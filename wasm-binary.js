@@ -25,6 +25,16 @@ export function sleb(n, out = []) {
   }
 }
 
+// the same for an i64 constant, as a BigInt
+function sleb64(n, out = []) {
+  for (;;) {
+    const byte = Number(n & 0x7fn);
+    n >>= 7n;
+    if ((n === 0n && !(byte & 0x40)) || (n === -1n && byte & 0x40)) return out.push(byte), out;
+    out.push(byte | 0x80);
+  }
+}
+
 function f64Bytes(x) {
   const view = new DataView(new ArrayBuffer(8));
   view.setFloat64(0, x, true);
@@ -79,6 +89,14 @@ const OPS = {
   "i32.shr_u": [0x76],
   "f64.abs": [0x99], "f64.neg": [0x9a], "f64.ceil": [0x9b], "f64.floor": [0x9c], "f64.trunc": [0x9d], "f64.add": [0xa0], "f64.sub": [0xa1], "f64.mul": [0xa2], "f64.div": [0xa3], "f64.max": [0xa5], "f64.copysign": [0xa6],
   "i32.trunc_f64_s": [0xaa], "f64.convert_i32_s": [0xb7], "f64.convert_i32_u": [0xb8],
+  "i64.const": [0x42], "i32.div_u": [0x6e], "i32.rem_u": [0x70], "i32.shr_s": [0x75],
+  "i64.eqz": [0x50], "i64.eq": [0x51], "i64.ne": [0x52], "i64.lt_s": [0x53], "i64.lt_u": [0x54], "i64.gt_s": [0x55], "i64.gt_u": [0x56],
+  "i64.le_s": [0x57], "i64.le_u": [0x58], "i64.ge_s": [0x59], "i64.ge_u": [0x5a],
+  "i64.add": [0x7c], "i64.sub": [0x7d], "i64.mul": [0x7e], "i64.div_u": [0x80], "i64.rem_u": [0x82], "i64.and": [0x83], "i64.or": [0x84],
+  "i64.xor": [0x85], "i64.shl": [0x86], "i64.shr_s": [0x87], "i64.shr_u": [0x88],
+  "i32.wrap_i64": [0xa7], "i64.extend_i32_s": [0xac], "i64.extend_i32_u": [0xad], "i64.trunc_f64_s": [0xb0], "i64.trunc_f64_u": [0xb1],
+  "f64.convert_i64_s": [0xb9], "f64.convert_i64_u": [0xba], "i64.reinterpret_f64": [0xbd], "f64.reinterpret_i64": [0xbf],
+  "i32.load16_u": [0x2f], "i32.store": [0x36], "i32.store16": [0x3b], // each followed by its alignment (as a power of 2) and offset
   "ref.null": [0xd0], "ref.is_null": [0xd1], "ref.func": [0xd2], "ref.eq": [0xd3], "ref.as_non_null": [0xd4],
   "struct.new": [0xfb, 0x00], "struct.get": [0xfb, 0x02], "struct.set": [0xfb, 0x05],
   "array.new": [0xfb, 0x06], "array.new_default": [0xfb, 0x07], "array.new_fixed": [0xfb, 0x08], "array.new_data": [0xfb, 0x09],
@@ -94,6 +112,7 @@ function immediates(op, args) {
       return typeof type === "object" && type.func !== undefined ? sleb(type.func) : valueType(type);
     }
     case "i32.const": return sleb(args[0]);
+    case "i64.const": return sleb64(BigInt(args[0]));
     case "f64.const": return f64Bytes(args[0]);
     case "ref.null": case "ref.test": case "ref.cast": return heapType(args[0]);
     default:
@@ -107,12 +126,15 @@ function immediates(op, args) {
 const TYPED = new Set(["struct.new", "struct.get", "struct.set", "array.new", "array.new_default", "array.new_fixed", "array.new_data",
   "array.get", "array.get_u", "array.set", "call_ref", "ref.test", "ref.cast", "ref.null"]);
 
-// One function's instructions, as bytes, plus what the listing needs to show them as text.
+// One function's instructions, as bytes, plus what the listing needs to show them as text. Code marked `keep`
+// is the same in every module, with the same locals, so its function's body is encoded once and kept.
 export class Code {
   constructor() {
     this.bytes = [];
     this.entries = [];
     this.depth = 1;
+    this.keep = false;
+    this.body = null;
   }
 
   // emit("i32.const", 5), emit("struct.get", type, field)...; the listing indents each one by nesting
@@ -143,6 +165,7 @@ export class Module {
     this.funcs = [];
     this.globals = [];
     this.exports = [];
+    this.memories = []; // each one's size, in 64 KiB pages
     this.datas = [];
     this.declared = new Set(); // functions named by ref.func, which the format wants declared
     this.typeNames = []; // for the listing
@@ -186,8 +209,13 @@ export class Module {
     return this.globals.push({ type, mutable, init }) - 1;
   }
 
-  export(field, index) {
-    this.exports.push({ field, index });
+  // a function's, or with kind 2 a memory's
+  export(field, index, kind = 0) {
+    this.exports.push({ field, index, kind });
+  }
+
+  memory(pages) {
+    return this.memories.push(pages) - 1;
   }
 
   // a passive data segment, for array.new_data
@@ -201,11 +229,13 @@ export class Module {
     section(1, vec([[0x4e, ...vec(this.types.map(compositeType))]])); // one recursive group
     if (this.imports.length) section(2, vec(this.imports.map((i) => [...name(i.module), ...name(i.field), 0x00, ...uleb(i.type)])));
     section(3, vec(this.funcs.map((f) => uleb(f.type))));
+    if (this.memories.length) section(5, vec(this.memories.map((pages) => [0x00, ...uleb(pages)])));
     if (this.globals.length) section(6, vec(this.globals.map((g) => [...valueType(g.type), g.mutable ? 1 : 0, ...g.init.bytes, 0x0b])));
-    section(7, vec(this.exports.map((e) => [...name(e.field), 0x00, ...uleb(e.index)])));
+    section(7, vec(this.exports.map((e) => [...name(e.field), e.kind, ...uleb(e.index)])));
     if (this.declared.size) section(9, vec([[0x03, 0x00, ...vec([...this.declared].map((i) => uleb(i)))]]));
     if (this.datas.length) section(12, uleb(this.datas.length));
     section(10, vec(this.funcs.map((f) => {
+      if (f.code.body) return f.code.body; // code every module has, encoded once (see Code's `keep`)
       const groups = [];
       for (const t of f.locals) {
         const last = groups.at(-1);
@@ -214,7 +244,9 @@ export class Module {
       }
       const body = append([...vec(groups.map((g) => [...uleb(g.count), ...valueType(g.type)]))], f.code.bytes);
       body.push(0x0b);
-      return [...uleb(body.length), ...body];
+      const encoded = [...uleb(body.length), ...body];
+      if (f.code.keep) f.code.body = encoded;
+      return encoded;
     })));
     if (this.datas.length) section(11, vec(this.datas.map((d) => [0x01, ...uleb(d.length), ...d])));
     return new Uint8Array(out);

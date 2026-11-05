@@ -5,12 +5,15 @@
 #
 # Moth's values live inside the module: a number is an i31 if it's whole, from -2^30 to 2^30 - 1, and isn't 0
 # or 1, and a struct holding an f64 otherwise; yes and no are the i31 values 1 and 0; nothing is null; text,
-# lists, records, functions and bytes are structs. The common cases run in WebAssembly, and the rest, and
-# every mistake, call out to the module's imports (see IMPORTS in wasm.js), so it says what the VM says.
+# lists, records, functions and bytes are structs. Text is UTF-16 in the module, and the part of the runtime
+# that works on it, and shows numbers in it, is written once, in wasm-runtime.js, which this reads as
+# wasm-runtime.moth has it. The common cases run in WebAssembly, and the rest, and every mistake, call out to
+# the module's imports (see IMPORTS in wasm.js), so it says what the VM says.
 #
 # Every top-level name here starts with wasm_, so no function's own variable can be one of them.
 
 use "compiler.moth" as front
+use "wasm-runtime.moth" as shared
 
 # ---------- bytes ----------
 
@@ -145,8 +148,10 @@ end
 # A value type is its bytes; a composite type (a function's, a struct's or an array's) is its bytes too.
 
 set wasm_i32 to list of 127
+set wasm_i64 to list of 126
 set wasm_f64 to list of 124
 set wasm_i8 to list of 120
+set wasm_i16 to list of 119
 set wasm_funcref to list of 112
 set wasm_externref to list of 111
 set wasm_eq to list of 99, 109 # (ref null eq): any Moth value
@@ -175,12 +180,15 @@ set wasm_t_host to 9
 set wasm_t_u8 to 10
 set wasm_t_bytes to 11
 set wasm_t_qty to 12
+set wasm_t_chars to 13
+set wasm_t_strbuf to 14
+set wasm_t_big to 15
 
 # ---------- the module ----------
 
 to wasm_new_module
     return record with types empty list, type_keys empty dictionary, imports empty list, funcs empty list, globals empty list,
-        exports empty list, declared empty list, declared_keys empty dictionary
+        exports empty list, declared empty list, declared_keys empty dictionary, datas empty list, memories empty list
 end
 
 # the index of a composite type, added once
@@ -286,7 +294,7 @@ end
 
 to wasm_export with m, field, index
     set kept to exports of m
-    add record with field field, index index to kept
+    add record with field field, index index, kind 0 to kept
 end
 
 # ---------- writing code ----------
@@ -307,9 +315,15 @@ set wasm_one_labels to list of "unreachable", "else", "end", "return", "drop", "
     "i32.lt_s", "i32.lt_u", "i32.gt_s", "i32.gt_u", "i32.le_s", "i32.le_u", "i32.ge_s", "i32.ge_u", "f64.eq", "f64.ne", "f64.lt", "f64.gt",
     "f64.le", "f64.ge", "i32.add", "i32.sub", "i32.mul", "i32.rem_s", "i32.and", "i32.or", "i32.xor", "i32.shl", "i32.shr_u", "f64.abs",
     "f64.neg", "f64.ceil", "f64.floor", "f64.trunc", "f64.add", "f64.sub", "f64.mul", "f64.div", "f64.max", "f64.copysign",
-    "i32.trunc_f64_s", "f64.convert_i32_s", "f64.convert_i32_u", "ref.is_null", "ref.eq", "ref.as_non_null"
+    "i32.trunc_f64_s", "f64.convert_i32_s", "f64.convert_i32_u", "ref.is_null", "ref.eq", "ref.as_non_null",
+    "i32.div_u", "i32.rem_u", "i32.shr_s", "i64.eqz", "i64.eq", "i64.ne", "i64.lt_s", "i64.lt_u", "i64.gt_s", "i64.gt_u", "i64.le_s",
+    "i64.le_u", "i64.ge_s", "i64.ge_u", "i64.add", "i64.sub", "i64.mul", "i64.div_u", "i64.rem_u", "i64.and", "i64.or", "i64.xor",
+    "i64.shl", "i64.shr_s", "i64.shr_u", "i32.wrap_i64", "i64.extend_i32_s", "i64.extend_i32_u", "i64.trunc_f64_s", "i64.trunc_f64_u",
+    "f64.convert_i64_s", "f64.convert_i64_u", "i64.reinterpret_f64", "f64.reinterpret_i64"
 set wasm_one_codes to list of 0, 5, 11, 15, 26, 27, 25, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 97, 98, 99, 100, 101, 102, 106,
-    107, 108, 111, 113, 114, 115, 116, 118, 153, 154, 155, 156, 157, 160, 161, 162, 163, 165, 166, 170, 183, 184, 209, 211, 212
+    107, 108, 111, 113, 114, 115, 116, 118, 153, 154, 155, 156, 157, 160, 161, 162, 163, 165, 166, 170, 183, 184, 209, 211, 212,
+    110, 112, 117, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 124, 125, 126, 128, 130, 131, 132, 133, 134, 135, 136, 167, 172, 173,
+    176, 177, 185, 186, 189, 191
 for each wasm_k from 1 to length of wasm_one_labels
     wasm_op(item wasm_k of wasm_one_labels, (list of item wasm_k of wasm_one_codes), "none")
 end
@@ -343,14 +357,20 @@ wasm_op("struct.get", (list of 251, 2), "two")
 wasm_op("struct.set", (list of 251, 5), "two")
 wasm_op("array.new_fixed", (list of 251, 8), "two")
 wasm_op("array.copy", (list of 251, 17), "two")
+wasm_op("array.new_data", (list of 251, 9), "two")
 wasm_op("ref.null", (list of 208), "heap")
 wasm_op("ref.test", (list of 251, 20), "heap")
 wasm_op("ref.cast", (list of 251, 22), "heap")
 wasm_op("i32.const", (list of 65), "i32")
+wasm_op("i64.const", (list of 66), "i32") # a signed LEB128 too, of a number below 2^53
+wasm_op("i32.load16_u", (list of 47), "two") # its alignment (as a power of 2) and offset
+wasm_op("i32.store16", (list of 59), "two")
+wasm_op("i32.store", (list of 54), "two")
 wasm_op("f64.const", (list of 68), "f64")
 
 set wasm_block_types to empty dictionary
 set item "i32" of wasm_block_types to wasm_i32
+set item "i64" of wasm_block_types to wasm_i64
 set item "f64" of wasm_block_types to wasm_f64
 set item "eq" of wasm_block_types to wasm_eq
 set item "externref" of wasm_block_types to wasm_externref
@@ -487,7 +507,7 @@ to wasm_map_of with x
 end
 
 to wasm_text_of with x
-    return " local.get " + x + " ref.cast text struct.get text 0 "
+    return " local.get " + x + " call R.jsOf "
 end
 
 to wasm_bytes_of with x
@@ -513,6 +533,108 @@ to wasm_order_test with op
     return " i32.const 1 i32.add i32.const 1 i32.le_u " # at most: -1 or 0
 end
 
+# ---------- the shared runtime ----------
+# wasm-runtime.js's functions and globals, as text (wasm-runtime.moth holds it as make-wasm-runtime.mjs writes
+# it): its globals and functions are made first, so the rest of the runtime can call them, and their code is
+# written last, so they can call it. wasm.js reads the same text, so the two make the same bytes.
+
+# a type as the shared runtime writes it: i32, i64, f64, eq, extern, or ref: or null: and a type's name
+to wasm_type_of with word
+    if word is "i32"
+        return wasm_i32
+    else if word is "i64"
+        return wasm_i64
+    else if word is "f64"
+        return wasm_f64
+    else if word is "eq"
+        return wasm_eq
+    else if word is "extern"
+        return wasm_externref
+    end
+    set parts to split word by ":"
+    set index to item (item 2 of parts) of wasm_syms
+    if item 1 of parts is "ref"
+        return wasm_ref(index)
+    end
+    return wasm_ref_null(index)
+end
+
+# the words from place `first_word` on, as one text again
+to wasm_rest with words, first_word
+    set out to ""
+    for each k from first_word to length of words
+        if k is greater than first_word
+            set out to out + " "
+        end
+        set out to out + item k of words
+    end
+    return out
+end
+
+# The shared runtime's doubles (for f64.const), globals and functions, made in the module, an exported function
+# exported now; out comes each function with its code, to be written once everything it calls exists.
+to wasm_shared_declare with m
+    set made to empty list
+    set f to nothing
+    set source to shared's wasm_runtime_source()
+    for each line in split source by "\n"
+        set words to split line by " "
+        set word to item 1 of words
+        if word is "memory" # the module's memory, exported under its name
+            set kept to memories of m
+            add number of item 3 of words to kept
+            set exported to exports of m
+            set memory_name to item 2 of words
+            set memory_index to length of kept - 1
+            add record with field memory_name, index memory_index, kind 2 to exported
+        else if word is "double"
+            set eight to empty list
+            for each k from 3 to 10
+                add number of item k of words to eight
+            end
+            set item (item 2 of words) of wasm_f64s to eight
+        else if word is "global"
+            set start_value to record with label "a global", named empty dictionary, code (record with out empty list, labels 0)
+            wasm_asm(start_value, wasm_rest(words, 5))
+            set mutable to item 4 of words is "mut"
+            wasm_global(m, item 2 of words, wasm_type_of(item 3 of words), mutable, out of code of start_value)
+        else if word is "func" or word is "export"
+            set params to empty list
+            set names to empty list
+            set k to 3
+            repeat while item k of words is not "->"
+                set pieces to split item k of words by ":"
+                add item 1 of pieces to names
+                set typed to item 2 of pieces
+                if length of pieces is 3
+                    set typed to typed + ":" + item 3 of pieces
+                end
+                add wasm_type_of(typed) to params
+                add 1 to k
+            end
+            set results to empty list
+            for each r from k + 1 to length of words
+                add wasm_type_of(item r of words) to results
+            end
+            set f to wasm_rt(m, item 2 of words, params, results)
+            set known to named of f
+            for each i from 1 to length of names
+                set item (item i of names) of known to i - 1
+            end
+            if word is "export"
+                wasm_export(m, item 2 of words, index of f)
+            end
+            add record with f f, body "" to made
+        else if word is "local"
+            wasm_named(f, item 2 of words, wasm_type_of(item 3 of words))
+        else
+            set latest to wasm_top(made)
+            set body of latest to wasm_rest(words, 2)
+        end
+    end
+    return made
+end
+
 # ---------- the runtime every module has ----------
 # Built once, the same for every program: the types, the imports, the runtime's functions, what JavaScript
 # calls to look inside values, and the globals. wasm_module copies it and adds the program.
@@ -534,7 +656,9 @@ to wasm_runtime
     set i32 to wasm_i32
     set f64 to wasm_f64
     set ext to wasm_externref
-    set made to list of wasm_struct_type(m, (list of (list of f64, no))), wasm_struct_type(m, (list of (list of ext, no))), wasm_array_type(m, eq, yes)
+    # text: its buffer, how many of the buffer's units are its own, and its JavaScript string, once made
+    set text_fields to list of (list of wasm_ref_null(wasm_t_strbuf), yes), (list of i32, no), (list of ext, yes)
+    set made to list of wasm_struct_type(m, (list of (list of f64, no))), wasm_struct_type(m, text_fields), wasm_array_type(m, eq, yes)
     add wasm_struct_type(m, (list of (list of wasm_ref(wasm_t_items), yes), (list of i32, yes))) to made
     add wasm_array_type(m, i32, yes) to made
     add wasm_struct_type(m, (list of (list of wasm_ref(wasm_t_ids), yes), (list of wasm_ref(wasm_t_items), yes), (list of i32, yes))) to made
@@ -545,7 +669,11 @@ to wasm_runtime
     add wasm_array_type(m, wasm_i8, yes) to made
     add wasm_struct_type(m, (list of (list of wasm_ref(wasm_t_u8), no))) to made
     add wasm_struct_type(m, (list of (list of f64, no), (list of i32, no))) to made
-    set type_names to list of "num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty"
+    add wasm_array_type(m, wasm_i16, yes) to made
+    add wasm_struct_type(m, (list of (list of wasm_ref_null(wasm_t_chars), yes), (list of i32, yes))) to made
+    add wasm_struct_type(m, (list of (list of wasm_ref_null(wasm_t_ids), yes), (list of i32, yes))) to made
+    set type_names to list of "num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty",
+        "chars", "strbuf", "big"
     for each n from 1 to length of made
         if item n of made is not n - 1
             fail with "wasm.moth: the types are out of order"
@@ -568,11 +696,6 @@ to wasm_runtime
     wasm_import(m, "numberOrder", (list of f64, f64), (list of i32))
     wasm_import(m, "divisible", (list of f64, f64), (list of i32))
     wasm_import(m, "equal", (list of eq, eq), (list of i32))
-    wasm_import(m, "sameText", (list of ext, ext), (list of i32))
-    wasm_import(m, "concat", (list of ext, ext), (list of ext))
-    wasm_import(m, "textNum", (list of ext, f64), (list of ext))
-    wasm_import(m, "numText", (list of f64, ext), (list of ext))
-    wasm_import(m, "text", (list of i32), (list of ext))
     wasm_import(m, "lengthOf", (list of eq, i32), (list of f64))
     wasm_import(m, "item", (list of eq, eq, i32), (list of eq))
     wasm_import(m, "itemRef", (list of eq, eq, i32), none)
@@ -626,8 +749,15 @@ to wasm_runtime
     wasm_import(m, "workerBegin", (list of eq, eq, i32, i32), (list of eq))
     wasm_import(m, "workerGave", (list of eq), (list of eq))
     wasm_import(m, "workerFailed", none, (list of eq))
+    # text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
+    wasm_import(m, "jsText", (list of eq), (list of ext))
+    wasm_import(m, "fill", (list of eq), none)
 
+    set shared_made to wasm_shared_declare(m)
     wasm_runtime_functions(m)
+    for each s in shared_made
+        wasm_asm(f of s, body of s)
+    end
     wasm_runtime_exports(m)
 
     # the globals every program has, after the runtime's own two
@@ -700,14 +830,14 @@ to wasm_runtime_functions with m
             wasm_asm(f, "else i32.const " + op + " local.get 0 local.get 1 local.get 2 call im.arithmetic unreachable end")
         end
         wasm_asm(f, "else")
-        if sign is "+" # text and text, or text and a number, joined by one call; the rest as before
+        if sign is "+" # text and text, or text and a number, joined here; the rest as before
             wasm_asm(f, "local.get 0 ref.test text if eq local.get 1 ref.test text if eq")
-            wasm_asm(f, wasm_text_of(0) + wasm_text_of(1) + " call im.concat struct.new text")
+            wasm_asm(f, "local.get 0 local.get 1 call R.concat")
             wasm_asm(f, "else " + wasm_is_num(1) + " if eq")
-            wasm_asm(f, wasm_text_of(0) + wasm_num_of(1) + " call im.textNum struct.new text")
+            wasm_asm(f, "local.get 0 " + wasm_num_of(1) + " call R.numText call R.concat")
             wasm_asm(f, "else " + slow + " end end")
             wasm_asm(f, "else local.get 1 ref.test text " + wasm_is_num(0) + " i32.and if eq")
-            wasm_asm(f, wasm_num_of(0) + wasm_text_of(1) + " call im.numText struct.new text")
+            wasm_asm(f, wasm_num_of(0) + " call R.numText local.get 1 call R.concat")
             wasm_asm(f, "else " + slow + " end end")
         else
             wasm_asm(f, slow)
@@ -736,19 +866,21 @@ to wasm_runtime_functions with m
     wasm_asm(f, wasm_both_nums(0, 1) + " if " + wasm_num_of(0) + wasm_num_of(1) + " call R.ncmp i32.eqz return end")
     wasm_asm(f, "local.get 0 local.get 1 ref.eq if i32.const 1 return end")
     wasm_asm(f, "local.get 0 ref.test text local.get 1 ref.test text i32.and if")
-    wasm_asm(f, "local.get 0 ref.cast text struct.get text 0 local.get 1 ref.cast text struct.get text 0 call im.sameText return end")
+    wasm_asm(f, "local.get 0 local.get 1 call R.sameText return end")
     wasm_asm(f, "local.get 0 ref.test list local.get 1 ref.test list i32.and local.get 0 ref.test record local.get 1 ref.test record i32.and i32.or")
     wasm_asm(f, "local.get 0 ref.test host local.get 1 ref.test host i32.and i32.or local.get 0 ref.test bytes local.get 1 ref.test bytes i32.and i32.or")
     wasm_asm(f, "local.get 0 ref.test qty local.get 1 ref.test qty i32.or") # 1 km is 1000 m, and not 1000
     wasm_asm(f, "i32.or if local.get 0 local.get 1 call im.equal return end i32.const 0")
 
-    # less than, greater than, at least, at most: numbers here, text and mistakes in JavaScript
+    # less than, greater than, at least, at most: numbers and text here, mistakes in JavaScript
     set orders to list of "less than", "greater than", "at least", "at most"
     set labels to list of "lt", "gt", "ge", "le"
     for each k from 1 to 4
         set f to wasm_rt(m, item k of labels, (list of eq, eq, i32), (list of i32))
-        wasm_asm(f, wasm_both_nums(0, 1) + " if i32 " + wasm_num_of(0) + wasm_num_of(1) + " call R.ncmp " + wasm_order_test(item k of orders))
-        wasm_asm(f, "else i32.const " + k + " local.get 0 local.get 1 local.get 2 call im.compare end")
+        set order_test to wasm_order_test(item k of orders)
+        wasm_asm(f, wasm_both_nums(0, 1) + " if i32 " + wasm_num_of(0) + wasm_num_of(1) + " call R.ncmp " + order_test)
+        wasm_asm(f, "else local.get 0 ref.test text local.get 1 ref.test text i32.and if i32 local.get 0 local.get 1 call R.textOrder " + order_test)
+        wasm_asm(f, "else i32.const " + k + " local.get 0 local.get 1 local.get 2 call im.compare end end")
     end
 
     # `is divisible by` on two numbers. For whole numbers below 2^52, a is divisible by b exactly when
@@ -1000,14 +1132,8 @@ to wasm_runtime_exports with m
     set tag_code to tag_code + " local.get 0 ref.test bytes if i32.const 8 return end local.get 0 ref.test qty if i32.const 9 return end i32.const 6"
     wasm_out(m, "tag", (list of eq), (list of i32), tag_code)
     wasm_out(m, "num", (list of eq), (list of f64), wasm_num_of(0))
-    wasm_out(m, "textValue", (list of eq), (list of ext), "local.get 0 ref.cast text struct.get text 0")
     wasm_out(m, "listLength", (list of eq), (list of i32), "local.get 0 ref.cast list struct.get list 1")
     wasm_out(m, "listItem", (list of eq, i32), (list of eq), "local.get 0 ref.cast list struct.get list 0 local.get 1 array.get items")
-    # a list's item's JavaScript string, if it's text, or null: one call for each item of a list of text
-    set f to wasm_func(m, "listText", (list of eq, i32), (list of ext))
-    wasm_named(f, "it", eq)
-    wasm_asm(f, "local.get 0 ref.cast list struct.get list 0 local.get 1 array.get items local.tee it ref.test text if externref " + wasm_text_of("it") + " else ref.null extern end")
-    wasm_export(m, "listText", index of f)
     wasm_out(m, "recordSize", (list of eq), (list of i32), "local.get 0 ref.cast record struct.get record 2")
     wasm_out(m, "recordKey", (list of eq, i32), (list of i32), "local.get 0 ref.cast record struct.get record 0 local.get 1 array.get ids")
     wasm_out(m, "recordValue", (list of eq, i32), (list of eq), "local.get 0 ref.cast record struct.get record 1 local.get 1 array.get items")
@@ -1026,7 +1152,6 @@ to wasm_runtime_exports with m
     wasm_out(m, "scopeSlot", (list of eq, i32), (list of eq), "local.get 0 ref.cast closure struct.get closure 1 struct.get env 1 local.get 1 array.get items")
     wasm_out(m, "setScopeSlot", (list of eq, i32, eq), empty list, "local.get 0 ref.cast closure struct.get closure 1 struct.get env 1 local.get 1 local.get 2 array.set items")
     wasm_out(m, "makeNum", (list of f64), (list of eq), "local.get 0 call R.box")
-    wasm_out(m, "makeText", (list of ext), (list of eq), "local.get 0 struct.new text")
     wasm_out(m, "newList", empty list, (list of eq), "i32.const 0 array.new_default items i32.const 0 struct.new list")
     wasm_out(m, "listPush", (list of eq, eq), empty list, "local.get 0 local.get 1 call R.push")
     wasm_out(m, "hostValue", (list of eq), (list of ext), "local.get 0 ref.cast host struct.get host 0")
@@ -1261,6 +1386,47 @@ to wasm_number with fc, eight
 end
 
 # the global holding text the program wrote, which init makes when the program starts
+# text's UTF-16 units, each as its two bytes, low first, added to `out`; how many units there are
+to wasm_units with out, text
+    set n to 0
+    for each c in front's letters(text)
+        set b to c as bytes
+        set first to item 1 of b
+        if first is less than 128
+            set code to first
+        else if first is less than 224
+            set code to (first - 192) * 64 + item 2 of b - 128
+        else if first is less than 240
+            set code to (first - 224) * 4096 + (item 2 of b - 128) * 64 + item 3 of b - 128
+        else
+            set code to (first - 240) * 262144 + (item 2 of b - 128) * 4096 + (item 3 of b - 128) * 64 + item 4 of b - 128
+        end
+        if code is 65533 # U+FFFD, or half of a character past the first 65,536 on its own, which JSON spells out
+            set spelled to front's letters(c as json)
+            if length of spelled is 8
+                set code to 0
+                for each k from 4 to 7
+                    set code to code * 16 + (position of item k of spelled in "0123456789abcdef") - 1
+                end
+            end
+        end
+        if code is at least 65536 # past the first 65,536: two units, a surrogate pair
+            set code to code - 65536
+            set high to 55296 + shift code right by 10
+            add high bit and 255 to out
+            add shift high right by 8 to out
+            set code to 56320 + (code bit and 1023)
+            add 1 to n
+        end
+        add code bit and 255 to out
+        add shift code right by 8 to out
+        add 1 to n
+    end
+    return n
+end
+
+# the global holding text the program wrote, which init makes, when the program starts, from its units in the
+# module's one data segment
 to wasm_text with fc, text
     set cx to cx of fc
     set known to texts of cx
@@ -1271,9 +1437,14 @@ to wasm_text with fc, text
     add record with type wasm_ref_null(wasm_t_text), mutable yes, init (list of 208, wasm_t_text) to kept
     set global to length of kept - 1
     set item text of known to global
-    set listed to text_list of cx
-    add text to listed
-    wasm_asm(init of cx, "i32.const " + (length of listed - 1) + " call im.text struct.new text global.set " + global)
+    set units to units of cx
+    set segments to datas of m of cx
+    if length of segments is 0
+        add units to segments
+    end
+    set at to length of units
+    set n to wasm_units(units, text)
+    wasm_asm(init of cx, "i32.const " + at + " i32.const " + n + " array.new_data chars 0 i32.const " + n + " call R.newText global.set " + global)
     return global
 end
 
@@ -2267,6 +2438,8 @@ to wasm_copy with base
     wasm_put_all(funcs of m, funcs of base)
     wasm_put_all(globals of m, globals of base)
     wasm_put_all(exports of m, exports of base)
+    wasm_put_all(datas of m, datas of base)
+    wasm_put_all(memories of m, memories of base)
     return m
 end
 
@@ -2330,6 +2503,15 @@ to wasm_encode with m
         wasm_uleb(payload, type of f)
     end
     wasm_section(out, 3, payload)
+    if length of memories of m is greater than 0
+        set payload to empty list
+        wasm_uleb(payload, length of memories of m)
+        for each pages in memories of m
+            add 0 to payload
+            wasm_uleb(payload, pages)
+        end
+        wasm_section(out, 5, payload)
+    end
     set payload to empty list
     wasm_uleb(payload, length of globals of m)
     for each g in globals of m
@@ -2347,7 +2529,7 @@ to wasm_encode with m
     wasm_uleb(payload, length of exports of m)
     for each x in exports of m
         wasm_name(payload, field of x)
-        add 0 to payload
+        add kind of x to payload
         wasm_uleb(payload, index of x)
     end
     wasm_section(out, 7, payload)
@@ -2359,23 +2541,37 @@ to wasm_encode with m
         end
         wasm_section(out, 9, payload)
     end
+    set segments to datas of m
+    if length of segments is greater than 0
+        wasm_section(out, 12, wasm_uleb_of(length of segments))
+    end
     set payload to empty list
     wasm_uleb(payload, length of funcs of m)
     for each f in funcs of m
         wasm_put_all(payload, wasm_body(f))
     end
     wasm_section(out, 10, payload)
+    if length of segments is greater than 0 # passive, for array.new_data
+        set payload to empty list
+        wasm_uleb(payload, length of segments)
+        for each segment in segments
+            add 1 to payload
+            wasm_uleb(payload, length of segment)
+            wasm_put_all(payload, segment)
+        end
+        wasm_section(out, 11, payload)
+    end
     return out
 end
 
 # A parsed program as a module: its bytes (as a list of numbers from 0 to 255), and what the JavaScript that
 # runs it needs to know (wasm.js's instantiate): the tokens its positions point at, the names its records and
-# functions use, its messages, its text, and what the inputs of each function whose inputs say so are.
+# functions use, its messages, and what the inputs of each function whose inputs say so are.
 to wasm_module with program
     set m to wasm_copy(wasm_runtime())
     set init to wasm_func(m, "init", empty list, empty list) # makes the text the program holds
     set cx to record with m m, init init, ats empty list, names empty list, name_ids empty dictionary, messages empty list,
-        numbers empty dictionary, texts empty dictionary, text_list empty list, kinds (list of nothing)
+        numbers empty dictionary, texts empty dictionary, units empty list, kinds (list of nothing)
     set main to wasm_function(cx, nothing, "main", empty list, program, 0)
     wasm_export(m, "main", index of f of main)
     # the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
@@ -2399,7 +2595,7 @@ to wasm_module with program
     wasm_asm(invoke, "ref.null eq")
     wasm_export(m, "invoke", index of invoke)
     wasm_out(m, "restart", empty list, empty list, "call im.grant global.set g.left i32.const 0 global.set g.depth")
-    return record with code wasm_encode(m), ats ats of cx, names names of cx, messages messages of cx, texts text_list of cx, kinds kinds of cx
+    return record with code wasm_encode(m), ats ats of cx, names names of cx, messages messages of cx, kinds kinds of cx
 end
 
 # Moth source, and the files it may use, by name and text; out comes its module, as wasm_module gives it. A
@@ -2415,13 +2611,13 @@ end
 
 # What `moth build --target wasm` writes: the module, and after it a custom section called "moth" holding, as
 # JSON, what running it needs (wasmFile in wasm.js reads it): each position as its line, column and file ("" for
-# the program's own), the names, the messages, the text, and what the inputs of functions that say so are.
+# the program's own), the names, the messages, and what the inputs of functions that say so are.
 to wasm_with_details with made
     set places to empty list
     for each where in ats of made
         add (list of line of where, col of where, file of where) to places
     end
-    set details to record with ats places, names names of made, messages messages of made, texts texts of made, kinds kinds of made
+    set details to record with ats places, names names of made, messages messages of made, kinds kinds of made
     set out to empty list
     wasm_put_all(out, code of made)
     set payload to empty list

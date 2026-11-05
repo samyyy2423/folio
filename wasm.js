@@ -4,13 +4,15 @@
 // Moth's values live inside the module, as WebAssembly GC values: a number is a struct holding an f64, or,
 // if it's whole and fits in 31 bits, an i31 value, so a list of them is no boxes for the GC to keep; yes and
 // no are the i31 values 1 and 0 (so the numbers 1 and 0 are boxes, made once), nothing is null, and lists,
-// records and functions are structs. Text is a
-// struct holding a JavaScript string, so joining it is as cheap as in JavaScript (which joins long text
-// without copying it) and it fails at exactly the same length. The common cases run in WebAssembly: arithmetic on numbers, comparisons, list
-// items, fields, calls and loops. Everything else, and every mistake, calls out to the same checks the VM
-// and the JIT use (vm.js), so all three engines say exactly the same things.
+// records and functions are structs. Text lives in the module too, as UTF-16 (see wasm-runtime.js, the part
+// of the runtime written once for this and wasm.moth): joining it, comparing it and showing numbers in it
+// happen here, and text that ends where its buffer does grows in place, so joining text in a loop is cheap.
+// The common cases run in WebAssembly: arithmetic on numbers, text, comparisons, list items, fields, calls
+// and loops. Everything else, and every mistake, calls out to the same checks the VM and the JIT use (vm.js),
+// so all three engines say exactly the same things.
 import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
+import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
 import { TooDeep } from "./jit.js";
 import { MothError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, item, compare, plus, arithmetic, negate,
   lengthOf, addInto, checkRepeat, checkRange, itemsOf, callable, checkInputs, KINDS, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, fieldOf,
@@ -53,12 +55,6 @@ const IMPORTS = {
   numberOrder: [[F64, F64], [I32]],
   divisible: [[F64, F64], [I32]],
   equal: [[EQ, EQ], [I32]],
-  sameText: [["externref", "externref"], [I32]],
-  // text + text, text + a number, a number + text: the strings joined in one call
-  concat: [["externref", "externref"], ["externref"]],
-  textNum: [["externref", F64], ["externref"]],
-  numText: [[F64, "externref"], ["externref"]],
-  text: [[I32], ["externref"]], // the program's text, by number
   lengthOf: [[EQ, I32], [F64]],
   item: [[EQ, EQ, I32], [EQ]],
   itemRef: [[EQ, EQ, I32], []],
@@ -113,14 +109,21 @@ const IMPORTS = {
   workerBegin: [[EQ, EQ, I32, I32], [EQ]],
   workerGave: [[EQ], [EQ]],
   workerFailed: [[], [EQ]],
+  // text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
+  jsText: [[EQ], ["externref"]],
+  fill: [[EQ], []],
 };
 
 // ---------- the module's types and runtime ----------
 
+const TYPE_NAMES = ["num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty", "chars", "strbuf", "big"];
+
 function declareTypes(m) {
   const T = {};
   T.num = m.type({ kind: "struct", fields: [{ type: F64 }] });
-  T.text = m.type({ kind: "struct", fields: [{ type: "externref" }] });
+  // text: its buffer (null until the module needs the units of text JavaScript made), how many of the
+  // buffer's units are its own, and its JavaScript string, once made (see wasm-runtime.js)
+  T.text = m.type({ kind: "struct", fields: [{ type: refNull(13 + 1), mutable: true }, { type: I32 }, { type: "externref", mutable: true }] });
   T.items = m.type({ kind: "array", element: { type: EQ, mutable: true } });
   T.list = m.type({ kind: "struct", fields: [{ type: ref(T.items), mutable: true }, { type: I32, mutable: true }] });
   T.ids = m.type({ kind: "array", element: { type: I32, mutable: true } });
@@ -136,12 +139,16 @@ function declareTypes(m) {
   T.u8 = m.type({ kind: "array", element: { type: "i8", mutable: true } });
   T.bytes = m.type({ kind: "struct", fields: [{ type: ref(T.u8) }] });
   T.qty = m.type({ kind: "struct", fields: [{ type: F64 }, { type: I32 }] }); // an amount of a unit (its place in vm.js's UNITS)
+  T.chars = m.type({ kind: "array", element: { type: "i16", mutable: true } }); // text's UTF-16 units
+  T.strbuf = m.type({ kind: "struct", fields: [{ type: refNull(T.chars), mutable: true }, { type: I32, mutable: true }] }); // and how many are in use
+  if (T.strbuf !== 14) throw new Error("wasm.js: the types are out of order");
+  T.big = m.type({ kind: "struct", fields: [{ type: refNull(T.ids), mutable: true }, { type: I32, mutable: true }] }); // a big whole number's limbs, and how many
   T.fn = (n) => { // a Moth function with n inputs
     const index = m.funcType([refNull(T.env), ...Array(n).fill(EQ)], [EQ]);
     m.typeNames[index] = `fn${n}`;
     return index;
   };
-  for (const name of ["num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty"]) m.typeNames[T[name]] = name;
+  for (const name of TYPE_NAMES) m.typeNames[T[name]] = name;
   return T;
 }
 
@@ -155,15 +162,120 @@ const numOf = (c, T, local) => c.emit("local.get", local).emit("ref.test", "i31"
   .emit("else").emit("local.get", local).emit("ref.cast", T.num).emit("struct.get", T.num, 0).emit("end");
 const bothNums = (c, T, a, b) => (isNum(c, T, a), isNum(c, T, b), c.emit("i32.and"));
 const mapOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.host).emit("struct.get", T.host, 0); // a dictionary's Map
-const textOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.text).emit("struct.get", T.text, 0); // text's JavaScript string
+const textOf = (c, R, local) => c.emit("local.get", local).emit("call", R.jsOf); // text's JavaScript string
 const bytesOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.bytes).emit("struct.get", T.bytes, 0);
 // leaves 1 if the f64 in `local` is a whole number from `low` to `high`
 const wholeIn = (c, local, low, high) => c.emit("local.get", local).emit("local.get", local).emit("f64.trunc").emit("f64.eq")
   .emit("local.get", local).emit("f64.const", low).emit("f64.ge").emit("i32.and").emit("local.get", local).emit("f64.const", high).emit("f64.le").emit("i32.and");
 
+// ---------- the shared runtime ----------
+// wasm-runtime.js's functions and globals, as text: read once, and assembled into every module, its globals
+// and functions first, so the rest of the runtime can call them, and their code last, so they can call it.
+
+const SHARED = parseRuntime(RUNTIME);
+
+// how each instruction's immediates are written, as wasm_asm in wasm.moth reads them
+const HOW = {
+  block: "block", loop: "block", if: "block", try: "block", br: "index", br_if: "index", rethrow: "index", call: "index", call_ref: "index",
+  "ref.func": "index", "local.get": "local", "local.set": "local", "local.tee": "local", "global.get": "index", "global.set": "index",
+  "struct.new": "index", "array.new": "index", "array.new_default": "index", "array.get": "index", "array.get_u": "index", "array.set": "index",
+  "struct.get": "two", "struct.set": "two", "array.new_fixed": "two", "array.copy": "two", "array.new_data": "two",
+  "ref.null": "heap", "ref.test": "heap", "ref.cast": "heap", "i32.const": "i32", "i64.const": "i64", "f64.const": "f64",
+  "i32.load16_u": "two", "i32.store": "two", "i32.store16": "two",
+};
+const BLOCK_TYPES = { i32: I32, i64: "i64", f64: F64, eq: EQ, externref: "externref" };
+const ABSTRACT_HEAPS = new Set(["i31", "eq", "extern"]);
+
+// Writes code from text, an instruction and then its immediates: an index can be a number or a name, a local's
+// (from `named`) or one of `syms` (R.box, im.say, g.dbuf, a type's name).
+function assemble(c, text, syms, named = {}) {
+  const words = text.split(" ").filter(Boolean);
+  const index = (word, locally) => {
+    if (/^[-\d]/.test(word)) return Number(word);
+    if (locally) {
+      if (Object.hasOwn(named, word)) return named[word];
+      throw new Error(`wasm.js: no local called ${word}`);
+    }
+    if (syms.has(word)) return syms.get(word);
+    throw new Error(`wasm.js: nothing called ${word}`);
+  };
+  for (let k = 0; k < words.length;) {
+    const op = words[k++];
+    const how = HOW[op] ?? "none";
+    if (how === "none") c.emit(op);
+    else if (how === "block") {
+      if (Object.hasOwn(BLOCK_TYPES, words[k] ?? "")) c.emit(op, BLOCK_TYPES[words[k++]]);
+      else c.emit(op);
+    } else if (how === "i32" || how === "i64") c.emit(op, Number(words[k++]));
+    else if (how === "f64") {
+      const name = words[k++];
+      if (!SHARED.doubles.has(name)) throw new Error(`wasm.js: no double called ${name}`);
+      c.emit(op, SHARED.doubles.get(name));
+    } else if (how === "heap") {
+      const word = words[k++];
+      c.emit(op, ABSTRACT_HEAPS.has(word) ? word : index(word, false));
+    } else if (how === "local") c.emit(op, index(words[k++], true));
+    else if (how === "index") c.emit(op, index(words[k++], false));
+    else {
+      c.emit(op, index(words[k], false), index(words[k + 1], false));
+      k += 2;
+    }
+  }
+}
+
+// a type as the shared runtime writes it
+function typeOf(word, T) {
+  if (word === "i32" || word === "i64" || word === "f64") return word;
+  if (word === "eq") return EQ;
+  if (word === "extern") return "externref";
+  if (word.startsWith("ref:")) return ref(T[word.slice(4)]);
+  if (word.startsWith("null:")) return refNull(T[word.slice(5)]);
+  throw new Error(`wasm.js: no type called ${word}`);
+}
+
+// The shared runtime's code, the same in every module (its globals, its types and the functions it calls are
+// in the same places in each), so assembled once: each global's first value, and each function's code.
+let sharedCode = null;
+
+// The shared runtime's globals and functions, made in the module (an exported one exported now); `finish`
+// writes the functions' code, once everything they call exists.
+function declareShared(m, T, R) {
+  const syms = new Map(TYPE_NAMES.map((name) => [name, T[name]]));
+  for (const { name, pages } of SHARED.memories) m.export(name, m.memory(pages), 2);
+  for (const [i, g] of SHARED.globals.entries()) {
+    let init = sharedCode?.inits[i];
+    if (!init) assemble((init = new Code()), g.init, syms);
+    const index = m.global(typeOf(g.type, T), g.mutable, init);
+    m.globalNames[index] = g.name;
+    syms.set(`g.${g.name}`, index);
+  }
+  const made = SHARED.funcs.map((s) => {
+    const f = m.func(s.name, s.params.map(([, type]) => typeOf(type, T)), s.results.map((type) => typeOf(type, T)));
+    const named = Object.fromEntries(s.params.map(([name], i) => [name, i]));
+    for (const [name, type] of s.locals) named[name] = f.local(typeOf(type, T));
+    R[s.name] = f.index;
+    if (s.exported) m.export(s.name, f.index);
+    return { f, named, code: s.code };
+  });
+  return {
+    finish(im) {
+      if (sharedCode) {
+        made.forEach(({ f }, i) => (f.code = sharedCode.funcs[i]));
+        return;
+      }
+      for (const [label, index] of Object.entries(R)) syms.set(`R.${label}`, index);
+      for (const [label, index] of Object.entries(im)) syms.set(`im.${label}`, index);
+      for (const { f, named, code } of made) assemble(f.code, code, syms, named);
+      for (const { f } of made) f.code.keep = true;
+      sharedCode = { inits: m.globals.slice(0, SHARED.globals.length).map((g) => g.init), funcs: made.map(({ f }) => f.code) };
+    },
+  };
+}
+
 // The functions every module has: fast paths for the common cases, calling out to JavaScript for the rest.
 function declareRuntime(m, T, im) {
   const R = {};
+  const shared = declareShared(m, T, R);
   const fn = (label, params, results, write) => {
     const f = m.func(label, params, results);
     R[label] = f.index;
@@ -210,18 +322,16 @@ function declareRuntime(m, T, im) {
       };
       if (sign === "/") c.emit("else").emit("i32.const", op).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.arithmetic).emit("unreachable").emit("end");
       c.emit("else");
-      if (sign === "+") { // text and text, or text and a number, joined by one call; the rest as before
+      if (sign === "+") { // text and text, or text and a number, joined here; the rest as before
         const isText = (x) => c.emit("local.get", x).emit("ref.test", T.text);
         isText(0).emit("if", EQ);
         isText(1).emit("if", EQ);
-        textOf(c, T, 0);
-        textOf(c, T, 1);
-        c.emit("call", im.concat).emit("struct.new", T.text);
+        c.emit("local.get", 0).emit("local.get", 1).emit("call", R.concat);
         c.emit("else");
         isNum(c, T, 1).emit("if", EQ);
-        textOf(c, T, 0);
+        c.emit("local.get", 0);
         numOf(c, T, 1);
-        c.emit("call", im.textNum).emit("struct.new", T.text);
+        c.emit("call", R.numText).emit("call", R.concat);
         c.emit("else");
         slow();
         c.emit("end").emit("end");
@@ -230,8 +340,7 @@ function declareRuntime(m, T, im) {
         isNum(c, T, 0);
         c.emit("i32.and").emit("if", EQ);
         numOf(c, T, 0);
-        textOf(c, T, 1);
-        c.emit("call", im.numText).emit("struct.new", T.text);
+        c.emit("call", R.numText).emit("local.get", 1).emit("call", R.concat);
         c.emit("else");
         slow();
         c.emit("end").emit("end");
@@ -273,8 +382,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("local.get", 1).emit("ref.eq").emit("if").emit("i32.const", 1).emit("return").emit("end");
     const both = (type) => c.emit("local.get", 0).emit("ref.test", type).emit("local.get", 1).emit("ref.test", type).emit("i32.and");
     both(T.text).emit("if");
-    c.emit("local.get", 0).emit("ref.cast", T.text).emit("struct.get", T.text, 0).emit("local.get", 1).emit("ref.cast", T.text).emit("struct.get", T.text, 0);
-    c.emit("call", im.sameText).emit("return").emit("end");
+    c.emit("local.get", 0).emit("local.get", 1).emit("call", R.sameText).emit("return").emit("end");
     both(T.list);
     both(T.record);
     c.emit("i32.or");
@@ -287,16 +395,22 @@ function declareRuntime(m, T, im) {
     c.emit("i32.const", 0);
   });
 
-  // less than, greater than, at least, at most: numbers here, text and mistakes in JavaScript
+  // less than, greater than, at least, at most: numbers and text here, mistakes in JavaScript
   ["lt", "gt", "ge", "le"].forEach((label, i) => {
     fn(label, [EQ, EQ, I32], [I32], (c) => {
+      const test = ORDER_TESTS[["less than", "greater than", "at least", "at most"][i]];
       bothNums(c, T, 0, 1).emit("if", I32);
       numOf(c, T, 0);
       numOf(c, T, 1);
       c.emit("call", R.ncmp);
-      ORDER_TESTS[["less than", "greater than", "at least", "at most"][i]](c);
+      test(c);
+      c.emit("else");
+      c.emit("local.get", 0).emit("ref.test", T.text).emit("local.get", 1).emit("ref.test", T.text).emit("i32.and").emit("if", I32);
+      c.emit("local.get", 0).emit("local.get", 1).emit("call", R.textOrder);
+      test(c);
       c.emit("else");
       c.emit("i32.const", i + 1).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.compare).emit("end");
+      c.emit("end");
     });
   });
 
@@ -365,7 +479,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.test", T.host).emit("if");
     c.emit("local.get", 1).emit("ref.test", T.text).emit("if");
     mapOf(c, T, 0);
-    textOf(c, T, 1).emit("local.get", 2).emit("call", im.dictGetText).emit("return").emit("end");
+    textOf(c, R, 1).emit("local.get", 2).emit("call", im.dictGetText).emit("return").emit("end");
     isNum(c, T, 1).emit("if");
     mapOf(c, T, 0);
     numOf(c, T, 1).emit("local.get", 2).emit("call", im.dictGetNum).emit("return").emit("end");
@@ -397,7 +511,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.test", T.host).emit("if");
     c.emit("local.get", 1).emit("ref.test", T.text).emit("if");
     mapOf(c, T, 0);
-    textOf(c, T, 1).emit("local.get", 2).emit("call", im.dictSetText).emit("return").emit("end");
+    textOf(c, R, 1).emit("local.get", 2).emit("call", im.dictSetText).emit("return").emit("end");
     isNum(c, T, 1).emit("if");
     mapOf(c, T, 0);
     numOf(c, T, 1).emit("local.get", 2).emit("call", im.dictSetNum).emit("return").emit("end");
@@ -410,7 +524,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 1).emit("ref.test", T.host).emit("if");
     c.emit("local.get", 0).emit("ref.test", T.text).emit("if");
     mapOf(c, T, 1);
-    textOf(c, T, 0).emit("call", im.dictHasText).emit("return").emit("end");
+    textOf(c, R, 0).emit("call", im.dictHasText).emit("return").emit("end");
     isNum(c, T, 0).emit("if");
     mapOf(c, T, 1);
     numOf(c, T, 0).emit("call", im.dictHasNum).emit("return").emit("end");
@@ -611,6 +725,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.field).emit("unreachable");
   });
 
+  shared.finish(im);
   return R;
 }
 
@@ -631,17 +746,8 @@ function declareExports(m, T, R) {
     c.emit("i32.const", TAGS.unset);
   });
   fn("num", [EQ], [F64], (c) => numOf(c, T, 0));
-  fn("textValue", [EQ], ["externref"], (c) => c.emit("local.get", 0).emit("ref.cast", T.text).emit("struct.get", T.text, 0));
   fn("listLength", [EQ], [I32], (c) => c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 1));
   fn("listItem", [EQ, I32], [EQ], (c) => c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 0).emit("local.get", 1).emit("array.get", T.items));
-  // a list's item's JavaScript string, if it's text, or null: one call for each item of a list of text
-  fn("listText", [EQ, I32], ["externref"], (c, f) => {
-    const item = f.local(EQ);
-    c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 0).emit("local.get", 1).emit("array.get", T.items).emit("local.tee", item);
-    c.emit("ref.test", T.text).emit("if", "externref");
-    textOf(c, T, item);
-    c.emit("else").emit("ref.null", "extern").emit("end");
-  });
   fn("recordSize", [EQ], [I32], (c) => c.emit("local.get", 0).emit("ref.cast", T.record).emit("struct.get", T.record, 2));
   fn("recordKey", [EQ, I32], [I32], (c) => c.emit("local.get", 0).emit("ref.cast", T.record).emit("struct.get", T.record, 0).emit("local.get", 1).emit("array.get", T.ids));
   fn("recordValue", [EQ, I32], [EQ], (c) => c.emit("local.get", 0).emit("ref.cast", T.record).emit("struct.get", T.record, 1).emit("local.get", 1).emit("array.get", T.items));
@@ -662,7 +768,6 @@ function declareExports(m, T, R) {
   fn("scopeSlot", [EQ, I32], [EQ], (c) => c.emit("local.get", 0).emit("ref.cast", T.closure).emit("struct.get", T.closure, 1).emit("struct.get", T.env, 1).emit("local.get", 1).emit("array.get", T.items));
   fn("setScopeSlot", [EQ, I32, EQ], [], (c) => c.emit("local.get", 0).emit("ref.cast", T.closure).emit("struct.get", T.closure, 1).emit("struct.get", T.env, 1).emit("local.get", 1).emit("local.get", 2).emit("array.set", T.items));
   fn("makeNum", [F64], [EQ], (c) => c.emit("local.get", 0).emit("call", R.box));
-  fn("makeText", ["externref"], [EQ], (c) => c.emit("local.get", 0).emit("struct.new", T.text));
   fn("newList", [], [EQ], (c) => c.emit("i32.const", 0).emit("array.new_default", T.items).emit("i32.const", 0).emit("struct.new", T.list));
   fn("listPush", [EQ, EQ], [], (c) => c.emit("local.get", 0).emit("local.get", 1).emit("call", R.push));
   fn("hostValue", [EQ], ["externref"], (c) => c.emit("local.get", 0).emit("ref.cast", T.host).emit("struct.get", T.host, 0));
@@ -1536,8 +1641,9 @@ export function compileToWasmModule(program) {
     maxSteps: named("maxSteps", m.global(F64, true, new Code().emit("f64.const", Infinity))),
     depth: named("depth", m.global(I32, true, new Code().emit("i32.const", 0))),
     calls: named("calls", m.global(ref(T.ids), false, new Code().emit("i32.const", 2 * MAX_DEPTH).emit("array.new_default", T.ids))), // see call()
-    init: m.func("init", [], []), // makes the text the program holds
-    texts: [],
+    init: m.func("init", [], []), // makes the text the program holds, from its units in the module's data
+    units: [], // each text's UTF-16 units, as bytes
+    data: null,
     id(name) {
       if (!nameIds.has(name)) nameIds.set(name, names.push(name) - 1);
       return nameIds.get(name);
@@ -1552,7 +1658,11 @@ export function compileToWasmModule(program) {
       if (!texts.has(value)) {
         const global = named(`text${texts.size}`, m.global(refNull(T.text), true, new Code().emit("ref.null", T.text)));
         texts.set(value, global);
-        ctx.init.code.emit("i32.const", ctx.texts.push(value) - 1).emit("call", im.text).emit("struct.new", T.text).emit("global.set", global);
+        ctx.data ??= m.data(ctx.units);
+        const at = ctx.units.length;
+        for (let i = 0; i < value.length; i++) ctx.units.push(value.charCodeAt(i) & 255, value.charCodeAt(i) >> 8);
+        ctx.init.code.emit("i32.const", at).emit("i32.const", value.length).emit("array.new_data", T.chars, ctx.data);
+        ctx.init.code.emit("i32.const", value.length).emit("call", R.newText).emit("global.set", global);
       }
       return texts.get(value);
     },
@@ -1585,7 +1695,7 @@ export function compileToWasmModule(program) {
   const restart = m.func("restart", [], []);
   restart.code.emit("call", ctx.im.grant).emit("global.set", ctx.left).emit("i32.const", 0).emit("global.set", ctx.depth);
   m.export("restart", restart.index);
-  return { bytes: m.encode(), listing: m.listing(ctx.init.index), ats: ctx.ats, names, messages, texts: ctx.texts, kinds: ctx.kinds };
+  return { bytes: m.encode(), listing: m.listing(ctx.init.index), ats: ctx.ats, names, messages, kinds: ctx.kinds };
 }
 
 // Compiles a parsed program: { bytes, listing, run(print, draw, maxSteps) }, like jit() in jit.js.
@@ -1611,7 +1721,7 @@ export function wasmFile(bytes) {
 }
 
 // The JavaScript side of a run: the imports, and moving values in and out of the module.
-function instantiate(module, { ats, names, messages, texts, kinds }, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
+function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
   // Every mistake made is kept, for a `try`: JavaScript's exceptions cross WebAssembly, but only JavaScript can
   // tell which ones it was. A `fail with` keeps its value as WebAssembly holds it, so catching it keeps it whole.
   let lastError = null;
@@ -1637,6 +1747,34 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
   host.turtle = turtle;
   let x = null; // the module's exports, once it exists
 
+  // Text's JavaScript string: kept in the text, if it has one, or made from its units, which textView or
+  // listView have put in the module's memory (how many, then the first 32,766 of them), and textOut the rest.
+  // Long text keeps the string it was given, so a text read again costs nothing.
+  let units = null; // the module's memory, as 16-bit units, and its first 4 bytes as a whole number
+  let count = null;
+  const fromUnits = (from, to) => { // the units from place `from` to `to` in the memory, as a string
+    if (to - from < 16) {
+      let s = "";
+      for (let j = from; j < to; j++) s += String.fromCharCode(units[j]);
+      return s;
+    }
+    const parts = [];
+    for (let j = from; j < to; j += 8192) parts.push(String.fromCharCode.apply(null, units.subarray(j, Math.min(j + 8192, to))));
+    return parts.join("");
+  };
+  function textInMemory(v) {
+    const n = count[0];
+    let s = fromUnits(2, 2 + Math.min(n, 32766));
+    for (let i = 32766; i < n;) {
+      const got = x.textOut(v, i);
+      s += fromUnits(0, got);
+      i += got;
+    }
+    x.setTextJs(v, s);
+    return s;
+  }
+  const textValue = (v) => x.textView(v) ?? textInMemory(v);
+
   function toJs(v, seen = new Map()) {
     if (v === null) return null;
     if (typeof v === "number") return v === 1 ? true : v === 0 ? false : v; // i31 values reach JavaScript as numbers: 1 and 0 are yes and no
@@ -1645,19 +1783,16 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
       case TAGS.number:
         return x.num(v);
       case TAGS.text:
-        return x.textValue(v);
+        return textValue(v);
       case TAGS.list: {
         const list = [];
         seen.set(v, list);
-        const n = x.listLength(v);
-        let i = 0;
-        if (n > 0 && x.listText(v, 0) !== null) { // a list of text, most likely: each text in one call
-          for (; i < n; i++) {
-            const text = x.listText(v, i);
-            list.push(text !== null ? text : toJs(x.listItem(v, i), seen));
-          }
+        for (let i = 0, n = x.listLength(v); i < n; i++) { // text, the most common item, in one call
+          const s = x.listView(v, i);
+          if (s !== null) list.push(s);
+          else if (count[0] >= 0) list.push(textInMemory(x.listItem(v, i)));
+          else list.push(toJs(x.listItem(v, i), seen));
         }
-        for (; i < n; i++) list.push(toJs(x.listItem(v, i), seen));
         return list;
       }
       case TAGS.record: {
@@ -1695,7 +1830,7 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
     if (v === null) return null;
     if (typeof v === "boolean") return v ? 1 : 0;
     if (typeof v === "number") return x.makeNum(v);
-    if (typeof v === "string") return x.makeText(v);
+    if (typeof v === "string") return x.makeTextJs(v, v.length);
     if (isQuantity(v)) return x.makeQty(v.amount, v.unit);
     if (isRecord(v)) { // a table's row: its fields by the module's ids for their names, new names given new ones
       const record = x.makeRecord();
@@ -1787,7 +1922,7 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
         return workerDone({ gave: workerCopy(gave) });
       } catch (err) {
         if (!(err instanceof CantCopy)) throw err;
-        return workerDone({ failed: x.makeText(err.message) });
+        return workerDone({ failed: toWasm(err.message) });
       }
     },
     workerFailed: () => {
@@ -1796,7 +1931,7 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
         return workerDone({ failed: workerCopy(value) });
       } catch (err) {
         if (!(err instanceof CantCopy)) throw err;
-        return workerDone({ failed: x.makeText(err.message) });
+        return workerDone({ failed: toWasm(err.message) });
       }
     },
     say: (parts) => print(toJs(parts).map((p) => show(p)).join("")),
@@ -1815,11 +1950,6 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
     },
     divisible: (a, b) => (divisible(a, b) ? 1 : 0),
     equal: (a, b) => (equal(toJs(a), toJs(b)) ? 1 : 0),
-    sameText: (a, b) => (a === b ? 1 : 0),
-    concat: (a, b) => a + b,
-    textNum: (a, n) => a + show(n),
-    numText: (n, b) => show(n) + b,
-    text: (i) => texts[i],
     lengthOf: (v, k) => lengthOf(rawOf(v), errors[k]),
     item: (target, n, k) => { // a list's items are found in WebAssembly, so a list here is a mistake
       const [seq, i] = item(rawOf(target), toJs(n), false, errors[k]);
@@ -1915,8 +2045,20 @@ function instantiate(module, { ats, names, messages, texts, kinds }, print, draw
     expectYes: (value, k) => expectYes(toJs(value), errors[k]),
     play: (note, time, unit, k) => play(soundOf(toJs(note), toJs(time), unit, errors[k])),
     beep: () => play({ ...BEEP }),
+    jsText: (t) => textValue(t),
+    fill: (t) => { // the units of text JavaScript made, for the module to work on, through its memory
+      const s = x.textJs(t);
+      x.textBegin(t);
+      for (let i = 0; i < s.length; i += 32768) {
+        const n = Math.min(32768, s.length - i);
+        for (let j = 0; j < n; j++) units[j] = s.charCodeAt(i + j);
+        x.textIn(t, i, n);
+      }
+    },
   };
   x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  units = new Uint16Array(x.memory.buffer);
+  count = new Int32Array(x.memory.buffer, 0, 1);
   host.call = (handler, inputs) => {
     granted = 0; // each handler's call has steps of its own
     x.restart();

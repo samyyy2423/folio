@@ -1618,6 +1618,7 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`wasm-binary.js`](wasm-binary.js) | WebAssembly's binary format, written byte by byte |
 | [`wasm.js`](wasm.js) | Moth to WebAssembly, with escape analysis and unboxed numbers |
 | [`wasm.moth`](wasm.moth) | The same, written in Moth: wasm.js's bytes exactly, and `moth build --target wasm` |
+| [`wasm-runtime.js`](wasm-runtime.js) | The part of their runtime written once, as WebAssembly, which both assemble: text, and numbers shown in it; `make-wasm-runtime.mjs` writes it into `wasm-runtime.moth` for wasm.moth |
 | [`checker.js`](checker.js) | Finds mistakes without running the program |
 | [`compiler.moth`](compiler.moth) | Moth's compiler, written in Moth |
 | [`machine.moth`](machine.moth) | Moth to x86-64 machine code, written in Moth: a Windows .exe or a Linux program, byte by byte |

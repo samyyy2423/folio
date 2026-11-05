@@ -11,7 +11,7 @@ import { PROGRAMS, ERRORS, SAVING, TYPED, brokenPrograms } from "./cases.js";
 import { machinePrograms } from "./machine-programs.js";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
-const compileWasm = wasmMothCompiler(here("wasm.moth"), here("compiler.moth"));
+const compileWasm = wasmMothCompiler(here("wasm.moth"), here("compiler.moth"), here("wasm-runtime.moth"));
 
 // every program the engines are tested with: the playground's examples, the hand-written cases, and the
 // random programs the fuzzers make, broken on purpose or not
@@ -98,7 +98,7 @@ test("wasm.moth reads the files a program uses, and points at mistakes in them",
 // The step before moth.wasm: wasm.moth, with compiler.moth, is a program like any other, so it compiles itself
 // into wasm.js's bytes, and that module, run, compiles a program into the same bytes again.
 test("wasm.moth compiles itself into wasm.js's bytes, and the module it makes compiles programs as it does", () => {
-  const files = { "compiler.moth": here("compiler.moth"), "wasm.moth": here("wasm.moth") };
+  const files = { "compiler.moth": here("compiler.moth"), "wasm.moth": here("wasm.moth"), "wasm-runtime.moth": here("wasm-runtime.moth") };
   const program = 'to f with n\n    return n * 2\nend\nsay "twice 21 is " f(21)';
   const driver = `use "wasm.moth" as webassembly\nset made to webassembly's wasm_compile(${JSON.stringify(program)}, empty list, empty list)\nsay join code of made with ","\n`;
   const itself = compileWasm(driver, files).bytes;

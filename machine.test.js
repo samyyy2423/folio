@@ -295,8 +295,8 @@ let standalone = null;
 function mothExe() {
   if (standalone) return standalone;
   const dir = mkdtempSync(join(tmpdir(), "moth-standalone-"));
-  const sources = Object.fromEntries(["moth.moth", "machine.moth", "compiler.moth", "wasm.moth", "stdlib.moth", "webpage.moth", "checker-rules.moth", "moth-debugger.moth", "tools/hash.moth", "moth-coverage.moth", "package.json"].map((f) => [f, here(f)]));
-  const made = machine(sources["moth.moth"], { files: { "machine.moth": sources["machine.moth"], "compiler.moth": sources["compiler.moth"], "wasm.moth": sources["wasm.moth"], "stdlib.moth": sources["stdlib.moth"], "webpage.moth": sources["webpage.moth"], "checker-rules.moth": sources["checker-rules.moth"], "tools/hash.moth": sources["tools/hash.moth"], "moth-coverage.moth": sources["moth-coverage.moth"] }, target, name: "moth.moth", allow: ["--allow-read", "--allow-write", "--allow-run"],
+  const sources = Object.fromEntries(["moth.moth", "machine.moth", "compiler.moth", "wasm.moth", "wasm-runtime.moth", "stdlib.moth", "webpage.moth", "checker-rules.moth", "moth-debugger.moth", "tools/hash.moth", "moth-coverage.moth", "package.json"].map((f) => [f, here(f)]));
+  const made = machine(sources["moth.moth"], { files: { "machine.moth": sources["machine.moth"], "compiler.moth": sources["compiler.moth"], "wasm.moth": sources["wasm.moth"], "wasm-runtime.moth": sources["wasm-runtime.moth"], "stdlib.moth": sources["stdlib.moth"], "webpage.moth": sources["webpage.moth"], "checker-rules.moth": sources["checker-rules.moth"], "tools/hash.moth": sources["tools/hash.moth"], "moth-coverage.moth": sources["moth-coverage.moth"] }, target, name: "moth.moth", allow: ["--allow-read", "--allow-write", "--allow-run"],
     include: Object.fromEntries(["moth-debugger.moth", "package.json"].map((file) => [file, Buffer.from(sources[file])])) });
   const exe = executable(dir, "moth-first");
   writeFileSync(exe, made);
@@ -1419,7 +1419,7 @@ test("moth.exe runs a program, passing its arguments, input, output and exit cod
   writeFileSync(join(dir, "broken.moth"), "say 1 +\n");
   mkdirSync(join(dir, "deeper"), { recursive: true });
   writeFileSync(join(dir, "deeper", "deep.moth"), 'say "deep"\n');
-  const left = () => readdirSync(dir).filter((name) => name.includes("-run"));
+  const left = () => readdirSync(dir).filter((name) => /-run([.]exe)?$/.test(name));
   const ran = spawnSync(exe, ["run", "--allow-read", "tool.moth", "one", "two words", "--allow-write"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
   assert.deepEqual({ stdout: ran.stdout, stderr: ran.stderr, status: ran.status }, {
     stdout: "[one]\n[two words]\n[--allow-write]\nName? Sam\nheard Sam\nnoted\n", // what comes after the file is the program's own
@@ -1451,7 +1451,7 @@ test("moth.exe runs a program, passing its arguments, input, output and exit cod
   assert.deepEqual([deep.status, deep.stdout], [0, "deep\n"]);
   const slashed = spawnSync(exe, ["run", "deeper/deep.moth"], { cwd: dir, encoding: "utf8" }); // a / on Windows too
   assert.deepEqual([slashed.status, slashed.stdout, slashed.stderr], [0, "deep\n", ""]);
-  assert.deepEqual(readdirSync(join(dir, "deeper")).filter((name) => name.includes("-run")), []);
+  assert.deepEqual(readdirSync(join(dir, "deeper")).filter((name) => /-run([.]exe)?$/.test(name)), []);
   for (const bad of [["run"], ["run", "--target", "linux", "tool.moth"], ["walk", "tool.moth"]]) {
     const said = spawnSync(exe, bad, { cwd: dir, encoding: "utf8" });
     assert.deepEqual([said.status, said.stdout], [2, ""], bad.join(" "));
