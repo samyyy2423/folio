@@ -6577,3 +6577,28 @@ are gone, and every value check, and every mistake one makes, is the module's ow
   A module for `say 1` is 27,149 bytes; leaving out the runtime a program doesn't call is worth more as part 5
   adds to it.
 
+## 155. The operators, in the WebAssembly module
+
+The first of stage 2's fifth part, the built-ins: the operators, which every program uses. A module imports 34
+functions, not 40: `plus`, `arithmetic`, `negate`, `compare`, `numberOrder` and `equal` are gone.
+
+- **What they did in JavaScript.** Two numbers, and text with text or a number, were the module's already. The
+  rest went out: `+` with text and any other value (joined as show makes it, §153), amounts (`5 km + 300 m`,
+  `2 * 3 km`, `6 km / 2 km`, `-(5 km)`, compared in the first one's unit), `is` by value for lists, records,
+  dictionaries, bytes and amounts, `is in`, and every mistake. Each is as vm.js does it now, in the module.
+- **`is` by value**, as vm.js's equal: a list, record or dictionary by what it holds, the pair of them on a stack
+  while they're compared, so a list that holds itself is the same as another that holds itself; a dictionary's
+  keys found in the other by its slots (§147), a record's fields by their ids; bytes byte by byte; an amount in
+  the first one's unit, to 15 digits.
+- **Two numbers that agree to 15 digits, or nearly** (`0.30000000000000004 is less than 0.3`): both to 15 digits
+  (`canonAny`, §153), then compared, as numberOrder does.
+- **`is in`**, as isIn: an item of a list by value, a number among bytes to 15 digits, a key of a dictionary (no
+  dictionary has a key that isn't text or a number, so a list is in none), or a piece of a text, unit by unit.
+- **Left in JavaScript: `remainder` and `divisible`,** for numbers that aren't both whole and below 2^52 (the module
+  does those). Each needs JavaScript's `%` on doubles, which is exact (C's fmod), and WebAssembly has no remainder
+  for floats; doing it from the bits, as musl's fmod does, is for the next part.
+- **Checked.** A module run with those imports failing the test: text joined with a list and a record, 15-digit
+  comparing, `is` on lists, records, dictionaries and lists that hold themselves, `is in` four ways, and eight
+  mistakes, as the VM says them; amounts on both engines; and every program the engines are tested with, made by
+  wasm.js, wasm.folio and folio.wasm byte for byte.
+

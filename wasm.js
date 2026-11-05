@@ -15,8 +15,7 @@ import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
 import { TooDeep } from "./jit.js";
-import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, compare, plus, arithmetic,
-  negate, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, failWith, BUILTINS, askFor, readFile, writeFile,
+import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, show, divisible, canon, noValue, stoppedMessage, makeRecord, failWith, BUILTINS, askFor, readFile, writeFile,
   trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, everyInterval, Quantity, isQuantity, isRecord, Ended, exitCode, removeFile, fakeClock,
   nowValue, waitFor, readFolder, soundOf, BEEP, CantCopy, DEEPEST_COPY, madeInside, tooDeepToCopy, workerEnded, workerResult, workerRoom,
   workerTaken, enterWorker, leaveWorker } from "./vm.js";
@@ -43,14 +42,8 @@ const IMPORTS = {
   say: [[EQ], []],
   sayError: [[EQ], []], // a line for the error output
   exit: [[EQ, I32], []], // `stop the program with` this, and a position
-  plus: [[EQ, EQ, I32], [EQ]],
-  arithmetic: [[I32, EQ, EQ, I32], [EQ]],
-  negate: [[EQ, I32], [EQ]],
-  compare: [[I32, EQ, EQ, I32], [I32]],
   remainder: [[F64, F64], [F64]],
-  numberOrder: [[F64, F64], [I32]],
   divisible: [[F64, F64], [I32]],
-  equal: [[EQ, EQ], [I32]],
   stopped: [[I32], []],
   refill: [[I32], [I32]], // more steps, as a step count's last ran out: how many are left after this one
   grant: [[], [I32]], // the steps a run (or an app's handler) starts with
@@ -279,7 +272,7 @@ function declareRuntime(m, T, im) {
   // a Folio value that's a number, as an f64
   fn("unbox", [EQ], [F64], (c) => numOf(c, T, 0));
 
-  // + - * /: two numbers here, anything else (joining text, or a mistake) in JavaScript
+  // + - * /: two numbers here, anything else (joining text, amounts, or a mistake) in plusRest and arithRest
   MATH.forEach((sign, op) => {
     fn(["add", "sub", "mul", "div"][op], [EQ, EQ, I32], [EQ], (c) => {
       bothNums(c, T, 0, 1).emit("if", EQ);
@@ -288,10 +281,10 @@ function declareRuntime(m, T, im) {
       numOf(c, T, 1);
       c.emit(["f64.add", "f64.sub", "f64.mul", "f64.div"][op]).emit("call", R.box);
       const slow = () => {
-        if (sign === "+") c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.plus);
-        else c.emit("i32.const", op).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.arithmetic); // an amount, or a mistake
+        if (sign === "+") c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.plusRest);
+        else c.emit("i32.const", op).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.arithRest); // an amount, or a mistake
       };
-      if (sign === "/") c.emit("else").emit("i32.const", op).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.arithmetic).emit("unreachable").emit("end");
+      if (sign === "/") c.emit("else").emit("i32.const", op).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.arithRest).emit("unreachable").emit("end");
       c.emit("else");
       if (sign === "+") { // text and text, or text and a number, joined here; the rest as before
         const isText = (x) => c.emit("local.get", x).emit("ref.test", T.text);
@@ -323,12 +316,12 @@ function declareRuntime(m, T, im) {
   fn("neg", [EQ, I32], [EQ], (c) => {
     isNum(c, T, 0).emit("if", EQ);
     numOf(c, T, 0).emit("f64.neg").emit("call", R.box);
-    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.negate).emit("end"); // an amount, or a mistake
+    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", R.negRest).emit("end"); // an amount, or a mistake
   });
 
   // How two numbers compare, to 15 digits (numberOrder in vm.js): -1, 0, 1, or 2 if either is NaN. Two that are
   // equal, two whole numbers, and two further apart than 15 digits tell are answered here; the rest, which
-  // agree to 15 digits or nearly, in JavaScript.
+  // agree to 15 digits or nearly, in nearOrder.
   fn("ncmp", [F64, F64], [I32], (c) => {
     c.emit("local.get", 0).emit("local.get", 1).emit("f64.eq").emit("if").emit("i32.const", 0).emit("return").emit("end");
     const whole = (x) => c.emit("local.get", x).emit("local.get", x).emit("f64.trunc").emit("f64.eq");
@@ -337,13 +330,13 @@ function declareRuntime(m, T, im) {
     c.emit("i32.and").emit("i32.eqz");
     c.emit("local.get", 0).emit("local.get", 1).emit("f64.sub").emit("f64.abs");
     c.emit("local.get", 0).emit("f64.abs").emit("local.get", 1).emit("f64.abs").emit("f64.max").emit("f64.const", 1e-14).emit("f64.mul").emit("f64.le");
-    c.emit("i32.and").emit("if").emit("local.get", 0).emit("local.get", 1).emit("call", im.numberOrder).emit("return").emit("end");
+    c.emit("i32.and").emit("if").emit("local.get", 0).emit("local.get", 1).emit("call", R.nearOrder).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("f64.lt").emit("if").emit("i32.const", -1).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("f64.gt").emit("if").emit("i32.const", 1).emit("return").emit("end");
     c.emit("i32.const", 2);
   });
 
-  // `is`: numbers by value, text by its letters, lists, records, dictionaries and bytes (in JavaScript) by
+  // `is`: numbers by value, text by its letters, lists, records, dictionaries and bytes (in deepEq) by
   // what they hold, everything else (yes, no, nothing, functions) by identity
   fn("eq", [EQ, EQ], [I32], (c) => {
     bothNums(c, T, 0, 1).emit("if");
@@ -362,11 +355,11 @@ function declareRuntime(m, T, im) {
     both(T.bytes);
     c.emit("i32.or");
     c.emit("local.get", 0).emit("ref.test", T.qty).emit("local.get", 1).emit("ref.test", T.qty).emit("i32.or"); // 1 km is 1000 m, and not 1000
-    c.emit("i32.or").emit("if").emit("local.get", 0).emit("local.get", 1).emit("call", im.equal).emit("return").emit("end");
+    c.emit("i32.or").emit("if").emit("local.get", 0).emit("local.get", 1).emit("call", R.deepEq).emit("return").emit("end");
     c.emit("i32.const", 0);
   });
 
-  // less than, greater than, at least, at most: numbers and text here, mistakes in JavaScript
+  // less than, greater than, at least, at most: numbers and text here, amounts and mistakes in compareRest
   ["lt", "gt", "ge", "le"].forEach((label, i) => {
     fn(label, [EQ, EQ, I32], [I32], (c) => {
       const test = ORDER_TESTS[["less than", "greater than", "at least", "at most"][i]];
@@ -380,7 +373,7 @@ function declareRuntime(m, T, im) {
       c.emit("local.get", 0).emit("local.get", 1).emit("call", R.textOrder);
       test(c);
       c.emit("else");
-      c.emit("i32.const", i + 1).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.compare).emit("end");
+      c.emit("i32.const", i + 1).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.compareRest).emit("end");
       c.emit("end");
     });
   });
@@ -392,7 +385,7 @@ function declareRuntime(m, T, im) {
     const whole = (x) => c.emit("local.get", x).emit("local.get", x).emit("f64.trunc").emit("f64.eq").emit("local.get", x).emit("f64.abs").emit("f64.const", 2 ** 52).emit("f64.lt").emit("i32.and");
     c.emit("local.get", 1).emit("f64.const", 0).emit("f64.eq").emit("if");
     c.emit("i32.const", COMPARE_OPS.indexOf("divisible by")).emit("local.get", 0).emit("call", R.box).emit("local.get", 1).emit("call", R.box);
-    c.emit("local.get", 2).emit("call", im.compare).emit("return").emit("end");
+    c.emit("local.get", 2).emit("call", R.compareRest).emit("return").emit("end");
     whole(0);
     whole(1);
     c.emit("i32.and").emit("if", I32);
@@ -405,7 +398,7 @@ function declareRuntime(m, T, im) {
     numOf(c, T, 0);
     numOf(c, T, 1);
     c.emit("local.get", 2).emit("call", R.dvf);
-    c.emit("else").emit("i32.const", COMPARE_OPS.indexOf("divisible by")).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.compare).emit("end");
+    c.emit("else").emit("i32.const", COMPARE_OPS.indexOf("divisible by")).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.compareRest).emit("end");
   });
 
   fn("lengthOf", [EQ, I32], [EQ], (c) => {
@@ -486,7 +479,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 1).emit("ref.test", T.dict).emit("local.get", 0).emit("ref.test", T.text);
     isNum(c, T, 0).emit("i32.or").emit("i32.and").emit("if");
     c.emit("local.get", 1).emit("local.get", 0).emit("call", R.dictHas).emit("return").emit("end");
-    c.emit("i32.const", COMPARE_OPS.indexOf("in")).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.compare);
+    c.emit("i32.const", COMPARE_OPS.indexOf("in")).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.compareRest);
   });
 
   // `bit and`, `bit or`, `bit xor` (which = 0, 1, 2) and `shift ... left/right by` (3, 4), here when both are
@@ -911,7 +904,7 @@ class WasmCompiler extends Scope {
       const [a, b] = [this.temp(F64), this.temp(F64)];
       this.e("local.set", b).e("local.set", a).e("local.get", b).e("f64.const", 0).e("f64.eq").e("if");
       this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
-      this.e("i32.const", this.pos(e.at)).e("call", im.arithmetic).e("unreachable").e("end");
+      this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R.arithRest).e("unreachable").e("end");
       return void this.e("local.get", a).e("local.get", b).e("f64.div");
     }
     if (e.kind === "negate" && this.unboxed(e)) return void (this.exprNum(e.operand), this.e("f64.neg"));
@@ -1969,17 +1962,8 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     say: (parts) => print(toJs(parts).map((p) => show(p)).join("")),
     sayError: (parts) => printError(toJs(parts).map((p) => show(p)).join("")),
     exit: (code, k) => throwing(new Ended(exitCode(toJs(code), errors[k]))), // kept as the last thing thrown, which no `try` catches
-    plus: (a, b, k) => toWasm(plus(toJs(a), toJs(b), errors[k])),
-    arithmetic: (op, a, b, k) => toWasm(arithmetic(MATH[op], toJs(a), toJs(b), errors[k])),
-    negate: (v, k) => toWasm(negate(toJs(v), errors[k])),
-    compare: (op, a, b, k) => (compare(COMPARE_OPS[op], toJs(a), toJs(b), errors[k]) ? 1 : 0),
     remainder: (a, b) => a % b,
-    numberOrder: (a, b) => {
-      const order = numberOrder(a, b);
-      return Number.isNaN(order) ? 2 : order;
-    },
     divisible: (a, b) => (divisible(a, b) ? 1 : 0),
-    equal: (a, b) => (equal(toJs(a), toJs(b)) ? 1 : 0),
     stopped: (k) => {
       const err = new FolioError(ats[k], stoppedMessage(maxSteps), undefined, trail());
       err.final = true; // no try catches it

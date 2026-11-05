@@ -1962,6 +1962,426 @@ global.get g.kindsData local.get at i32.const 1 i32.add local.get i i32.const 1 
 global.get g.toBe call R.concat local.get wanted call R.kindName call R.concat global.get g.notComma call R.concat
 local.get v call R.kindWords call R.concat i32.const 0 local.get k throw 0
 
+;; ---------- the operators: + - * /, '-', comparing, 'is' and 'in' (DESIGN §155) ----------
+;; What + - * / and comparing do with what isn't two numbers or two texts: text joined with a value as show makes
+;; it, amounts of the same measure, 'is' by value for lists, records, dictionaries, bytes and amounts, 'in', and
+;; every mistake they make, as vm.js's plus, arithmetic, negate, compare, equal and isIn do them.
+
+text cantUseWords "can't use '"
+text onWords "' on "
+text divideByZero "can't divide by zero"
+text minusNeeds "'-' needs a number, not "
+text cantCheckWords "can't check if "
+text isInWords " is in "
+text opPlus "+"
+text opMinus "-"
+text opTimes "*"
+text opOver "/"
+text cmpLess "less than"
+text cmpGreater "greater than"
+text cmpAtLeast "at least"
+text cmpAtMost "at most"
+text cmpDivisible "divisible by"
+;; the pairs being compared further up, so a list holding itself is the same as one that holds it
+global eqA null:items mut ref.null items
+global eqB null:items mut ref.null items
+global eqN i32 mut i32.const 0
+
+;; MATH[op] in wasm.js: + - * /
+func opWord op:i32 -> eq
+local.get op i32.eqz if
+  global.get g.opPlus return
+end
+local.get op i32.const 1 i32.eq if
+  global.get g.opMinus return
+end
+local.get op i32.const 2 i32.eq if
+  global.get g.opTimes return
+end
+global.get g.opOver
+
+;; COMPARE_OPS[op] in vm.js, of those with a mistake of their own: less than, greater than, at least, at most,
+;; divisible by
+func cmpWord op:i32 -> eq
+local.get op i32.const 1 i32.eq if
+  global.get g.cmpLess return
+end
+local.get op i32.const 2 i32.eq if
+  global.get g.cmpGreater return
+end
+local.get op i32.const 3 i32.eq if
+  global.get g.cmpAtLeast return
+end
+local.get op i32.const 4 i32.eq if
+  global.get g.cmpAtMost return
+end
+global.get g.cmpDivisible
+
+;; q's amount in unit u, of the same measure, as vm.js's amountIn makes it: 5 km is 5000 in m
+func amountIn q:eq u:i32 -> f64
+local w i32
+local.get q ref.cast qty struct.get qty 1 local.tee w local.get u i32.eq if
+  local.get q ref.cast qty struct.get qty 0 return
+end
+local.get q ref.cast qty struct.get qty 0 local.get w call R.unitFactor f64.mul local.get u call R.unitFactor f64.div
+
+;; 1 if a and b are amounts of the same measure
+func sameMeasure a:eq b:eq -> i32
+local.get a ref.test qty local.get b ref.test qty i32.and if i32
+  global.get g.unitMeasure local.get a ref.cast qty struct.get qty 1 array.get ids
+  global.get g.unitMeasure local.get b ref.cast qty struct.get qty 1 array.get ids i32.eq
+else
+  i32.const 0
+end
+
+;; the mistake of + - * / on a and b: "can't use '-' on text and a list"
+func cantUse a:eq b:eq op:i32 k:i32 ->
+global.get g.cantUseWords local.get op call R.opWord call R.concat global.get g.onWords call R.concat local.get a call R.kindWords call R.concat
+global.get g.andWords call R.concat local.get b call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; the mistake of comparing a and b with op: "can't check if text is less than a number"
+func cantCheck a:eq b:eq op:i32 k:i32 ->
+global.get g.cantCheckWords local.get a call R.kindWords call R.concat global.get g.wIs call R.concat local.get op call R.cmpWord call R.concat
+global.get g.wSpace call R.concat local.get b call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; '+' for what the module hasn't added: text and any value, joined as show makes the value; amounts of the same
+;; measure, in the first one's unit; or the mistake
+func plusRest a:eq b:eq k:i32 -> eq
+local.get a ref.test text if
+  local.get a local.get b i32.const 0 call R.show call R.concat return
+end
+local.get b ref.test text if
+  local.get a i32.const 0 call R.show local.get b call R.concat return
+end
+local.get a local.get b call R.sameMeasure if
+  local.get a ref.cast qty struct.get qty 0 local.get b local.get a ref.cast qty struct.get qty 1 call R.amountIn f64.add
+  local.get a ref.cast qty struct.get qty 1 struct.new qty return
+end
+local.get a local.get b i32.const 0 local.get k call R.cantUse
+local.get a
+
+;; '-', '*' and '/' (op 1, 2 and 3) for what the module hasn't worked out: a number over 0, an amount less one of
+;; the same measure, times a number, or over a number or one of the same measure (which gives how many times it
+;; goes in); or the mistake
+func arithRest op:i32 a:eq b:eq k:i32 -> eq
+local by f64
+local.get a call R.isNumber local.get b call R.isNumber i32.and if
+  local.get op i32.const 3 i32.eq local.get b call R.numberOf f64.const d0 f64.eq i32.and if
+    global.get g.divideByZero i32.const 0 local.get k throw 0
+  end
+  local.get op i32.const 1 i32.eq if
+    local.get a call R.numberOf local.get b call R.numberOf f64.sub call R.box return
+  end
+  local.get op i32.const 2 i32.eq if
+    local.get a call R.numberOf local.get b call R.numberOf f64.mul call R.box return
+  end
+  local.get a call R.numberOf local.get b call R.numberOf f64.div call R.box return
+end
+local.get op i32.const 1 i32.eq local.get a local.get b call R.sameMeasure i32.and if
+  local.get a ref.cast qty struct.get qty 0 local.get b local.get a ref.cast qty struct.get qty 1 call R.amountIn f64.sub
+  local.get a ref.cast qty struct.get qty 1 struct.new qty return
+end
+local.get op i32.const 2 i32.eq if
+  local.get a ref.test qty local.get b call R.isNumber i32.and if
+    local.get a ref.cast qty struct.get qty 0 local.get b call R.numberOf f64.mul local.get a ref.cast qty struct.get qty 1 struct.new qty return
+  end
+  local.get a call R.isNumber local.get b ref.test qty i32.and if
+    local.get a call R.numberOf local.get b ref.cast qty struct.get qty 0 f64.mul local.get b ref.cast qty struct.get qty 1 struct.new qty return
+  end
+end
+local.get op i32.const 3 i32.eq local.get a ref.test qty i32.and if
+  local.get b call R.isNumber local.get a local.get b call R.sameMeasure i32.or if
+    local.get b call R.isNumber if
+      local.get b call R.numberOf local.set by
+    else
+      local.get b local.get a ref.cast qty struct.get qty 1 call R.amountIn local.set by
+    end
+    local.get by f64.const d0 f64.eq if
+      global.get g.divideByZero i32.const 0 local.get k throw 0
+    end
+    local.get b call R.isNumber if
+      local.get a ref.cast qty struct.get qty 0 local.get by f64.div local.get a ref.cast qty struct.get qty 1 struct.new qty return
+    end
+    local.get a ref.cast qty struct.get qty 0 local.get by f64.div call R.box return
+  end
+end
+local.get a local.get b local.get op local.get k call R.cantUse
+local.get a
+
+;; '-' before what isn't a number: an amount the other way, or the mistake
+func negRest v:eq k:i32 -> eq
+local.get v ref.test qty if
+  local.get v ref.cast qty struct.get qty 0 f64.neg local.get v ref.cast qty struct.get qty 1 struct.new qty return
+end
+local.get v call R.isNumber if
+  local.get v call R.numberOf f64.neg call R.box return
+end
+global.get g.minusNeeds local.get v call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; how two numbers that agree to 15 digits, or nearly, compare: as their values to 15 digits do (vm.js's
+;; numberOrder): -1, 0, 1, or 2 if either is NaN
+func nearOrder a:f64 b:f64 -> i32
+local.get a call R.canonAny local.set a
+local.get b call R.canonAny local.set b
+local.get a local.get b f64.eq if
+  i32.const 0 return
+end
+local.get a local.get b f64.lt if
+  i32.const -1 return
+end
+local.get a local.get b f64.gt if
+  i32.const 1 return
+end
+i32.const 2
+
+;; 1 if a and b are being compared further up
+func comparing a:eq b:eq -> i32
+local i i32
+block loop
+  local.get i global.get g.eqN i32.ge_u br_if 1
+  global.get g.eqA local.get i array.get items local.get a ref.eq global.get g.eqB local.get i array.get items local.get b ref.eq i32.and if
+    i32.const 1 return
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+i32.const 0
+
+;; a and b on top of the pairs being compared
+func comparingPush a:eq b:eq ->
+local bigger null:items
+global.get g.eqA ref.is_null if
+  i32.const 8 array.new_default items global.set g.eqA
+  i32.const 8 array.new_default items global.set g.eqB
+end
+global.get g.eqN global.get g.eqA array.len i32.eq if
+  global.get g.eqN i32.const 1 i32.shl array.new_default items local.tee bigger
+  i32.const 0 global.get g.eqA i32.const 0 global.get g.eqN array.copy items items
+  local.get bigger global.set g.eqA
+  global.get g.eqN i32.const 1 i32.shl array.new_default items local.tee bigger
+  i32.const 0 global.get g.eqB i32.const 0 global.get g.eqN array.copy items items
+  local.get bigger global.set g.eqB
+end
+global.get g.eqA global.get g.eqN local.get a array.set items
+global.get g.eqB global.get g.eqN local.get b array.set items
+global.get g.eqN i32.const 1 i32.add global.set g.eqN
+
+;; 'a is b' for amounts, bytes, lists, records and dictionaries, as vm.js's equal has it: by value, an amount in
+;; the first one's unit, and a pair already being compared further up the same
+func deepEq a:eq b:eq -> i32
+local i i32
+local n i32
+local same i32
+local e i32
+local aa null:u8
+local bb null:u8
+local.get a ref.test qty local.get b ref.test qty i32.or if
+  local.get a local.get b call R.sameMeasure i32.eqz if
+    i32.const 0 return
+  end
+  local.get a ref.cast qty struct.get qty 0 local.get b local.get a ref.cast qty struct.get qty 1 call R.amountIn call R.ncmp i32.eqz return
+end
+local.get a ref.test bytes local.get b ref.test bytes i32.and if
+  local.get a ref.cast bytes struct.get bytes 0 local.tee aa array.len local.tee n local.get b ref.cast bytes struct.get bytes 0 local.tee bb array.len i32.ne if
+    i32.const 0 return
+  end
+  block loop
+    local.get i local.get n i32.ge_u br_if 1
+    local.get aa local.get i array.get_u u8 local.get bb local.get i array.get_u u8 i32.ne if
+      i32.const 0 return
+    end
+    local.get i i32.const 1 i32.add local.set i
+    br 0
+  end end
+  i32.const 1 return
+end
+local.get a ref.test list local.get b ref.test list i32.and
+local.get a ref.test dict local.get b ref.test dict i32.and i32.or
+local.get a ref.test record local.get b ref.test record i32.and i32.or i32.eqz if
+  i32.const 0 return
+end
+local.get a local.get b call R.comparing if
+  i32.const 1 return
+end
+local.get a local.get b call R.comparingPush
+i32.const 1 local.set same
+local.get a ref.test list if
+  local.get a ref.cast list struct.get list 1 local.tee n local.get b ref.cast list struct.get list 1 i32.ne if
+    i32.const 0 local.set same
+  else
+    block loop
+      local.get i local.get n i32.ge_u br_if 1
+      local.get a ref.cast list struct.get list 0 local.get i array.get items local.get b ref.cast list struct.get list 0 local.get i array.get items call R.eq i32.eqz if
+        i32.const 0 local.set same
+        br 2
+      end
+      local.get i i32.const 1 i32.add local.set i
+      br 0
+    end end
+  end
+else
+  local.get a ref.test dict if
+    local.get a ref.cast dict struct.get dict 3 local.get b ref.cast dict struct.get dict 3 i32.ne if
+      i32.const 0 local.set same
+    else
+      local.get a ref.cast dict struct.get dict 2 local.set n
+      block loop
+        local.get i local.get n i32.ge_u br_if 1
+        local.get a ref.cast dict struct.get dict 0 local.get i array.get items ref.is_null i32.eqz if
+          local.get b ref.cast dict local.get a ref.cast dict struct.get dict 0 local.get i array.get items
+          local.get a ref.cast dict struct.get dict 0 local.get i array.get items call R.keyHash call R.dictFind local.tee e i32.const 0 i32.lt_s if
+            i32.const 0 local.set same
+            br 3
+          end
+          local.get a ref.cast dict struct.get dict 1 local.get i array.get items local.get b ref.cast dict struct.get dict 1 local.get e array.get items call R.eq i32.eqz if
+            i32.const 0 local.set same
+            br 3
+          end
+        end
+        local.get i i32.const 1 i32.add local.set i
+        br 0
+      end end
+    end
+  else
+    ;; records: the same fields, each by value
+    local.get a ref.cast record struct.get record 2 local.tee n local.get b ref.cast record struct.get record 2 i32.ne if
+      i32.const 0 local.set same
+    else
+      block loop
+        local.get i local.get n i32.ge_u br_if 1
+        local.get b local.get a ref.cast record struct.get record 0 local.get i array.get ids call R.find local.tee e i32.const 0 i32.lt_s if
+          i32.const 0 local.set same
+          br 2
+        end
+        local.get a ref.cast record struct.get record 1 local.get i array.get items local.get b ref.cast record struct.get record 1 local.get e array.get items call R.eq i32.eqz if
+          i32.const 0 local.set same
+          br 2
+        end
+        local.get i i32.const 1 i32.add local.set i
+        br 0
+      end end
+    end
+  end
+end
+global.get g.eqN i32.const 1 i32.sub global.set g.eqN
+local.get same
+
+;; 1 if text t holds text s, unit for unit, as JavaScript's includes finds it
+func contains t:eq s:eq -> i32
+local p null:chars
+local q null:chars
+local n i32
+local m i32
+local i i32
+local j i32
+local.get t ref.cast text struct.get text 1 local.set n
+local.get s ref.cast text struct.get text 1 local.tee m i32.eqz if
+  i32.const 1 return
+end
+local.get m local.get n i32.gt_u if
+  i32.const 0 return
+end
+local.get t call R.units local.set p
+local.get s call R.units local.set q
+block loop
+  local.get i local.get n local.get m i32.sub i32.gt_u br_if 1
+  i32.const 0 local.set j
+  block loop
+    local.get j local.get m i32.ge_u br_if 1
+    local.get p local.get i local.get j i32.add array.get_u chars local.get q local.get j array.get_u chars i32.ne br_if 1
+    local.get j i32.const 1 i32.add local.set j
+    br 0
+  end end
+  local.get j local.get m i32.eq if
+    i32.const 1 return
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+i32.const 0
+
+;; 'a is in b', as vm.js's isIn has it: an item of a list by value, a byte (a number to 15 digits), a key of a
+;; dictionary (no dictionary has one that isn't text or a number), or a piece of a text; or the mistake
+func inRest a:eq b:eq k:i32 -> i32
+local i i32
+local n i32
+local x f64
+local.get b ref.test list if
+  local.get b ref.cast list struct.get list 1 local.set n
+  block loop
+    local.get i local.get n i32.ge_u br_if 1
+    local.get a local.get b ref.cast list struct.get list 0 local.get i array.get items call R.eq if
+      i32.const 1 return
+    end
+    local.get i i32.const 1 i32.add local.set i
+    br 0
+  end end
+  i32.const 0 return
+end
+local.get b ref.test bytes if
+  local.get a call R.isNumber i32.eqz if
+    i32.const 0 return
+  end
+  local.get a call R.numberOf call R.canonAny local.set x
+  local.get b ref.cast bytes struct.get bytes 0 array.len local.set n
+  block loop
+    local.get i local.get n i32.ge_u br_if 1
+    local.get b ref.cast bytes struct.get bytes 0 local.get i array.get_u u8 f64.convert_i32_s local.get x f64.eq if
+      i32.const 1 return
+    end
+    local.get i i32.const 1 i32.add local.set i
+    br 0
+  end end
+  i32.const 0 return
+end
+local.get b ref.test dict if
+  local.get a call R.isKey i32.eqz if
+    i32.const 0 return
+  end
+  local.get b local.get a call R.dictHas return
+end
+local.get a ref.test text local.get b ref.test text i32.and i32.eqz if
+  global.get g.cantCheckWords local.get a call R.kindWords call R.concat global.get g.isInWords call R.concat
+  local.get b call R.kindWords call R.concat i32.const 0 local.get k throw 0
+end
+local.get b local.get a call R.contains
+
+;; comparing what the module hasn't (op is COMPARE_OPS' place): 'is' by value, 'in', 'divisible by' for two numbers,
+;; and less than, greater than, at least and at most for amounts of the same measure, in a's unit; or the mistake
+func compareRest op:i32 a:eq b:eq k:i32 -> i32
+local o i32
+local.get op i32.eqz if
+  local.get a local.get b call R.eq return
+end
+local.get op i32.const 6 i32.eq if
+  local.get a local.get b local.get k call R.inRest return
+end
+local.get op i32.const 5 i32.eq if
+  local.get a call R.isNumber local.get b call R.isNumber i32.and i32.eqz if
+    local.get a local.get b local.get op local.get k call R.cantCheck
+  end
+  local.get b call R.numberOf f64.const d0 f64.eq if
+    global.get g.divideByZero i32.const 0 local.get k throw 0
+  end
+  local.get a call R.numberOf local.get b call R.numberOf local.get k call R.dvf return
+end
+local.get a local.get b call R.sameMeasure if
+  local.get a ref.cast qty struct.get qty 0 local.get b local.get a ref.cast qty struct.get qty 1 call R.amountIn call R.ncmp local.set o
+  ;; less than -1; greater than 1; at least 0 or 1; at most -1 or 0 (2, for NaN, none of them)
+  local.get op i32.const 1 i32.eq if
+    local.get o i32.const -1 i32.eq return
+  end
+  local.get op i32.const 2 i32.eq if
+    local.get o i32.const 1 i32.eq return
+  end
+  local.get op i32.const 3 i32.eq if
+    local.get o i32.const 0 i32.eq local.get o i32.const 1 i32.eq i32.or return
+  end
+  local.get o i32.const -1 i32.eq local.get o i32.const 0 i32.eq i32.or return
+end
+local.get a local.get b local.get op local.get k call R.cantCheck
+i32.const 0
+
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so
 ;; text that ends where its buffer's in-use units end can have more added in place, and joining text in a

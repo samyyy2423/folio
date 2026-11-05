@@ -143,6 +143,57 @@ test("the module words the mistakes of calls, ranges and fields itself, with the
   assert.deepEqual(both(source), said);
 });
 
+// DESIGN §155: + - * / with text, amounts or a mistake, '-', comparing and 'is' by value and 'in', in the module:
+// a list holding itself is a list holding itself, and two numbers that agree to 15 digits are the same
+test("the module does + - * /, compares, and finds 'is' and 'in' by value itself", () => {
+  const tries = (...lines) => lines.map((line) => `try\n    ${line}\nif it fails with why\n    say why\nend`).join("\n");
+  const source = [
+    'say "n: " + (list of 1, "a")',
+    'say (record with a 1) + " r"',
+    "say 0.1 + 0.2 is 0.3",
+    "say 0.30000000000000004 is less than 0.3",
+    "say (list of 1, 2) is (list of 1, 3)",
+    'say (record with a 1, b "x") is (record with b "x", a 1)',
+    'set d1 to dictionary where "a" is 1\nset d2 to dictionary where "a" is 1\nsay d1 is d2',
+    "set ys to list of 1\nadd ys to ys\nset zs to list of 1\nadd zs to zs\nsay ys is zs",
+    "say (list of 1) is in (list of (list of 1))",
+    'say "el" is in "hello"',
+    "say (list of 1) is in (dictionary where 1 is 2)",
+    "say 0 is in (3 bytes)",
+    tries('say "a" - 1', "say 1 / 0", 'say -"x"', "say yes + 1", 'say "a" is less than 1', 'say 1 is in "abc"', "say 6 is divisible by 0", 'say "a" is divisible by 2'),
+  ].join("\n");
+  const module = new WebAssembly.Module(compileToWasmBytes(source).bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["plus", "arithmetic", "negate", "compare", "numberOrder", "equal"]) assert.ok(!imported.includes(gone), gone);
+  let x = null;
+  const said = [];
+  const text = (t) => String.fromCharCode(...Array.from({ length: x.textLength(t) }, (_, i) => x.textUnit(t, i)));
+  const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: (parts) => said.push(Array.from({ length: x.listLength(parts) }, (_, i) => {
+    const part = x.listItem(parts, i);
+    return typeof part === "number" ? ["no", "yes"][part] : text(part); // yes and no come as 1 and 0
+  }).join("")) };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  x = new WebAssembly.Instance(module, { folio: imports }).exports;
+  x.restart();
+  x.main();
+  assert.deepEqual(said, [
+    'n: [1, "a"]', "(record with a 1) r", "yes", "no", "no", "yes", "yes", "yes", "yes", "yes", "no", "yes",
+    "can't use '-' on text and a number",
+    "can't divide by zero",
+    "'-' needs a number, not text",
+    "can't use '+' on yes/no and a number",
+    "can't check if text is less than a number",
+    "can't check if a number is in text",
+    "can't divide by zero",
+    "can't check if text is divisible by a number",
+  ]);
+  assert.deepEqual(both(source), said);
+  // amounts, which a built-in makes: added, less, times, over, the other way, compared and 'is' in the first's unit
+  assert.deepEqual(both(["say 5 km + 300 m", "say 5 km - 300 m", "say 2 * 3 km", "say 6 km / 2 km", "say -(5 km)", "say 1 km is 1000 m",
+    "say 1 km is at least 1000 m", "try\n    say 1 km * 2 km\nif it fails with why\n    say why\nend"].join("\n")),
+  ["5.3 km", "4.7 km", "6 km", "3", "-5 km", "yes", "yes", "can't use '*' on a distance and a distance"]);
+});
+
 // DESIGN §154: a function's inputs that say what they are, checked against a table of them in the module's data,
 // and a record's "did you mean", in the module too; an amount given to one said "not undefined" before
 test("the module checks inputs that say what they are, and guesses a record's field, itself", () => {

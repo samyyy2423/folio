@@ -13,6 +13,8 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **Inputs that say what they are, checked in WebAssembly.** A function's typed inputs and a record's "did you
   mean" are the module's own too (40 imports). An amount given to an input that wants a number now says "not a
   distance" on the WebAssembly engine, as on the others, not "not undefined" (DESIGN §154).
+- **The operators stay in WebAssembly.** `+ - * /` with text, amounts or a mistake, `-` before a value, comparing,
+  `is` by value and `is in` are the module's own: it imports 34 functions, not 40 (DESIGN §155).
 - **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
   `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
   `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,
