@@ -14,6 +14,8 @@ Built from scratch, with no dependencies, into programs for Windows and Linux as
 &nbsp;·&nbsp;
 <a href="https://samyyy2423.github.io/moth/docs/">The standard library</a>
 &nbsp;·&nbsp;
+<a href="docs/cookbook/README.md">Cookbook</a>
+&nbsp;·&nbsp;
 <a href="DESIGN.md">How it's built</a>
 &nbsp;·&nbsp;
 <a href="https://github.com/samyyy2423/moth/releases/latest">Download</a>
@@ -113,8 +115,10 @@ moth                         the Moth shell: Moth a line at a time
 
 <p align="center"><img src="docs/build.gif" width="760" alt="A terminal: fib.moth, a Fibonacci function in plain English, is built by moth build into fib.exe, which works out fib(32) in 16 ms; the same program in Python takes 341 ms"></p>
 
-[The language](#the-language) has all of Moth on one page, and
-[CONTRIBUTING.md](CONTRIBUTING.md) says how to help.
+[The language](#the-language) has all of Moth on one page,
+[the cookbook](docs/cookbook/README.md) has tested recipes for real work (CSV and
+JSON, web APIs, a server with a database, command-line tools, charts, games, every
+core and tests), and [CONTRIBUTING.md](CONTRIBUTING.md) says how to help.
 
 ## What makes it different
 
@@ -1415,7 +1419,8 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`neural.moth`](neural.moth), [`math.moth`](math.moth) | The neural network, and the maths it needs, in Moth |
 | [`digits.moth`](digits.moth), [`digit-shapes.moth`](digit-shapes.moth), [`digits-train.moth`](digits-train.moth), [`handwriting.moth`](handwriting.moth) | Reading handwriting: strokes to pictures, the network, its training, and the program that asks you to draw |
 | [`tools/`](tools) | Real tools in Moth: a picture maker, a word counter, a JSON reader and its tests, SQLite, Windows' own controls, and a notepad made with them |
-| [`make-docs.mjs`](make-docs.mjs), [`docs/`](docs) | The standard library's reference on the site: a page for each library, made from its own comments |
+| [`make-docs.mjs`](make-docs.mjs), [`docs/`](docs) | The standard library's reference on the site: a page for each library, made from its own comments; and the cookbook's pages, from its recipes |
+| [`docs/cookbook/`](docs/cookbook), [`cookbook.test.js`](cookbook.test.js) | The cookbook: recipes for real work, each run as it's written by its test |
 | [`bootstrap.mjs`](bootstrap.mjs) | Makes the first moth.exe from the source, with Node.js |
 | [`index.html`](index.html), [`worker.js`](worker.js) | The playground |
 
@@ -1449,6 +1454,10 @@ calls that led there.
 - the WebAssembly back end written in Moth against wasm.js, byte for byte, on
   7,822 programs, and what it makes against the VM, mistakes and trails included
 - the neural network and the handwriting reader, on all three engines
+- every recipe of [the cookbook](docs/cookbook/README.md)
+  ([`cookbook.test.js`](cookbook.test.js)), run as it's written: its files
+  written, its programs and commands run (a server asked with curl, a game in a
+  window), and what each says compared with what the recipe shows
 - the standard library's reference ([`docs.test.js`](docs.test.js)): `docs/` is
   what [`make-docs.mjs`](make-docs.mjs) makes of the libraries, every public
   function has a comment, and each example ran and said what's shown under it

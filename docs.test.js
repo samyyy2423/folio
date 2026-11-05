@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { docs, pageOf, undocumented, readLibrary, signatureOf, summaryOf, KEPT } from "./make-docs.mjs";
+import { docs, pageOf, undocumented, readLibrary, signatureOf, summaryOf, markdownOf, KEPT } from "./make-docs.mjs";
 
 test("docs/ is what make-docs.mjs makes of the standard library as it is", () => {
   const made = docs();
@@ -52,4 +52,19 @@ test("the reference reads a library's functions, inputs and examples as they're 
   assert.equal(code, "use \"stats.moth\" as stats\nset xs to list of 1, 5\nadd 9 to xs\nsay stats's spread(xs)");
   assert.match(spread, /class="says"><code>8<\/code>/);
   assert.doesNotMatch(page, /stats_sum\(numbers\)<\/code><\/a>/, "a helper has no entry of its own");
+});
+
+test("the cookbook's Markdown is made the site's HTML", () => {
+  const made = markdownOf([
+    "# Call a web API", "", "You want [`http.moth`](https://samyyy2423.github.io/moth/docs/http.html) and **JSON**.", "",
+    "## Ask", "", "- one", "  more", "- [two](testing.md)", "", "```moth file=a.moth", "say 1", "```", "", "```moth", "say 2", "```", "",
+    "```output", "2", "```", "", "```console", "$ moth run a.moth", "1", "```", "", "![A chart](sales.svg)", ""].join("\n"), "../../");
+  assert.equal(made.title, "Call a web API");
+  assert.deepEqual(made.sections, [["ask", "Ask"]]);
+  assert.match(made.html, /<p>You want <a href="\.\.\/\.\.\/docs\/http\.html"><code>http\.moth<\/code><\/a> and <strong>JSON<\/strong>\.<\/p>/);
+  assert.match(made.html, /<ul><li>one more<\/li><li><a href="testing\.html">two<\/a><\/li><\/ul>/);
+  assert.match(made.html, /<span class="name">a\.moth<\/span>/);
+  assert.match(made.html, /<span class="k">say<\/span> <span class="n">2<\/span><\/code><\/pre><pre class="says"><code>2<\/code><\/pre><\/div>/);
+  assert.match(made.html, /<span class="prompt">\$<\/span> <b>moth run a\.moth<\/b>\n1/);
+  assert.match(made.html, /<p class="figure"><img src="sales\.svg" alt="A chart"><\/p>/);
 });

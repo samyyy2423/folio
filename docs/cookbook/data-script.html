@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A data script: statistics and a chart · The Moth cookbook</title>
+  <meta name="description" content="You have a year of figures, and want the numbers that sum them up, how two of them go together, and a chart to show someone.">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../../#playground">Playground</a>
+      <a class="go" href="../../learn.html">Learn</a>
+      <a class="go" href="../../docs/">Docs</a>
+      <a class="go" href="../../docs/cookbook/" aria-current="page">Cookbook</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>A data script: statistics and a chart</h1>
+      <p>You have a year of figures, and want the numbers that sum them up, how two of them go together, and a chart to show someone. <a href="../../docs/stats.html"><code>stats.moth</code></a> has Python's statistics module's means, medians, spread, quantiles, correlation and a straight line through points; <a href="../../docs/charts.html"><code>charts.moth</code></a> saves bar and line charts as SVG or PNG.</p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol><li><a href="#the-data">The data</a></li><li><a href="#the-script">The script</a></li><li><a href="#the-charts">The charts</a></li><li><a href="#see-also">See also</a></li></ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/data-script.md">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+                <h2 id="the-data">The data</h2>
+        <p>A year of an ice-cream stand: each month's average high, in °C, and how many it sold.</p>
+        <div class="code"><div class="head"><span class="name">weather.csv</span></div><pre><code>month,high,sales
+Jan,8.1,212
+Feb,9.4,230
+Mar,12.6,301
+Apr,15.9,388
+May,19.8,475
+Jun,23.1,590
+Jul,25.6,661
+Aug,25.2,645
+Sep,21.4,512
+Oct,16.7,402
+Nov,11.5,280
+Dec,8.6,236</code></pre></div>
+        <h2 id="the-script">The script</h2>
+        <div class="code"><div class="head"><span class="name">report.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;stats.moth&quot;</span> <span class="k">as</span> stats
+<span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+<span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+
+<span class="c"># each of the numbers times `by`</span>
+<span class="k">to</span> scaled <span class="k">with</span> numbers, <span class="k">by</span>
+    <span class="k">set</span> made <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+    <span class="k">for</span> <span class="k">each</span> n <span class="k">in</span> numbers
+        <span class="k">add</span> n * <span class="k">by</span> <span class="k">to</span> made
+    <span class="k">end</span>
+    <span class="k">return</span> made
+<span class="k">end</span>
+
+<span class="k">set</span> rows <span class="k">to</span> <span class="k">read</span> <span class="k">table</span> <span class="s">&quot;weather.csv&quot;</span>
+<span class="k">set</span> months <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">set</span> highs <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">set</span> sales <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">for</span> <span class="k">each</span> row <span class="k">in</span> rows
+    <span class="k">add</span> month <span class="k">of</span> row <span class="k">to</span> months
+    <span class="k">add</span> high <span class="k">of</span> row <span class="k">to</span> highs
+    <span class="k">add</span> sales <span class="k">of</span> row <span class="k">to</span> sales
+<span class="k">end</span>
+
+<span class="k">say</span> <span class="s">&quot;Ice creams sold a month: mean &quot;</span> text's number_text(stats's mean(sales), <span class="n">1</span>) <span class="s">&quot;, median &quot;</span> stats's median(sales)
+<span class="k">say</span> <span class="s">&quot;spread (standard deviation): &quot;</span> text's number_text(stats's stdev(sales), <span class="n">1</span>)
+<span class="k">say</span> <span class="s">&quot;quartiles: &quot;</span> stats's quantiles(sales, <span class="n">4</span>)
+<span class="k">say</span> <span class="s">&quot;correlation with the day's high: &quot;</span> text's number_text(stats's correlation(highs, sales), <span class="n">3</span>)
+
+<span class="k">set</span> line <span class="k">to</span> stats's straight_line(highs, sales)
+<span class="k">say</span> <span class="s">&quot;each degree warmer sells about &quot;</span> text's number_text(slope <span class="k">of</span> line, <span class="n">1</span>) <span class="s">&quot; more&quot;</span>
+<span class="k">say</span> <span class="s">&quot;at 30 degrees, expect about &quot;</span> (intercept <span class="k">of</span> line + slope <span class="k">of</span> line * <span class="n">30</span>) <span class="k">rounded</span>
+
+<span class="k">set</span> <span class="k">chart</span> <span class="k">to</span> charts's bar_chart(<span class="s">&quot;Ice creams sold, by month&quot;</span>, months, sales)
+charts's save(<span class="k">chart</span>, <span class="s">&quot;sales.svg&quot;</span>)
+<span class="k">set</span> both <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;Sold (tens)&quot;</span> <span class="k">is</span> scaled(sales, <span class="n">0.1</span>), <span class="s">&quot;High (°C)&quot;</span> <span class="k">is</span> highs
+charts's save(charts's line_chart(<span class="s">&quot;Sales and the weather&quot;</span>, months, both), <span class="s">&quot;sales-and-highs.svg&quot;</span>)</code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-read --allow-write report.moth</b>
+Ice creams sold a month: mean 411.0, median 395
+spread (standard deviation): 164.2
+quartiles: [247, 395, 570.5]
+correlation with the day's high: 0.995
+each degree warmer sells about 25.2 more
+at 30 degrees, expect about 752</code></pre></div>
+        <p>A correlation near 1 says the two go up together; <code>straight_line</code> is the line closest to the points, by least squares, as a record of its <code>slope</code> and <code>intercept</code>, so a temperature it hasn't seen can be guessed from it.</p>
+        <h2 id="the-charts">The charts</h2>
+        <p><code>bar_chart</code> and <code>line_chart</code> take a title, the labels along the bottom, and the numbers: a list, or a dictionary of lists for a series each, in colours that stay apart for colour-blind eyes, with a legend. <code>save</code> writes SVG or PNG by the file's name.</p>
+        <p class="figure"><img src="sales.svg" alt="A bar chart of ice creams sold each month, from about 210 in January up to 660 in July and down again"></p>
+        <p class="figure"><img src="sales-and-highs.svg" alt="A line chart of the sales, in tens, and the month's high in °C, both rising to July and falling after, together"></p>
+        <p>An SVG is sharp at any size and says each bar's number when the mouse is on it; <code>sized(chart, 1200, 600)</code> is the same chart bigger, and <code>png_of(chart)</code> its PNG's bytes.</p>
+        <h2 id="see-also">See also</h2>
+        <ul><li><a href="../../docs/arrays.html">arrays.moth</a> for maths on whole tables of numbers at once, as NumPy does.</li><li><a href="csv-and-json.html">Reading and writing CSV and JSON</a>, for the data's way in and out.</li></ul>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../../#playground">Playground</a>
+      <a href="../../learn.html">Learn</a>
+      <a href="../../docs/">The standard library</a>
+      <a href="../../docs/cookbook/">The cookbook</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>

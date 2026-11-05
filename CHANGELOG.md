@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **A cookbook**, in [docs/cookbook/](docs/cookbook/README.md) and on the site: short recipes, each from a task
+  to a whole program and what it says: CSV and JSON, calling a web API, a web API with a database, a
+  command-line tool with options, a data script with statistics and a chart, a game, work on every core, and
+  testing. Every recipe is run as it's written by the tests, so none goes stale.
 - **`moth build --target wasm`** makes `<file>.wasm`, a WebAssembly module, from
   [`wasm.moth`](wasm.moth): Moth's WebAssembly back end, now written in Moth too, which makes exactly the
   bytes the playground's WebAssembly engine makes. `runWasm` in `moth.js` runs one.

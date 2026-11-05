@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work on every core · The Moth cookbook</title>
+  <meta name="description" content="You have work that takes a while and splits into parts that don't need each other: here, counting the primes up to four million, in eight ranges.">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../../#playground">Playground</a>
+      <a class="go" href="../../learn.html">Learn</a>
+      <a class="go" href="../../docs/">Docs</a>
+      <a class="go" href="../../docs/cookbook/" aria-current="page">Cookbook</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>Work on every core</h1>
+      <p>You have work that takes a while and splits into parts that don't need each other: here, counting the primes up to four million, in eight ranges. One core does one part after another; every core can do a part each at the same moment. Moth has two ways:</p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol><li><a href="#the-program">The program</a></li><li><a href="#which-to-use">Which to use</a></li><li><a href="#see-also">See also</a></li></ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/every-core.md">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+                <ul><li><strong>Workers</strong>, <code>start work(x) on another core</code>, built into the language: each a thread of its own, sharing nothing. A worker gets copies of what it's given and of the program's variables, and <code>wait for</code> gives a copy of what it gave back.</li><li>**<a href="../../docs/cores.html"><code>cores.moth</code></a>**, <code>each_at_once(work, items)</code>, as Python's multiprocessing does it: copies of the whole program, each a process, which share the items out among as many as there are cores.</li></ul>
+        <h2 id="the-program">The program</h2>
+        <div class="code"><div class="head"><span class="name">primes.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;cores.moth&quot;</span> <span class="k">as</span> cores
+
+<span class="c"># how many primes there are from `first` to `last`, the slow way</span>
+<span class="k">to</span> primes_between <span class="k">with</span> first, last
+    <span class="k">set</span> found <span class="k">to</span> <span class="n">0</span>
+    <span class="k">for</span> <span class="k">each</span> n <span class="k">from</span> first <span class="k">to</span> last
+        <span class="k">if</span> n <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">2</span>
+            <span class="k">set</span> prime <span class="k">to</span> <span class="k">yes</span>
+            <span class="k">set</span> d <span class="k">to</span> <span class="n">2</span>
+            <span class="k">repeat</span> <span class="k">while</span> prime <span class="k">and</span> d * d <span class="k">is</span> <span class="k">at</span> <span class="k">most</span> n
+                <span class="k">if</span> n <span class="k">is</span> <span class="k">divisible</span> <span class="k">by</span> d
+                    <span class="k">set</span> prime <span class="k">to</span> <span class="k">no</span>
+                <span class="k">end</span>
+                <span class="k">set</span> d <span class="k">to</span> d + <span class="n">1</span>
+            <span class="k">end</span>
+            <span class="k">if</span> prime
+                <span class="k">add</span> <span class="n">1</span> <span class="k">to</span> found
+            <span class="k">end</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">return</span> found
+<span class="k">end</span>
+
+<span class="c"># a part of the work: half a million numbers, by where they start</span>
+<span class="k">to</span> primes_in_part <span class="k">with</span> <span class="k">start</span>
+    <span class="k">return</span> primes_between(<span class="k">start</span>, <span class="k">start</span> + <span class="n">499999</span>)
+<span class="k">end</span>
+cores's work_here(primes_in_part)
+
+<span class="k">set</span> parts <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">500001</span>, <span class="n">1000001</span>, <span class="n">1500001</span>, <span class="n">2000001</span>, <span class="n">2500001</span>, <span class="n">3000001</span>, <span class="n">3500001</span>
+
+<span class="k">set</span> began <span class="k">to</span> the clock
+<span class="k">set</span> one_by_one <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">for</span> <span class="k">each</span> part <span class="k">in</span> parts
+    <span class="k">add</span> primes_in_part(part) <span class="k">to</span> one_by_one
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;one after another: &quot;</span> <span class="k">total</span> <span class="k">of</span> one_by_one <span class="s">&quot; primes, in &quot;</span> ((the clock - began) * <span class="n">10</span> <span class="k">rounded</span>) / <span class="n">10</span> <span class="s">&quot; s&quot;</span>
+
+<span class="k">set</span> began <span class="k">to</span> the clock
+<span class="k">set</span> counted <span class="k">to</span> cores's each_at_once(primes_in_part, parts)
+<span class="k">say</span> <span class="s">&quot;on &quot;</span> cores's count_of_cores() <span class="s">&quot; cores: &quot;</span> <span class="k">total</span> <span class="k">of</span> counted <span class="s">&quot; primes, in &quot;</span> ((the clock - began) * <span class="n">10</span> <span class="k">rounded</span>) / <span class="n">10</span> <span class="s">&quot; s&quot;</span>
+
+<span class="k">set</span> began <span class="k">to</span> the clock
+<span class="k">set</span> workers <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">for</span> <span class="k">each</span> part <span class="k">in</span> parts
+    <span class="k">add</span> (<span class="k">start</span> primes_in_part(part) on another core) <span class="k">to</span> workers
+<span class="k">end</span>
+<span class="k">set</span> by_workers <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">for</span> <span class="k">each</span> worker <span class="k">in</span> workers
+    <span class="k">add</span> (<span class="k">wait</span> <span class="k">for</span> worker) <span class="k">to</span> by_workers
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;on &quot;</span> <span class="k">length</span> <span class="k">of</span> workers <span class="s">&quot; workers: &quot;</span> <span class="k">total</span> <span class="k">of</span> by_workers <span class="s">&quot; primes, in &quot;</span> ((the clock - began) * <span class="n">10</span> <span class="k">rounded</span>) / <span class="n">10</span> <span class="s">&quot; s&quot;</span>
+<span class="k">say</span> by_workers</code></pre></div>
+        <p><code>cores's work_here(primes_in_part)</code>, after the functions, is where a copy of the program that <code>each_at_once</code> starts does its part and stops, so it does nothing else first. Everything before it runs in each copy too.</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-libraries --allow-read --allow-write primes.moth</b>
+one after another: 283146 primes, in ... s
+on ... cores: 283146 primes, in ... s
+on 8 workers: 283146 primes, in ... s
+[41538, 36960, 35657, 34778, 34139, 33744, 33334, 32996]</code></pre></div>
+        <p>On four cores, both take about a third of the time one after another does: the parts aren't the same size (there are fewer primes higher up, but each takes longer to check), and starting copies or threads costs a little. <code>cores.moth</code> needs <code>--allow-libraries</code> to start its copies and <code>--allow-read</code> and <code>--allow-write</code> for the files they pass their parts through; workers need nothing.</p>
+        <h2 id="which-to-use">Which to use</h2>
+        <ul><li><strong>Workers</strong> start in well under a millisecond, and what they're given and give back is copied directly, so they suit many small parts, and a server's requests (<code>server.moth</code>'s <code>serve_on_workers</code>). A function made inside another can't go to a worker, as it would share that function's variables.</li><li>**<code>each_at_once</code>** starts the program again for each copy, so it suits a few big parts. What a part is given and gives back goes through a file, so it's numbers, text, lists, records and dictionaries.</li><li>Neither shares anything while it works, so there's nothing to lock. For tasks that take turns on one core, waiting on the network say, use <code>start</code> without <code>on another core</code>, and <a href="../../docs/sync.html"><code>sync.moth</code></a>'s locks and queues.</li></ul>
+        <p>In the playground, and on the JavaScript engines, workers and <code>each_at_once</code> do their parts one after another, and give the same.</p>
+        <h2 id="see-also">See also</h2>
+        <ul><li><a href="../../docs/cores.html">cores.moth</a>: <code>each_at_once_on(n, work, items)</code> for n copies, and <code>count_of_cores()</code>.</li><li><a href="../../docs/sync.html">sync.moth</a>: <code>wait_for_all</code> and <code>wait_for_any</code> take workers as they take tasks.</li></ul>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../../#playground">Playground</a>
+      <a href="../../learn.html">Learn</a>
+      <a href="../../docs/">The standard library</a>
+      <a href="../../docs/cookbook/">The cookbook</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>

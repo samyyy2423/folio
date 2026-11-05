@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Call a web API · The Moth cookbook</title>
+  <meta name="description" content="You want to ask a web service for data, as JSON, and send it some: here, GitHub's REST API, for a repository's stars and its open issues, and to open a new issue.">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../../#playground">Playground</a>
+      <a class="go" href="../../learn.html">Learn</a>
+      <a class="go" href="../../docs/">Docs</a>
+      <a class="go" href="../../docs/cookbook/" aria-current="page">Cookbook</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>Call a web API</h1>
+      <p>You want to ask a web service for data, as JSON, and send it some: here, GitHub's REST API, for a repository's stars and its open issues, and to open a new issue.</p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol><li><a href="#ask-for-json">Ask for JSON</a></li><li><a href="#headers-a-status-and-what-went-wrong">Headers, a status, and what went wrong</a></li><li><a href="#send-json">Send JSON</a></li><li><a href="#mistakes">Mistakes</a></li><li><a href="#see-also">See also</a></li></ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/web-api.md">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+                <h2 id="ask-for-json">Ask for JSON</h2>
+        <p><a href="../../docs/http.html"><code>http.moth</code></a>'s <code>get_json</code> asks a URL, checks the answer isn't a mistake (400 and up), and reads its JSON into Moth's own values: an object as a dictionary, an array as a list.</p>
+        <div class="code"><div class="head"><span class="name">repo.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+
+<span class="k">set</span> name <span class="k">to</span> <span class="s">&quot;samyyy2423/moth&quot;</span>
+<span class="k">if</span> <span class="k">length</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">1</span>
+    <span class="k">set</span> name <span class="k">to</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> <span class="k">arguments</span>
+<span class="k">end</span>
+
+<span class="k">set</span> repo <span class="k">to</span> http's get_json(<span class="s">&quot;https://api.github.com/repos/&quot;</span> + name)
+<span class="k">say</span> <span class="k">item</span> <span class="s">&quot;full_name&quot;</span> <span class="k">of</span> repo <span class="s">&quot;: &quot;</span> <span class="k">item</span> <span class="s">&quot;description&quot;</span> <span class="k">of</span> repo
+<span class="k">say</span> <span class="k">item</span> <span class="s">&quot;stargazers_count&quot;</span> <span class="k">of</span> repo <span class="s">&quot; stars, &quot;</span> <span class="k">item</span> <span class="s">&quot;forks_count&quot;</span> <span class="k">of</span> repo <span class="s">&quot; forks, &quot;</span> <span class="k">item</span> <span class="s">&quot;open_issues_count&quot;</span> <span class="k">of</span> repo <span class="s">&quot; open issues&quot;</span>
+<span class="k">say</span> <span class="s">&quot;Licensed under the &quot;</span> <span class="k">item</span> <span class="s">&quot;name&quot;</span> <span class="k">of</span> <span class="k">item</span> <span class="s">&quot;license&quot;</span> <span class="k">of</span> repo</code></pre></div>
+        <p>A program that goes online is run with <code>--allow-net</code>, and one that uses sockets, as http.moth does, with <code>--allow-libraries</code>:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-net --allow-libraries repo.moth</b>
+samyyy2423/moth: A programming language that reads like plain English
+128 stars, 9 forks, 3 open issues
+Licensed under the Apache License 2.0</code></pre></div>
+        <p>(Your numbers will be today's.) Anything after the file is the program's own <code>arguments</code>, so <code>moth run --allow-net --allow-libraries repo.moth python/cpython</code> asks about another.</p>
+        <h2 id="headers-a-status-and-what-went-wrong">Headers, a status, and what went wrong</h2>
+        <p><code>request</code> takes a method, a URL, a body (or nothing) and headers of your own, and gives back a response: its <code>status</code>, <code>reason</code>, <code>headers</code>, <code>text</code> and <code>body</code> (its bytes). It doesn't fail on a 404 or a 500: that's an answer like any other, so look at the status.</p>
+        <div class="code"><div class="head"><span class="name">issues.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+<span class="k">use</span> <span class="s">&quot;system.moth&quot;</span> <span class="k">as</span> system
+
+<span class="k">set</span> <span class="k">headers</span> <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;accept&quot;</span> <span class="k">is</span> <span class="s">&quot;application/vnd.github+json&quot;</span>, <span class="s">&quot;user-agent&quot;</span> <span class="k">is</span> <span class="s">&quot;moth-cookbook&quot;</span>
+<span class="k">set</span> token <span class="k">to</span> system's environment(<span class="s">&quot;GITHUB_TOKEN&quot;</span>)
+<span class="k">if</span> token <span class="k">is</span> <span class="k">not</span> <span class="k">nothing</span>
+    <span class="k">set</span> <span class="k">item</span> <span class="s">&quot;authorization&quot;</span> <span class="k">of</span> <span class="k">headers</span> <span class="k">to</span> <span class="s">&quot;Bearer &quot;</span> + token
+<span class="k">end</span>
+
+<span class="k">set</span> url <span class="k">to</span> <span class="s">&quot;https://api.github.com/repos/samyyy2423/moth/issues?state=open&amp;per_page=2&quot;</span>
+<span class="k">set</span> response <span class="k">to</span> http's request(<span class="s">&quot;GET&quot;</span>, url, <span class="k">nothing</span>, <span class="k">headers</span>)
+<span class="k">if</span> status <span class="k">of</span> response <span class="k">is</span> <span class="k">not</span> <span class="n">200</span>
+    <span class="k">say</span> <span class="s">&quot;GitHub said &quot;</span> status <span class="k">of</span> response <span class="s">&quot; &quot;</span> reason <span class="k">of</span> response <span class="s">&quot;: &quot;</span> text <span class="k">of</span> response
+    <span class="k">stop</span> the program <span class="k">with</span> <span class="n">1</span>
+<span class="k">end</span>
+<span class="k">for</span> <span class="k">each</span> issue <span class="k">in</span> <span class="k">json</span> <span class="k">from</span> text <span class="k">of</span> response
+    <span class="k">say</span> <span class="s">&quot;#&quot;</span> <span class="k">item</span> <span class="s">&quot;number&quot;</span> <span class="k">of</span> issue <span class="s">&quot;  &quot;</span> <span class="k">item</span> <span class="s">&quot;title&quot;</span> <span class="k">of</span> issue
+<span class="k">end</span></code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-net --allow-libraries issues.moth</b>
+#42  A clearer message for a missing end
+#41  Dates before 1970 on Windows</code></pre></div>
+        <h2 id="send-json">Send JSON</h2>
+        <p>A record, a list or a dictionary given as the body goes as JSON, with <code>Content-Type: application/json</code>. Opening an issue needs a token; the key never goes in the code, only in the environment:</p>
+        <div class="code"><div class="head"><span class="name">open-issue.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+<span class="k">use</span> <span class="s">&quot;system.moth&quot;</span> <span class="k">as</span> system
+
+<span class="k">set</span> token <span class="k">to</span> system's environment(<span class="s">&quot;GITHUB_TOKEN&quot;</span>)
+<span class="k">set</span> <span class="k">headers</span> <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;accept&quot;</span> <span class="k">is</span> <span class="s">&quot;application/vnd.github+json&quot;</span>, <span class="s">&quot;user-agent&quot;</span> <span class="k">is</span> <span class="s">&quot;moth-cookbook&quot;</span>
+<span class="k">if</span> token <span class="k">is</span> <span class="k">not</span> <span class="k">nothing</span>
+    <span class="k">set</span> <span class="k">item</span> <span class="s">&quot;authorization&quot;</span> <span class="k">of</span> <span class="k">headers</span> <span class="k">to</span> <span class="s">&quot;Bearer &quot;</span> + token
+<span class="k">end</span>
+<span class="k">set</span> issue <span class="k">to</span> <span class="k">record</span> <span class="k">with</span> title <span class="s">&quot;Docs: a recipe for calling an API&quot;</span>, body <span class="s">&quot;Written in Moth.&quot;</span>
+
+<span class="k">set</span> response <span class="k">to</span> http's request(<span class="s">&quot;POST&quot;</span>, <span class="s">&quot;https://api.github.com/repos/samyyy2423/moth/issues&quot;</span>, issue, <span class="k">headers</span>)
+<span class="k">if</span> status <span class="k">of</span> response <span class="k">is</span> <span class="n">201</span>
+    <span class="k">set</span> made <span class="k">to</span> <span class="k">json</span> <span class="k">from</span> text <span class="k">of</span> response
+    <span class="k">say</span> <span class="s">&quot;Opened #&quot;</span> <span class="k">item</span> <span class="s">&quot;number&quot;</span> <span class="k">of</span> made <span class="s">&quot;: &quot;</span> <span class="k">item</span> <span class="s">&quot;html_url&quot;</span> <span class="k">of</span> made
+<span class="k">else</span>
+    <span class="k">say</span> <span class="s">&quot;No: &quot;</span> status <span class="k">of</span> response <span class="s">&quot; &quot;</span> <span class="k">item</span> <span class="s">&quot;message&quot;</span> <span class="k">of</span> (<span class="k">json</span> <span class="k">from</span> text <span class="k">of</span> response)
+<span class="k">end</span></code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-net --allow-libraries open-issue.moth</b>
+No: 401 Requires authentication</code></pre></div>
+        <p>With a token (one you made in GitHub's settings), it opens one; <code>GITHUB_TOKEN=... moth run ...</code> on Linux, or <code>set GITHUB_TOKEN=...</code> first on Windows.</p>
+        <h2 id="mistakes">Mistakes</h2>
+        <p>A request fails only when it can't be made or answered: no network, a name that isn't a site, a certificate that isn't right. <code>get_json</code> fails on a status of 400 and up too. Catch either with <code>try</code>:</p>
+        <div class="code"><div class="head"><span class="name">careful.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+
+http's wait_at_most(<span class="n">5000</span>)
+<span class="k">try</span>
+    <span class="k">set</span> repo <span class="k">to</span> http's get_json(<span class="s">&quot;https://api.github.com/repos/samyyy2423/no-such-thing&quot;</span>)
+    <span class="k">say</span> <span class="k">item</span> <span class="s">&quot;full_name&quot;</span> <span class="k">of</span> repo
+<span class="k">if</span> it <span class="k">fails</span> <span class="k">with</span> why
+    <span class="k">say</span> <span class="s">&quot;Couldn't ask GitHub: &quot;</span> why
+<span class="k">end</span></code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-net --allow-libraries careful.moth</b>
+Couldn't ask GitHub: the server said 404 Not Found to https://api.github.com/repos/samyyy2423/no-such-thing</code></pre></div>
+        <h2 id="see-also">See also</h2>
+        <ul><li><a href="../../docs/http.html">http.moth</a>: <code>post</code>, <code>put</code>, <code>patch</code> and <code>delete</code>, forms with <code>form_of</code>, and <code>trust</code> for a company's own certificates.</li><li><a href="../../docs/oauth.html">oauth.moth</a> to sign a person in and get a token for them; <a href="../../docs/ai.html">ai.moth</a> for language models' APIs.</li></ul>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../../#playground">Playground</a>
+      <a href="../../learn.html">Learn</a>
+      <a href="../../docs/">The standard library</a>
+      <a href="../../docs/cookbook/">The cookbook</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>

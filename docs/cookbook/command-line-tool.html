@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A command-line tool with options · The Moth cookbook</title>
+  <meta name="description" content="You want a program people run from a terminal, with options in the usual form (--top 3, -t 3, --top=3, a flag like -k), names after them, and a --help that…">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../../#playground">Playground</a>
+      <a class="go" href="../../learn.html">Learn</a>
+      <a class="go" href="../../docs/">Docs</a>
+      <a class="go" href="../../docs/cookbook/" aria-current="page">Cookbook</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>A command-line tool with options</h1>
+      <p>You want a program people run from a terminal, with options in the usual form (<code>--top 3</code>, <code>-t 3</code>, <code>--top=3</code>, a flag like <code>-k</code>), names after them, and a <code>--help</code> that says how to use it. <a href="../../docs/options.html"><code>options.moth</code></a> reads a command line as Python's argparse does.</p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol><li><a href="#run-it">Run it</a></li><li><a href="#make-it-a-program-of-its-own">Make it a program of its own</a></li><li><a href="#see-also">See also</a></li></ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/command-line-tool.md">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+                <p>Here, a tool that counts the words in text files and says which come most:</p>
+        <div class="code"><div class="head"><span class="name">words.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+<span class="k">use</span> <span class="s">&quot;collections.moth&quot;</span> <span class="k">as</span> collections
+<span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+
+<span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;words&quot;</span>, <span class="s">&quot;Counts the words in text files, and says which come most.&quot;</span>)
+options's option(p, <span class="s">&quot;top&quot;</span>, <span class="s">&quot;t&quot;</span>, <span class="s">&quot;how many of the most common to show&quot;</span>, <span class="n">5</span>)
+options's option(p, <span class="s">&quot;shortest&quot;</span>, <span class="s">&quot;s&quot;</span>, <span class="s">&quot;leave out words shorter than this&quot;</span>, <span class="n">1</span>)
+options's flag(p, <span class="s">&quot;keep-case&quot;</span>, <span class="s">&quot;k&quot;</span>, <span class="s">&quot;count \&quot;The\&quot; and \&quot;the\&quot; apart&quot;</span>)
+options's positional(p, <span class="s">&quot;file&quot;</span>, <span class="s">&quot;a text file to count&quot;</span>)
+options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot;more files to count with it&quot;</span>)
+<span class="k">set</span> given <span class="k">to</span> options's parse(p, <span class="k">arguments</span>)
+
+<span class="k">set</span> words <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">set</span> files <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="k">item</span> <span class="s">&quot;file&quot;</span> <span class="k">of</span> given
+<span class="k">for</span> <span class="k">each</span> file <span class="k">in</span> <span class="k">item</span> <span class="s">&quot;more&quot;</span> <span class="k">of</span> given
+    <span class="k">add</span> file <span class="k">to</span> files
+<span class="k">end</span>
+<span class="k">for</span> <span class="k">each</span> file <span class="k">in</span> files
+    <span class="k">set</span> words_in_file <span class="k">to</span> text's find_all(<span class="s">&quot;[A-Za-z']+&quot;</span>, <span class="k">read</span> file)
+    <span class="k">for</span> <span class="k">each</span> found <span class="k">in</span> words_in_file
+        <span class="k">set</span> word <span class="k">to</span> text <span class="k">of</span> found
+        <span class="k">if</span> <span class="k">not</span> <span class="k">item</span> <span class="s">&quot;keep-case&quot;</span> <span class="k">of</span> given
+            <span class="k">set</span> word <span class="k">to</span> <span class="k">lowercase</span> <span class="k">of</span> word
+        <span class="k">end</span>
+        <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> word <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="k">item</span> <span class="s">&quot;shortest&quot;</span> <span class="k">of</span> given
+            <span class="k">add</span> word <span class="k">to</span> words
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">set</span> counts <span class="k">to</span> collections's counted(words)
+<span class="k">say</span> <span class="k">length</span> <span class="k">of</span> words <span class="s">&quot; words, &quot;</span> <span class="k">length</span> <span class="k">of</span> <span class="k">keys</span> <span class="k">of</span> counts <span class="s">&quot; different, in &quot;</span> <span class="k">length</span> <span class="k">of</span> files <span class="s">&quot; files&quot;</span>
+<span class="k">for</span> <span class="k">each</span> pair <span class="k">in</span> collections's most_common(counts, <span class="k">item</span> <span class="s">&quot;top&quot;</span> <span class="k">of</span> given)
+    <span class="k">say</span> text's padded_right(value <span class="k">of</span> pair, <span class="n">8</span>) count <span class="k">of</span> pair
+<span class="k">end</span></code></pre></div>
+        <p><code>parser</code> names the tool and says what it does; <code>option</code> adds an option with a value, its short name, what it's for and its value when it isn't given (a number there makes the value given a number); <code>flag</code> adds one that's yes when it's there; <code>positional</code> a name that must be given; and <code>rest</code> the names after it, as a list. <code>parse</code> gives a dictionary of them all, by name.</p>
+        <h2 id="run-it">Run it</h2>
+        <p>Two files to try it on:</p>
+        <div class="code"><div class="head"><span class="name">moth.txt</span></div><pre><code>The moth flew to the lamp. The lamp was warm, and the moth was happy.</code></pre></div>
+        <div class="code"><div class="head"><span class="name">story.txt</span></div><pre><code>A moth is not a butterfly. It flies at night, and it loves the light.</code></pre></div>
+        <p>Everything after the program's file is its own:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-read words.moth moth.txt</b>
+15 words, 9 different, in 1 files
+the     4
+moth    2
+lamp    2
+was     2
+flew    1
+<span class="prompt">$</span> <b>moth run --allow-read words.moth --top 3 -s 4 moth.txt story.txt</b>
+13 words, 10 different, in 2 files
+moth    3
+lamp    2
+flew    1
+<span class="prompt">$</span> <b>moth run --allow-read words.moth -k --top=2 moth.txt</b>
+15 words, 10 different, in 1 files
+The     2
+moth    2</code></pre></div>
+        <p><code>--help</code> is made from what each option said it's for, and stops the program:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-read words.moth --help</b>
+usage: words [-h] [-t TOP] [-s SHORTEST] [-k] file [more ...]
+
+Counts the words in text files, and says which come most.
+
+names:
+  file                  a text file to count
+  more                  more files to count with it
+
+options:
+  -h, --help            say this, and stop
+  -t, --top TOP         how many of the most common to show (5 if it isn't given)
+  -s, --shortest SHORTEST  leave out words shorter than this (1 if it isn't given)
+  -k, --keep-case       count &quot;The&quot; and &quot;the&quot; apart</code></pre></div>
+        <p>A command line it can't read says how to use it and what's wrong, on the error output, and stops the program with 2, as command-line tools do:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-read words.moth --top</b>
+usage: words [-h] [-t TOP] [-s SHORTEST] [-k] file [more ...]
+words: --top needs a value after it</code></pre></div>
+        <h2 id="make-it-a-program-of-its-own">Make it a program of its own</h2>
+        <p><code>moth build</code> makes <code>words</code> (<code>words.exe</code> on Windows), which runs anywhere with nothing installed. What it's allowed to do is decided when it's built:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth build words.moth --allow-read</b>
+compiled words.moth to machine code for Linux -&gt; words (... bytes)
+<span class="prompt">$</span> <b>./words --top 1 story.txt</b>
+15 words, 13 different, in 1 files
+a       2</code></pre></div>
+        <p>Put it in a folder on your <code>PATH</code> and it's a command like any other.</p>
+        <h2 id="see-also">See also</h2>
+        <ul><li><a href="../../docs/options.html">options.moth</a>: <code>parse_or_fail</code>, which gives a mistake to catch instead of stopping, and <code>help_text</code>.</li><li><a href="../../docs/system.html">system.moth</a> for files, folders and environment variables, and <a href="../../docs/log.html">log.moth</a> to say what happened.</li></ul>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../../#playground">Playground</a>
+      <a href="../../learn.html">Learn</a>
+      <a href="../../docs/">The standard library</a>
+      <a href="../../docs/cookbook/">The cookbook</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>

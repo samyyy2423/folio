@@ -459,6 +459,7 @@ ${body}
       <a href="${root}#playground">Playground</a>
       <a href="${root}learn.html">Learn</a>
       <a href="${root}docs/">The standard library</a>
+      <a href="${root}docs/cookbook/">The cookbook</a>
       <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
       <a href="https://github.com/samyyy2423/moth">GitHub</a>
     </nav>
@@ -468,7 +469,7 @@ ${script}</body>
 `;
 }
 // the pages the site has, for its navigation: more as they come
-export const SITE_PAGES = ["Playground", "Learn", "Docs"];
+export const SITE_PAGES = ["Playground", "Learn", "Docs", "Cookbook"];
 const GITHUB = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z";
 
 // a block of Moth, coloured, and what it says under it if it's known
@@ -603,6 +604,145 @@ ${sections.map(([title, about, names]) => `      <section class="group">
   return page({ title: "The standard library · Moth", description: `Moth's standard library: ${libs.length} libraries and ${count} functions, each with an example.`, root: "../", current: "Docs", hero, body, script });
 }
 
+// ---------- the cookbook ----------
+
+// The cookbook's recipes, docs/cookbook/*.md, as the site's pages: the Markdown GitHub shows, made HTML, with
+// what cookbook.test.js knows of its blocks shown too: a file's name over its code, a console's commands
+// apart from what they say, and an ```output block as what the program before it says
+const SITE = "https://samyyy2423.github.io/moth/";
+// the recipes, in the order the cookbook's README lists them, then any it doesn't
+const recipeNames = (read) => {
+  let files = [];
+  try {
+    files = readdirSync(new URL("./docs/cookbook/", import.meta.url)).filter((f) => f.endsWith(".md") && f !== "README.md");
+  } catch {
+    return [];
+  }
+  const listed = [...read("docs/cookbook/README.md").matchAll(/^- \[[^\]]+\]\(([\w-]+\.md)\)/gm)].map((m) => m[1]).filter((f) => files.includes(f));
+  return [...listed, ...files.filter((f) => !listed.includes(f)).sort()];
+};
+
+// Markdown's inline parts: `code`, links (the site's own made relative to `root`, a recipe's .md its .html),
+// pictures, **strong** and *emphasis*
+function inlineOf(text, root) {
+  const link = (href) => (href.startsWith(SITE) ? root + href.slice(SITE.length) : /^[\w-]+\.md(#.*)?$/.test(href) ? href.replace(/^README\.md/, "index.html").replace(/\.md/, ".html") : href);
+  const plain = (words) => words.split(/(`[^`]+`)/).map((piece) => (piece.length > 1 && piece.startsWith("`") ? `<code>${escape(piece.slice(1, -1))}</code>`
+    : escape(piece).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>"))).join("");
+  let html = "";
+  let last = 0;
+  for (const m of text.matchAll(/(!?)\[([^\]]+)\]\(([^)\s]+)\)/g)) {
+    html += plain(text.slice(last, m.index));
+    html += m[1] ? `<img src="${link(m[3])}" alt="${escape(m[2])}">` : `<a href="${link(m[3])}">${plain(m[2])}</a>`;
+    last = m.index + m[0].length;
+  }
+  return html + plain(text.slice(last));
+}
+
+const slugOf = (title) => title.toLowerCase().replace(/`/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// a recipe's Markdown as { title, intro, sections, html }: its # title, its first paragraph, its ## sections
+export function markdownOf(markdown, root) {
+  const lines = markdown.split("\n");
+  const out = [];
+  const sections = [];
+  let title = "";
+  let intro = null;
+  for (let k = 0; k < lines.length; ) {
+    const line = lines[k];
+    const fence = /^```(\w*)(.*)$/.exec(line);
+    if (fence) {
+      const body = [];
+      for (k++; k < lines.length && !/^```\s*$/.test(lines[k]); k++) body.push(lines[k]);
+      k++;
+      const [language, info] = [fence[1], fence[2]];
+      const file = /\bfile=(\S+)/.exec(info)?.[1];
+      const text = body.join("\n");
+      if (language === "output" && out.at(-1)?.endsWith("</pre></div>")) {
+        out[out.length - 1] = out.at(-1).replace(/<\/div>$/, `<pre class="says"><code>${escape(text)}</code></pre></div>`);
+      } else if (language === "console") {
+        out.push(`<div class="code console"><pre><code>${body.map((l) => (l.startsWith("$ ") ? `<span class="prompt">$</span> <b>${escape(l.slice(2))}</b>` : escape(l))).join("\n")}</code></pre></div>`);
+      } else {
+        const code = language === "moth" ? highlight(text) : escape(text);
+        out.push(`<div class="code">${file ? `<div class="head"><span class="name">${escape(file)}</span></div>` : ""}<pre><code>${code}</code></pre></div>`);
+      }
+      continue;
+    }
+    const heading = /^(#{1,3}) (.*)$/.exec(line);
+    if (heading) {
+      k++;
+      if (heading[1] === "#") title = heading[2];
+      else if (heading[1] === "##") {
+        const id = slugOf(heading[2]);
+        sections.push([id, heading[2]]);
+        out.push(`<h2 id="${id}">${inlineOf(heading[2], root)}</h2>`);
+      } else out.push(`<h3>${inlineOf(heading[2], root)}</h3>`);
+      continue;
+    }
+    if (/^- /.test(line)) {
+      const items = [];
+      for (; k < lines.length && (/^- /.test(lines[k]) || /^ {2}\S/.test(lines[k])); k++) {
+        if (lines[k].startsWith("- ")) items.push(lines[k].slice(2));
+        else items[items.length - 1] += ` ${lines[k].trim()}`;
+      }
+      out.push(`<ul>${items.map((item) => `<li>${inlineOf(item, root)}</li>`).join("")}</ul>`);
+      continue;
+    }
+    if (!line.trim()) {
+      k++;
+      continue;
+    }
+    const words = [];
+    for (; k < lines.length && lines[k].trim() && !/^(```|#{1,3} |- )/.test(lines[k]); k++) words.push(lines[k].trim());
+    const paragraph = words.join(" ");
+    if (intro === null) intro = paragraph;
+    out.push(/^!\[[^\]]*\]\([^)]+\)$/.test(paragraph) ? `<p class="figure">${inlineOf(paragraph, root)}</p>` : `<p>${inlineOf(paragraph, root)}</p>`);
+  }
+  return { title, intro: intro ?? "", sections, html: out.join("\n        ") };
+}
+
+function recipePage(name, read) {
+  const md = read(`docs/cookbook/${name}`);
+  const { title, sections, html } = markdownOf(md, "../../");
+  const intro = html.split("\n")[0];
+  const hero = `      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>${inlineOf(title, "../../")}</h1>
+      ${intro.replace(/^<p>/, "<p>")}`;
+  const toc = sections.map(([id, words]) => `<li><a href="#${id}">${inlineOf(words, "../../").replace(/<\/?code>/g, "")}</a></li>`).join("");
+  const body = `  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol>${toc}</ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/${name}">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+        ${html.split("\n").slice(1).join("\n")}
+    </main>
+  </div>`;
+  const plain = markdownOf(md, "../../").intro.replace(/[`*]/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  return page({ title: `${title.replace(/`/g, "")} · The Moth cookbook`, description: summaryOf(plain), root: "../../", current: "Cookbook", hero, body });
+}
+
+function cookbookIndex(names, read) {
+  const { title } = markdownOf(read("docs/cookbook/README.md"), "../../");
+  const cards = names.map((name) => {
+    const recipe = markdownOf(read(`docs/cookbook/${name}`), "../../");
+    return `<a class="card" href="${name.replace(/\.md$/, ".html")}"><b class="recipe-title">${inlineOf(recipe.title, "../../").replace(/<\/?a[^>]*>/g, "")}</b><span>${inlineOf(summaryOf(recipe.intro), "../../").replace(/<\/?a[^>]*>/g, "")}</span></a>`;
+  });
+  const hero = `      <p class="eyebrow">The cookbook</p>
+      <h1>Recipes for <em>real work</em>.</h1>
+      <p>Short recipes for what people make: data from files and the web, servers with databases, tools for the
+        command line, charts, games, work on every core, and tests. Each starts from a task, gives the whole
+        program, and shows what it says.</p>`;
+  const body = `  <main class="wrap index">
+    <section class="group">
+      <h2>${names.length} recipes</h2>
+      <p>Every one is run as it's written, by Moth's tests, on every push: what you read is what the code does today.</p>
+      <div class="cards">${cards.join("\n        ")}</div>
+    </section>
+  </main>`;
+  return page({ title: `${title} · Moth`, description: "Short, tested recipes for Moth: CSV and JSON, web APIs, servers with databases, command-line tools, data and charts, games, every core, and testing.", root: "../../", current: "Cookbook", hero, body });
+}
+
 // the tests of a library, if it has any
 const testsOf = (file, read) => {
   const name = file.replace(/\.moth$/, ".test.moth");
@@ -621,6 +761,11 @@ export function docs(read = here) {
   const libs = LIBRARIES.map((file) => readLibrary(file, read));
   const pages = { "index.html": indexPage(libs) };
   for (const lib of libs) pages[`${lib.name}.html`] = libraryPage(lib, testsOf(lib.file, read), read);
+  const recipes = recipeNames(read);
+  if (recipes.length) {
+    pages["cookbook/index.html"] = cookbookIndex(recipes, read);
+    for (const name of recipes) pages[`cookbook/${name.replace(/\.md$/, ".html")}`] = recipePage(name, read);
+  }
   return pages;
 }
 
@@ -635,8 +780,12 @@ export const KEPT = ["examples.html"];
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const made = docs();
   const folder = new URL("./docs/", import.meta.url);
-  // a page for a library that's gone, gone too: every page here that isn't made or kept was a library's
-  for (const file of readdirSync(folder)) if (file.endsWith(".html") && !(file in made) && !KEPT.includes(file)) unlinkSync(new URL(file, folder));
+  // a page for a library or a recipe that's gone, gone too: every page here that isn't made or kept was one's
+  for (const sub of ["", "cookbook/"]) {
+    for (const file of readdirSync(new URL(sub, folder))) {
+      if (file.endsWith(".html") && !(`${sub}${file}` in made) && !KEPT.includes(`${sub}${file}`)) unlinkSync(new URL(`${sub}${file}`, folder));
+    }
+  }
   for (const [file, html] of Object.entries(made)) writeFileSync(new URL(file, folder), html);
   const missing = undocumented();
   console.log(`made docs/: ${Object.keys(made).length} pages${missing.length ? `; ${missing.length} public functions have no comment: ${missing.join(", ")}` : ""}`);

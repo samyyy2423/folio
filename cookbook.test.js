@@ -1,4 +1,4 @@
-// The cookbook's recipes (docs/cookbook/*.md, DESIGN §127), each run as it's written, so none goes stale:
+// The cookbook's recipes (docs/cookbook/*.md, DESIGN §128), each run as it's written, so none goes stale:
 // its files are written to a folder of its own, each program run, and what each says must be what the recipe
 // shows. In a recipe:
 //
@@ -99,11 +99,13 @@ after(() => Object.values(stands ?? {}).forEach(({ server }) => server.close()))
 // ---------- moth ----------
 
 let built = null;
+let builtIn = null; // the folder moth was built in, taken away once every recipe has run
+after(() => builtIn && rmSync(builtIn, { recursive: true, force: true }));
 // moth, built from the source as machine.test.js builds it, or MOTH_EXE's, which saves a minute while writing
 function mothExe() {
   if (built) return built;
   if (process.env.MOTH_EXE) return (built = process.env.MOTH_EXE);
-  const dir = mkdtempSync(join(tmpdir(), "moth-cookbook-"));
+  const dir = (builtIn = mkdtempSync(join(tmpdir(), "moth-cookbook-")));
   const machine = machineCompiler(here("machine.moth"), here("compiler.moth"));
   const files = Object.fromEntries(["machine.moth", "compiler.moth", "stdlib.moth", "webpage.moth", "checker-rules.moth", "tools/hash.moth", "wasm.moth"]
     .filter((file) => existsSync(new URL(`./${file}`, import.meta.url))).map((file) => [file, here(file)]));
@@ -112,7 +114,6 @@ function mothExe() {
   built = join(dir, target === "windows" ? "moth.exe" : "moth");
   writeFileSync(built, bytes);
   if (target === "linux") chmodSync(built, 0o755);
-  after(() => rmSync(dir, { recursive: true, force: true }));
   return built;
 }
 
@@ -151,8 +152,9 @@ const same = (got, wanted) => {
   return new RegExp(`^${pattern}$`).test(got);
 };
 
-// a display for a program's window: none on Windows' CI, and on Linux, only where DISPLAY is
-const display = target === "windows" || Boolean(process.env.DISPLAY);
+// a window can open: on Windows, and on Linux where there's GTK 3 and a display (CI runs the tests in Xvfb)
+const display = target === "windows" || (Boolean(process.env.DISPLAY)
+  && ["/usr/lib/x86_64-linux-gnu/libgtk-3.so.0", "/usr/lib64/libgtk-3.so.0", "/usr/lib/libgtk-3.so.0"].some((f) => existsSync(f)));
 
 // Runs a recipe: its files written, its programs and commands run, in a folder of its own; gives what went
 // differently from what it shows, as lines
@@ -191,7 +193,7 @@ export async function cook(markdown, name) {
           if (words[0] === "curl") got = await curl(words);
           else if (words[0] === "moth" && command.endsWith("&")) {
             const opens = /use "(game|ui|windows|linux)\.moth"/.test(readdirSync(dir).filter((f) => f.endsWith(".moth")).map((f) => readFileSync(join(dir, f), "utf8")).join("\n"));
-            if (opens && !display) continue; // a window needs a display to open on
+            if (opens && !display) continue; // a window needs GTK and a display to open on
             const child = spawn(exe, words.slice(1), { cwd: dir, detached: target !== "windows", stdio: ["ignore", "pipe", "pipe"] });
             const said = [];
             child.stdout.on("data", (piece) => said.push(piece));

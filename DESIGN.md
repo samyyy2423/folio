@@ -5228,3 +5228,38 @@ engines stay: as the fallback, and as what the tests compare against.
   one that's gone; every public function has a comment; and on a library made up for the test, a helper has
   no entry, inputs with kinds and defaults are read (`with on as yes or no or no`), and an example from the
   tests keeps the `set` and the `add` it needs, leaves out what it doesn't, and shows what it said.
+
+## 128. A cookbook, tested
+
+- **Why.** The reference (§127) says what each function does; it doesn't say how to build the things people
+  build: read a CSV and write JSON, call an API, serve one with a database, make a command-line tool, chart
+  some data, write a game, use every core, test it. Python's and Rust's cookbooks are where people learn
+  that, and they go stale as the language moves on, because nothing runs them.
+- **Recipes, task first.** docs/cookbook/ has eight, in Markdown, which GitHub shows as they are: each starts
+  from what you want, gives every file of the program whole, shows the commands to run it and what they say,
+  then says how it works and where to go next. The site has them too, made by make-docs.mjs with the
+  reference's look: a page each, with its sections beside it, and an index of cards in the README's order.
+- **Every recipe runs.** cookbook.test.js reads a recipe's blocks as the reader would follow them: ```` ```moth
+  file=todos.moth ```` (or ```` ```text file=... ````) is a file written to the recipe's own folder; a
+  ```` ```moth ```` block without a name is a program run on its own, and the ```` ```output ```` block after
+  it, as `moth notebook` (§77) writes them, is what it says; and a ```` ```console ```` block is what to type
+  and what it says: `$ moth ...` runs moth, `$ curl ...` asks a server, `$ cat` shows a file, `$ ./words`
+  runs what the recipe built, and a command ending in `&` keeps running, in the background, to the block's
+  end, where it must still be running. Every other line of a console is what the command before said, with
+  `...` for what's different each run (how long it took, how big a program is). A picture the recipe shows
+  that its program makes (a chart's SVG) must be the one it makes now. So what a reader reads is what the
+  code does today, and a change that breaks a recipe fails CI.
+- **Real sites, stood in for.** The web API recipe asks GitHub's API, as people do. CI shouldn't depend on
+  GitHub answering, so the test answers for it: a server of its own, on 127.0.0.1, answering as
+  api.github.com does (the repository, its issues, and 401 to a new issue without a token, 403 without a
+  User-Agent), and the recipe's files are written with the stand-in's address in place of the site's, and
+  what they say with the site's again. The children run without GITHUB_TOKEN, so a token of the person
+  running the tests is never sent anywhere.
+- **What the recipes found.** Writing them against the real moth found a mistake in each draft that a page
+  of docs wouldn't have: `item region of sale of totals` read as `item (region of sale of totals)`, a
+  function used above where it's made, `rounded` taking only what's next to it, `random number from` needing
+  whole numbers, and `random number` differing each run of a program moth builds, unlike the playground's.
+- **Tested.** cookbook.test.js builds moth from the source, as machine.test.js does, and runs each recipe in
+  a folder of its own; the game in a window under CI's Xvfb, where GTK is. It also tests how a recipe is read:
+  a file, a program and its output, a console; words in quotes; `...`. docs.test.js has the cookbook's pages
+  as part of docs/, and how its Markdown is made HTML.

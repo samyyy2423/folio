@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A web API with a database · The Moth cookbook</title>
+  <meta name="description" content="You want a small service of your own: a to-do list other programs can read and change over HTTP, as JSON, kept in a database so it's there after a restart.">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../../#playground">Playground</a>
+      <a class="go" href="../../learn.html">Learn</a>
+      <a class="go" href="../../docs/">Docs</a>
+      <a class="go" href="../../docs/cookbook/" aria-current="page">Cookbook</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>A web API with a database</h1>
+      <p>You want a small service of your own: a to-do list other programs can read and change over HTTP, as JSON, kept in a database so it's there after a restart. <a href="../../docs/server.html"><code>server.moth</code></a> answers the requests, and <a href="../../docs/sqlite.html"><code>sqlite.moth</code></a> keeps the to-dos in a file, through the SQLite that comes with Windows and Linux.</p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol><li><a href="#the-service">The service</a></li><li><a href="#build-it-into-one-program">Build it into one program</a></li><li><a href="#see-also">See also</a></li></ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/web-api-with-a-database.md">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+                <h2 id="the-service">The service</h2>
+        <div class="code"><div class="head"><span class="name">todos.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+<span class="k">use</span> <span class="s">&quot;sqlite.moth&quot;</span> <span class="k">as</span> sqlite
+
+<span class="k">set</span> db <span class="k">to</span> sqlite's open(<span class="s">&quot;todos.db&quot;</span>)
+sqlite's run(db, <span class="s">&quot;create table if not exists todos (id integer primary key, title text not null, done integer not null default 0)&quot;</span>)
+
+<span class="k">to</span> todo_with <span class="k">with</span> id
+    <span class="k">set</span> found <span class="k">to</span> sqlite's query_with(db, <span class="s">&quot;select id, title, done from todos where id = ?&quot;</span>, <span class="k">list</span> <span class="k">of</span> id)
+    <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> found <span class="k">is</span> <span class="n">0</span>
+        <span class="k">return</span> <span class="k">nothing</span>
+    <span class="k">end</span>
+    <span class="k">return</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> found
+<span class="k">end</span>
+
+<span class="k">to</span> answer <span class="k">with</span> request
+    <span class="k">set</span> parts <span class="k">to</span> <span class="k">split</span> path <span class="k">of</span> request <span class="k">by</span> <span class="s">&quot;/&quot;</span>     <span class="c"># &quot;/todos/7&quot; is &quot;&quot;, &quot;todos&quot;, &quot;7&quot;</span>
+    <span class="k">if</span> <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> parts <span class="k">is</span> <span class="k">not</span> <span class="s">&quot;todos&quot;</span>
+        <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">404</span>, body <span class="s">&quot;There's nothing at &quot;</span> + path <span class="k">of</span> request
+    <span class="k">end</span>
+    <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> parts <span class="k">is</span> <span class="n">2</span>                        <span class="c"># /todos</span>
+        <span class="k">if</span> method <span class="k">of</span> request <span class="k">is</span> <span class="s">&quot;GET&quot;</span>
+            <span class="k">return</span> sqlite's query(db, <span class="s">&quot;select id, title, done from todos order by id&quot;</span>)
+        <span class="k">end</span>
+        <span class="k">if</span> method <span class="k">of</span> request <span class="k">is</span> <span class="s">&quot;POST&quot;</span>
+            <span class="k">set</span> given <span class="k">to</span> <span class="k">json</span> <span class="k">from</span> body <span class="k">of</span> request
+            sqlite's run_with(db, <span class="s">&quot;insert into todos (title) values (?)&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="k">item</span> <span class="s">&quot;title&quot;</span> <span class="k">of</span> given)
+            <span class="k">set</span> made <span class="k">to</span> sqlite's query(db, <span class="s">&quot;select last_insert_rowid() as id&quot;</span>)
+            <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">201</span>, body todo_with(<span class="k">item</span> <span class="s">&quot;id&quot;</span> <span class="k">of</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> made) <span class="k">as</span> <span class="k">json</span>, type <span class="s">&quot;application/json&quot;</span>
+        <span class="k">end</span>
+        <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">405</span>, body <span class="s">&quot;Ask for the to-dos with GET, or add one with POST&quot;</span>
+    <span class="k">end</span>
+    <span class="k">set</span> id <span class="k">to</span> <span class="k">number</span> <span class="k">of</span> <span class="k">item</span> <span class="n">3</span> <span class="k">of</span> parts            <span class="c"># /todos/7</span>
+    <span class="k">if</span> todo_with(id) <span class="k">is</span> <span class="k">nothing</span>
+        <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">404</span>, body <span class="s">&quot;There's no to-do &quot;</span> + id
+    <span class="k">end</span>
+    <span class="k">if</span> method <span class="k">of</span> request <span class="k">is</span> <span class="s">&quot;PATCH&quot;</span>
+        sqlite's run_with(db, <span class="s">&quot;update todos set done = ? where id = ?&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="k">item</span> <span class="s">&quot;done&quot;</span> <span class="k">of</span> (<span class="k">json</span> <span class="k">from</span> body <span class="k">of</span> request), id)
+        <span class="k">return</span> todo_with(id)
+    <span class="k">end</span>
+    <span class="k">if</span> method <span class="k">of</span> request <span class="k">is</span> <span class="s">&quot;DELETE&quot;</span>
+        sqlite's run_with(db, <span class="s">&quot;delete from todos where id = ?&quot;</span>, <span class="k">list</span> <span class="k">of</span> id)
+        <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">204</span>
+    <span class="k">end</span>
+    <span class="k">return</span> todo_with(id)
+<span class="k">end</span>
+
+web's serve(<span class="n">8080</span>, answer)</code></pre></div>
+        <p>The handler is given each request, a record: its <code>method</code>, <code>path</code>, <code>query</code>, <code>headers</code> and <code>body</code>. What it gives back is the answer: a list or a dictionary goes as JSON, text as a page, and a record says the <code>status</code>, the <code>body</code>, its <code>type</code> and <code>headers</code>. A <code>?</code> in SQL is a value given apart from it, so a title with a quote in it is only ever a title.</p>
+        <p>Start it, letting it use sockets and SQLite (<code>--allow-libraries</code>) and keep its file (<code>--allow-read</code>, <code>--allow-write</code>), and ask it from another terminal:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth run --allow-libraries --allow-read --allow-write todos.moth &amp;</b>
+<span class="prompt">$</span> <b>curl -s -d '{&quot;title&quot;: &quot;Buy milk&quot;}' localhost:8080/todos</b>
+{&quot;id&quot;:1,&quot;title&quot;:&quot;Buy milk&quot;,&quot;done&quot;:0}
+<span class="prompt">$</span> <b>curl -s -d '{&quot;title&quot;: &quot;Write a recipe&quot;}' localhost:8080/todos</b>
+{&quot;id&quot;:2,&quot;title&quot;:&quot;Write a recipe&quot;,&quot;done&quot;:0}
+<span class="prompt">$</span> <b>curl -s -X PATCH -d '{&quot;done&quot;: 1}' localhost:8080/todos/1</b>
+{&quot;id&quot;:1,&quot;title&quot;:&quot;Buy milk&quot;,&quot;done&quot;:1}
+<span class="prompt">$</span> <b>curl -s localhost:8080/todos</b>
+[{&quot;id&quot;:1,&quot;title&quot;:&quot;Buy milk&quot;,&quot;done&quot;:1},{&quot;id&quot;:2,&quot;title&quot;:&quot;Write a recipe&quot;,&quot;done&quot;:0}]
+<span class="prompt">$</span> <b>curl -s -X DELETE localhost:8080/todos/2</b>
+<span class="prompt">$</span> <b>curl -s localhost:8080/todos/2</b>
+There's no to-do 2</code></pre></div>
+        <p><code>serve</code> answers this computer alone; <code>serve_everywhere</code> the networks it's on too. It serves many people at once, keeps connections open between requests, and a handler that fails is answered 500, said on the error output, and the server goes on.</p>
+        <h2 id="build-it-into-one-program">Build it into one program</h2>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth build todos.moth --allow-libraries --allow-read --allow-write</b>
+compiled todos.moth to machine code for Linux -&gt; todos (... bytes)</code></pre></div>
+        <p><code>todos</code> (<code>todos.exe</code> on Windows) is the whole service, needing nothing installed: copy it to a server and run it. <code>web's serve_on_workers(8080, answer, 4)</code> answers on four cores at once.</p>
+        <h2 id="see-also">See also</h2>
+        <ul><li><a href="https://github.com/samyyy2423/moth/blob/main/docs/guestbook.md">The guestbook</a>: a web app, with a page and a form, from start to finish.</li><li><a href="../../docs/postgres.html">postgres.moth</a> and <a href="../../docs/mysql.html">mysql.moth</a> for a database server, and <a href="../../docs/redis.html">redis.moth</a> for Redis.</li></ul>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../../#playground">Playground</a>
+      <a href="../../learn.html">Learn</a>
+      <a href="../../docs/">The standard library</a>
+      <a href="../../docs/cookbook/">The cookbook</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>

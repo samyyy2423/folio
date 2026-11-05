@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testing · The Moth cookbook</title>
+  <meta name="description" content="You want to know your code does what you meant, now and after every change.">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../../#playground">Playground</a>
+      <a class="go" href="../../learn.html">Learn</a>
+      <a class="go" href="../../docs/">Docs</a>
+      <a class="go" href="../../docs/cookbook/" aria-current="page">Cookbook</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The cookbook</a></p>
+      <h1>Testing</h1>
+      <p>You want to know your code does what you meant, now and after every change. Moth's tests are functions whose names start with <code>test_</code>, in files ending in <code>.test.moth</code>, and <code>expect</code> says what should be so; <code>moth test</code> runs each in a run of its own and says which failed, where, and what was there instead.</p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="The recipe's parts">
+      <h2>In this recipe</h2>
+      <ol><li><a href="#the-code">The code</a></li><li><a href="#its-tests">Its tests</a></li><li><a href="#when-a-test-fails">When a test fails</a></li><li><a href="#testing-what-s-always-so">Testing what's always so</a></li><li><a href="#every-test">Every test</a></li><li><a href="#see-also">See also</a></li></ol>
+      <p class="more"><a href="./">Every recipe</a> · <a href="https://github.com/samyyy2423/moth/blob/main/docs/cookbook/testing.md">On GitHub</a></p>
+    </nav>
+    <main class="prose recipe">
+                <h2 id="the-code">The code</h2>
+        <p>A shop's prices, with a discount for bigger ones:</p>
+        <div class="code"><div class="head"><span class="name">prices.moth</span></div><pre><code><span class="c"># a price with the shop's discount: 10% off at 100 or more, 20% off at 500 or more, to the cent</span>
+<span class="k">to</span> discounted <span class="k">with</span> price
+    <span class="k">if</span> price <span class="k">is</span> less <span class="k">than</span> <span class="n">0</span>
+        <span class="k">fail</span> <span class="k">with</span> <span class="s">&quot;a price can't be below 0, not &quot;</span> + price
+    <span class="k">end</span>
+    <span class="k">set</span> rate <span class="k">to</span> <span class="n">0</span>
+    <span class="k">if</span> price <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">500</span>
+        <span class="k">set</span> rate <span class="k">to</span> <span class="n">0.2</span>
+    <span class="k">else</span> <span class="k">if</span> price <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">100</span>
+        <span class="k">set</span> rate <span class="k">to</span> <span class="n">0.1</span>
+    <span class="k">end</span>
+    <span class="k">return</span> (price * (<span class="n">1</span> - rate) * <span class="n">100</span> <span class="k">rounded</span>) / <span class="n">100</span>
+<span class="k">end</span>
+
+<span class="c"># the total of a basket, a list of records with a price and how many</span>
+<span class="k">to</span> basket_total <span class="k">with</span> basket
+    <span class="k">set</span> sum <span class="k">to</span> <span class="n">0</span>
+    <span class="k">for</span> <span class="k">each</span> line <span class="k">in</span> basket
+        <span class="k">set</span> sum <span class="k">to</span> sum + discounted(price <span class="k">of</span> line) * count <span class="k">of</span> line
+    <span class="k">end</span>
+    <span class="k">return</span> sum
+<span class="k">end</span></code></pre></div>
+        <h2 id="its-tests">Its tests</h2>
+        <p><code>use</code> the file <code>as</code> a name, and write a <code>test_</code> function for each thing it should do. <code>expect</code> takes any comparison; a <code>try</code> checks a mistake is the one it should be.</p>
+        <div class="code"><div class="head"><span class="name">prices.test.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;prices.moth&quot;</span> <span class="k">as</span> shop
+
+<span class="k">to</span> test_no_discount_under_100
+    <span class="k">expect</span> shop's discounted(<span class="n">99.99</span>) <span class="k">is</span> <span class="n">99.99</span>
+<span class="k">end</span>
+
+<span class="k">to</span> test_ten_percent_from_100
+    <span class="k">expect</span> shop's discounted(<span class="n">100</span>) <span class="k">is</span> <span class="n">90</span>
+    <span class="k">expect</span> shop's discounted(<span class="n">250</span>) <span class="k">is</span> <span class="n">225</span>
+<span class="k">end</span>
+
+<span class="k">to</span> test_twenty_percent_from_500
+    <span class="k">expect</span> shop's discounted(<span class="n">500</span>) <span class="k">is</span> <span class="n">400</span>
+<span class="k">end</span>
+
+<span class="k">to</span> test_a_basket
+    <span class="k">set</span> basket <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">record</span> <span class="k">with</span> price <span class="n">10</span>, count <span class="n">3</span>), (<span class="k">record</span> <span class="k">with</span> price <span class="n">200</span>, count <span class="n">1</span>)
+    <span class="k">expect</span> shop's basket_total(basket) <span class="k">is</span> <span class="n">210</span>
+<span class="k">end</span>
+
+<span class="k">to</span> test_a_price_below_0_is_a_mistake
+    <span class="k">try</span>
+        shop's discounted(-<span class="n">5</span>)
+        <span class="k">expect</span> <span class="s">&quot;a mistake&quot;</span> <span class="k">is</span> <span class="s">&quot;no mistake&quot;</span>
+    <span class="k">if</span> it <span class="k">fails</span> <span class="k">with</span> why
+        <span class="k">expect</span> why <span class="k">is</span> <span class="s">&quot;a price can't be below 0, not -5&quot;</span>
+    <span class="k">end</span>
+<span class="k">end</span></code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth test prices.test.moth</b>
+✓ test_no_discount_under_100
+✓ test_ten_percent_from_100
+✓ test_twenty_percent_from_500
+✓ test_a_basket
+✓ test_a_price_below_0_is_a_mistake
+5 passed</code></pre></div>
+        <h2 id="when-a-test-fails">When a test fails</h2>
+        <p>A test is often wrong about the edges. This one thinks 499.99 is in the top band:</p>
+        <div class="code"><div class="head"><span class="name">edge.test.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;prices.moth&quot;</span> <span class="k">as</span> shop
+
+<span class="k">to</span> test_just_under_500
+    <span class="k">expect</span> shop's discounted(<span class="n">499.99</span>) <span class="k">is</span> <span class="n">450</span>
+<span class="k">end</span></code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth test edge.test.moth</b>
+✗ test_just_under_500
+    edge.test.moth:4:5: expected 449.99 to be 450
+        expect shop's discounted(499.99) is 450
+        ^
+0 passed, 1 failed</code></pre></div>
+        <p>It says the line, both sides of the comparison, and ends with 1, so a script or CI stops there. Here the code is right and the test is wrong: 499.99 is under 500, so it's 10% off.</p>
+        <h2 id="testing-what-s-always-so">Testing what's always so</h2>
+        <p>A test of a few prices checks those prices. A test of what must be so for <em>every</em> price checks many, picked at random, and finds the ones you didn't think of:</p>
+        <div class="code"><div class="head"><span class="name">properties.test.moth</span></div><pre><code><span class="k">use</span> <span class="s">&quot;prices.moth&quot;</span> <span class="k">as</span> shop
+
+<span class="c"># whatever the price, the discount never makes it more, nor below 0, nor takes more than a fifth</span>
+<span class="k">to</span> test_any_price
+    <span class="k">repeat</span> <span class="n">1000</span> <span class="k">times</span>
+        <span class="k">set</span> price <span class="k">to</span> (<span class="k">random</span> <span class="k">number</span> <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> <span class="n">100000</span>) / <span class="n">100</span>
+        <span class="k">set</span> paid <span class="k">to</span> shop's discounted(price)
+        <span class="k">expect</span> paid <span class="k">is</span> <span class="k">at</span> <span class="k">most</span> price
+        <span class="k">expect</span> paid <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> price * <span class="n">0.8</span> - <span class="n">0.005</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c"># a cent more never costs less</span>
+<span class="k">to</span> test_a_higher_price_never_costs_less
+    <span class="k">for</span> <span class="k">each</span> cents <span class="k">from</span> <span class="n">9900</span> <span class="k">to</span> <span class="n">10100</span>
+        <span class="k">set</span> price <span class="k">to</span> cents / <span class="n">100</span>
+        <span class="k">expect</span> shop's discounted(price + <span class="n">0.01</span>) <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> shop's discounted(price)
+    <span class="k">end</span>
+<span class="k">end</span></code></pre></div>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth test properties.test.moth</b>
+✓ test_any_price
+✗ test_a_higher_price_never_costs_less
+    properties.test.moth:17:9: expected 90 to be at least 99.99
+            expect shop's discounted(price + 0.01) is at least shop's discounted(price)
+            ^
+1 passed, 1 failed</code></pre></div>
+        <p>The second found something no single example showed: 99.99 costs 99.99, and a cent more costs 90. That's the discount doing what it says, but a shop may not want a customer to pay less by buying more; a test like this is how you find out to ask. The first test picks a different thousand prices each run; the second goes through every cent from 99 to 101, so when it fails, it fails again the same way when you look.</p>
+        <h2 id="every-test">Every test</h2>
+        <p><code>moth test</code> with no file runs every <code>.test.moth</code> file in the folder and the folders inside it, each named before its tests, then how many passed and failed in all:</p>
+        <div class="code console"><pre><code><span class="prompt">$</span> <b>moth test</b>
+edge.test.moth
+✗ test_just_under_500
+    edge.test.moth:4:5: expected 449.99 to be 450
+        expect shop's discounted(499.99) is 450
+        ^
+prices.test.moth
+✓ test_no_discount_under_100
+✓ test_ten_percent_from_100
+✓ test_twenty_percent_from_500
+✓ test_a_basket
+✓ test_a_price_below_0_is_a_mistake
+properties.test.moth
+✓ test_any_price
+✗ test_a_higher_price_never_costs_less
+    properties.test.moth:17:9: expected 90 to be at least 99.99
+            expect shop's discounted(price + 0.01) is at least shop's discounted(price)
+            ^
+6 passed, 2 failed</code></pre></div>
+        <p>Run it in CI as it is: it ends with 0 only when every test passed. <code>moth coverage</code> says which lines the tests never ran.</p>
+        <h2 id="see-also">See also</h2>
+        <ul><li>Every library in <a href="../../docs/">the standard library</a> has a <code>.test.moth</code> file of its own, which <code>moth test</code> runs on every push: <a href="https://github.com/samyyy2423/moth/blob/main/tools/stats.test.moth">stats.moth's</a> is a good one to read.</li></ul>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../../#playground">Playground</a>
+      <a href="../../learn.html">Learn</a>
+      <a href="../../docs/">The standard library</a>
+      <a href="../../docs/cookbook/">The cookbook</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>
