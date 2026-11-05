@@ -4,7 +4,7 @@
 import { MothError, Ended, fail, closest, startTasks, seeded, fakeClock, NOW_WORDS, EVENTS, KINDS, Turtle, callFunction, makeRecord, catchable, caughtValue, COMPARISONS, COMPARE_OPS, OP, OPCODES, TURTLE_ACTIONS, BUILTINS, UNSET, Closure, Machine, execute, isRecord, UNITS, unitNamed } from "./vm.js";
 import { Scope, declarations } from "./scope.js";
 import { jit, fromJs, TooDeep } from "./jit.js";
-import { wasm, wasmProgram, wasmFile, compileToWasmModule } from "./wasm.js";
+import { wasm, wasmProgram, wasmFile, wasmDetails, compileToWasmModule } from "./wasm.js";
 import { check as checkProgram } from "./checker.js";
 
 export { MothError, excerpt, describeTrail, seeded, soundSamples, soundWav, SOUND_RATE } from "./vm.js";
@@ -2807,6 +2807,33 @@ export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
       if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
       throw err;
     }
+  };
+}
+
+// Moth's compiler as WebAssembly (moth.wasm, which make-moth-wasm.mjs makes; DESIGN §144): give it the module's
+// bytes and get back a function that compiles a program, and the files it may use ({ "name.moth": text }), as
+// compileToWasmModule does: { bytes, ats, names, messages, kinds }, and `whole`, the module with what running it
+// needs in its section "moth", as moth build --target wasm writes it. A mistake in the program is a MothError.
+export function mothWasmCompiler(bytes) {
+  const compiler = wasmFile(bytes);
+  return (source, files = {}) => {
+    const given = [source];
+    for (const [name, text] of Object.entries(files)) given.push(name, text);
+    const said = [];
+    try {
+      compiler.run((line) => said.push(line), undefined, Infinity, undefined, undefined, given, seeded(), { handlers: [] }, (line) => said.push(line));
+    } catch (err) {
+      if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+      throw err;
+    }
+    const line = said.join("\n");
+    if (line.startsWith("mistake ")) {
+      const why = JSON.parse(line.slice(8));
+      if (why && typeof why === "object" && why.reason !== undefined) fail({ line: why.at.line, col: why.at.col, file: why.at.file || undefined }, why.reason);
+      throw new Error(`moth.wasm: ${typeof why === "string" ? why : line}`);
+    }
+    const whole = Uint8Array.from(line.split(","), Number);
+    return { ...wasmDetails(whole), whole };
   };
 }
 

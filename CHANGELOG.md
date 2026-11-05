@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **moth.wasm.** Moth's compiler, `compiler.moth` and `wasm.moth`, is a WebAssembly module of its own,
+  `moth.wasm`, made by itself and checked to make itself again. The playground compiles with it on the
+  WebAssembly engine, so the programs it runs there are compiled by Moth, not by JavaScript.
 - **What a function needs.** `to withdraw with amount where amount is greater than 0` checks its condition at
   the start of each call: if it isn't so, the call is a mistake that says what the function needs, as written,
   and what the name was: `'withdraw' needs amount is greater than 0, but amount is -5`. `where` goes on the

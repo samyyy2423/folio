@@ -1657,6 +1657,7 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`wasm.js`](wasm.js) | Moth to WebAssembly, with escape analysis and unboxed numbers |
 | [`wasm.moth`](wasm.moth) | The same, written in Moth: wasm.js's bytes exactly, and `moth build --target wasm` |
 | [`npm/`](npm) | mothlang for JavaScript: `run`, `load`, `check`, `format` and `test` on Moth's engine, and the `mothlang` command; `make-package.mjs` makes the npm package |
+| [`moth-wasm.moth`](moth-wasm.moth), `moth.wasm` | Moth's compiler as a WebAssembly module of its own, made by itself with `make-moth-wasm.mjs`; the playground compiles with it |
 | [`wasm-runtime.js`](wasm-runtime.js) | The part of their runtime written once, as WebAssembly, which both assemble: text, and numbers shown in it; `make-wasm-runtime.mjs` writes it into `wasm-runtime.moth` for wasm.moth |
 | [`checker.js`](checker.js) | Finds mistakes without running the program |
 | [`compiler.moth`](compiler.moth) | Moth's compiler, written in Moth |

@@ -6130,3 +6130,44 @@ top, worded each time. `to withdraw with amount where amount is greater than
   a check that holds and one that fails, with `and`, brackets, `length of`,
   inputs with types and `or`, a kind's function and `self's`, a `try`, and a
   name and a function called `where` and `needs` that are as they were.
+
+## 144. moth.wasm, and the playground compiling with it
+
+Stages 3 and 4 of §125's four, done before the end of stage 2 (§139), as
+they could be: the compiler is Moth's own in the browser now, while the
+modules it makes still take most of their runtime from vm.js until stage 2
+is done.
+
+- **moth.wasm.** `moth-wasm.moth` is the compiler as a program: compiler.moth
+  reads the program it's given (its arguments are the program's text, then
+  each file's name and text), wasm.moth makes the module, and it says the
+  module's bytes on one line, with what running it needs in its section
+  "moth", as `moth build --target wasm` writes it; or `mistake` and the
+  mistake as JSON, which `mothWasmCompiler` in moth.js throws as the
+  MothError wasm.js would.
+- **Made by itself.** `make-moth-wasm.mjs` has wasm.js make it once; that
+  module, run, makes `moth-wasm.moth` again, and what it makes is moth.wasm;
+  and moth.wasm, run, must make itself into its own bytes, or nothing is
+  written. It is 1,556,161 bytes, 400 KB of them the positions and messages
+  its section keeps for its own mistakes. A test makes it again and checks the
+  file is what it makes, as webpage.moth's does.
+- **The same compiler.** On every playground example, hand-written case, typed
+  program and 800 programs the generators make, broken or not, moth.wasm makes
+  wasm.js's bytes exactly and stops at the same mistakes, and what it makes
+  runs as the VM runs it. A program takes 17 ms to compile on average in
+  Node, as each call runs moth.wasm's program again, its runtime made again
+  with it; 0.8 ms of that is the program.
+- **The playground.** The page compiles moth.wasm once, when it loads, and
+  sends the compiled module with each run, so the code the browser makes of it
+  is kept between runs (each run has a worker of its own). On the WebAssembly
+  engine, the worker compiles the program with it, and says so: "Ran in 37 ms
+  on WebAssembly, compiled by moth.wasm". The first run after the page loads
+  takes 350 ms while the browser compiles moth.wasm's code; the runs after it,
+  40 to 60. Until moth.wasm is there, or where it can't be fetched (a page
+  `moth build --web` made, which has no moth.wasm beside it), the worker
+  compiles with wasm.js, as it would for a mistake in moth.wasm itself that
+  isn't the program's.
+- **What's left.** The modules moth.wasm makes import their checks, mistakes,
+  dictionaries and built-ins from vm.js (§139 has the parts), so the page still
+  carries the engine's JavaScript; when stage 2 is done, it's a loader, and
+  moth.wasm and what it makes can run with no JavaScript at all.

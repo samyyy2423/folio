@@ -1712,12 +1712,18 @@ export function wasmProgram(made, module = new WebAssembly.Module(made.bytes)) {
 // A module `moth build --target wasm` made (wasm_with_details in wasm.moth): its bytes, with what running it needs
 // as JSON in its custom section "moth", made ready to run as wasmProgram makes one.
 export function wasmFile(bytes) {
-  const module = new WebAssembly.Module(bytes);
+  const module = bytes instanceof WebAssembly.Module ? bytes : new WebAssembly.Module(bytes); // or the module, compiled
+  return wasmProgram(wasmDetails(bytes, module), module);
+}
+
+// what a module moth build --target wasm wrote holds: its bytes, and what running it needs, from its section
+// "moth", as compileToWasmModule gives them
+export function wasmDetails(bytes, module = new WebAssembly.Module(bytes)) {
   const [section] = WebAssembly.Module.customSections(module, "moth");
   if (!section) throw new Error("this module wasn't made by moth build --target wasm: it has no section called moth");
   const details = JSON.parse(new TextDecoder().decode(section));
   const ats = details.ats.map(([line, col, file]) => ({ line, col, file: file || undefined }));
-  return wasmProgram({ ...details, bytes, ats }, module);
+  return { ...details, bytes, ats };
 }
 
 // The JavaScript side of a run: the imports, and moving values in and out of the module.

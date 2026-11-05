@@ -1260,7 +1260,7 @@ Did you mean 'total'?</pre></div>
         if (data.stopped !== undefined && !data.done) return finish(`The app stopped the program with ${data.stopped}`); // a handler did
         if (data.done) {
           if (data.empty && !data.app) output.append("(no output)");
-          const engine = { jit: "the JIT", wasm: "WebAssembly", vm: "the VM" }[$("engine").value];
+          const engine = { jit: "the JIT", wasm: data.byMothWasm ? "WebAssembly, compiled by moth.wasm" : "WebAssembly", vm: "the VM" }[$("engine").value];
           const ms = data.ms < 10 ? data.ms.toFixed(1) : Math.round(data.ms);
           if (data.app) return startApp(data.app, `Set up in ${ms} ms on ${engine}`);
           // `stop the program with 2` just ends the run: there is no system here to hand the 2 to
@@ -1270,7 +1270,7 @@ Did you mean 'total'?</pre></div>
       current.onerror = (e) => fail(`Error: ${e.message || "the program stopped unexpectedly"}`); // e.g. it ran out of memory
       const source = code.value;
       fetchUses(source).then(() => {
-        if (worker === current) current.postMessage({ source, engine: $("engine").value, answers, files: Object.fromEntries(usedFiles), seed, disk: Object.fromEntries(pageFiles) });
+        if (worker === current) current.postMessage({ source, engine: $("engine").value, answers, files: Object.fromEntries(usedFiles), seed, disk: Object.fromEntries(pageFiles), mothWasm });
       });
     }
 
@@ -1589,6 +1589,14 @@ Did you mean 'total'?</pre></div>
       }
     })();
     if (wasmReady) $("engine").value = "wasm";
+    // Moth's own compiler as WebAssembly (moth.wasm, DESIGN §144), compiled here once and sent with each run, so
+    // the WebAssembly engine's programs are compiled by Moth itself. Where it can't be fetched (a page moth build
+    // --web made, say), the worker compiles them with wasm.js.
+    let mothWasm = null;
+    if (wasmReady) {
+      fetch("./moth.wasm").then((answer) => (answer.ok ? answer.arrayBuffer() : null)).then((bytes) => bytes && WebAssembly.compile(bytes))
+        .then((module) => (mothWasm = module ?? null), () => {});
+    }
     $("engine").onchange = runCode;
 
     // Files a program can read, by name, as if they were in its folder: picked with Files, or dropped on the
