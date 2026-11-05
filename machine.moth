@@ -556,6 +556,11 @@ to alui with a, op, dst, v
     alu_at(a, op, reg_at(dst), v)
 end
 
+# compares the low 32 bits of register r with v, from 0 to 2^32 - 1
+to cmp32i with a, r, v
+    enc(a, empty list, no, (list of 0x81), 7, reg_at(r), imm32(v))
+end
+
 to test_rr with a, x, y
     enc(a, empty list, yes, (list of 0x85), y, reg_at(x), empty list)
 end
@@ -4469,7 +4474,22 @@ to emit_sequences with a
     set same to new_label(a)
     set different to new_label(a)
     set out to new_label(a)
+    set general_equal to new_label(a)
+    set not_text_too to new_label(a)
     mark(a, "rt_equal")
+    mov_rr(a, rcx, rax) # text, the most compared: the same as text of the same bytes, and nothing else
+    shifti(a, "shr", rcx, 48)
+    alui(a, "cmp", rcx, kind_text)
+    jcc(a, cc_ne, general_equal)
+    mov_rr(a, rcx, rdx)
+    shifti(a, "shr", rcx, 48)
+    alui(a, "cmp", rcx, kind_text)
+    jcc(a, cc_ne, not_text_too)
+    jmp_to(a, "rt_text_same")
+    mark(a, not_text_too)
+    movi(a, rax, 0)
+    ret(a)
+    mark(a, general_equal)
     push_r(a, rbx)
     push_r(a, r12)
     push_r(a, r13)
@@ -4539,18 +4559,10 @@ to emit_sequences with a
     jcc(a, cc_ne, different)
     jmp_to(a, same)
     mark(a, texts)
-    untag(a, rbx)
-    untag(a, r12)
-    load(a, rcx, mem(rbx, 0))
-    alu_load(a, "cmp", rcx, mem(r12, 0))
-    jcc(a, cc_ne, different)
-    test_rr(a, rcx, rcx)
-    jcc(a, cc_e, same)
-    load(a, rsi, mem(rbx, 16))
-    load(a, rdi, mem(r12, 16))
-    raw(a, list of 0xF3, 0xA6) # repe cmpsb
-    jcc(a, cc_ne, different)
-    jmp_to(a, same)
+    mov_rr(a, rax, rbx)
+    mov_rr(a, rdx, r12)
+    call_to(a, "rt_text_same")
+    jmp_to(a, out)
     mark(a, lists)
     mov_rr(a, r13, rbx)
     untag(a, r13)
@@ -5901,23 +5913,61 @@ to emit_records with a
     mark(a, whole_key)
     mov_rr(a, r8, rdx)
     jmp_to(a, hashed)
-    mark(a, text_key) # FNV-1a over its bytes
+    # text: its bytes eight at a time, each eight xored in, multiplied by an odd number and its high bits
+    # brought down; then the last one to seven as one piece, read as two that may overlap (the first four and
+    # the last four, or two and two), with how many bytes there are mixed in first. A byte at a time took 75
+    # instructions for a key of five letters (DESIGN §149).
+    set eights to new_label(a)
+    set tail to new_label(a)
+    set under_four to new_label(a)
+    set one_byte to new_label(a)
+    set mix_tail to new_label(a)
+    mark(a, text_key)
     mov_rr(a, rax, rdx)
     untag(a, rax)
     load(a, rcx, mem(rax, 0))
     load(a, rsi, mem(rax, 16))
     movi64(a, r8, list of 0x25, 0x23, 0x22, 0x84, 0xE4, 0x9C, 0xF2, 0xCB)
-    movi64(a, r9, list of 0xB3, 0x01, 0, 0, 0, 0x01, 0, 0)
-    set fnv to new_label(a)
-    mark(a, fnv)
-    test_rr(a, rcx, rcx)
-    jcc(a, cc_e, hashed)
-    load8(a, rax, mem(rsi, 0))
+    alu(a, "xor", r8, rcx)
+    movi64(a, r9, list of 0x15, 0x7C, 0x4A, 0x7F, 0xB9, 0x79, 0x37, 0x9E)
+    mark(a, eights)
+    alui(a, "cmp", rcx, 8)
+    jcc(a, cc_b, tail)
+    load(a, rax, mem(rsi, 0))
     alu(a, "xor", r8, rax)
     imul_rr(a, r8, r9)
-    inc_r(a, rsi)
-    dec_r(a, rcx)
-    jmp_to(a, fnv)
+    mov_rr(a, rax, r8)
+    shifti(a, "shr", rax, 29)
+    alu(a, "xor", r8, rax)
+    alui(a, "add", rsi, 8)
+    alui(a, "sub", rcx, 8)
+    jmp_to(a, eights)
+    mark(a, tail)
+    test_rr(a, rcx, rcx)
+    jcc(a, cc_e, hashed)
+    alu(a, "add", rcx, rsi) # where the bytes end
+    mov_rr(a, rax, rcx)
+    alu(a, "sub", rax, rsi)
+    alui(a, "cmp", rax, 4)
+    jcc(a, cc_b, under_four)
+    load32(a, rax, mem(rsi, 0))
+    load32(a, rcx, mem(rcx, -4))
+    shifti(a, "shl", rcx, 32)
+    alu(a, "or", rax, rcx)
+    jmp_to(a, mix_tail)
+    mark(a, under_four)
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_b, one_byte)
+    load16(a, rax, mem(rsi, 0))
+    load16(a, rcx, mem(rcx, -2))
+    shifti(a, "shl", rcx, 16)
+    alu(a, "or", rax, rcx)
+    jmp_to(a, mix_tail)
+    mark(a, one_byte)
+    load8(a, rax, mem(rsi, 0))
+    mark(a, mix_tail)
+    alu(a, "xor", r8, rax)
+    imul_rr(a, r8, r9)
     mark(a, hashed) # every bit reaches the low ones the index uses (murmur3's last mix)
     mov_rr(a, rax, r8)
     shifti(a, "shr", rax, 33)
@@ -6019,11 +6069,56 @@ to emit_records with a
     shifti(a, "shr", rcx, 48)
     alui(a, "cmp", rcx, kind_text)
     jcc(a, cc_ne, not_same)
-    jmp_to(a, "rt_equal")
+    jmp_to(a, "rt_text_same")
     mark(a, same_bits)
     movi(a, rax, 1)
     ret(a)
     mark(a, not_same)
+    movi(a, rax, 0)
+    ret(a)
+
+    # rt_text_same: rax, rdx, two texts: rax 1 if they have the same bytes, else 0; uses rcx, rsi and rdi. Eight
+    # bytes at a time while there are eight, then one at a time: `repe cmpsb` took longer to start than most
+    # texts take to compare (DESIGN §149).
+    set ts_eights to new_label(a)
+    set ts_bytes to new_label(a)
+    set ts_same to new_label(a)
+    set ts_differ to new_label(a)
+    mark(a, "rt_text_same")
+    untag(a, rax)
+    untag(a, rdx)
+    load(a, rcx, mem(rax, 0))
+    alu_load(a, "cmp", rcx, mem(rdx, 0))
+    jcc(a, cc_ne, ts_differ)
+    load(a, rsi, mem(rax, 16))
+    load(a, rdi, mem(rdx, 16))
+    alu(a, "cmp", rsi, rdi)
+    jcc(a, cc_e, ts_same)
+    mark(a, ts_eights)
+    alui(a, "cmp", rcx, 8)
+    jcc(a, cc_b, ts_bytes)
+    load(a, rax, mem(rsi, 0))
+    alu_load(a, "cmp", rax, mem(rdi, 0))
+    jcc(a, cc_ne, ts_differ)
+    alui(a, "add", rsi, 8)
+    alui(a, "add", rdi, 8)
+    alui(a, "sub", rcx, 8)
+    jmp_to(a, ts_eights)
+    mark(a, ts_bytes)
+    test_rr(a, rcx, rcx)
+    jcc(a, cc_e, ts_same)
+    load8(a, rax, mem(rsi, 0))
+    load8(a, rdx, mem(rdi, 0))
+    alu(a, "cmp", rax, rdx)
+    jcc(a, cc_ne, ts_differ)
+    inc_r(a, rsi)
+    inc_r(a, rdi)
+    dec_r(a, rcx)
+    jmp_to(a, ts_bytes)
+    mark(a, ts_same)
+    movi(a, rax, 1)
+    ret(a)
+    mark(a, ts_differ)
     movi(a, rax, 0)
     ret(a)
 
@@ -12431,7 +12526,7 @@ end
 # the order the program made them, 32 bytes: what it waits for (0 a key, 1 a click, 2 a drag, 3 a button,
 # and on as front's event_names has them, or app_timer for a timer), the function, how many inputs it takes,
 # and for a timer how many milliseconds apart, or for a button or text box its label.
-set app_timer to 8 # after the last of event_names, so a timer is never taken for a button
+set app_timer to 9 # after the last of event_names, so a timer is never taken for a button
 
 to emit_app_setup with a
     # rt_on: rcx what it waits for, rax the function, rdx how many inputs it takes; rt_every: the same for a
@@ -45344,6 +45439,66 @@ end
 set holds_codes to dictionary where "lt" is cc_b, "gt" is cc_a, "le" is cc_be, "ge" is cc_ae, "is" is cc_e
 set fails_codes to dictionary where "lt" is cc_ae, "gt" is cc_be, "le" is cc_a, "ge" is cc_b, "is" is cc_ne
 
+# `x is "a text the program wrote"`, which jumps to `label` when whether it holds is `jump_when`. It holds when
+# x is text of the same bytes, as rt_equal has it, so it's worked out right here: x's kind, how many bytes it
+# has, and the bytes themselves, four at a time against the text's, written in the instructions. A number is
+# never the same as text. A longer text goes to rt_cmp_is as before.
+set text_is_most to 32
+
+to gen_text_is with fc, e, label, jump_when
+    set a to a of fc
+    set lit to (value of right of e) as bytes
+    set size to length of lit
+    set kl to gen_expr(fc, left of e)
+    set miss to label
+    if jump_when
+        set miss to new_label(a)
+    end
+    if kl is "value"
+        movq_rx(a, rax, xmm0)
+        mov_rr(a, rcx, rax)
+        shifti(a, "shr", rcx, 48)
+        alui(a, "cmp", rcx, kind_text)
+        jcc(a, cc_ne, miss)
+        untag(a, rax)
+        alu_at(a, "cmp", mem(rax, 0), size)
+        jcc(a, cc_ne, miss)
+        if size is greater than 0
+            load(a, rdx, mem(rax, 16))
+        end
+        set at to 0
+        repeat while at is less than size
+            set wide to 1
+            if size - at is at least 4
+                set wide to 4
+                load32(a, rcx, mem(rdx, at))
+            else if size - at is at least 2
+                set wide to 2
+                load16(a, rcx, mem(rdx, at))
+            else
+                load8(a, rcx, mem(rdx, at))
+            end
+            set v to 0
+            set k to wide
+            repeat while k is greater than 0
+                set v to v * 256 + item (at + k) of lit
+                set k to k - 1
+            end
+            cmp32i(a, rcx, v)
+            jcc(a, cc_ne, miss)
+            set at to at + wide
+        end
+        if jump_when
+            jmp_to(a, label)
+        end
+    else if not jump_when
+        jmp_to(a, label)
+    end
+    if jump_when
+        mark(a, miss)
+    end
+end
+
 # A comparison that jumps to `label` when whether it holds is `jump_when`. Two numbers compare right there,
 # as rt_order would: two whole ones as they are, and any others too unless they're so close that 15
 # digits might not tell them apart, which rt_order works out. Anything else, and those close ones, go to
@@ -45360,6 +45515,12 @@ to gen_compare_jump with fc, e, label, jump_when
             jcc(a, cc_e, label)
         end
         return nothing
+    end
+    if test is "is" and kind of right of e is "value" and type of right of e is "string"
+        if length of ((value of right of e) as bytes) is at most text_is_most
+            gen_text_is(fc, e, label, jump_when)
+            return nothing
+        end
     end
     set written to nothing # a whole number the program wrote on the right, compared with a whole one where it is
     set right to right of e

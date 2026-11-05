@@ -1,0 +1,75 @@
+/* The reference, the cookbook and the examples: what make-docs.mjs and make-guides.mjs write, in the site's look */
+
+.doc-hero { position: relative; padding: 150px 0 56px; border-bottom: 1px solid var(--ink); margin-bottom: 48px; }
+.doc-hero .wrap { display: grid; gap: 22px; justify-items: start; }
+.doc-hero h1 { font-size: clamp(56px, 9vw, 150px); max-width: 14ch; }
+.doc-hero h1 em { color: var(--lamp); }
+.doc-hero p:not(.eyebrow) { font-size: 19px; color: var(--ink-2); max-width: 64ch; }
+.doc-hero a { color: var(--violet); text-underline-offset: 4px; }
+.doc-hero .search { width: min(640px, 100%); margin-top: 8px; }
+.doc-hero .search input { width: 100%; height: 60px; padding: 0 22px 0 52px; border-radius: 999px; border: 1px solid var(--ink); background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23847d92' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 20px center; font-size: 17px; box-shadow: var(--shadow); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.doc-hero .search input:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(108, 71, 255, 0.14), var(--shadow); }
+
+/* the index: libraries in groups, and what a search finds */
+.doc .index { display: grid; gap: 72px; padding-top: 16px; }
+.doc .group { display: grid; gap: 14px; }
+.doc .group h2 { font-size: clamp(28px, 3vw, 38px); }
+.doc .group > p { color: var(--ink-2); max-width: 70ch; }
+.doc .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 10px; }
+.doc .cards { gap: 0; border-top: 1px solid var(--ink); border-left: 1px solid var(--line); }
+.doc .card { display: grid; gap: 8px; align-content: start; padding: 22px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-decoration: none; transition: background 0.35s, color 0.35s; }
+.doc .card:hover { background: var(--ink); color: var(--paper); }
+.doc .card:hover span, .doc .card:hover i { color: var(--night-dim); }
+.doc .card b { font: 600 15px/1.2 var(--mono); color: var(--violet); }
+.doc .card span { color: var(--ink-2); font-size: 15px; }
+.doc .card i { font-style: normal; font-size: 13px; color: var(--ink-3); }
+.doc .results h2 { font-size: 30px; margin-bottom: 14px; }
+.doc .results ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.doc .results li { display: grid; gap: 4px; padding: 14px 18px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.doc .results li a { text-decoration: none; }
+.doc .results li span { color: var(--ink-2); font-size: 15px; }
+
+/* a library, the cookbook, the examples: the list beside, and what each function or recipe is */
+.doc .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 56px; align-items: start; }
+.doc .toc { position: sticky; top: 96px; max-height: calc(100vh - 120px); overflow: auto; display: grid; gap: 12px; padding-right: 6px; }
+.doc .toc h2 { font: 600 12px/1 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.doc .toc input { height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--card); font-size: 14px; outline: none; }
+.doc .toc input:focus { border-color: var(--violet); }
+.doc .toc ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); display: grid; }
+.doc .toc ol a { display: block; padding: 6px 12px; margin-left: -1px; border-left: 2px solid transparent; color: var(--ink-2); text-decoration: none; font: 14px/1.4 var(--mono); overflow-wrap: anywhere; }
+.doc .toc ol a:hover { color: var(--ink); border-left-color: var(--violet); }
+.doc .toc .more { font-size: 14px; color: var(--ink-3); }
+.doc .toc .more a { color: var(--violet); text-underline-offset: 3px; }
+
+.doc main { display: grid; gap: 40px; min-width: 0; }
+.doc main > section > h2, .doc .fns > h2 { font-size: clamp(28px, 3vw, 38px); margin-bottom: 16px; }
+.doc .about, .doc .prose { display: grid; gap: 16px; font-size: 17px; color: var(--ink-2); }
+.doc .fns { display: grid; gap: 20px; }
+.doc .fn { display: grid; gap: 14px; padding: 28px 0; border-top: 1px solid var(--line); scroll-margin-top: 96px; }
+.doc .fn h3, .doc .fn > h2 { font-size: 22px; font-family: var(--sans); letter-spacing: 0; }
+.doc .fn h3 a, .doc .fn > h2 a { text-decoration: none; }
+.doc .fn h3 code { font-size: 18px; background: none; border: 0; padding: 0; color: var(--ink); }
+.doc .fn > h2 { font: 700 clamp(30px, 3vw, 44px)/0.95 var(--display); font-stretch: 72%; text-transform: uppercase; }
+.doc .fn p { color: var(--ink-2); }
+.doc .fn h4 { margin: 0; font: 600 12px/1 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.doc .facts { display: flex; flex-wrap: wrap; gap: 28px; }
+.doc .facts > div { display: grid; gap: 8px; }
+.doc .inputs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.doc .written { font-size: 14px; color: var(--ink-3); }
+.doc .written a { color: var(--violet); text-underline-offset: 3px; }
+.doc .written a.run { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 999px; background: var(--ink); color: var(--paper); text-decoration: none; font: 600 14px/1 var(--sans); }
+.doc .written a.run:hover { background: #221c30; }
+.doc main a { color: var(--violet); text-underline-offset: 3px; }
+.doc main .card, .doc main .fn h3 a, .doc main .fn > h2 a { color: inherit; }
+
+.doc .code { border-radius: 4px; background: var(--night); border: 1px solid var(--night-line); overflow: hidden; }
+.doc .code pre { margin: 0; padding: 16px 20px; font: 14px/1.7 var(--mono); color: var(--night-text); white-space: pre; overflow-x: auto; }
+.doc .code pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+.doc .code .says { border-top: 1px dashed var(--night-line); background: #110e16; color: #d8f5e4; }
+.doc .code .says::before { content: "says"; display: block; margin-bottom: 6px; font: 600 10px/1 var(--sans); letter-spacing: 0.16em; text-transform: uppercase; color: var(--night-dim); }
+
+@media (max-width: 900px) {
+  .doc .layout { grid-template-columns: 1fr; }
+  .doc .toc { position: static; max-height: none; }
+  .doc .fn { padding: 20px; }
+}

@@ -468,7 +468,7 @@ once, with 0, or the number after `with`, a whole number from 0 to 255. Nothing 
 ### 6.8 Functions: to and return
 
 ```text
-to     = "to" name [ "with" input { ("," | "and") input } ] [ "gives" gives ] NL block "end"
+to     = "to" name [ "with" input { ("," | "and") input } ] [ "gives" gives ] [ "where" expression ] NL block "end"
 input  = name [ "as" type ] [ "or" default ]
 type   = kind | ("a" | "an") name | "a list of" holds
 kind   = "a number" | "text" | "yes or no" | "a list" | "a record" | "a dictionary" | "bytes" | "a function"
@@ -481,6 +481,12 @@ return = "return" [ expression ]
 In `("a" | "an") name`, the name is a kind's (section 7.4), as `a dog`; in `holds`, it's what a kind makes,
 more than one, as `dogs`, `boxes` or `puppies`. `gives` is a word only here, after a function's inputs: it
 stays a name everywhere else.
+
+`where` and a condition say what the function needs: `to withdraw with amount where amount is greater than
+0`. It's checked at the start of each call, before anything else the function does, and if it isn't so the
+call is a mistake (one `try` catches) that says what the function needs, as the condition was written:
+`'withdraw' needs amount is greater than 0`, and, when the condition compares a name with something, what the
+name was: `, but amount is -5`.
 
 Section 7 has what they mean. `return` outside a function is a mistake.
 
@@ -1042,6 +1048,7 @@ when enter is pressed in the text box "Name" with words
 when the checkbox "Dark" is clicked
 when an item is chosen in the list "Fruits" with fruit     # or in the dropdown
 when the slider "Volume" is moved with volume
+when the page is used with what           # the page page.moth shows: what was done on it
 every 100 milliseconds                    # or any amount of time above 0
 ```
 
@@ -1053,6 +1060,12 @@ until it's closed or `stop the program` runs. A mistake in a handler ends the pr
 The controls of section 6.16 are drawn where they're placed and found by their label. A text box holds one
 line of up to 40 letters and a text area 2,000; a slider's value is a whole number, kept between its ends;
 `the choice in the list` is nothing until there is one.
+
+`when the page is used` is for the page `page.moth` shows on the web, in the playground and in a page `moth
+build --web` makes. Its one value is a dictionary: the "type" of what was done (`"click"`, `"change"`, or
+`"enter"` for Enter in a text box), the "name" of what was used, its "value", and "values", every text box's,
+checkbox's and dropdown's value on the page by its name (text, or yes or no for a checkbox). Anywhere else it
+never happens.
 
 ## 13. Tasks and workers
 

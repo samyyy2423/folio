@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync, readdirSync } from "node:fs";
 import { run, test as testMoth, format, suggestedFix, debug, timeline, check, compile, compileToJs, compileToWasm, load, mothCompiler, memoryDisk, excerpt, describeTrail, MothError, soundSamples, soundWav, LANGUAGE } from "./moth.js";
-import { Machine, BEEP, Ended } from "./vm.js";
+import { Machine, BEEP, Ended, OP } from "./vm.js";
 import examples from "./examples.js";
 import { generatePrograms } from "./generate.js";
 import { PROGRAMS, ERRORS, SAVING, TYPED, brokenPrograms } from "./cases.js";
@@ -76,6 +76,12 @@ test("errors point at the exact spot", () => {
 
 test("maxSteps stops a loop that never ends", () => {
   assert.equal(error("repeat while yes\nend", { maxSteps: 1000 }).message, "line 1: stopped after 1,000 steps (is there a loop that never ends?)");
+});
+
+test("each case of the VM's switch is its opcode's number, and every opcode has one", () => {
+  const cases = [...Machine.prototype.run.toString().matchAll(/case (\d+) \/\* ([A-Z_]+) \*\//g)].map(([, n, name]) => [name, Number(n)]);
+  assert.deepEqual(cases.map(([name]) => name).sort(), Object.keys(OP).sort());
+  for (const [name, n] of cases) assert.equal(n, OP[name], name);
 });
 
 test("the drawing examples draw", () => {
@@ -1136,7 +1142,7 @@ test("json.moth passes its own tests, json.test.moth, on all three engines", () 
   }
 });
 
-test("text.moth, dates.moth, hash.moth, base64.moth, big.moth, xml.moth, zip.moth, toml.moth, options.moth, collections.moth, lists.moth, stats.moth, arrays.moth, ai.moth and properties.moth pass their own tests on all three engines", () => {
+test("text.moth, dates.moth, hash.moth, base64.moth, big.moth, xml.moth, zip.moth, toml.moth, options.moth, collections.moth, lists.moth, stats.moth, arrays.moth, ai.moth, properties.moth, mcp.moth, pdf.moth, xlsx.moth and page.moth pass their own tests on all three engines", () => {
   const found = (name) => (name === "math.moth" ? readFileSync(new URL("./math.moth", import.meta.url), "utf8") : tool(name));
   for (const engine of ENGINES) {
     for (const [file, names] of [
@@ -1168,7 +1174,15 @@ test("text.moth, dates.moth, hash.moth, base64.moth, big.moth, xml.moth, zip.mot
       ["charts.test.moth", ["test_axis_numbers", "test_svg", "test_png", "test_mistakes"]],
       ["xml.test.moth", ["test_elements", "test_finding", "test_around_the_element", "test_entities_and_cdata",
         "test_writing", "test_mistakes"]],
-      ["zip.test.moth", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_mistakes"]]]) {
+      ["zip.test.moth", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_mistakes"]],
+      ["mcp.test.moth", ["test_initialize", "test_a_version_it_doesnt_know_gets_its_newest", "test_notifications_have_no_reply",
+        "test_tools_list", "test_tools_call", "test_a_tool_that_gives_a_list_gives_json", "test_a_tools_mistake_is_its_error",
+        "test_unknown_tools_and_methods", "test_what_isnt_json", "test_resources", "test_prompts", "test_ping"]],
+      ["pdf.test.moth", ["test_widths", "test_text_colours_and_lines", "test_paragraphs_wrap_to_their_width", "test_the_file_finds_its_objects",
+        "test_mistakes"]],
+      ["xlsx.test.moth", ["test_column_names", "test_round_trips", "test_reading_what_excel_writes", "test_mistakes"]],
+      ["page.test.moth", ["test_text_is_shown_as_it_is", "test_controls_are_named", "test_boxes_lists_and_tables", "test_style_and_html",
+        "test_a_sites_menus_links_and_forms", "test_mistakes"]]]) {
       const results = testMoth(tool(file), { engine, files: found });
       assert.deepEqual(results.map((r) => [r.name, r.error?.message]), names.map((n) => [n, undefined]), `${file} on ${engine}`);
     }
@@ -1911,6 +1925,48 @@ test("dropdowns and sliders take their clicks, drags, keys and wheel, through a 
       x: -200, y: 150, width: 200, height: 30, color: "#4f8ff7" },
     { shape: "slider", label: "Volume", value: 0, from: 0, to: 10, focused: false, x: -200, y: 50, width: 200, height: 20, color: "#4f8ff7" },
   ]);
+});
+
+// page.moth (DESIGN §145): a program shows a page by writing it to "<page>", and what's done on it comes back to
+// `when the page is used`, as the playground's frame sends it: a dictionary, with every field's value in it
+const TO_DO = `use "page.moth" as page
+set todos to list of "Feed the cat"
+to view
+    set p to page's new("To do")
+    page's text_box(p, "new", "What needs doing?")
+    page's checkbox(p, "soon", "Soon")
+    page's button(p, "add", "Add")
+    page's start_list(p)
+    for each t in todos
+        page's list_item(p, t)
+    end
+    page's end_list(p)
+    page's show(p)
+end
+when the page is used with what
+    set fields to item "values" of what
+    say item "type" of what " " item "name" of what " " item "value" of what " " item "soon" of fields
+    if item "name" of what is "add"
+        add item "new" of fields to todos
+        view()
+    end
+end
+view()`;
+
+test("a page.moth page is shown, used and shown again, on all three engines", () => {
+  const event = (type, name, value, values) => [new Map([["type", type], ["name", name], ["value", value], ["values", new Map(Object.entries(values))]])];
+  for (const engine of ENGINES) {
+    const said = [];
+    const disk = memoryDisk();
+    const app = run(TO_DO, (line) => said.push(line), { engine, disk, files: (name) => (name === "page.moth" ? tool(name) : undefined) });
+    assert.deepEqual(app.waits, [{ event: "page" }], engine);
+    assert.match(disk.files.get("<page>"), /<ul>\n<li>Feed the cat<\/li>\n<\/ul>/, engine);
+    app.send("page", event("change", "soon", true, { new: "", soon: true }));
+    app.send("page", event("change", "new", "Walk <the> dog", { new: "Walk <the> dog", soon: true }));
+    app.send("page", event("click", "add", "Add", { new: "Walk <the> dog", soon: false }));
+    assert.deepEqual(said, ["change soon yes yes", "change new Walk <the> dog yes", "click add Add no"], engine);
+    assert.match(disk.files.get("<page>"), /<ul>\n<li>Feed the cat<\/li>\n<li>Walk &lt;the&gt; dog<\/li>\n<\/ul>/, engine);
+  }
 });
 
 test("choosing a file is asking for one: nothing for no answer, and a slider's and a dropdown's mistakes", () => {

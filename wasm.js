@@ -4,12 +4,13 @@
 // Moth's values live inside the module, as WebAssembly GC values: a number is a struct holding an f64, or,
 // if it's whole and fits in 31 bits, an i31 value, so a list of them is no boxes for the GC to keep; yes and
 // no are the i31 values 1 and 0 (so the numbers 1 and 0 are boxes, made once), nothing is null, and lists,
-// records and functions are structs. Text lives in the module too, as UTF-16 (see wasm-runtime.js, the part
+// records, dictionaries and functions are structs. Text lives in the module too, as UTF-16 (see wasm-runtime.js, the part
 // of the runtime written once for this and wasm.moth): joining it, comparing it and showing numbers in it
 // happen here, and text that ends where its buffer does grows in place, so joining text in a loop is cheap.
 // The common cases run in WebAssembly: arithmetic on numbers, text, comparisons, list items, fields, calls
-// and loops. Everything else, and every mistake, calls out to the same checks the VM and the JIT use (vm.js),
-// so all three engines say exactly the same things.
+// and loops. A mistake the program makes itself (`fail with`, a name with no value) is thrown and caught in the
+// module, as a WebAssembly exception (DESIGN §146). Everything else calls out to the same checks the VM and the
+// JIT use (vm.js), so all three engines say exactly the same things.
 import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
@@ -45,8 +46,6 @@ const IMPORTS = {
   say: [[EQ], []],
   sayError: [[EQ], []], // a line for the error output
   exit: [[EQ, I32], []], // `stop the program with` this, and a position
-  fail: [[I32, I32], []], // a message the compiler worked out (a name nothing sets), and a position
-  unset: [[I32, I32], []],
   plus: [[EQ, EQ, I32], [EQ]],
   arithmetic: [[I32, EQ, EQ, I32], [EQ]],
   negate: [[EQ, I32], [EQ]],
@@ -59,15 +58,8 @@ const IMPORTS = {
   item: [[EQ, EQ, I32], [EQ]],
   itemRef: [[EQ, EQ, I32], []],
   put: [[EQ, EQ, EQ, I32], []], // what `set item` does that WebAssembly doesn't: where, the key, the value, and a position
-  dict: [[EQ, I32], [EQ]], // a new dictionary, from a list of each key and then its value
+  dict: [[EQ, I32], []], // only ever throws: the mistake in a dictionary's keys (a list of each key, then its value)
   remove: [[EQ, EQ, I32], []],
-  // a dictionary's Map and a key as JavaScript holds it (text, or a number): fast, as nothing needs converting
-  dictGetText: [["externref", "externref", I32], [EQ]],
-  dictGetNum: [["externref", F64, I32], [EQ]],
-  dictSetText: [["externref", "externref", EQ], []],
-  dictSetNum: [["externref", F64, EQ], []],
-  dictHasText: [["externref", "externref"], [I32]],
-  dictHasNum: [["externref", F64], [I32]],
   addInto: [[EQ, EQ, I32, I32], [EQ]],
   checkRepeat: [[EQ, I32], [F64]],
   checkRange: [[EQ, EQ, I32], []],
@@ -82,7 +74,6 @@ const IMPORTS = {
   turtle: [[I32, EQ, I32], []],
   field: [[EQ, I32, I32], []],
   recordFor: [[EQ, I32, I32], []],
-  failWith: [[EQ, I32], []],
   builtin: [[I32, EQ, I32], [EQ]], // which one, its inputs as a list, and a position
   ask: [[EQ, I32], [EQ]],
   read: [[EQ, I32, I32], [EQ]], // the file's name, 1 for bytes or 0 for text, and a position
@@ -108,15 +99,14 @@ const IMPORTS = {
   // what it gave, or the mistake it ended with, copied, the variables put back, and the worker
   workerBegin: [[EQ, EQ, I32, I32], [EQ]],
   workerGave: [[EQ], [EQ]],
-  workerFailed: [[], [EQ]],
-  // text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
-  jsText: [[EQ], ["externref"]],
+  workerFailed: [[EQ], [EQ]], // what the worker's mistake gave `if it fails with`
+  // the units of text JavaScript made, filled in
   fill: [[EQ], []],
 };
 
 // ---------- the module's types and runtime ----------
 
-const TYPE_NAMES = ["num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty", "chars", "strbuf", "big"];
+const TYPE_NAMES = ["num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "dict", "u8", "bytes", "qty", "chars", "strbuf", "big"];
 
 function declareTypes(m) {
   const T = {};
@@ -132,9 +122,10 @@ function declareTypes(m) {
   m.type({ kind: "struct", fields: [{ type: refNull(T.env) }, { type: ref(T.items) }] });
   T.closure = m.type({ kind: "struct", fields: [{ type: "funcref" }, { type: refNull(T.env) }, { type: I32 }, { type: I32 }, { type: I32 }] });
   T.unset = m.type({ kind: "struct", fields: [] });
-  // A value JavaScript keeps, and its tag: a dictionary, which is a Map from keys as JavaScript values to the
-  // module's own values.
-  T.host = m.type({ kind: "struct", fields: [{ type: "externref" }, { type: I32 }] });
+  // A dictionary: its keys and its values, in the order the keys were first set, how many places of them are
+  // used, how many keys it has, and the slots its keys are found by (see wasm-runtime.js)
+  T.dict = m.type({ kind: "struct", fields: [{ type: ref(T.items), mutable: true }, { type: ref(T.items), mutable: true }, { type: I32, mutable: true },
+    { type: I32, mutable: true }, { type: ref(T.ids), mutable: true }] });
   // Bytes live here, as an array of 8-bit numbers, so reading and changing one never leaves WebAssembly.
   T.u8 = m.type({ kind: "array", element: { type: "i8", mutable: true } });
   T.bytes = m.type({ kind: "struct", fields: [{ type: ref(T.u8) }] });
@@ -161,8 +152,6 @@ const numOf = (c, T, local) => c.emit("local.get", local).emit("ref.test", "i31"
   .emit("local.get", local).emit("ref.cast", "i31").emit("i31.get_s").emit("f64.convert_i32_s")
   .emit("else").emit("local.get", local).emit("ref.cast", T.num).emit("struct.get", T.num, 0).emit("end");
 const bothNums = (c, T, a, b) => (isNum(c, T, a), isNum(c, T, b), c.emit("i32.and"));
-const mapOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.host).emit("struct.get", T.host, 0); // a dictionary's Map
-const textOf = (c, R, local) => c.emit("local.get", local).emit("call", R.jsOf); // text's JavaScript string
 const bytesOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.bytes).emit("struct.get", T.bytes, 0);
 // leaves 1 if the f64 in `local` is a whole number from `low` to `high`
 const wholeIn = (c, local, low, high) => c.emit("local.get", local).emit("local.get", local).emit("f64.trunc").emit("f64.eq")
@@ -176,7 +165,7 @@ const SHARED = parseRuntime(RUNTIME);
 
 // how each instruction's immediates are written, as wasm_asm in wasm.moth reads them
 const HOW = {
-  block: "block", loop: "block", if: "block", try: "block", br: "index", br_if: "index", rethrow: "index", call: "index", call_ref: "index",
+  block: "block", loop: "block", if: "block", try: "block", br: "index", br_if: "index", rethrow: "index", throw: "index", catch: "index", call: "index", call_ref: "index",
   "ref.func": "index", "local.get": "local", "local.set": "local", "local.tee": "local", "global.get": "index", "global.set": "index",
   "struct.new": "index", "array.new": "index", "array.new_default": "index", "array.get": "index", "array.get_u": "index", "array.set": "index",
   "struct.get": "two", "struct.set": "two", "array.new_fixed": "two", "array.copy": "two", "array.new_data": "two",
@@ -386,7 +375,7 @@ function declareRuntime(m, T, im) {
     both(T.list);
     both(T.record);
     c.emit("i32.or");
-    both(T.host);
+    both(T.dict);
     c.emit("i32.or");
     both(T.bytes);
     c.emit("i32.or");
@@ -442,7 +431,9 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 1).emit("f64.convert_i32_s");
     c.emit("else").emit("local.get", 0).emit("ref.test", T.bytes).emit("if", F64);
     bytesOf(c, T, 0).emit("array.len").emit("f64.convert_i32_s");
-    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.lengthOf).emit("end").emit("end").emit("call", R.box);
+    c.emit("else").emit("local.get", 0).emit("ref.test", T.dict).emit("if", F64);
+    c.emit("local.get", 0).emit("ref.cast", T.dict).emit("struct.get", T.dict, 3).emit("f64.convert_i32_s");
+    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.lengthOf).emit("end").emit("end").emit("end").emit("call", R.box);
   });
 
   // The 0-based place of item n in a list, if n is a whole number from 1 to its length, or -1.
@@ -468,22 +459,17 @@ function declareRuntime(m, T, im) {
     c.emit("if", I32).emit("local.get", x).emit("i32.trunc_f64_s").emit("i32.const", 1).emit("i32.sub").emit("else").emit("i32.const", -1).emit("end");
   });
 
-  // `item n of x`: a list's item, or a byte, here; a dictionary's value straight from its Map; the rest, and
-  // every mistake, in the shared code
+  // `item n of x`: a list's item, a byte, or a dictionary's value, here; the rest, and every mistake, in the
+  // shared code
   fn("item", [EQ, EQ, I32], [EQ], (c, f) => {
     const at = f.local(I32);
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.place).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if");
     c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 0).emit("local.get", at).emit("array.get", T.items).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.bytePlace).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if");
     bytesOf(c, T, 0).emit("local.get", at).emit("array.get_u", T.u8).emit("f64.convert_i32_u").emit("call", R.box).emit("return").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("if");
-    c.emit("local.get", 1).emit("ref.test", T.text).emit("if");
-    mapOf(c, T, 0);
-    textOf(c, R, 1).emit("local.get", 2).emit("call", im.dictGetText).emit("return").emit("end");
-    isNum(c, T, 1).emit("if");
-    mapOf(c, T, 0);
-    numOf(c, T, 1).emit("local.get", 2).emit("call", im.dictGetNum).emit("return").emit("end");
-    c.emit("end");
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
+    isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if");
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.dictItem).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.item);
   });
 
@@ -493,12 +479,12 @@ function declareRuntime(m, T, im) {
     const at = f.local(I32);
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.place).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if").emit("local.get", at).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.bytePlace).emit("i32.const", 0).emit("i32.ge_s").emit("if").emit("i32.const", -1).emit("return").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("local.get", 1).emit("ref.test", T.text);
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
     isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if").emit("i32.const", -1).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.itemRef).emit("i32.const", -1);
   });
 
-  // a value into a byte (a whole number from 0 to 255), or into a dictionary's Map, where itemRef said to;
+  // a value into a byte (a whole number from 0 to 255), or into a dictionary, where itemRef said to;
   // anything else is a mistake, which the shared code words
   fn("put", [EQ, EQ, EQ, I32], [], (c, f) => {
     const [at, v] = [f.local(I32), f.local(F64)];
@@ -508,27 +494,17 @@ function declareRuntime(m, T, im) {
     wholeIn(c, v, 0, 255).emit("if");
     bytesOf(c, T, 0).emit("local.get", at).emit("local.get", v).emit("i32.trunc_f64_s").emit("array.set", T.u8).emit("return");
     c.emit("end").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("if");
-    c.emit("local.get", 1).emit("ref.test", T.text).emit("if");
-    mapOf(c, T, 0);
-    textOf(c, R, 1).emit("local.get", 2).emit("call", im.dictSetText).emit("return").emit("end");
-    isNum(c, T, 1).emit("if");
-    mapOf(c, T, 0);
-    numOf(c, T, 1).emit("local.get", 2).emit("call", im.dictSetNum).emit("return").emit("end");
-    c.emit("end");
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
+    isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if");
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.dictPut).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("local.get", 3).emit("call", im.put);
   });
 
-  // `x is in d` for a dictionary, straight from its Map; anything else in the shared code
+  // `x is in d` for a dictionary, here; anything else in the shared code
   fn("isIn", [EQ, EQ, I32], [I32], (c) => {
-    c.emit("local.get", 1).emit("ref.test", T.host).emit("if");
-    c.emit("local.get", 0).emit("ref.test", T.text).emit("if");
-    mapOf(c, T, 1);
-    textOf(c, R, 0).emit("call", im.dictHasText).emit("return").emit("end");
-    isNum(c, T, 0).emit("if");
-    mapOf(c, T, 1);
-    numOf(c, T, 0).emit("call", im.dictHasNum).emit("return").emit("end");
-    c.emit("end");
+    c.emit("local.get", 1).emit("ref.test", T.dict).emit("local.get", 0).emit("ref.test", T.text);
+    isNum(c, T, 0).emit("i32.or").emit("i32.and").emit("if");
+    c.emit("local.get", 1).emit("local.get", 0).emit("call", R.dictHas).emit("return").emit("end");
     c.emit("i32.const", COMPARE_OPS.indexOf("in")).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.compare);
   });
 
@@ -740,7 +716,7 @@ function declareExports(m, T, R) {
     isNum(c, T, 0).emit("if").emit("i32.const", TAGS.number).emit("return").emit("end");
     for (const [type, tag] of [[T.text, TAGS.text], [T.list, TAGS.list], [T.record, TAGS.record], [T.closure, TAGS.function]])
       c.emit("local.get", 0).emit("ref.test", type).emit("if").emit("i32.const", tag).emit("return").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("if").emit("local.get", 0).emit("ref.cast", T.host).emit("struct.get", T.host, 1).emit("return").emit("end");
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("if").emit("i32.const", TAGS.dictionary).emit("return").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.bytes).emit("if").emit("i32.const", TAGS.bytes).emit("return").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.qty).emit("if").emit("i32.const", TAGS.quantity).emit("return").emit("end");
     c.emit("i32.const", TAGS.unset);
@@ -770,8 +746,6 @@ function declareExports(m, T, R) {
   fn("makeNum", [F64], [EQ], (c) => c.emit("local.get", 0).emit("call", R.box));
   fn("newList", [], [EQ], (c) => c.emit("i32.const", 0).emit("array.new_default", T.items).emit("i32.const", 0).emit("struct.new", T.list));
   fn("listPush", [EQ, EQ], [], (c) => c.emit("local.get", 0).emit("local.get", 1).emit("call", R.push));
-  fn("hostValue", [EQ], ["externref"], (c) => c.emit("local.get", 0).emit("ref.cast", T.host).emit("struct.get", T.host, 0));
-  fn("makeHost", ["externref", I32], [EQ], (c) => c.emit("local.get", 0).emit("local.get", 1).emit("struct.new", T.host));
   fn("bytesLength", [EQ], [I32], (c) => bytesOf(c, T, 0).emit("array.len"));
   fn("byteAt", [EQ, I32], [I32], (c) => bytesOf(c, T, 0).emit("local.get", 1).emit("array.get_u", T.u8));
   fn("makeBytes", [I32], [EQ], (c) => c.emit("local.get", 0).emit("array.new_default", T.u8).emit("struct.new", T.bytes));
@@ -945,7 +919,7 @@ class WasmCompiler extends Scope {
     if (e.kind === "name") {
       const { value, box } = this.numberSlot(e.name);
       this.e("local.get", box).e("global.get", this.ctx.unset).e("ref.eq");
-      this.e("if").e("i32.const", this.id(e.name)).e("i32.const", this.pos(e.at)).e("call", im.unset).e("unreachable").e("end");
+      this.noValueYet(e.name, this.pos(e.at));
       return void this.e("local.get", value).note(e.name);
     }
     if (e.kind === "math" && this.unboxed(e)) {
@@ -1031,9 +1005,22 @@ class WasmCompiler extends Scope {
     this.e("array.set", this.ctx.T.items).note(`set ${name}`);
   }
 
+  // A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
+  noValueYet(name, k) {
+    const [at, n] = this.ctx.spelled(name);
+    this.e("if").e("i32.const", at).e("i32.const", n).e("i32.const", k).e("call", this.ctx.R.noValueYet).e("end");
+  }
+
+  // text made from the program's data where it's needed, not when the program starts, as a mistake's words are
+  spelled(value) {
+    const [at, n] = this.ctx.spelled(value);
+    this.e("i32.const", at).e("i32.const", n).e("array.new_data", this.ctx.T.chars, this.ctx.data).e("i32.const", n).e("call", this.ctx.R.newText);
+  }
+
   // A name nothing ever sets: fail when this runs, with the same message (and "did you mean") as the other engines.
   undefinedName(name, at, options) {
-    this.e("i32.const", this.ctx.message(this.undefinedMessage(name, options))).e("i32.const", this.pos(at)).e("call", this.ctx.im.fail).e("unreachable");
+    this.spelled(this.undefinedMessage(name, options));
+    this.e("i32.const", 0).e("i32.const", this.pos(at)).e("throw", this.ctx.mistake);
   }
 
   // Each loop counts a step at the end of each round, and each call when it starts, as the other engines do:
@@ -1252,7 +1239,7 @@ class WasmCompiler extends Scope {
       }
       case "fail":
         this.expr(s.value);
-        this.e("i32.const", this.pos(s.at)).e("call", im.failWith).e("unreachable");
+        this.e("i32.const", 1).e("i32.const", this.pos(s.at)).e("throw", this.ctx.mistake);
         return;
       case "stop":
         this.e("br", this.labels - 1 - this.stops.at(-1)).note("stop");
@@ -1260,7 +1247,7 @@ class WasmCompiler extends Scope {
       case "remove":
         this.expr(s.key);
         this.expr(s.target);
-        this.e("i32.const", this.pos(s.at)).e("call", im.remove);
+        this.e("i32.const", this.pos(s.at)).e("call", this.ctx.R.remove);
         return;
       case "write":
         this.expr(s.value);
@@ -1295,16 +1282,20 @@ class WasmCompiler extends Scope {
         this.expr(s.cond.right);
         this.e("i32.const", this.pos(s.at)).e("call", im.expect);
         return;
-      case "try": { // what JavaScript throws is caught here; JavaScript says whether it was a mistake to handle
+      case "try": { // the module's own mistake is caught as itself; one JavaScript threw, JavaScript says whether to catch
         const depth = this.temp(I32);
+        const got = this.temp(EQ);
         this.e("global.get", this.ctx.depth).e("local.set", depth).e("call", im.tryStart);
-        this.e("try");
+        this.e("block").e("block", EQ).e("try");
         this.block(s.body);
+        this.e("br", 2); // nothing went wrong: past the handler
+        this.e("catch", this.ctx.mistake).e("drop").e("drop").e("br", 1); // what `if it fails with` gets
         this.e("catch_all");
         this.e("call", im.caught).e("i32.eqz").e("if").e("rethrow", 1).e("end"); // going too deep, say: not ours
-        this.e("local.get", depth).e("global.set", this.ctx.depth);
-        if (s.name) this.store(s.name, () => this.e("call", im.caughtValue));
-        else this.e("call", im.caughtValue).e("drop");
+        this.e("call", im.caughtValue).e("br", 1);
+        this.e("end").e("unreachable").e("end");
+        this.e("local.set", got).e("local.get", depth).e("global.set", this.ctx.depth);
+        if (s.name) this.store(s.name, () => this.e("local.get", got));
         this.block(s.handler);
         this.e("end");
         return;
@@ -1322,7 +1313,7 @@ class WasmCompiler extends Scope {
     else this.expr(s.value);
     this.e("local.set", value);
     this.e("local.get", number.box).e("global.get", this.ctx.unset).e("ref.eq");
-    this.e("if").e("i32.const", this.id(s.name)).e("i32.const", k).e("call", im.unset).e("unreachable").e("end");
+    this.noValueYet(s.name, k);
     if (fast) this.e("local.get", number.value).e("local.get", value).e("f64.add");
     else { // a number added here; any other value gives a number (if it is one) or fails, in the shared check
       isNum(this.c, T, value);
@@ -1430,10 +1421,13 @@ class WasmCompiler extends Scope {
       this.e("call_ref", T.fn(args.length)).note(call.name);
       this.e("global.get", ctx.depth).e("i32.const", 1).e("i32.sub").e("global.set", ctx.depth);
       this.e("call", im.workerGave).e("local.set", made);
+      this.e("catch", ctx.mistake).e("drop").e("drop"); // the value of what it threw
+      this.e("local.get", depth).e("global.set", ctx.depth);
+      this.e("call", im.workerFailed).e("local.set", made);
       this.e("catch_all");
       this.e("call", im.caught).e("i32.eqz").e("if").e("rethrow", 1).e("end"); // going too deep, say: not the worker's
       this.e("local.get", depth).e("global.set", ctx.depth);
-      this.e("call", im.workerFailed).e("local.set", made);
+      this.e("call", im.caughtValue).e("call", im.workerFailed).e("local.set", made);
       this.e("end");
     });
     this.e("local.get", made);
@@ -1454,7 +1448,7 @@ class WasmCompiler extends Scope {
         const value = this.temp();
         this.load(e.name);
         this.e("local.tee", value).e("global.get", this.ctx.unset).e("ref.eq");
-        this.e("if").e("i32.const", this.id(e.name)).e("i32.const", this.pos(e.at)).e("call", im.unset).e("unreachable").e("end");
+        this.noValueYet(e.name, this.pos(e.at));
         this.e("local.get", value);
         return;
       }
@@ -1553,7 +1547,7 @@ class WasmCompiler extends Scope {
       case "dictionary":
         for (const x of e.items) this.expr(x);
         this.e("array.new_fixed", T.items, e.items.length).e("i32.const", e.items.length).e("struct.new", T.list);
-        this.e("i32.const", this.pos(e.at)).e("call", im.dict);
+        this.e("i32.const", this.pos(e.at)).e("call", R.dictOf);
         return;
       case "field":
         this.expr(e.of);
@@ -1624,17 +1618,20 @@ export function compileToWasmModule(program) {
   const T = declareTypes(m);
   const im = {};
   for (const [label, [params, results]] of Object.entries(IMPORTS)) im[label] = m.import("moth", label, m.funcType(params, results));
+  // A mistake, thrown and caught in the module (DESIGN §146): what `if it fails with` gets (a `fail with`'s
+  // value, or the mistake's message as text), 1 if that's a `fail with`'s value, and the mistake's position
+  const mistake = m.tag(m.funcType([EQ, I32, I32], []));
   const R = declareRuntime(m, T, im);
   declareExports(m, T, R);
 
   const names = [];
   const nameIds = new Map();
-  const messages = [];
   const numbers = new Map();
   const texts = new Map();
+  const spelled = new Map();
   const named = (name, global) => ((m.globalNames[global] = name), global);
   const ctx = {
-    m, T, R, im, ats: [], names, messages, captured: findCaptured(program),
+    m, T, R, im, mistake, ats: [], names, captured: findCaptured(program),
     kinds: [null], // what the inputs of each function whose inputs say so are (see closure())
     unset: named("unset", m.global(ref(T.unset), false, new Code().emit("struct.new", T.unset))),
     left: named("left", m.global(I32, true, new Code().emit("i32.const", 0))),
@@ -1648,11 +1645,19 @@ export function compileToWasmModule(program) {
       if (!nameIds.has(name)) nameIds.set(name, names.push(name) - 1);
       return nameIds.get(name);
     },
-    message: (text) => messages.push(text) - 1,
     number(value) {
       const key = String(value);
       if (!numbers.has(key)) numbers.set(key, named(`number${numbers.size}`, m.global(ref(T.num), false, new Code().emit("f64.const", value).emit("struct.new", T.num))));
       return numbers.get(key);
+    },
+    // where text's units are in the program's data, as bytes, and how many there are, for text made where it's
+    // needed (see spelled() above)
+    spelled(value) {
+      if (!spelled.has(value)) {
+        spelled.set(value, [ctx.units.length, value.length]);
+        for (let i = 0; i < value.length; i++) ctx.units.push(value.charCodeAt(i) & 255, value.charCodeAt(i) >> 8);
+      }
+      return spelled.get(value);
     },
     text(value) {
       if (!texts.has(value)) {
@@ -1667,6 +1672,7 @@ export function compileToWasmModule(program) {
       return texts.get(value);
     },
   };
+  ctx.data = m.data(ctx.units); // the program's text, as UTF-16 units: in every module, as the runtime reads names from it
   const main = new WasmCompiler(null, "main", [], program, ctx);
   m.export("main", main.f.index);
   // the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
@@ -1695,7 +1701,8 @@ export function compileToWasmModule(program) {
   const restart = m.func("restart", [], []);
   restart.code.emit("call", ctx.im.grant).emit("global.set", ctx.left).emit("i32.const", 0).emit("global.set", ctx.depth);
   m.export("restart", restart.index);
-  return { bytes: m.encode(), listing: m.listing(ctx.init.index), ats: ctx.ats, names, messages, kinds: ctx.kinds };
+  m.export("mistake", mistake, 4); // for JavaScript to know the module's mistakes when one isn't caught
+  return { bytes: m.encode(), listing: m.listing(ctx.init.index), ats: ctx.ats, names, kinds: ctx.kinds };
 }
 
 // Compiles a parsed program: { bytes, listing, run(print, draw, maxSteps) }, like jit() in jit.js.
@@ -1712,16 +1719,22 @@ export function wasmProgram(made, module = new WebAssembly.Module(made.bytes)) {
 // A module `moth build --target wasm` made (wasm_with_details in wasm.moth): its bytes, with what running it needs
 // as JSON in its custom section "moth", made ready to run as wasmProgram makes one.
 export function wasmFile(bytes) {
-  const module = new WebAssembly.Module(bytes);
+  const module = bytes instanceof WebAssembly.Module ? bytes : new WebAssembly.Module(bytes); // or the module, compiled
+  return wasmProgram(wasmDetails(bytes, module), module);
+}
+
+// what a module moth build --target wasm wrote holds: its bytes, and what running it needs, from its section
+// "moth", as compileToWasmModule gives them
+export function wasmDetails(bytes, module = new WebAssembly.Module(bytes)) {
   const [section] = WebAssembly.Module.customSections(module, "moth");
   if (!section) throw new Error("this module wasn't made by moth build --target wasm: it has no section called moth");
   const details = JSON.parse(new TextDecoder().decode(section));
   const ats = details.ats.map(([line, col, file]) => ({ line, col, file: file || undefined }));
-  return wasmProgram({ ...details, bytes, ats }, module);
+  return { ...details, bytes, ats };
 }
 
 // The JavaScript side of a run: the imports, and moving values in and out of the module.
-function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
+function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
   // Every mistake made is kept, for a `try`: JavaScript's exceptions cross WebAssembly, but only JavaScript can
   // tell which ones it was. A `fail with` keeps its value as WebAssembly holds it, so catching it keeps it whole.
   let lastError = null;
@@ -1806,7 +1819,10 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
       case TAGS.dictionary: {
         const dictionary = new Map();
         seen.set(v, dictionary);
-        for (const [key, value] of x.hostValue(v)) dictionary.set(key, toJs(value, seen));
+        for (let i = 0, n = x.dictUsed(v); i < n; i++) {
+          const key = x.dictKeyAt(v, i);
+          if (key !== null) dictionary.set(toJs(key), toJs(x.dictValueAt(v, i), seen)); // nothing: a key taken out
+        }
         return dictionary;
       }
       case TAGS.quantity:
@@ -1820,10 +1836,6 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
         return UNSET;
     }
   }
-
-  // A dictionary's own Map, whose values stay the module's, so changing it changes the dictionary; any other
-  // value as JavaScript (bytes as a copy). For checks that only need to see the dictionary, not what is in it.
-  const rawOf = (v) => (v !== null && typeof v !== "number" && x.tag(v) === TAGS.dictionary ? x.hostValue(v) : toJs(v));
 
   // only new values come back from JavaScript (text, and the letters of a text), never a list it changed
   function toWasm(v) {
@@ -1841,7 +1853,11 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
       }
       return record;
     }
-    if (v instanceof Map) return x.makeHost(new Map([...v].map(([key, value]) => [key, toWasm(value)])), TAGS.dictionary);
+    if (v instanceof Map) {
+      const dictionary = x.makeDict();
+      for (const [key, value] of v) x.dictPut(dictionary, toWasm(key), toWasm(value));
+      return dictionary;
+    }
     if (v instanceof Uint8Array) {
       const bytes = x.makeBytes(v.length); // all 0 to start with
       for (let i = 0; i < v.length; i++) if (v[i]) x.setByte(bytes, i, v[i]);
@@ -1874,8 +1890,14 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
       case TAGS.function:
         if (!x.functionAtTop(v)) throw new CantCopy(madeInside(names[x.functionName(v)]));
         return v;
-      case TAGS.dictionary:
-        return x.makeHost(new Map([...x.hostValue(v)].map(([key, value]) => [key, workerCopy(value, depth + 1)])), TAGS.dictionary);
+      case TAGS.dictionary: {
+        const dictionary = x.makeDict();
+        for (let i = 0, n = x.dictUsed(v); i < n; i++) {
+          const key = x.dictKeyAt(v, i);
+          if (key !== null) x.dictPut(dictionary, key, workerCopy(x.dictValueAt(v, i), depth + 1));
+        }
+        return dictionary;
+      }
       default: {
         const bytes = x.makeBytes(x.bytesLength(v));
         for (let i = 0, n = x.bytesLength(v); i < n; i++) x.setByte(bytes, i, x.byteAt(v, i));
@@ -1925,8 +1947,7 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
         return workerDone({ failed: toWasm(err.message) });
       }
     },
-    workerFailed: () => {
-      const value = caughtError.wasm !== undefined ? caughtError.wasm : toWasm(caughtValue(caughtError));
+    workerFailed: (value) => {
       try {
         return workerDone({ failed: workerCopy(value) });
       } catch (err) {
@@ -1937,12 +1958,10 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
     say: (parts) => print(toJs(parts).map((p) => show(p)).join("")),
     sayError: (parts) => printError(toJs(parts).map((p) => show(p)).join("")),
     exit: (code, k) => throwing(new Ended(exitCode(toJs(code), errors[k]))), // kept as the last thing thrown, which no `try` catches
-    fail: (message, k) => errors[k](messages[message]),
-    unset: (name, k) => errors[k](noValue(names[name])),
     plus: (a, b, k) => toWasm(plus(toJs(a), toJs(b), errors[k])),
     arithmetic: (op, a, b, k) => toWasm(arithmetic(MATH[op], toJs(a), toJs(b), errors[k])),
     negate: (v, k) => toWasm(negate(toJs(v), errors[k])),
-    compare: (op, a, b, k) => (compare(COMPARE_OPS[op], toJs(a), COMPARE_OPS[op] === "in" ? rawOf(b) : toJs(b), errors[k]) ? 1 : 0),
+    compare: (op, a, b, k) => (compare(COMPARE_OPS[op], toJs(a), toJs(b), errors[k]) ? 1 : 0),
     remainder: (a, b) => a % b,
     numberOrder: (a, b) => {
       const order = numberOrder(a, b);
@@ -1950,30 +1969,26 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
     },
     divisible: (a, b) => (divisible(a, b) ? 1 : 0),
     equal: (a, b) => (equal(toJs(a), toJs(b)) ? 1 : 0),
-    lengthOf: (v, k) => lengthOf(rawOf(v), errors[k]),
-    item: (target, n, k) => { // a list's items are found in WebAssembly, so a list here is a mistake
-      const [seq, i] = item(rawOf(target), toJs(n), false, errors[k]);
-      return seq instanceof Map ? seq.get(i) : toWasm(seq[i]);
+    lengthOf: (v, k) => lengthOf(toJs(v), errors[k]),
+    // Lists, bytes and dictionaries are worked on in WebAssembly, so these are only ever mistakes (or a
+    // dictionary's key that isn't one), which the shared code words; a copy of what's there is all it needs.
+    item: (target, n, k) => {
+      const [seq, i] = item(toJs(target), toJs(n), false, errors[k]);
+      return toWasm(seq instanceof Map ? seq.get(i) : seq[i]);
     },
     itemRef: (target, n, k) => {
-      item(rawOf(target), toJs(n), true, errors[k]);
+      item(toJs(target), toJs(n), true, errors[k]);
     },
-    put: (target, n, value, k) => { // only for a mistake: R.put does the rest
-      const [seq, i] = item(rawOf(target), toJs(n), true, errors[k]);
-      putItem(seq, i, seq instanceof Map ? value : toJs(value), errors[k]);
+    put: (target, n, value, k) => {
+      const [seq, i] = item(toJs(target), toJs(n), true, errors[k]);
+      putItem(seq, i, toJs(value), errors[k]);
     },
-    dictGetText: (map, key, k) => (map.has(key) ? map.get(key) : item(map, key, false, errors[k])),
-    dictGetNum: (map, key, k) => (map.has(canon(key)) ? map.get(canon(key)) : item(map, key, false, errors[k])), // keys to 15 digits
-    dictSetText: (map, key, value) => void map.set(key, value),
-    dictSetNum: (map, key, value) => void map.set(canon(key), value),
-    dictHasText: (map, key) => (map.has(key) ? 1 : 0),
-    dictHasNum: (map, key) => (map.has(canon(key)) ? 1 : 0),
-    dict: (list, k) => x.makeHost(makeDictionary(Array.from({ length: x.listLength(list) }, (_, i) => x.listItem(list, i)), errors[k], toJs), TAGS.dictionary),
-    remove: (key, target, k) => removeKey(toJs(key), rawOf(target), errors[k]),
+    dict: (list, k) => void makeDictionary(Array.from({ length: x.listLength(list) }, (_, i) => x.listItem(list, i)), errors[k], toJs),
+    remove: (key, target, k) => removeKey(toJs(key), toJs(target), errors[k]),
     addInto: (current, value, name, k) => toWasm(addInto(toJs(current), toJs(value), names[name], errors[k])),
     checkRepeat: (n, k) => checkRepeat(toJs(n), errors[k]), // a count that's whole to 15 digits comes back whole
     checkRange: (from, to, k) => checkRange(toJs(from), toJs(to), errors[k]),
-    itemsOf: (v, k) => toWasm(itemsOf(rawOf(v), errors[k])),
+    itemsOf: (v, k) => toWasm(itemsOf(toJs(v), errors[k])),
     callable: (f, name, k) => callable(toJs(f), names[name], errors[k]),
     checkInputs: (f, argc, name, k) => checkInputs(toJs(f), argc, names[name], errors[k]),
     // input i of a function whose inputs say what they are: its kind from its tag, so a big list isn't copied
@@ -2004,10 +2019,6 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
     turtle: (action, value, k) => turtle.act(action, toJs(value), errors[k], disk),
     field: (r, name, k) => fieldOf(toJs(r), names[name], errors[k]),
     recordFor: (r, name, k) => recordFor(toJs(r), names[name], errors[k]),
-    failWith: (value, k) => {
-      failing = value;
-      failWith(toJs(value), errors[k]);
-    },
     tryStart: () => {
       lastError = null;
     },
@@ -2045,7 +2056,6 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
     expectYes: (value, k) => expectYes(toJs(value), errors[k]),
     play: (note, time, unit, k) => play(soundOf(toJs(note), toJs(time), unit, errors[k])),
     beep: () => play({ ...BEEP }),
-    jsText: (t) => textValue(t),
     fill: (t) => { // the units of text JavaScript made, for the module to work on, through its memory
       const s = x.textJs(t);
       x.textBegin(t);
@@ -2059,11 +2069,33 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
   x = new WebAssembly.Instance(module, { moth: imports }).exports;
   units = new Uint16Array(x.memory.buffer);
   count = new Int32Array(x.memory.buffer, 0, 1);
+  // A mistake the module threw and nothing in it caught, as the MothError the other engines make: its message,
+  // or a `fail with`'s value, kept as WebAssembly holds it too, so a `try` around an app's handler keeps it whole.
+  // The calls that led to it are still the module's: nothing has undone them.
+  const mothError = (err) => {
+    if (!(err instanceof WebAssembly.Exception) || !err.is(x.mistake)) return err;
+    const [value, given, k] = [0, 1, 2].map((i) => err.getArg(x.mistake, i));
+    let made;
+    if (given === 1) {
+      const thrown = toJs(value);
+      made = new MothError(ats[k], show(thrown), thrown, trail());
+      made.wasm = value;
+    } else made = new MothError(ats[k], textValue(value), undefined, trail());
+    lastError = made;
+    return made;
+  };
+  const guarded = (run) => {
+    try {
+      return run();
+    } catch (err) {
+      throw mothError(err);
+    }
+  };
   host.call = (handler, inputs) => {
     granted = 0; // each handler's call has steps of its own
     x.restart();
     const [a = null, b = null] = inputs.map(toWasm);
-    x.invoke(handler.closure, a, b);
+    guarded(() => x.invoke(handler.closure, a, b));
   };
-  return x;
+  return { main: (...given) => guarded(() => x.main(...given)) };
 }

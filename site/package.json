@@ -1,0 +1,22 @@
+{
+  "name": "moth-site",
+  "private": true,
+  "description": "Moth's website: the front page, the playground, the lessons and the docs, made with Next.js and GSAP",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync.mjs",
+    "dev": "node scripts/sync.mjs && next dev -p 3000",
+    "build": "node scripts/sync.mjs && next build",
+    "serve": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "gsap": "^3.13.0",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}

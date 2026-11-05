@@ -78,7 +78,7 @@ function compositeType(t) {
 // ---------- instructions ----------
 
 const OPS = {
-  unreachable: [0x00], try: [0x06], catch_all: [0x19], rethrow: [0x09], block: [0x02], loop: [0x03], if: [0x04], else: [0x05], end: [0x0b], br: [0x0c], br_if: [0x0d],
+  unreachable: [0x00], try: [0x06], catch: [0x07], throw: [0x08], catch_all: [0x19], rethrow: [0x09], block: [0x02], loop: [0x03], if: [0x04], else: [0x05], end: [0x0b], br: [0x0c], br_if: [0x0d],
   return: [0x0f], call: [0x10], call_ref: [0x14], drop: [0x1a], select: [0x1b],
   "local.get": [0x20], "local.set": [0x21], "local.tee": [0x22], "global.get": [0x23], "global.set": [0x24],
   "i32.const": [0x41], "f64.const": [0x44],
@@ -142,9 +142,9 @@ export class Code {
     if (!OPS[op]) throw new Error(`no such instruction: ${op}`);
     append(this.bytes, OPS[op]);
     append(this.bytes, immediates(op, args));
-    if (op === "end" || op === "else" || op === "catch_all") this.depth--;
+    if (op === "end" || op === "else" || op === "catch" || op === "catch_all") this.depth--;
     this.entries.push({ depth: this.depth, op, args, note: "" });
-    if (op === "block" || op === "loop" || op === "if" || op === "else" || op === "try" || op === "catch_all") this.depth++;
+    if (op === "block" || op === "loop" || op === "if" || op === "else" || op === "try" || op === "catch" || op === "catch_all") this.depth++;
     return this;
   }
 
@@ -166,6 +166,7 @@ export class Module {
     this.globals = [];
     this.exports = [];
     this.memories = []; // each one's size, in 64 KiB pages
+    this.tags = []; // each exception tag's type: what's thrown with it
     this.datas = [];
     this.declared = new Set(); // functions named by ref.func, which the format wants declared
     this.typeNames = []; // for the listing
@@ -209,7 +210,12 @@ export class Module {
     return this.globals.push({ type, mutable, init }) - 1;
   }
 
-  // a function's, or with kind 2 a memory's
+  // an exception tag, for throw and catch: its type is a function's, whose inputs are what's thrown
+  tag(type) {
+    return this.tags.push(type) - 1;
+  }
+
+  // a function's, or with kind 2 a memory's, or with kind 4 a tag's
   export(field, index, kind = 0) {
     this.exports.push({ field, index, kind });
   }
@@ -230,6 +236,7 @@ export class Module {
     if (this.imports.length) section(2, vec(this.imports.map((i) => [...name(i.module), ...name(i.field), 0x00, ...uleb(i.type)])));
     section(3, vec(this.funcs.map((f) => uleb(f.type))));
     if (this.memories.length) section(5, vec(this.memories.map((pages) => [0x00, ...uleb(pages)])));
+    if (this.tags.length) section(13, vec(this.tags.map((type) => [0x00, ...uleb(type)])));
     if (this.globals.length) section(6, vec(this.globals.map((g) => [...valueType(g.type), g.mutable ? 1 : 0, ...g.init.bytes, 0x0b])));
     section(7, vec(this.exports.map((e) => [...name(e.field), e.kind, ...uleb(e.index)])));
     if (this.declared.size) section(9, vec([[0x03, 0x00, ...vec([...this.declared].map((i) => uleb(i)))]]));

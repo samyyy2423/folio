@@ -4,7 +4,7 @@
 import { MothError, Ended, fail, closest, startTasks, seeded, fakeClock, NOW_WORDS, EVENTS, KINDS, Turtle, callFunction, makeRecord, catchable, caughtValue, COMPARISONS, COMPARE_OPS, OP, OPCODES, TURTLE_ACTIONS, BUILTINS, UNSET, Closure, Machine, execute, isRecord, UNITS, unitNamed } from "./vm.js";
 import { Scope, declarations } from "./scope.js";
 import { jit, fromJs, TooDeep } from "./jit.js";
-import { wasm, wasmProgram, wasmFile, compileToWasmModule } from "./wasm.js";
+import { wasm, wasmProgram, wasmFile, wasmDetails, compileToWasmModule } from "./wasm.js";
 import { check as checkProgram } from "./checker.js";
 
 export { MothError, excerpt, describeTrail, seeded, soundSamples, soundWav, SOUND_RATE } from "./vm.js";
@@ -173,7 +173,7 @@ const BIT_WORDS = ["and", "or", "xor"];
 const AS_WORDS = ["bytes", "text", "hex", "binary", "json"];
 // what `when` can wait for, and how many values each gives its handler
 const EVENT_PHRASES = new Map([["a key is pressed", { event: "key", gives: 1 }], ["the mouse is clicked", { event: "click", gives: 2 }],
-  ["the mouse is dragged", { event: "drag", gives: 2 }]]);
+  ["the mouse is dragged", { event: "drag", gives: 2 }], ["the page is used", { event: "page", gives: 1 }]]); // page.moth's page
 // buttons and text boxes (DESIGN §36): `when enter is pressed in the text box "Name"`, `the text in the text box
 // "Name"`, and the words that can follow a value, so `draw button at 0, 0` still draws a variable called button
 const ENTER_PHRASE = ["enter", "is", "pressed", "in", "the", "text", "box"];
@@ -723,7 +723,9 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       const fnName = name("a function name");
       const { params, kinds, types, defaults } = inputsOf();
       const gives = word("gives") ? givesType() : null; // `to area with w, h gives a number`
+      const needs = word("where") ? needsOf(fnName, t) : null; // `to withdraw with amount where amount is greater than 0`
       const made = { ...func(fnName, params, t), kinds };
+      if (needs) made.body.unshift(needs);
       if (defaults.some((d) => d)) made.defaults = defaults;
       if (types.some((type) => type)) made.types = types; // what the inputs say beyond KINDS, for the checker
       if (gives) made.gives = gives;
@@ -770,7 +772,7 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       }
       if (!known) {
         pos = start;
-        expected("'a key is pressed', 'the mouse is clicked', 'the mouse is dragged', 'the button ... is clicked', 'enter is pressed in the text box ...', 'the checkbox ... is clicked', 'an item is chosen in the list ...' or 'the slider ... is moved'");
+        expected("'a key is pressed', 'the mouse is clicked', 'the mouse is dragged', 'the button ... is clicked', 'enter is pressed in the text box ...', 'the checkbox ... is clicked', 'an item is chosen in the list ...', 'the slider ... is moved' or 'the page is used'");
       }
       const params = [];
       if (known.gives && word("with")) do params.push(name("an input name")); while (match(",") || word("and"));
@@ -1580,6 +1582,32 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     const n = (hiddenOnLine.get(named) ?? 0) + 1;
     hiddenOnLine.set(named, n);
     return n > 1 ? `${named} (${n})` : named;
+  }
+
+  // tokens as they were written, with a space between each but after ( and before ), a comma and 's
+  function spoken(said) {
+    let out = "";
+    said.forEach((tk, k) => {
+      const piece = tk.type === "word" ? tk.raw : tk.type === "number" ? tk.text : tk.type === "string" ? `"${tk.value}"` : tk.value;
+      if (k > 0 && !(piece === ")" || piece === "," || tk.type === "'s") && said[k - 1].type !== "(") out += " ";
+      out += piece;
+    });
+    return out;
+  }
+
+  // `to withdraw with amount where amount is greater than 0` (DESIGN §143): what a function needs, checked at
+  // the start of each call, as an `if` that fails with what the function needs, said as it was written, and, for
+  // a comparison of a name, what that name was
+  function needsOf(fnName, t) {
+    const from = pos;
+    const cond = expression();
+    const at = (kind, rest) => ({ ...rest, kind, at: t });
+    const text = `'${fnName}' needs ${spoken(tokens.slice(from, pos))}`;
+    let why = at("value", { value: text });
+    if (cond.kind === "compare" && cond.left.kind === "name") {
+      why = at("math", { op: "+", left: at("value", { value: `${text}, but ${cond.left.name} is ` }), right: at("name", { name: cond.left.name }) });
+    }
+    return at("if", { cond: at("not", { operand: cond }), then: [at("fail", { value: why })], otherwise: [] });
   }
 
   // `set a, b to pair`: what's after `to` kept in a variable of its own, then each name its item, once there
@@ -2764,7 +2792,7 @@ export function runWasm(bytes, print = console.log, { maxSteps = Infinity, draw,
 // Moth's WebAssembly back end written in Moth (wasm.moth, which reads programs with compiler.moth, and the shared
 // part of its runtime from wasm-runtime.moth): give it the three files' text and get back a function that turns
 // a program, and the files it uses ({ "name.moth": text }), into what compileToWasmModule in wasm.js gives:
-// { bytes, ats, names, messages, kinds }, the same bytes and all.
+// { bytes, ats, names, kinds }, the same bytes and all.
 export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
   const used = { "compiler.moth": compilerSource, "wasm-runtime.moth": runtimeSource };
   const { wasm_compile: compileWasm } = loadProgram(compileToJs(wasmSource, { files: (name) => used[name], file: "wasm.moth" }));
@@ -2773,12 +2801,39 @@ export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
       const made = compileWasm(source, Object.keys(files), Object.values(files));
       // a position as moth.js's tokens have one: the program's own file is no file
       const ats = made.ats.map((at) => ({ type: at.type, line: at.line, col: at.col, file: at.file || undefined }));
-      return { bytes: Uint8Array.from(made.code), ats, names: made.names, messages: made.messages, kinds: made.kinds };
+      return { bytes: Uint8Array.from(made.code), ats, names: made.names, kinds: made.kinds };
     } catch (err) {
       if (err instanceof MothError && isRecord(err.value) && Object.hasOwn(err.value, "reason")) fail(err.value.at, err.value.reason);
       if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
       throw err;
     }
+  };
+}
+
+// Moth's compiler as WebAssembly (moth.wasm, which make-moth-wasm.mjs makes; DESIGN §144): give it the module's
+// bytes and get back a function that compiles a program, and the files it may use ({ "name.moth": text }), as
+// compileToWasmModule does: { bytes, ats, names, kinds }, and `whole`, the module with what running it
+// needs in its section "moth", as moth build --target wasm writes it. A mistake in the program is a MothError.
+export function mothWasmCompiler(bytes) {
+  const compiler = wasmFile(bytes);
+  return (source, files = {}) => {
+    const given = [source];
+    for (const [name, text] of Object.entries(files)) given.push(name, text);
+    const said = [];
+    try {
+      compiler.run((line) => said.push(line), undefined, Infinity, undefined, undefined, given, seeded(), { handlers: [] }, (line) => said.push(line));
+    } catch (err) {
+      if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+      throw err;
+    }
+    const line = said.join("\n");
+    if (line.startsWith("mistake ")) {
+      const why = JSON.parse(line.slice(8));
+      if (why && typeof why === "object" && why.reason !== undefined) fail({ line: why.at.line, col: why.at.col, file: why.at.file || undefined }, why.reason);
+      throw new Error(`moth.wasm: ${typeof why === "string" ? why : line}`);
+    }
+    const whole = Uint8Array.from(line.split(","), Number);
+    return { ...wasmDetails(whole), whole };
   };
 }
 

@@ -31,6 +31,12 @@ set cli_asked to record with icon nothing, version nothing, include empty list, 
 
 set cli_usage to "usage: moth build <file.moth> [--target windows|linux|wasm] [--allow-...] [--icon <file>] [--version <1.2.0>] [--include <file or folder>]\n       moth build <file.moth> --installer [--name <name>] [--version <1.2.0>] [--icon <file>] [--sign <command>]\n       moth build --web <file.moth>\n       moth build <file.moth> --library [--into <folder>] [--target windows|linux] [--allow-...]\n       moth run [--allow-...] <file.moth> [arguments...]\n       moth debug [--allow-...] <file.moth> [arguments...]\n       moth profile [--allow-...] <file.moth> [arguments...]\n       moth coverage [--lcov] [--allow-...] <file.moth> [arguments...]\n       moth coverage [--lcov] [files.test.moth...] [--allow-...]\n       moth notebook [--allow-...] <file.md>\n       moth tidy <files...> [--check]\n       moth check <file.moth>\n       moth lsp\n       moth test [files...] [--allow-...]\n       moth add <git repository or name> [name] [--signed] | moth get [--signed] | moth update [name] [--signed]\n       moth remove <name> | moth packages\n       moth search [words...] [--index <address or file>] | moth audit [--index <address or file>]\n       moth [shell] [--allow-...]\n       moth kernel [--allow-...]\n  build compiles a Moth program to machine code: a program of its own, <file>.exe for Windows or <file>\n  for Linux, for the system moth runs on unless --target says; with --target wasm, <file>.wasm, a WebAssembly\n  module (with GC and exceptions) that Moth's JavaScript runs, runWasm in moth.js; with --web, <file>.html, a\n  page that runs it in a browser, with Moth's engine and the files it uses in it. With --library, a shared\n  library of its functions, for C and Python's ctypes: lib<file>.so for Linux or <file>.dll for Windows, and\n  <file>.h, which declares them; --into puts them in a folder.\n  run builds it for this system into a file beside it, runs it with the arguments after it, ends with the\n  number it ended with, and removes the file.\n  debug runs it so too, stopping at its first line for commands: step, next, out, go, break, show, where\n  and the rest, which help lists. profile runs it so too, and then says where its time went: each\n  function's own time and calls, and the lines that took longest. coverage runs it so too, and then says\n  how many of each file's lines with a statement on them ran, and which didn't. Given .test.moth files, or\n  none (every one here and in the folders inside), it runs their tests as test does, and says that of the\n  files they use, every test's runs added up. It says nothing of moth's own copies of the standard library,\n  nor of packages. --lcov writes it to lcov.info too, for CI services and editors.\n  notebook runs each ```moth block of a Markdown file in turn, as the shell runs entries, and writes what\n  it said under it, in an ```output block, which the next run writes again.\n  The --allow flags let the program read or write files, read sites, start programs or use libraries\n  without asking: --allow-read, --allow-write, --allow-net, --allow-run, --allow-libraries or --allow-all,\n  and --allow-read=data,notes.txt (or --allow-write=..., --allow-net=...) only those. --icon gives a Windows\n  program its icon (an .ico or .png file), --version its version, and --include builds a file, or a folder's\n  files, into the program, where read finds them before it looks on the disk. --installer then makes\n  <file>-setup.exe (or <file>-setup), which installs the program for a person, with a menu entry and a way to\n  take it away, and no administrator needed; --name names it there. --sign runs a command on each program\n  built, with its name after it: --sign \"signtool sign /fd SHA256 /a\".\n  tidy writes the files the one way Moth writes code; --check only says which of them need it.\n  check finds problems in a file without running it, and test runs every test_ function in the files, each\n  in a run of its own; with no file, every file ending in .test.moth here and in the folders inside.\n  lsp is the language server an editor starts: problems as you type, tidying, the outline, where a name is\n  made, what it is, and what can come next, over the Language Server Protocol on the input and output.\n  add fetches a package, a Git repository (an address, github.com/someone/thing, or a folder), into\n  packages/, and lists it, at its commit, in moth.packages; a program uses it with use the package \"thing\".\n  An @ after it asks for a version: github.com/someone/thing@v1.2, a tag, branch or commit.\n  A name alone is one from the package index, which search lists, or finds the words in; --index gives\n  another index, an address or a file.\n  get fetches every package listed, at its commit; update moves them, or one, to their newest (a branch's,\n  if one was asked for; one asked for at a tag or commit stays there); remove takes\n  one away; and packages lists them. moth.sums keeps the SHA-256 of each package's files, which add and\n  update write and get checks, so a package that has changed is found. --signed takes only packages whose\n  commit, or the tag they were asked for at, has a signature git trusts. audit checks the packages against\n  the advisories in the package index, and says which are about the commits they're at.\n  moth alone, or moth shell, is the Moth shell: Moth typed a line at a\n  time, each entry run as a program of its own that has what the entries before it left. kernel runs cells\n  for Jupyter (editors/jupyter): each line it reads names a file of code, run as a notebook's block."
 set cli_usage to cli_usage + "\n  moth --version | moth version: say which Moth this is (the release version)."
+set cli_usage to cli_usage + "\n  moth new [app|web|package|library] <name>: start a project, in a folder of its own: its code, tests, a\n    README and a GitHub workflow that runs them. An app unless it says, a web server, a package or a library."
+set cli_usage to cli_usage + "\n  moth explain <file.moth> | moth explain <a mistake's words>: what a mistake means, why it happens and how\n    to put it right, with code that makes it and the same code put right: the first mistake moth check finds in\n    a file, or the one a message is from."
+set cli_usage to cli_usage + "\n  moth upgrade [--check]: the newest release in place of the moth on PATH, checked against its SHA256SUMS.txt\n    first (or, for a moth a package manager put there, what to run instead); --check only says if there is one."
+set cli_usage to cli_usage + "\n  moth bench [files.bench.moth...] [--allow-...]: each bench_ function timed, as the mean of five samples of as\n    many calls as take 50 ms, with how far they spread; with no file, every .bench.moth file here and inside.\n  moth watch <a moth command>: the command, run again each time a .moth file here or inside changes: moth\n    watch test, moth watch run app.moth. Ctrl+C stops it."
+set cli_usage to cli_usage + "\n  moth publish [name] [--about \"<one line>\"] [--dry-run]: the package here put in the package index, by a\n    pull request made with GitHub's gh, once its tests pass; --dry-run only says what it would add."
+set cli_usage to cli_usage + "\n  moth doc <files.moth...> [--into <folder>]: a page of HTML for each file, from its comments: what the file is\n    for, and each function it makes, how it's called and what it does; and index.html for more than one. In doc/."
 
 # the folder a file is in, with its last / or \, or "" for the folder moth runs in
 to cli_folder_of with cli_path
@@ -5977,8 +5983,1492 @@ end
 # the arguments: `build`, `run`, `tidy`, `check` or `test`, the file (or files, for a tidy or a test), any
 # --allow flags, --target for a build, and for a run whatever comes after the file, which is the program's
 # own
-to cli_main
-    set cli_given to arguments
+# ---------- moth new ----------
+# moth new [app|web|package|library] <name> (DESIGN §140): a project to start from, in a folder of its own named
+# for it: its code, tests of it, a README, and a GitHub workflow that installs moth and runs the tests.
+
+set cli_new_kinds to list of "app", "web", "package", "library"
+
+# whether a project can have this name: a letter, then letters, digits and _ (it names a file, and a package)
+to cli_project_name with cli_name
+    if length of cli_name is 0 or length of cli_name is greater than 64 or cli_name is "main"
+        return no
+    end
+    for each cli_k from 1 to length of cli_name
+        set cli_c to item cli_k of cli_name
+        set cli_letter to (cli_c is at least "a" and cli_c is at most "z") or (cli_c is at least "A" and cli_c is at most "Z")
+        set cli_digit to cli_c is at least "0" and cli_c is at most "9"
+        if not (cli_letter or (cli_k is greater than 1 and (cli_digit or cli_c is "_")))
+            return no
+        end
+    end
+    return yes
+end
+
+# a folder, and the ones it's in, made by the system's own command: whether it is
+to cli_make_folder with cli_path
+    try
+        if cli_host() is "windows"
+            set cli_windows_path to ""
+            for each cli_c in cli_path
+                if cli_c is "/"
+                    add "\\" to cli_windows_path
+                else
+                    add cli_c to cli_windows_path
+                end
+            end
+            set cli_code to run program "cmd" with (list of "/c", "mkdir", cli_windows_path)
+        else
+            set cli_code to run program "mkdir" with (list of "-p", cli_path)
+        end
+        return cli_code is 0 and cli_folder_here(cli_path)
+    if it fails with cli_why
+        say "moth: " + cli_why to the error output
+        return no
+    end
+end
+
+# what a project of each kind is called, and what to type next in it
+to cli_new_called with cli_kind
+    if cli_kind is "web"
+        return "a web server"
+    else if cli_kind is "app"
+        return "an app"
+    end
+    return "a " + cli_kind
+end
+
+to cli_new_next with cli_kind, cli_name
+    if cli_kind is "web"
+        return "moth run --allow-libraries main.moth, and moth test"
+    else if cli_kind is "library"
+        return "moth test, and moth build " + cli_name + ".moth --library"
+    else if cli_kind is "package"
+        return "moth test"
+    end
+    return "moth run main.moth, and moth test"
+end
+
+to cli_new_project with cli_kind, cli_name
+    if not cli_project_name(cli_name)
+        say "moth: a project's name is a letter, then letters, digits and _ (and not main), not '" + cli_name + "'" to the error output
+        return 1
+    end
+    if cli_folder_here(cli_name) or cli_is_file(cli_name)
+        say "moth: there's already something called " + cli_name + " here" to the error output
+        return 1
+    end
+    set cli_made to empty list
+    for each cli_file in cli_new_files(cli_kind, cli_name)
+        set cli_path to cli_name + "/" + path of cli_file
+        set cli_folder to cli_folder_of(cli_path)
+        set cli_folder to cli_first(cli_folder, length of cli_folder - 1) # less its last /
+        if not cli_folder_here(cli_folder)
+            if not cli_make_folder(cli_folder)
+                say "moth: couldn't make the folder " + cli_folder to the error output
+                return 1
+            end
+        end
+        write text of cli_file to cli_path
+        add cli_path to cli_made
+    end
+    say "made " + cli_name + "/, " + cli_new_called(cli_kind) + ":"
+    for each cli_path in cli_made
+        say "  " + cli_path
+    end
+    say "next: cd " + cli_name + ", then " + cli_new_next(cli_kind, cli_name)
+    return 0
+end
+
+# the files of a new project of a kind (see cli_new_project), each a record of its path in the project's folder and its
+# text, with the project's name where it goes
+to cli_new_files with cli_kind, cli_name
+    set cli_files to empty list
+    if cli_kind is "app"
+        set cli_lines to empty list
+        add "# " + cli_name + ": the program. Run it with: moth run main.moth" to cli_lines
+        add "use \"" + cli_name + ".moth\" as app" to cli_lines
+        add "" to cli_lines
+        add "say app's greeting(\"world\")" to cli_lines
+        set cli_made_path to "main.moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# What " + cli_name + " does, apart from main.moth, so its tests can use it too." to cli_lines
+        add "" to cli_lines
+        add "# a greeting for someone, by name" to cli_lines
+        add "to greeting with name" to cli_lines
+        add "    return \"Hello, \" + name + \"!\"" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name + "'s tests: moth test runs each test_ function here." to cli_lines
+        add "use \"" + cli_name + ".moth\" as app" to cli_lines
+        add "" to cli_lines
+        add "to test_greeting" to cli_lines
+        add "    expect app's greeting(\"world\") is \"Hello, world!\"" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "to test_greeting_anyone" to cli_lines
+        add "    expect app's greeting(\"Ada\") is \"Hello, Ada!\"" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".test.moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name to cli_lines
+        add "" to cli_lines
+        add "A program written in [Moth](https://github.com/samyyy2423/moth)." to cli_lines
+        add "" to cli_lines
+        add "```text" to cli_lines
+        add "moth run main.moth      run it" to cli_lines
+        add "moth test               run its tests" to cli_lines
+        add "moth build main.moth    make it a program of its own: main.exe on Windows, main on Linux" to cli_lines
+        add "```" to cli_lines
+        add "" to cli_lines
+        add "`main.moth` is the program, `" + cli_name + ".moth` what it does, and `" + cli_name + ".test.moth` its tests, which GitHub runs" to cli_lines
+        add "on each push (`.github/workflows/test.yml`)." to cli_lines
+        set cli_made_path to "README.md"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# what moth build and moth run make" to cli_lines
+        add "/main" to cli_lines
+        add "/main.exe" to cli_lines
+        add "*-run" to cli_lines
+        add "*-run.exe" to cli_lines
+        set cli_made_path to ".gitignore"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "name: test" to cli_lines
+        add "on: [push, pull_request]" to cli_lines
+        add "jobs:" to cli_lines
+        add "  test:" to cli_lines
+        add "    runs-on: ubuntu-latest" to cli_lines
+        add "    steps:" to cli_lines
+        add "      - uses: actions/checkout@v4" to cli_lines
+        add "      - name: install moth" to cli_lines
+        add "        run: |" to cli_lines
+        add "          curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh" to cli_lines
+        add "          echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\"" to cli_lines
+        add "      - run: moth test" to cli_lines
+        set cli_made_path to ".github/workflows/test.yml"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+    else if cli_kind is "web"
+        set cli_lines to empty list
+        add "# " + cli_name + ": a web server. Run it with: moth run --allow-libraries main.moth" to cli_lines
+        add "use \"server.moth\" as web" to cli_lines
+        add "use \"" + cli_name + ".moth\" as site" to cli_lines
+        add "" to cli_lines
+        add "say \"" + cli_name + " is at http://localhost:8080\"" to cli_lines
+        add "web's serve(8080, site's answer)" to cli_lines
+        set cli_made_path to "main.moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# What " + cli_name + " answers, apart from main.moth, so its tests can ask it without a server." to cli_lines
+        add "" to cli_lines
+        add "# the answer to a request, by its path: a page, JSON, or a record with a status" to cli_lines
+        add "to answer with request" to cli_lines
+        add "    if path of request is \"/\"" to cli_lines
+        add "        return \"<h1>Hello from " + cli_name + "</h1>\"" to cli_lines
+        add "    end" to cli_lines
+        add "    if path of request is \"/hello\"" to cli_lines
+        add "        set asked to query of request" to cli_lines
+        add "        set name to \"world\"" to cli_lines
+        add "        if \"name\" is in asked" to cli_lines
+        add "            set name to item \"name\" of asked" to cli_lines
+        add "        end" to cli_lines
+        add "        return dictionary where \"greeting\" is \"Hello, \" + name + \"!\"" to cli_lines
+        add "    end" to cli_lines
+        add "    return record with status 404, body \"There's nothing at \" + path of request" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name + "'s tests: moth test runs each test_ function here." to cli_lines
+        add "use \"" + cli_name + ".moth\" as site" to cli_lines
+        add "" to cli_lines
+        add "# a request, as the server makes one" to cli_lines
+        add "to request_for with wanted, asked" to cli_lines
+        add "    return record with method \"GET\", path wanted, query asked, version \"HTTP/1.1\", headers empty dictionary, body \"\"" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "to test_home" to cli_lines
+        add "    expect site's answer(request_for(\"/\", empty dictionary)) is \"<h1>Hello from " + cli_name + "</h1>\"" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "to test_hello" to cli_lines
+        add "    set answered to site's answer(request_for(\"/hello\", dictionary where \"name\" is \"Ada\"))" to cli_lines
+        add "    expect item \"greeting\" of answered is \"Hello, Ada!\"" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "to test_nothing_there" to cli_lines
+        add "    set answered to site's answer(request_for(\"/nope\", empty dictionary))" to cli_lines
+        add "    expect status of answered is 404" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".test.moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name to cli_lines
+        add "" to cli_lines
+        add "A web server written in [Moth](https://github.com/samyyy2423/moth)." to cli_lines
+        add "" to cli_lines
+        add "```text" to cli_lines
+        add "moth run --allow-libraries main.moth    run it, at http://localhost:8080" to cli_lines
+        add "moth test                               run its tests" to cli_lines
+        add "moth build --allow-libraries main.moth  make it a program of its own" to cli_lines
+        add "```" to cli_lines
+        add "" to cli_lines
+        add "`main.moth` starts the server, `" + cli_name + ".moth` says what it answers, and `" + cli_name + ".test.moth` tests that without" to cli_lines
+        add "a server. GitHub runs the tests on each push (`.github/workflows/test.yml`)." to cli_lines
+        set cli_made_path to "README.md"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# what moth build and moth run make" to cli_lines
+        add "/main" to cli_lines
+        add "/main.exe" to cli_lines
+        add "*-run" to cli_lines
+        add "*-run.exe" to cli_lines
+        set cli_made_path to ".gitignore"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "name: test" to cli_lines
+        add "on: [push, pull_request]" to cli_lines
+        add "jobs:" to cli_lines
+        add "  test:" to cli_lines
+        add "    runs-on: ubuntu-latest" to cli_lines
+        add "    steps:" to cli_lines
+        add "      - uses: actions/checkout@v4" to cli_lines
+        add "      - name: install moth" to cli_lines
+        add "        run: |" to cli_lines
+        add "          curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh" to cli_lines
+        add "          echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\"" to cli_lines
+        add "      - run: moth test" to cli_lines
+        set cli_made_path to ".github/workflows/test.yml"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+    else if cli_kind is "package"
+        set cli_lines to empty list
+        add "# " + cli_name + ": a package for Moth programs. A program that has added it uses it with" to cli_lines
+        add "#   use the package \"" + cli_name + "\"" to cli_lines
+        add "" to cli_lines
+        add "# words, said loudly" to cli_lines
+        add "to shout with words" to cli_lines
+        add "    return uppercase of words + \"!\"" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "# the first n square numbers" to cli_lines
+        add "to squares with n" to cli_lines
+        add "    set made to empty list" to cli_lines
+        add "    for each k from 1 to n" to cli_lines
+        add "        add k * k to made" to cli_lines
+        add "    end" to cli_lines
+        add "    return made" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name + "'s tests: moth test runs each test_ function here." to cli_lines
+        add "use \"" + cli_name + ".moth\" as lib" to cli_lines
+        add "" to cli_lines
+        add "to test_shout" to cli_lines
+        add "    expect lib's shout(\"hi\") is \"HI!\"" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "to test_squares" to cli_lines
+        add "    set made to lib's squares(4)" to cli_lines
+        add "    expect made is list of 1, 4, 9, 16" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".test.moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name to cli_lines
+        add "" to cli_lines
+        add "A package for [Moth](https://github.com/samyyy2423/moth) programs." to cli_lines
+        add "" to cli_lines
+        add "```text" to cli_lines
+        add "moth add github.com/you/" + cli_name + "    in a program's folder: fetch it into packages/" to cli_lines
+        add "```" to cli_lines
+        add "" to cli_lines
+        add "```moth" to cli_lines
+        add "use the package \"" + cli_name + "\" as " + cli_name to cli_lines
+        add "say " + cli_name + "'s shout(\"hello\")" to cli_lines
+        add "```" to cli_lines
+        add "" to cli_lines
+        add "`moth test` runs its tests, which GitHub runs on each push (`.github/workflows/test.yml`). Once it's on" to cli_lines
+        add "GitHub, `moth publish` puts it in Moth's package index, so `moth add " + cli_name + "` finds it by name." to cli_lines
+        set cli_made_path to "README.md"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# what moth run makes" to cli_lines
+        add "*-run" to cli_lines
+        add "*-run.exe" to cli_lines
+        add "packages/" to cli_lines
+        set cli_made_path to ".gitignore"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "name: test" to cli_lines
+        add "on: [push, pull_request]" to cli_lines
+        add "jobs:" to cli_lines
+        add "  test:" to cli_lines
+        add "    runs-on: ubuntu-latest" to cli_lines
+        add "    steps:" to cli_lines
+        add "      - uses: actions/checkout@v4" to cli_lines
+        add "      - name: install moth" to cli_lines
+        add "        run: |" to cli_lines
+        add "          curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh" to cli_lines
+        add "          echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\"" to cli_lines
+        add "      - run: moth test" to cli_lines
+        set cli_made_path to ".github/workflows/test.yml"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+    else if cli_kind is "library"
+        set cli_lines to empty list
+        add "# " + cli_name + ": a library other languages can call. moth build " + cli_name + ".moth --library makes lib" + cli_name + ".so on Linux" to cli_lines
+        add "# (" + cli_name + ".dll on Windows) and " + cli_name + ".h, and each function made here is in it, by its name." to cli_lines
+        add "" to cli_lines
+        add "# the nth Fibonacci number" to cli_lines
+        add "to fib with n" to cli_lines
+        add "    if n is less than 2" to cli_lines
+        add "        return n" to cli_lines
+        add "    end" to cli_lines
+        add "    return fib(n - 1) + fib(n - 2)" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "# how many whole numbers from 2 to n are prime" to cli_lines
+        add "to primes_up_to with n" to cli_lines
+        add "    set count to 0" to cli_lines
+        add "    for each k from 2 to n" to cli_lines
+        add "        set prime to yes" to cli_lines
+        add "        set d to 2" to cli_lines
+        add "        repeat while prime and d * d is at most k" to cli_lines
+        add "            if k is divisible by d" to cli_lines
+        add "                set prime to no" to cli_lines
+        add "            end" to cli_lines
+        add "            add 1 to d" to cli_lines
+        add "        end" to cli_lines
+        add "        if prime" to cli_lines
+        add "            add 1 to count" to cli_lines
+        add "        end" to cli_lines
+        add "    end" to cli_lines
+        add "    return count" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name + "'s tests: moth test runs each test_ function here." to cli_lines
+        add "use \"" + cli_name + ".moth\" as lib" to cli_lines
+        add "" to cli_lines
+        add "to test_fib" to cli_lines
+        add "    expect lib's fib(10) is 55" to cli_lines
+        add "end" to cli_lines
+        add "" to cli_lines
+        add "to test_primes" to cli_lines
+        add "    expect lib's primes_up_to(10) is 4" to cli_lines
+        add "    expect lib's primes_up_to(100) is 25" to cli_lines
+        add "end" to cli_lines
+        set cli_made_path to cli_name + ".test.moth"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# " + cli_name to cli_lines
+        add "" to cli_lines
+        add "A library written in [Moth](https://github.com/samyyy2423/moth), for other languages to call." to cli_lines
+        add "" to cli_lines
+        add "```text" to cli_lines
+        add "moth build " + cli_name + ".moth --library    make lib" + cli_name + ".so (Linux) or " + cli_name + ".dll (Windows), and " + cli_name + ".h" to cli_lines
+        add "moth test                         run its tests" to cli_lines
+        add "```" to cli_lines
+        add "" to cli_lines
+        add "From Python, with [mothlang](https://pypi.org/project/mothlang/), which builds it the first time:" to cli_lines
+        add "" to cli_lines
+        add "```python" to cli_lines
+        add "import mothlang as moth" to cli_lines
+        add "" to cli_lines
+        add "lib = moth.load(\"" + cli_name + ".moth\")" to cli_lines
+        add "print(lib.fib(30))" to cli_lines
+        add "```" to cli_lines
+        add "" to cli_lines
+        add "From C, include `" + cli_name + ".h` and link with `-l" + cli_name + "`. GitHub runs the tests on each push" to cli_lines
+        add "(`.github/workflows/test.yml`)." to cli_lines
+        set cli_made_path to "README.md"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "# what moth build makes" to cli_lines
+        add "*.so" to cli_lines
+        add "*.dll" to cli_lines
+        add "*.h" to cli_lines
+        add "*-run" to cli_lines
+        add "*-run.exe" to cli_lines
+        set cli_made_path to ".gitignore"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+        set cli_lines to empty list
+        add "name: test" to cli_lines
+        add "on: [push, pull_request]" to cli_lines
+        add "jobs:" to cli_lines
+        add "  test:" to cli_lines
+        add "    runs-on: ubuntu-latest" to cli_lines
+        add "    steps:" to cli_lines
+        add "      - uses: actions/checkout@v4" to cli_lines
+        add "      - name: install moth" to cli_lines
+        add "        run: |" to cli_lines
+        add "          curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh" to cli_lines
+        add "          echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\"" to cli_lines
+        add "      - run: moth test" to cli_lines
+        set cli_made_path to ".github/workflows/test.yml"
+        set cli_made_text to (join cli_lines with "\n") + "\n"
+        add record with path cli_made_path, text cli_made_text to cli_files
+    end
+    return cli_files
+end
+
+# ---------- moth explain ----------
+# moth explain <file.moth> | moth explain <a mistake's words> (DESIGN §140): what a mistake means, why it happens
+# and how to put it right, with code that makes it and the same code put right. Given a file, the first mistake
+# moth check finds in it; given words, the mistake they come from, as a program said it when it ran.
+
+# text in lines of at most 76 characters, each with `cli_indent` before it
+to cli_wrapped with cli_text, cli_indent
+    set cli_out to ""
+    set cli_line to ""
+    for each cli_word in split cli_text by " "
+        if length of cli_line is 0
+            set cli_line to cli_word
+        else if (length of cli_line) + 1 + (length of cli_word) is greater than 76
+            set cli_out to cli_out + cli_indent + cli_line + "\n"
+            set cli_line to cli_word
+        else
+            set cli_line to cli_line + " " + cli_word
+        end
+    end
+    return cli_out + cli_indent + cli_line
+end
+
+# code, each line four spaces in
+to cli_indented with cli_code
+    set cli_out to empty list
+    for each cli_line in split cli_code by "\n"
+        add "    " + cli_line to cli_out
+    end
+    return join cli_out with "\n"
+end
+
+# the explanation of the mistake a message says, or nothing: the first whose pieces are all in it
+to cli_explanation_for with cli_message
+    for each cli_e in cli_explanations()
+        set cli_all to yes
+        for each cli_piece in has of cli_e
+            if not (cli_piece is in cli_message)
+                set cli_all to no
+            end
+        end
+        if cli_all
+            return cli_e
+        end
+    end
+    return nothing
+end
+
+# says what moth knows of the mistake a message says: 0, or 1 if it knows nothing more than the message
+to cli_say_explanation with cli_message
+    set cli_e to cli_explanation_for(cli_message)
+    say ""
+    if cli_e is nothing
+        say cli_wrapped("moth has no more to say of this mistake yet than its message does, which says what went wrong and where: the line, and a ^ under the spot.", "")
+        return 1
+    end
+    say title of cli_e
+    say ""
+    say cli_wrapped(why of cli_e, "")
+    say ""
+    say "This makes the mistake:"
+    say ""
+    say cli_indented(wrong of cli_e)
+    say ""
+    say "and this puts it right:"
+    say ""
+    say cli_indented(right of cli_e)
+    return 0
+end
+
+to cli_explain with cli_words
+    set cli_given_text to join cli_words with " "
+    if length of cli_words is greater than 1 or not cli_is_file(cli_given_text)
+        return cli_say_explanation(cli_given_text) # a mistake's words
+    end
+    set cli_path to cli_given_text
+    set cli_source to cli_text_of(cli_path)
+    if cli_source is nothing
+        return 1
+    end
+    set cli_used to cli_sources_of(cli_path, cli_source)
+    set cli_problems to empty list
+    try
+        set cli_problems to cli_problems_of(cli_source, names of cli_used, texts of cli_used)
+    if it fails with cli_whycheck # code that can't be read at all: its mistake
+        if not cli_is_problem(cli_whycheck)
+            fail with cli_whycheck
+        end
+        set cli_at to at of cli_whycheck
+        set cli_where to cli_path
+        if file of cli_at is not ""
+            set cli_where to file of cli_at
+        end
+        cli_say_problem(cli_where, line of cli_at, col of cli_at, "error: " + reason of cli_whycheck,
+            cli_text_for(file of cli_at, cli_source, names of cli_used, texts of cli_used), no)
+        cli_say_explanation(reason of cli_whycheck)
+        return 0
+    end
+    for each cli_p in cli_problems
+        if kind of cli_p is "fails" or kind of cli_p is "doesn't fit"
+            set cli_where to cli_path
+            if file of cli_p is not ""
+                set cli_where to file of cli_p
+            end
+            set cli_said to kind of cli_p
+            if cli_said is "fails"
+                set cli_said to "will fail"
+            end
+            cli_say_problem(cli_where, line of cli_p, col of cli_p, cli_said + ": " + message of cli_p,
+                cli_text_for(file of cli_p, cli_source, names of cli_used, texts of cli_used), no)
+            cli_say_explanation(message of cli_p)
+            return 0
+        end
+    end
+    say cli_wrapped(cli_path + ": moth found no mistakes in it without running it. For one it makes when it runs, give moth explain the mistake's words: moth explain \"can't divide by zero\".", "")
+    return 1
+end
+
+# The mistakes moth explain knows, each: pieces of the message (it's that mistake when the message has all of
+# them), what it is, why it happens and how to put it right, code that makes it, and the same code put right
+to cli_explanations
+    set cli_known to empty list
+    set cli_has to list of "has no value yet"
+    add record with has cli_has, title "A name is used before anything gives it a value.", why "Moth gives a variable its value when a 'set' runs. Using it on a line before that, or after a 'set' inside an 'if' that didn't run, finds no value. A name that's nearly another one is often a typing slip: the message says which name it may have meant.", wrong "say total\nset total to 5", right "set total to 5\nsay total" to cli_known
+    set cli_has to list of "there is no function called"
+    add record with has cli_has, title "A call to a function that nothing here makes.", why "A function is made with 'to', in this file or in one it uses. The name may be spelled differently where it's made, the file that makes it may need a 'use' line, or it may be one of the standard library's, which a program uses by its file: sqrt and power are in math.moth.", wrong "say sqrt(16)", right "use \"math.moth\"\nsay sqrt(16)" to cli_known
+    set cli_has to list of "can't use '+' on"
+    add record with has cli_has, title "'+' between two things it can't put together.", why "'+' adds numbers, joins text (anything joined to text becomes text), and adds amounts of one measure, as 5 km + 300 m. A list grows with 'add ... to'.", wrong "set items to list of 1, 2\nset items to items + 3", right "set items to list of 1, 2\nadd 3 to items" to cli_known
+    set cli_has to list of "can't divide by zero"
+    add record with has cli_has, title "A division by 0.", why "Nothing divided by 0 is a number, so Moth stops rather than guess. Check what you divide by before dividing, or give it a value that can't be 0.", wrong "set average to total / count", right "if count is 0\n    set average to 0\nelse\n    set average to total / count\nend" to cli_known
+    set cli_has to list of "there is no item", "counted from 1"
+    add record with has cli_has, title "An item number below 1.", why "Moth counts items from 1, as English does: the first item of a list is item 1, and there's no item 0.", wrong "say item 0 of names", right "say item 1 of names" to cli_known
+    set cli_has to list of "there is no item", "only has"
+    add record with has cli_has, title "An item past the end.", why "A list (or text, or bytes) has as many items as 'length of' says, and asking for one past that finds nothing. A loop that counts to 'length of' the list stays inside it.", wrong "for each k from 1 to 10\n    say item k of names\nend", right "for each k from 1 to length of names\n    say item k of names\nend" to cli_known
+    set cli_has to list of "item numbers must be whole numbers"
+    add record with has cli_has, title "An item number that isn't whole.", why "Items are counted 1, 2, 3, so an item's number is a whole number. A division or a measurement can give a fraction: 'rounded down' after it makes it whole.", wrong "say item (length of names / 2) of names", right "say item ((length of names / 2) rounded down) of names" to cli_known
+    set cli_has to list of "in this dictionary"
+    add record with has cli_has, title "A key the dictionary doesn't have.", why "Reading a dictionary's key that was never set is a mistake, so a typing slip doesn't go unseen. 'is in' says whether it has the key; the message says which key it may have meant.", wrong "say item \"bob\" of ages", right "if \"bob\" is in ages\n    say item \"bob\" of ages\nend" to cli_known
+    set cli_has to list of "a dictionary's keys are text or numbers"
+    add record with has cli_has, title "A key that's neither text nor a number.", why "A dictionary finds its values by text or numbers. To look things up by a list or a record, make text of it first, as with 'as json'.", wrong "set item (list of 1, 2) of seen to yes", right "set item ((list of 1, 2) as json) of seen to yes" to cli_known
+    set cli_has to list of "needs", "input", "but got"
+    add record with has cli_has, title "A call with too many or too few inputs.", why "A function takes the inputs its 'to' line names, one each, in order. An input given 'or' on that line may be left out, and is then what follows 'or'.", wrong "to area with width, height\n    return width * height\nend\nsay area(3)", right "to area with width, height\n    return width * height\nend\nsay area(3, 4)" to cli_known
+    set cli_has to list of "not a function"
+    add record with has cli_has, title "A call to something that isn't a function.", why "Brackets after a name call it, so the name must be a function: one made with 'to', or a function kept in a variable. A variable of the same name as a function hides it.", wrong "set total to 0\nsay total(5)", right "to total with n\n    return n * 2\nend\nsay total(5)" to cli_known
+    set cli_has to list of "can't check if"
+    add record with has cli_has, title "A comparison of two things that don't compare.", why "'is less than' and the others compare numbers with numbers, text with text, and amounts of one measure. Text that holds a number becomes one with 'number of'.", wrong "set age to ask \"Age?\"\nif age is greater than 17\n    say \"welcome\"\nend", right "set age to number of ask \"Age?\"\nif age is greater than 17\n    say \"welcome\"\nend" to cli_known
+    set cli_has to list of "isn't a number"
+    add record with has cli_has, title "Text that isn't a number, made into one.", why "'number of' reads text that's written as a number, as \"42\" or \"3.5\". Text that may not be one (what a person types, say) can be checked first, or read inside 'try'.", wrong "say number of \"forty\"", right "try\n    say number of answer\nif it fails\n    say \"that isn't a number\"\nend" to cli_known
+    set cli_has to list of "stopped after", "steps"
+    add record with has cli_has, title "A loop, or calls, that went on and on.", why "A program run with a limit on its steps (as the playground's and the tests' are) stops when it uses them all. That's most often a 'repeat while' whose test never changes, or a function that calls itself with nothing to stop it.", wrong "set n to 10\nrepeat while n is greater than 0\n    say n\nend", right "set n to 10\nrepeat while n is greater than 0\n    say n\n    set n to n - 1\nend" to cli_known
+    set cli_has to list of "too much recursion"
+    add record with has cli_has, title "A function that calls itself without end.", why "A function may call itself, but each call must get closer to an answer that needs no more calls. Without that, the calls pile up until Moth stops them.", wrong "to count_down with n\n    say n\n    count_down(n - 1)\nend", right "to count_down with n\n    if n is 0\n        return nothing\n    end\n    say n\n    count_down(n - 1)\nend" to cli_known
+    set cli_has to list of "expected a new line but found"
+    add record with has cli_has, title "More on a line than one statement.", why "Each statement has a line of its own, so something left over after a whole statement is a mistake: often a missing '+' or comma, or two statements on one line.", wrong "set total to price tax", right "set total to price + tax" to cli_known
+    set cli_has to list of "expected a value but found"
+    add record with has cli_has, title "A value missing where one should be.", why "Something that needs a value (a '+', a 'set ... to', an input) found nothing there, or a word that isn't one. The line may have been cut short.", wrong "set total to price +", right "set total to price + tax" to cli_known
+    set cli_has to list of "is missing its 'end'"
+    add record with has cli_has, title "A block with no 'end'.", why "'if', 'repeat', 'for each', 'to', 'try' and the rest each start a block of lines, and each block ends with its own 'end', lined up under it.", wrong "if score is greater than 10\n    say \"well done\"", right "if score is greater than 10\n    say \"well done\"\nend" to cli_known
+    set cli_has to list of "'return' only works inside a function"
+    add record with has cli_has, title "A 'return' outside any function.", why "'return' gives a function's answer back to whatever called it, so it belongs inside a 'to'. To end the program early, use 'stop the program with 0'.", wrong "if done\n    return\nend", right "if done\n    stop the program with 0\nend" to cli_known
+    set cli_has to list of "'stop' only works inside a loop"
+    add record with has cli_has, title "A 'stop' outside a loop.", why "'stop' leaves the loop it's in. Outside a loop there's nothing for it to leave; 'return' leaves a function, and 'stop the program with' ends the program.", wrong "if found\n    stop\nend", right "for each name in names\n    if name is \"Ana\"\n        stop\n    end\nend" to cli_known
+    set cli_has to list of "missing its closing quote"
+    add record with has cli_has, title "Text with no quote to end it.", why "Text starts and ends with a double quote, on one line. A quote inside it is written \\\", and a new line \\n.", wrong "say \"Hello, world!", right "say \"Hello, world!\"" to cli_known
+    set cli_has to list of "is a Moth word, so it can't be used"
+    add record with has cli_has, title "One of Moth's own words used as a name.", why "Moth's own words (say, set, if, length, item and the rest) mean what they always mean, so a variable or function needs a name of its own.", wrong "set length to 5", right "set size to 5" to cli_known
+    set cli_has to list of "a line can't start with"
+    add record with has cli_has, title "A line that starts in a way no statement does.", why "A statement starts with a word that says what it does (say, set, if, add...) or is a call. A value alone on a line, or a symbol, doesn't do anything.", wrong "x + 1", right "set x to x + 1" to cli_known
+    set cli_has to list of "has no '}' to end it"
+    add record with has cli_has, title "A \{ in text with no } to end it.", why "In text, \{...} puts a value in: \"total: \{total}\". A \{ meant as itself is written \\\{.", wrong "say \"a set is written \{1, 2\"", right "say \"a set is written \\\{1, 2}\"" to cli_known
+    set cli_has to list of "isn't allowed to"
+    add record with has cli_has, title "Something a program may only do when allowed.", why "A program reads and writes files, goes online, starts programs and uses libraries only when its flags allow it: --allow-read, --allow-write, --allow-net, --allow-run, --allow-libraries, or --allow-all, given to moth run or moth build.", wrong "moth run notes.moth", right "moth run --allow-read notes.moth" to cli_known
+    set cli_has to list of "there is no file called"
+    add record with has cli_has, title "A file Moth can't find.", why "A file's name is found from the folder the program runs in (or, for 'use', the program's own folder). Check the name, its ending, and which folder you run from.", wrong "use \"helper\"", right "use \"helper.moth\"" to cli_known
+    set cli_has to list of "can only take an item of"
+    add record with has cli_has, title "An item of something that has no items.", why "Lists, text, dictionaries and bytes have items; a number, yes or no, or nothing doesn't. The variable may hold something other than you think: 'say' it to see.", wrong "set n to 5\nsay item 1 of n", right "set ns to list of 5\nsay item 1 of ns" to cli_known
+    set cli_has to list of "can only change items of"
+    add record with has cli_has, title "Changing an item of something whose items don't change.", why "Lists, dictionaries and bytes can have an item set. Text can't: make new text instead, joining the pieces.", wrong "set item 1 of word to \"J\"", right "set word to \"J\" + rest" to cli_known
+    set cli_has to list of "'use' only works at the top level"
+    add record with has cli_has, title "A 'use' inside a block.", why "A file is used once, for the whole program, so 'use' goes at the top level, not inside a function or an 'if'.", wrong "to f\n    use \"math.moth\"\nend", right "use \"math.moth\"\nto f\n    return sqrt(2)\nend" to cli_known
+    set cli_has to list of "I don't understand"
+    add record with has cli_has, title "A symbol Moth doesn't have.", why "Moth is written in words: 'is greater than' not '>', 'and' not '&&', 'remainder of a divided by b' not '%'. The message says the words to write.", wrong "if x > 3\n    say x\nend", right "if x is greater than 3\n    say x\nend" to cli_known
+    set cli_has to list of "is given twice"
+    add record with has cli_has, title "One input given twice in a call.", why "Each input of a call is given once, in order or by its name.", wrong "to area with width, height\n    return width * height\nend\nsay area(3, width 4)", right "to area with width, height\n    return width * height\nend\nsay area(3, height 4)" to cli_known
+    set cli_has to list of "'stop the program with' needs a whole number"
+    add record with has cli_has, title "A program's ending number out of range.", why "A program ends with a whole number from 0 to 255: 0 for all went well, anything else for what went wrong.", wrong "stop the program with -1", right "stop the program with 1" to cli_known
+    return cli_known
+end
+
+# ---------- moth upgrade ----------
+# moth upgrade [--check] (DESIGN §140): the newest release of moth in place of the moth on PATH, its download
+# checked against the release's SHA256SUMS.txt first; or, for a moth a package manager put there, what to run
+# instead. --check only says whether there's a newer one. MOTH_RELEASES names another place to find releases, a
+# folder or an address, holding latest.json (as GitHub's API says what the latest release is) and its files.
+
+set cli_releases_api to "https://api.github.com/repos/samyyy2423/moth/releases/latest"
+set cli_releases_download to "https://github.com/samyyy2423/moth/releases/download/"
+
+# whether text is an address on the web
+to cli_is_address with cli_text
+    return cli_first(cli_text + "        ", 8) is "https://" or cli_first(cli_text + "       ", 7) is "http://"
+end
+
+# an environment variable's value, by the system's own shell, or "" if it has none
+to cli_env with cli_name
+    try
+        if cli_host() is "windows"
+            set cli_got to run program "cmd" with (list of "/c", "echo %" + cli_name + "%") keeping its output
+            set cli_value to cli_trimmed(output of cli_got)
+            if cli_value is "%" + cli_name + "%" # none: cmd says the name as it was written
+                return ""
+            end
+            return cli_value
+        end
+        set cli_got to run program "sh" with (list of "-c", "printf '%s' \"$" + cli_name + "\"") keeping its output
+        return output of cli_got
+    if it fails
+        return ""
+    end
+end
+
+# the moth on PATH, as the system finds it, or nothing
+to cli_moth_on_path
+    try
+        if cli_host() is "windows"
+            set cli_got to run program "cmd" with (list of "/c", "where", "moth") keeping its output
+        else
+            set cli_got to run program "sh" with (list of "-c", "command -v moth") keeping its output
+        end
+        if code of cli_got is not 0
+            return nothing
+        end
+        set cli_first_line to item 1 of split cli_trimmed(output of cli_got) by "\n"
+        return cli_trimmed(cli_first_line)
+    if it fails
+        return nothing
+    end
+end
+
+# a version's numbers: "v1.12.0" or "1.12.0" is 1, 12, 0
+to cli_version_numbers with cli_version
+    set cli_text to cli_version
+    if length of cli_text is greater than 0 and item 1 of cli_text is "v"
+        set cli_rest to ""
+        for each cli_k from 2 to length of cli_text
+            add item cli_k of cli_text to cli_rest
+        end
+        set cli_text to cli_rest
+    end
+    set cli_numbers to empty list
+    for each cli_part in split cli_text by "."
+        try
+            add number of cli_part to cli_numbers
+        if it fails
+            add 0 to cli_numbers
+        end
+    end
+    return cli_numbers
+end
+
+# whether version a comes after version b
+to cli_newer with cli_a, cli_b
+    set cli_x to cli_version_numbers(cli_a)
+    set cli_y to cli_version_numbers(cli_b)
+    for each cli_k from 1 to 3
+        set cli_p to 0
+        set cli_q to 0
+        if cli_k is at most length of cli_x
+            set cli_p to item cli_k of cli_x
+        end
+        if cli_k is at most length of cli_y
+            set cli_q to item cli_k of cli_y
+        end
+        if cli_p is not cli_q
+            return cli_p is greater than cli_q
+        end
+    end
+    return no
+end
+
+# a file of a release, from an address (by curl) or a folder, into `cli_into`: whether it came
+to cli_fetch_file with cli_from, cli_into
+    try
+        if cli_is_address(cli_from)
+            set cli_got to run program "curl" with (list of "-fsSL", "-o", cli_into, cli_from) keeping its output
+            if code of cli_got is not 0
+                say "moth: can't download " + cli_from + ": " + cli_trimmed(mistakes of cli_got) to the error output
+                return no
+            end
+            return yes
+        end
+        write (read bytes cli_from) as bytes to cli_into
+        return yes
+    if it fails with cli_why
+        say "moth: can't get " + cli_from + ": " + cli_why to the error output
+        return no
+    end
+end
+
+# a file's SHA-256, by the system's own tool (as fast as it gets, for a program of 30 MB), or nothing
+to cli_file_sha256 with cli_path
+    try
+        if cli_host() is "windows"
+            set cli_got to run program "certutil" with (list of "-hashfile", cli_path, "SHA256") keeping its output
+            set cli_line to item 2 of split output of cli_got by "\n"
+        else
+            set cli_got to run program "sha256sum" with (list of cli_path) keeping its output
+            set cli_line to item 1 of split output of cli_got by " "
+        end
+        set cli_hex to ""
+        for each cli_c in lowercase of cli_line
+            if cli_c is in "0123456789abcdef"
+                add cli_c to cli_hex
+            end
+        end
+        return cli_hex
+    if it fails
+        return nothing
+    end
+end
+
+# how to upgrade a moth some package manager put at this path, or nothing if moth upgrade can do it itself
+to cli_managed with cli_path
+    set cli_where to lowercase of cli_path
+    if "scoop" is in cli_where
+        return "scoop update moth"
+    else if "winget" is in cli_where
+        return "winget upgrade samyyy2423.Moth"
+    else if "site-packages" is in cli_where or "python" is in cli_where
+        return "pip install --upgrade mothlang"
+    else if cli_where is "/usr/bin/moth"
+        return "download the release's .deb, then: sudo apt install ./moth_<version>_amd64.deb"
+    end
+    return nothing
+end
+
+to cli_upgrade with cli_only_check
+    set cli_current to item "version" of (json from read "package.json")
+    set cli_place to cli_env("MOTH_RELEASES")
+    set cli_latest_from to cli_releases_api
+    if cli_place is not ""
+        set cli_latest_from to cli_place + "/latest.json"
+    end
+    set cli_latest to nothing
+    try
+        if cli_is_address(cli_latest_from)
+            set cli_got to run program "curl" with (list of "-fsSL", cli_latest_from) keeping its output
+            if code of cli_got is not 0
+                say "moth: can't find the latest release at " + cli_latest_from + ": " + cli_trimmed(mistakes of cli_got) to the error output
+                return 1
+            end
+            set cli_latest to json from output of cli_got
+        else
+            set cli_latest to json from read cli_latest_from
+        end
+    if it fails with cli_why
+        say "moth: can't find the latest release at " + cli_latest_from + ": " + cli_why to the error output
+        return 1
+    end
+    set cli_tag to item "tag_name" of cli_latest
+    set cli_newest to cli_tag
+    if length of cli_tag is greater than 0 and item 1 of cli_tag is "v"
+        set cli_newest to ""
+        for each cli_k from 2 to length of cli_tag
+            add item cli_k of cli_tag to cli_newest
+        end
+    end
+    if not cli_newer(cli_newest, cli_current)
+        say "moth " + cli_current + " is the latest"
+        return 0
+    end
+    if cli_only_check
+        say "moth " + cli_newest + " is out (this is " + cli_current + "): moth upgrade gets it"
+        return 0
+    end
+    set cli_target to cli_moth_on_path()
+    if cli_target is nothing
+        say "moth: there's no moth on PATH to put moth " + cli_newest + " in place of: the installer puts it there (see https://github.com/samyyy2423/moth#install)" to the error output
+        return 1
+    end
+    set cli_instead to cli_managed(cli_target)
+    if cli_instead is not nothing
+        say "moth " + cli_newest + " is out (this is " + cli_current + "), and " + cli_target + " came from a package manager: " + cli_instead
+        return 1
+    end
+    set cli_asset to "moth-linux"
+    if cli_host() is "windows"
+        set cli_asset to "moth-windows.exe"
+    end
+    set cli_from to cli_releases_download + cli_tag + "/"
+    if cli_place is not ""
+        set cli_from to cli_place + "/"
+    end
+    set cli_download to cli_target + ".new"
+    set cli_sums_file to cli_target + ".sums"
+    if not cli_fetch_file(cli_from + cli_asset, cli_download) or not cli_fetch_file(cli_from + "SHA256SUMS.txt", cli_sums_file)
+        return 1
+    end
+    set cli_wanted to nothing
+    for each cli_line in split (read cli_sums_file) by "\n"
+        set cli_words to split cli_trimmed(cli_line) by " "
+        if length of cli_words is at least 2
+            set cli_named to cli_trimmed(item (length of cli_words) of cli_words)
+            if cli_named is cli_asset or cli_named is "*" + cli_asset # * marks a file read as bytes
+                set cli_wanted to lowercase of item 1 of cli_words
+            end
+        end
+    end
+    remove the file cli_sums_file
+    set cli_got_sum to cli_file_sha256(cli_download)
+    if cli_wanted is nothing or cli_got_sum is not cli_wanted
+        remove the file cli_download
+        say "moth: the download of " + cli_asset + " isn't what SHA256SUMS.txt says it is, so moth is as it was" to the error output
+        return 1
+    end
+    # in its place: on Windows a running program can't be written over, but it can be moved aside
+    try
+        if cli_host() is "windows"
+            set cli_old to cli_target + ".old"
+            if cli_is_file(cli_old)
+                set cli_gone to run program "cmd" with (list of "/c", "del", "/f", "/q", cli_old) keeping its output
+            end
+            set cli_moved to run program "cmd" with (list of "/c", "move", "/y", cli_target, cli_old) keeping its output
+            set cli_placed to run program "cmd" with (list of "/c", "move", "/y", cli_download, cli_target) keeping its output
+            if code of cli_moved is not 0 or code of cli_placed is not 0
+                say "moth: can't put the new moth in place of " + cli_target + ": " + cli_trimmed(output of cli_placed) to the error output
+                return 1
+            end
+        else
+            set cli_mode to run program "chmod" with (list of "755", cli_download)
+            set cli_placed to run program "mv" with (list of "-f", cli_download, cli_target) keeping its output
+            if code of cli_placed is not 0
+                say "moth: can't put the new moth in place of " + cli_target + ": " + cli_trimmed(mistakes of cli_placed) to the error output
+                return 1
+            end
+        end
+    if it fails with cli_why
+        say "moth: can't put the new moth in place of " + cli_target + ": " + cli_why to the error output
+        return 1
+    end
+    say "moth " + cli_current + " -> " + cli_newest + ", at " + cli_target
+    return 0
+end
+
+# ---------- moth doc ----------
+# moth doc <files.moth...> [--into <folder>] (DESIGN §140): a page of HTML for each file, with what its opening
+# comment says it's for and, for each function and kind it makes at its top level, how it's called and what the
+# comment just above it says; and, for more than one file, index.html, which lists them. A comment's lines
+# indented three spaces past the # are code. The pages go in doc/, unless --into names another folder.
+
+# text as HTML has it: & < > and " as their names
+to cli_html with cli_text
+    set cli_out to ""
+    for each cli_c in cli_text
+        if cli_c is "&"
+            add "&amp;" to cli_out
+        else if cli_c is "<"
+            add "&lt;" to cli_out
+        else if cli_c is ">"
+            add "&gt;" to cli_out
+        else if cli_c is "\""
+            add "&quot;" to cli_out
+        else
+            add cli_c to cli_out
+        end
+    end
+    return cli_out
+end
+
+# what a comment line says, without its # and the space after it
+to cli_doc_said with cli_line
+    set cli_rest to cli_trimmed(cli_trimmed_front(cli_line))
+    if length of cli_rest is 0
+        return ""
+    end
+    set cli_rest to cli_tail(cli_rest, 2)
+    if length of cli_rest is greater than 0 and item 1 of cli_rest is " "
+        set cli_rest to cli_tail(cli_rest, 2)
+    end
+    return cli_rest
+end
+
+# a comment's lines as HTML: its words in paragraphs (a line with nothing on it ends one), and lines indented
+# two spaces or more as code
+to cli_doc_comment_html with cli_said
+    set cli_out to ""
+    set cli_words to ""
+    set cli_code to ""
+    set cli_all_lines to empty list
+    for each cli_line in cli_said
+        add cli_line to cli_all_lines
+    end
+    add "" to cli_all_lines # so what's left at the end is written too
+    for each cli_line in cli_all_lines
+        set cli_is_code to length of cli_line is greater than 1 and cli_first(cli_line, 2) is "  "
+        if cli_is_code
+            if cli_words is not ""
+                add "<p>" + cli_html(cli_words) + "</p>\n" to cli_out
+                set cli_words to ""
+            end
+            add cli_tail(cli_line, 3) + "\n" to cli_code
+        else
+            if cli_code is not ""
+                add "<pre><code>" + cli_html(cli_code) + "</code></pre>\n" to cli_out
+                set cli_code to ""
+            end
+            if cli_trimmed(cli_line) is ""
+                if cli_words is not ""
+                    add "<p>" + cli_html(cli_words) + "</p>\n" to cli_out
+                    set cli_words to ""
+                end
+            else
+                if cli_words is not ""
+                    add " " to cli_words
+                end
+                add cli_trimmed(cli_line) to cli_words
+            end
+        end
+    end
+    return cli_out
+end
+
+# the comment lines just above line n, each as it says it
+to cli_doc_above with cli_lines, cli_n
+    set cli_from to cli_n
+    repeat while cli_from is greater than 1 and cli_begins_with(cli_trimmed_front(item (cli_from - 1) of cli_lines), "#")
+        set cli_from to cli_from - 1
+    end
+    set cli_said to empty list
+    for each cli_k from cli_from to cli_n - 1
+        add cli_doc_said(item cli_k of cli_lines) to cli_said
+    end
+    return cli_said
+end
+
+# a file's name, without its folder or .moth
+to cli_doc_name with cli_path
+    set cli_stem_of to cli_stem(cli_path)
+    return cli_tail(cli_stem_of, length of cli_folder_of(cli_stem_of) + 1)
+end
+
+# a file's page, and what it's for in a line (for the index)
+to cli_doc_page with cli_path, cli_source
+    set cli_lines to split cli_source by "\n"
+    set cli_opening to empty list
+    set cli_k to 1
+    repeat while cli_k is at most length of cli_lines and cli_begins_with(cli_trimmed_front(item cli_k of cli_lines), "#")
+        add cli_doc_said(item cli_k of cli_lines) to cli_opening
+        add 1 to cli_k
+    end
+    set cli_name to cli_doc_name(cli_path)
+    set cli_entries to ""
+    set cli_contents to ""
+    for each cli_n from 1 to length of cli_lines
+        set cli_line to item cli_n of cli_lines
+        if cli_begins_with(cli_line, "to ") or cli_begins_with(cli_line, "kind ")
+            set cli_heading to cli_trimmed(cli_line)
+            set cli_called to item 2 of split cli_heading by " "
+            set cli_comment to cli_doc_above(cli_lines, cli_n)
+            if cli_n - (length of cli_comment) is 1 # the file's opening comment is the file's, not the function's
+                set cli_comment to empty list
+            end
+            add "<li><a href=\"#" + cli_html(cli_called) + "\"><code>" + cli_html(cli_called) + "</code></a></li>\n" to cli_contents
+            add "<section id=\"" + cli_html(cli_called) + "\">\n<h2><code>" + cli_html(cli_called) + "</code></h2>\n" to cli_entries
+            add "<pre class=\"called\"><code>" + cli_html(cli_heading) + "</code></pre>\n" to cli_entries
+            add cli_doc_comment_html(cli_comment) + "</section>\n" to cli_entries
+        end
+    end
+    set cli_page to cli_doc_top(cli_name) + "<h1>" + cli_html(cli_name) + "</h1>\n" + cli_doc_comment_html(cli_opening)
+    if cli_contents is not ""
+        set cli_page to cli_page + "<ul class=\"contents\">\n" + cli_contents + "</ul>\n" + cli_entries
+    end
+    set cli_line_said to ""
+    for each cli_said in cli_opening
+        if cli_line_said is "" and cli_trimmed(cli_said) is not ""
+            set cli_line_said to cli_trimmed(cli_said)
+        end
+    end
+    return record with page cli_page + cli_doc_bottom(), name cli_name, about cli_line_said
+end
+
+to cli_doc_top with cli_title
+    set cli_style to "body \{ font: 16px/1.55 system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; color: #1b1b1f; }\n"
+    add "code, pre \{ font: 14px/1.5 ui-monospace, Consolas, monospace; }\npre \{ background: #f4f3ef; padding: .7rem 1rem; border-radius: 6px; overflow-x: auto; }\n" to cli_style
+    add "pre.called \{ background: #ece9fb; }\nsection \{ border-top: 1px solid #ddd; margin-top: 1.6rem; }\nh2 \{ margin-bottom: .3rem; }\n" to cli_style
+    add ".contents \{ columns: 3; list-style: none; padding: 0; }\nfooter \{ margin-top: 3rem; color: #777; font-size: 14px; }\n" to cli_style
+    return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" + cli_html(cli_title) + "</title>\n<style>\n" + cli_style + "</style>\n</head>\n<body>\n"
+end
+
+to cli_doc_bottom
+    return "<footer>Made by <code>moth doc</code>.</footer>\n</body>\n</html>\n"
+end
+
+to cli_doc_pages with cli_paths, cli_into
+    set cli_folder to cli_into
+    if cli_folder is nothing
+        set cli_folder to "doc"
+    end
+    if not cli_folder_here(cli_folder)
+        if not cli_make_folder(cli_folder)
+            say "moth: can't make the folder " + cli_folder to the error output
+            return 1
+        end
+    end
+    set cli_made to empty list
+    for each cli_path in cli_paths
+        set cli_source to cli_text_of(cli_path)
+        if cli_source is nothing
+            return 1
+        end
+        set cli_doc_made to cli_doc_page(cli_path, cli_source)
+        set cli_out to cli_folder + "/" + name of cli_doc_made + ".html"
+        write page of cli_doc_made to cli_out
+        add cli_doc_made to cli_made
+        say "wrote " + cli_out
+    end
+    if length of cli_made is greater than 1
+        set cli_list to ""
+        for each cli_doc_made in cli_made
+            set cli_name to cli_html(name of cli_doc_made)
+            add "<li><a href=\"" + cli_name + ".html\"><code>" + cli_name + "</code></a> " + cli_html(about of cli_doc_made) + "</li>\n" to cli_list
+        end
+        set cli_index_page to cli_doc_top("Reference") + "<h1>Reference</h1>\n<ul>\n" + cli_list + "</ul>\n" + cli_doc_bottom()
+        set cli_index_path to cli_folder + "/index.html"
+        write cli_index_page to cli_index_path
+        say "wrote " + cli_folder + "/index.html"
+    end
+    return 0
+end
+
+# ---------- moth bench ----------
+# moth bench [files.bench.moth...] [--allow-...] (DESIGN §140): each bench_ function in the files (with none named,
+# every file ending in .bench.moth here and in the folders inside) timed: called as many times as takes 50 ms
+# or more, then that many times again five times over, each call's time the mean of those, with how far the
+# five samples spread, and how many calls go in a second. The file runs as a program with a driver at its end.
+
+# the .bench.moth files in a folder ("" for the one moth runs in) and those inside it
+to cli_find_benches with cli_folder, cli_sep, cli_found
+    set cli_looked to cli_folder
+    if cli_looked is ""
+        set cli_looked to "."
+    end
+    for each cli_entry in cli_sorted_entries(read the folder cli_looked)
+        set cli_name to name of cli_entry
+        set cli_path to cli_name
+        if cli_folder is not ""
+            set cli_path to cli_folder + cli_sep + cli_name
+        end
+        if cli_first(cli_name, 1) is not "." and cli_name is not "node_modules" and cli_name is not "packages"
+            if folder of cli_entry
+                cli_find_benches(cli_path, cli_sep, cli_found)
+            else if length of cli_name is greater than 11 and cli_tail(cli_name, length of cli_name - 10) is ".bench.moth"
+                add cli_path to cli_found
+            end
+        end
+    end
+    return cli_found
+end
+
+# the lines that go at the end of the file: each bench_ function measured, and said, its name padded so the
+# times line up
+to cli_bench_driver with cli_names
+    set cli_widest to 0
+    for each cli_name in cli_names
+        set cli_widest to largest of (list of cli_widest, length of cli_name)
+    end
+    set cli_out to "to moth_bench_calls with moth_bench_f, moth_bench_n\n    set moth_bench_start to the clock\n"
+    add "    repeat moth_bench_n times\n        moth_bench_f()\n    end\n    return the clock - moth_bench_start\nend\n" to cli_out
+    add "to moth_bench_root with moth_bench_x\n    set moth_bench_r to moth_bench_x\n    if moth_bench_r is at most 0\n        return 0\n    end\n" to cli_out
+    add "    repeat 60 times\n        set moth_bench_r to (moth_bench_r + moth_bench_x / moth_bench_r) / 2\n    end\n    return moth_bench_r\nend\n" to cli_out
+    add "to moth_bench_digits with moth_bench_v\n    if moth_bench_v is at least 100\n        return \"\" + (moth_bench_v rounded)\n    end\n" to cli_out
+    add "    if moth_bench_v is at least 10\n        return \"\" + ((moth_bench_v * 10) rounded) / 10\n    end\n    return \"\" + ((moth_bench_v * 100) rounded) / 100\nend\n" to cli_out
+    add "to moth_bench_shown with moth_bench_s\n    if moth_bench_s is less than 0.000001\n        return moth_bench_digits(moth_bench_s * 1000000000) + \" ns\"\n    end\n" to cli_out
+    add "    if moth_bench_s is less than 0.001\n        return moth_bench_digits(moth_bench_s * 1000000) + \" µs\"\n    end\n" to cli_out
+    add "    if moth_bench_s is less than 1\n        return moth_bench_digits(moth_bench_s * 1000) + \" ms\"\n    end\n    return moth_bench_digits(moth_bench_s) + \" s\"\nend\n" to cli_out
+    add "to moth_bench with moth_bench_label, moth_bench_f\n    set moth_bench_n to 1\n" to cli_out
+    add "    repeat while moth_bench_calls(moth_bench_f, moth_bench_n) is less than 0.05 and moth_bench_n is less than 1000000000\n" to cli_out
+    add "        set moth_bench_n to moth_bench_n * 2\n    end\n    set moth_bench_each to empty list\n    repeat 5 times\n" to cli_out
+    add "        add moth_bench_calls(moth_bench_f, moth_bench_n) / moth_bench_n to moth_bench_each\n    end\n" to cli_out
+    add "    set moth_bench_mean to (total of moth_bench_each) / 5\n    set moth_bench_spread to 0\n    for each moth_bench_s in moth_bench_each\n" to cli_out
+    add "        add (moth_bench_s - moth_bench_mean) * (moth_bench_s - moth_bench_mean) to moth_bench_spread\n    end\n" to cli_out
+    add "    set moth_bench_off to 0\n    if moth_bench_mean is greater than 0\n        set moth_bench_off to (moth_bench_root(moth_bench_spread / 4) / moth_bench_mean * 100) rounded\n    end\n" to cli_out
+    add "    set moth_bench_rate to \"\"\n    if moth_bench_mean is greater than 0\n        set moth_bench_rate to \", \" + ((1 / moth_bench_mean) rounded) + \" a second\"\n    end\n" to cli_out
+    add "    say moth_bench_label + \"  \" + moth_bench_shown(moth_bench_mean) + \" ± \" + moth_bench_off + \"%  (5 samples of \" + moth_bench_n + \" calls\" + moth_bench_rate + \")\"\nend\n" to cli_out
+    for each cli_name in cli_names
+        set cli_padded to cli_name
+        repeat while length of cli_padded is less than cli_widest
+            add " " to cli_padded
+        end
+        add "moth_bench(\"" + cli_padded + "\", " + cli_name + ")\n" to cli_out
+    end
+    return cli_out
+end
+
+# one file's benchmarks: 0, or 1 if it can't be read or built, or has none, or one fails
+to cli_bench_file with cli_path, cli_target, cli_allowing
+    say cli_path
+    set cli_source to cli_text_of(cli_path)
+    if cli_source is nothing
+        return 1
+    end
+    set cli_used to cli_sources_of(cli_path, cli_source)
+    set cli_names to empty list
+    try
+        for each cli_s in machine's read_program(cli_source, cli_files_of(names of cli_used, texts of cli_used))
+            if kind of cli_s is "define" and length of name of cli_s is greater than 6 and cli_first(name of cli_s, 6) is "bench_"
+                add name of cli_s to cli_names
+            end
+        end
+    if it fails with cli_why
+        if cli_is_problem(cli_why)
+            cli_report(cli_why, cli_path, cli_source, names of cli_used, texts of cli_used)
+        else
+            say "moth: " + cli_path + ": " + cli_why to the error output
+        end
+        return 1
+    end
+    if length of cli_names is 0
+        say "moth: " + cli_path + " has no bench_ functions to time" to the error output
+        return 1
+    end
+    set cli_temp to cli_temp_for(cli_path, cli_target, "-bench")
+    if cli_in_the_way(cli_temp)
+        return 1
+    end
+    if not cli_build_source(cli_path, cli_source + "\n" + cli_bench_driver(cli_names), cli_target, cli_allowing, cli_temp, no, cli_path)
+        return 1
+    end
+    return cli_run_built(cli_temp, empty list)
+end
+
+to cli_bench_all with cli_paths, cli_target, cli_allowing
+    set cli_ended to 0
+    for each cli_path in cli_paths
+        if cli_bench_file(cli_path, cli_target, cli_allowing) is not 0
+            set cli_ended to 1
+        end
+    end
+    return cli_ended
+end
+
+# ---------- moth watch ----------
+# moth watch <a moth command> (DESIGN §140): the command, run again each time a .moth file here or in the
+# folders inside changes (but those in packages/ and folders starting with a .): moth watch test, moth watch run
+# app.moth. Ctrl+C stops it. A command that doesn't end (a server, say) is run again only once it has.
+
+# every .moth file here and inside, by its path, with its text
+to cli_watched_texts with cli_folder, cli_sep, cli_texts
+    set cli_looked to cli_folder
+    if cli_looked is ""
+        set cli_looked to "."
+    end
+    try
+        set cli_entries to cli_sorted_entries(read the folder cli_looked)
+    if it fails
+        return cli_texts
+    end
+    for each cli_entry in cli_entries
+        set cli_name to name of cli_entry
+        set cli_path to cli_name
+        if cli_folder is not ""
+            set cli_path to cli_folder + cli_sep + cli_name
+        end
+        if cli_first(cli_name, 1) is not "." and cli_name is not "node_modules" and cli_name is not "packages"
+            if folder of cli_entry
+                cli_watched_texts(cli_path, cli_sep, cli_texts)
+            else if length of cli_name is greater than 5 and cli_tail(cli_name, length of cli_name - 4) is ".moth"
+                try
+                    set item cli_path of cli_texts to read cli_path
+                if it fails
+                    set item cli_path of cli_texts to ""
+                end
+            end
+        end
+    end
+    return cli_texts
+end
+
+to cli_watch with cli_command_words
+    set cli_sep to "/"
+    if cli_host() is "windows"
+        set cli_sep to "\\"
+    end
+    set cli_seen to cli_watched_texts("", cli_sep, empty dictionary)
+    repeat while yes
+        set cli_code to cli_dispatch(cli_command_words)
+        say "moth watch: that ended with " + cli_code + "; it runs again when a .moth file here changes (Ctrl+C stops)" to the error output
+        set cli_changed to no
+        repeat while not cli_changed
+            wait 0.25 seconds
+            set cli_now to cli_watched_texts("", cli_sep, empty dictionary)
+            if cli_now is not cli_seen
+                set cli_seen to cli_now
+                set cli_changed to yes
+            end
+        end
+    end
+end
+
+# ---------- moth publish ----------
+# moth publish [name] [--about "<one line>"] [--dry-run] [--index <address or file>] (DESIGN §140): the package
+# in this folder put in the package index, by a pull request to samyyy2423/moth-packages made with GitHub's gh, as
+# the index's README says to by hand. The package is the .moth file at the top here (or the one named), on
+# GitHub as origin says, said in a line by --about or by its opening comment's first sentence; its tests must
+# pass. --dry-run only says what it would add. Without gh, it says how to add it in the browser.
+
+set cli_index_repository to "samyyy2423/moth-packages"
+
+# the line about a package: its file's opening comment, up to the end of its first sentence
+to cli_publish_about with cli_source
+    set cli_said to cli_lsp_file_comment(cli_source)
+    set cli_out to ""
+    for each cli_k from 1 to length of cli_said
+        set cli_c to item cli_k of cli_said
+        add cli_c to cli_out
+        if cli_c is "." and (cli_k is length of cli_said or item (cli_k + 1) of cli_said is " ")
+            return cli_trimmed(cli_out)
+        end
+    end
+    return cli_trimmed(cli_out)
+end
+
+# where origin is, as moth add takes it: github.com/someone/thing for one on GitHub, or nothing
+to cli_publish_origin
+    set cli_got to cli_git(list of "remote", "get-url", "origin")
+    if cli_got is nothing or code of cli_got is not 0
+        return nothing
+    end
+    set cli_url to cli_trimmed(output of cli_got)
+    for each cli_start in list of "https://github.com/", "http://github.com/", "git@github.com:", "ssh://git@github.com/"
+        if cli_begins_with(cli_url, cli_start)
+            set cli_rest to cli_tail(cli_url, length of cli_start + 1)
+            if length of cli_rest is greater than 4 and cli_tail(cli_rest, length of cli_rest - 3) is ".git"
+                set cli_rest to cli_first(cli_rest, length of cli_rest - 4)
+            end
+            return "github.com/" + cli_rest
+        end
+    end
+    return cli_url # somewhere else: as it is
+end
+
+# the index as JSON is written in its repository: two spaces in for each level, the names in order
+to cli_index_text with cli_packages
+    set cli_names to (keys of cli_packages) in order
+    set cli_out to "\{\n  \"packages\": \{"
+    set cli_k to 0
+    for each cli_name in cli_names
+        add 1 to cli_k
+        set cli_entry to item cli_name of cli_packages
+        if cli_k is greater than 1
+            add "," to cli_out
+        end
+        set cli_quoted_name to cli_name as json
+        set cli_quoted_repository to item "repository" of cli_entry
+        set cli_quoted_repository to cli_quoted_repository as json
+        set cli_quoted_about to item "about" of cli_entry
+        set cli_quoted_about to cli_quoted_about as json
+        add "\n    " + cli_quoted_name + ": \{\n      \"repository\": " + cli_quoted_repository to cli_out
+        add ",\n      \"about\": " + cli_quoted_about + "\n    }" to cli_out
+    end
+    if cli_k is greater than 0
+        add "\n  " to cli_out
+    end
+    return cli_out + "}\n}\n"
+end
+
+to cli_publish with cli_all
+    set cli_flagged to cli_index_flag(cli_all)
+    set cli_name to nothing
+    set cli_about to nothing
+    set cli_dry to no
+    set cli_k to 1
+    set cli_rest to rest of cli_flagged
+    repeat while cli_k is at most length of cli_rest
+        set cli_arg to item cli_k of cli_rest
+        if cli_arg is "--about" and cli_k is less than length of cli_rest
+            set cli_about to item (cli_k + 1) of cli_rest
+            add 2 to cli_k
+        else if cli_arg is "--dry-run"
+            set cli_dry to yes
+            add 1 to cli_k
+        else if cli_name is nothing and not cli_begins_with(cli_arg, "--")
+            set cli_name to cli_arg
+            add 1 to cli_k
+        else
+            say cli_usage to the error output
+            return 2
+        end
+    end
+    # the package: the one .moth file at the top here that isn't tests or benchmarks, or the one named
+    if cli_name is nothing
+        set cli_found to empty list
+        for each cli_entry in cli_sorted_entries(read the folder ".")
+            set cli_file to name of cli_entry
+            if not folder of cli_entry and length of cli_file is greater than 5 and cli_tail(cli_file, length of cli_file - 4) is ".moth" and not cli_is_tests(cli_file)
+                if not (length of cli_file is greater than 11 and cli_tail(cli_file, length of cli_file - 10) is ".bench.moth")
+                    add cli_stem(cli_file) to cli_found
+                end
+            end
+        end
+        if length of cli_found is not 1
+            say "moth: name the package to publish (moth publish <name>): its main file is <name>.moth, here" to the error output
+            return 1
+        end
+        set cli_name to item 1 of cli_found
+    end
+    if not cli_package_name(cli_name) or lowercase of cli_name is not cli_name
+        say "moth: '" + cli_name + "' can't be a package's name in the index: it's lowercase letters, digits and _, starting with a letter" to the error output
+        return 1
+    end
+    set cli_source to cli_text_of(cli_name + ".moth")
+    if cli_source is nothing
+        return 1
+    end
+    if cli_about is nothing
+        set cli_about to cli_publish_about(cli_source)
+    end
+    if cli_about is "" or length of cli_about is greater than 100
+        say "moth: the index needs a line about " + cli_name + ", of at most 100 characters: give it with --about \"...\" (its file's opening comment has " + length of cli_about + ")" to the error output
+        return 1
+    end
+    set cli_repository to cli_publish_origin()
+    if cli_repository is nothing
+        say "moth: publishing needs the package in a Git repository with an origin: push it to GitHub first" to the error output
+        return 1
+    end
+    if cli_begins_with(cli_repository, "github.com/") # there, and public: its main file can be read by anyone
+        set cli_raw to "https://raw.githubusercontent.com/" + cli_tail(cli_repository, 12) + "/HEAD/" + cli_name + ".moth"
+        set cli_seen to run program "curl" with (list of "-fsSIL", cli_raw) keeping its output
+        if code of cli_seen is not 0
+            say "moth: " + cli_repository + " has no " + cli_name + ".moth that anyone can read: push it, and make the repository public" to the error output
+            return 1
+        end
+    end
+    if length of cli_find_tests("", "/", empty list) is greater than 0
+        say "moth publish: its tests first"
+        if cli_dispatch(list of "test") is not 0
+            say "moth: " + cli_name + "'s tests don't pass, so it isn't published" to the error output
+            return 1
+        end
+    end
+    set cli_index_read to cli_index_json(index of cli_flagged)
+    if cli_index_read is nothing
+        return 1
+    end
+    set cli_packages to item "packages" of cli_index_read
+    if cli_name is in cli_packages
+        set cli_listed to item cli_name of cli_packages
+        set cli_listed_from to item "repository" of cli_listed
+        if cli_listed_from is cli_repository
+            say cli_name + " is in the index already, from " + cli_repository
+            return 0
+        end
+        say "moth: the index has a package called " + cli_name + " already, from " + cli_listed_from + ": choose another name" to the error output
+        return 1
+    end
+    set cli_new_entry to dictionary where "repository" is cli_repository, "about" is cli_about
+    set item cli_name of cli_packages to cli_new_entry
+    set cli_entry_json to cli_new_entry as json
+    set cli_entry_text to "\"" + cli_name + "\": " + cli_entry_json
+    if cli_dry
+        say "moth publish would add to the index:"
+        say "  " + cli_entry_text
+        return 0
+    end
+    # the pull request, through gh: the index's repository forked, cloned, changed, and pushed to the fork
+    set cli_gh to nothing
+    try
+        set cli_gh to run program "gh" with (list of "api", "user", "--jq", ".login") keeping its output
+    if it fails
+        set cli_gh to nothing
+    end
+    if cli_gh is nothing or code of cli_gh is not 0
+        say "To add " + cli_name + " to the index, open https://github.com/" + cli_index_repository + "/edit/main/index.json, put this among the"
+        say "packages in alphabetical order, and propose the change (or install GitHub's gh, log in, and run moth publish again):"
+        say "  " + cli_entry_text
+        return 0
+    end
+    set cli_login to cli_trimmed(output of cli_gh)
+    set cli_work to ".moth-publish"
+    if cli_folder_here(cli_work)
+        cli_remove_folder(cli_work)
+    end
+    set cli_steps to list of (list of "gh", "repo", "fork", cli_index_repository, "--clone=false"),
+        (list of "git", "clone", "--depth", "1", "https://github.com/" + cli_index_repository, cli_work)
+    for each cli_step in cli_steps
+        set cli_args to empty list
+        for each cli_j from 2 to length of cli_step
+            add item cli_j of cli_step to cli_args
+        end
+        set cli_done to run program item 1 of cli_step with cli_args keeping its output
+        if code of cli_done is not 0
+            say "moth: " + item 1 of cli_step + " " + item 2 of cli_step + " didn't work: " + cli_trimmed(mistakes of cli_done) to the error output
+            return 1
+        end
+    end
+    set cli_index_written to cli_index_text(cli_packages)
+    set cli_index_path to cli_work + "/index.json"
+    write cli_index_written to cli_index_path
+    set cli_branch to "add-" + cli_name
+    set cli_steps to list of (list of "checkout", "-b", cli_branch), (list of "commit", "-am", "Add " + cli_name),
+        (list of "push", "--force", "https://github.com/" + cli_login + "/moth-packages", cli_branch)
+    for each cli_step in cli_steps
+        set cli_args to list of "-C", cli_work
+        for each cli_arg in cli_step
+            add cli_arg to cli_args
+        end
+        set cli_done to cli_git(cli_args)
+        if cli_done is nothing
+            cli_remove_folder(cli_work)
+            return 1
+        end
+        if code of cli_done is not 0
+            say "moth: git " + item 1 of cli_step + " didn't work: " + cli_git_said(cli_done) to the error output
+            cli_remove_folder(cli_work)
+            return 1
+        end
+    end
+    set cli_pr to run program "gh" with (list of "pr", "create", "--repo", cli_index_repository, "--head", cli_login + ":" + cli_branch,
+        "--title", "Add " + cli_name, "--body", cli_name + ": " + cli_about + "\n\nFrom " + cli_repository + ", by moth publish.") keeping its output
+    cli_remove_folder(cli_work)
+    if code of cli_pr is not 0
+        say "moth: gh pr create didn't work: " + cli_trimmed(mistakes of cli_pr) to the error output
+        return 1
+    end
+    say "asked for " + cli_name + " to go in the index: " + cli_trimmed(output of cli_pr)
+    return 0
+end
+
+# A moth command: what it was given, in, and the number moth ends with, out. moth watch runs one again and
+# again, so nothing here stops the program itself.
+to cli_dispatch with cli_given
     set cli_target to nothing
     set cli_flags to empty list
     set cli_file to nothing
@@ -5995,7 +7485,7 @@ to cli_main
         # package.json is built into moth: read finds it before any file in the current folder.
         set cli_release to json from read "package.json"
         say "moth " + item "version" of cli_release
-        stop the program with 0
+        return 0
     end
     if length of cli_given is 0 or cli_command is "shell" or cli_command is "kernel" # the shell, or the kernel, with what
         # its entries may do
@@ -6004,24 +7494,110 @@ to cli_main
             set cli_arg to item cli_k of cli_given
             if not cli_allow_flag(cli_arg)
                 say cli_usage to the error output
-                stop the program with 2
+                return 2
             end
             add cli_arg to cli_shell_flags
         end
         if cli_command is "kernel"
-            stop the program with cli_kernel(cli_shell_flags)
+            return cli_kernel(cli_shell_flags)
         end
-        stop the program with cli_shell(cli_shell_flags)
+        return cli_shell(cli_shell_flags)
+    end
+    if cli_command is "new" and (length of cli_given is 2 or length of cli_given is 3) # a project to start from
+        set cli_kind to "app"
+        set cli_name to item 2 of cli_given
+        if length of cli_given is 3
+            set cli_kind to item 2 of cli_given
+            set cli_name to item 3 of cli_given
+        end
+        if cli_kind is in cli_new_kinds
+            return cli_new_project(cli_kind, cli_name)
+        end
+    end
+    if cli_command is "explain" and length of cli_given is at least 2 # what a mistake means
+        set cli_rest to empty list
+        for each cli_k from 2 to length of cli_given
+            add item cli_k of cli_given to cli_rest
+        end
+        return cli_explain(cli_rest)
+    end
+    if cli_command is "upgrade" and (length of cli_given is 1 or (length of cli_given is 2 and item 2 of cli_given is "--check"))
+        return cli_upgrade(length of cli_given is 2)
+    end
+    if cli_command is "doc" and length of cli_given is at least 2 # pages of HTML from a program's comments
+        set cli_doc_files to empty list
+        set cli_doc_into to nothing
+        set cli_doc_fine to yes
+        set cli_k to 2
+        repeat while cli_k is at most length of cli_given
+            set cli_arg to item cli_k of cli_given
+            if cli_arg is "--into" and cli_k is less than length of cli_given and cli_doc_into is nothing
+                set cli_doc_into to item (cli_k + 1) of cli_given
+                add 2 to cli_k
+            else
+                if cli_begins_with(cli_arg, "--")
+                    set cli_doc_fine to no
+                end
+                add cli_arg to cli_doc_files
+                add 1 to cli_k
+            end
+        end
+        if cli_doc_fine and length of cli_doc_files is greater than 0
+            return cli_doc_pages(cli_doc_files, cli_doc_into)
+        end
+    end
+    if cli_command is "watch" and length of cli_given is at least 2 and item 2 of cli_given is not "watch" # again on each change
+        set cli_rest to empty list
+        for each cli_k from 2 to length of cli_given
+            add item cli_k of cli_given to cli_rest
+        end
+        return cli_watch(cli_rest)
+    end
+    if cli_command is "bench" # each bench_ function timed
+        set cli_bench_paths to empty list
+        set cli_bench_flags to empty list
+        set cli_bench_fine to yes
+        for each cli_k from 2 to length of cli_given
+            set cli_arg to item cli_k of cli_given
+            if cli_allow_flag(cli_arg)
+                add cli_arg to cli_bench_flags
+            else if cli_begins_with(cli_arg, "--")
+                set cli_bench_fine to no
+            else
+                add cli_arg to cli_bench_paths
+            end
+        end
+        if cli_bench_fine
+            if length of cli_bench_paths is 0
+                set cli_sep to "/"
+                if cli_host() is "windows"
+                    set cli_sep to "\\"
+                end
+                set cli_bench_paths to cli_find_benches("", cli_sep, empty list)
+                if length of cli_bench_paths is 0
+                    say "moth: no benchmarks found: name a file, or put bench_ functions in files ending in .bench.moth" to the error output
+                    return 1
+                end
+            end
+            return cli_bench_all(cli_bench_paths, cli_host(), cli_bench_flags)
+        end
+    end
+    if cli_command is "publish" # the package here, in the package index
+        set cli_rest to empty list
+        for each cli_k from 2 to length of cli_given
+            add item cli_k of cli_given to cli_rest
+        end
+        return cli_publish(cli_rest)
     end
     if cli_command is "lsp" and length of cli_given is 1 # the language server, for an editor
-        stop the program with cli_lsp()
+        return cli_lsp()
     end
     if cli_command is "add" or cli_command is "get" or cli_command is "update" or cli_command is "remove" or cli_command is "packages" or cli_command is "search" or cli_command is "audit"
         set cli_rest to empty list
         for each cli_k from 2 to length of cli_given
             add item cli_k of cli_given to cli_rest
         end
-        stop the program with cli_package_command(cli_command, cli_rest)
+        return cli_package_command(cli_command, cli_rest)
     end
     set cli_fine to (length of cli_given is at least 2 and (cli_command is "build" or cli_command is "run" or cli_command is "debug" or cli_command is "profile" or cli_command is "notebook" or cli_command is "tidy" or cli_command is "check")) or cli_command is "test" or cli_command is "coverage"
     set cli_k to 2
@@ -6111,64 +7687,65 @@ to cli_main
     end
     if not cli_fine # wrong usage: how to use it, and 2
         say cli_usage to the error output
-        stop the program with 2
+        return 2
     end
     if cli_command is "tidy"
-        stop the program with cli_tidy_all(cli_paths, cli_checking)
+        return cli_tidy_all(cli_paths, cli_checking)
     end
     if cli_command is "check"
-        stop the program with cli_check_file(cli_file)
+        return cli_check_file(cli_file)
     end
     if cli_command is "notebook"
-        stop the program with cli_notebook(cli_file, cli_flags)
+        return cli_notebook(cli_file, cli_flags)
     end
     if cli_web
-        stop the program with cli_build_web(cli_file)
+        return cli_build_web(cli_file)
     end
     if cli_target is "wasm"
-        stop the program with cli_build_wasm(cli_file)
+        return cli_build_wasm(cli_file)
     end
     if cli_command is "test" or cli_paths_given
         if length of cli_paths is 0 # none named: every one here and in the folders inside
             set cli_paths to cli_tests_here()
             if cli_paths is nothing
-                stop the program with 1
+                return 1
             end
         end
         set cli_covering to nothing
         if cli_command is "coverage"
             set cli_covering to record with files empty list, counts empty dictionary, lcov cli_lcov
         end
-        stop the program with cli_test_all(cli_paths, cli_host(), cli_flags, cli_covering)
+        return cli_test_all(cli_paths, cli_host(), cli_flags, cli_covering)
     end
     if cli_target is nothing
         set cli_target to cli_host()
     end
     if cli_command is "run"
-        stop the program with cli_run(cli_file, cli_target, cli_flags, cli_passed)
+        return cli_run(cli_file, cli_target, cli_flags, cli_passed)
     end
     if cli_command is "debug"
-        stop the program with cli_debug(cli_file, cli_target, cli_flags, cli_passed)
+        return cli_debug(cli_file, cli_target, cli_flags, cli_passed)
     end
     if cli_command is "profile"
-        stop the program with cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-profiler.moth", no)
+        return cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-profiler.moth", no)
     end
     if cli_command is "coverage"
-        stop the program with cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-coverage.moth", cli_lcov)
+        return cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-coverage.moth", cli_lcov)
     end
     if library of cli_asked
-        stop the program with cli_build_library(cli_file, cli_target, cli_flags)
+        return cli_build_library(cli_file, cli_target, cli_flags)
     end
     set cli_out to cli_out_for(cli_file, cli_target)
     if not cli_build(cli_file, cli_target, cli_flags, cli_out, yes) # a mistake in the program, or a file that can't be read: 1
-        stop the program with 1
+        return 1
     end
     if not cli_signed(cli_out)
-        stop the program with 1
+        return 1
     end
     if installer of cli_asked
-        stop the program with cli_build_installer(cli_file, cli_target, cli_out)
+        return cli_build_installer(cli_file, cli_target, cli_out)
     end
+    return 0
 end
 
-cli_main()
+stop the program with cli_dispatch(arguments)

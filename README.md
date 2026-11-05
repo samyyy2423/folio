@@ -535,6 +535,21 @@ bytes and dictionaries:
   authorization code flow and PKCE, a server of the program's own on
   127.0.0.1 for the browser to come back to, as command-line tools do;
   `client_credentials`; `refresh`; and `discover` for OpenID Connect.
+- [`mcp.moth`](tools/mcp.moth) makes MCP servers: tools, resources and
+  prompts that Claude and other AI apps use, served over the Model Context
+  Protocol on the program's input and output. `moth build` makes the server a
+  program of its own, for the app's settings to start.
+- [`page.moth`](tools/page.moth) makes web pages: headings, text, lists,
+  tables, text boxes, checkboxes, dropdowns and buttons, shown in the playground
+  and in pages `moth build --web` makes; what's clicked, typed or chosen on them
+  comes back to `when the page is used`. A site's pages have menus and forms,
+  for `server.moth` to send.
+- [`pdf.moth`](tools/pdf.moth) writes PDF files: pages of text in the 14 fonts
+  every reader has, lines, boxes and colours, and paragraphs wrapped by the
+  fonts' own widths.
+- [`xlsx.moth`](tools/xlsx.moth) reads and writes Excel workbooks: each sheet
+  a list of rows of numbers, text and yes or no, as Excel, LibreOffice and
+  Google Sheets open them.
 - [`zip.moth`](tools/zip.moth) squeezes bytes and back as gzip and .zip files
   do (DEFLATE, with codes made for each block as zlib's are), and makes and
   reads zip archives, in Moth alone: what it makes, zlib, Python and `tar`
@@ -961,7 +976,9 @@ lists, dropdowns, sliders and boxes to type in. [`apps/snake.moth`](apps/snake.m
 [`apps/todo.moth`](apps/todo.moth) a to-do list in 38.
 [`apps/guestbook`](apps/guestbook) is a web app with a SQLite database, in
 about 160 lines, and [docs/guestbook.md](docs/guestbook.md) walks through
-building it.
+building it. [`apps/recipes`](apps/recipes) is a whole site: pages made with
+`page.moth`, a menu, a search, a form that adds a recipe, its own tests, and the
+recipes as JSON.
 
 ```
 move to 50, -20                             # straight to a spot, drawing if the pen is down
@@ -1172,6 +1189,16 @@ source with Node.js: `node bootstrap.mjs`.
 ```text
 moth                                     the Moth shell: type Moth and see what it does (also moth shell --allow-...)
 moth --version                          say which Moth this is (also moth version)
+moth new hello                           start a project in hello/: its code, tests, a README and a GitHub workflow
+moth new web site                        the same for a web server (or package, or library, for other languages)
+moth explain hello.moth                  the first mistake moth check finds in it: what it means, and how to put it right
+moth explain "can't divide by zero"      the same for a mistake's words, as a program said them when it ran
+moth upgrade                             the newest release in place of the moth on PATH, checked against its sums
+moth upgrade --check                     only say whether there's a newer release
+moth doc hello.moth                      a page of HTML from its comments, in doc/: what it's for, and each function
+moth bench                               time each bench_ function in the .bench.moth files here
+moth watch test                          run the tests again each time a .moth file here changes (or moth watch run app.moth)
+moth publish                             put the package here in the package index, by a pull request (--dry-run to see)
 moth build hello.moth                    compile it to machine code: hello.exe, or hello on Linux
 moth build --web hello.moth              or hello.html: a page that runs it in any browser, Moth's engine in it
 moth run hello.moth Sam 3                build it beside itself, run it with those arguments, remove it again
@@ -1205,6 +1232,24 @@ moth build app.moth --installer --name "Notes"   and app-setup.exe, which instal
 moth build app.moth --sign "signtool sign /fd SHA256 /a"   run a command on each program made, its name after it
 moth build fast.moth --library           a shared library of its functions, for C: libfast.so, or fast.dll, and fast.h
 ```
+
+`moth new` makes a folder named for the project with what it needs to start:
+for an app, `main.moth`, `<name>.moth` with what it does, and
+`<name>.test.moth` testing that, which `moth test` runs as it is; a README; a
+`.gitignore`; and a GitHub workflow that installs moth and runs the tests on
+each push. `web` makes a server with `server.moth`, `package` a package for
+other programs, and `library` one for C and Python (`moth build --library`).
+`moth explain` says what a mistake means, why it happens and how to put it
+right, with code that makes it and the same code put right. `moth bench` builds
+each `.bench.moth` file with a driver at its end, like `moth test`, and says
+for each `bench_` function its time a call (the mean of five samples of as many
+calls as take 50 ms), how far the samples spread, and how many calls go in a
+second. `moth watch` runs any other command again whenever a `.moth` file here
+or in the folders inside changes. `moth publish` reads the package's name, its
+origin on GitHub and a line about it from its opening comment (or `--about`),
+runs its tests, and opens a pull request on the package index with GitHub's
+`gh`; without gh it says how to add it in the browser. DESIGN.md §140 has the
+details.
 
 `moth --version` (or `moth version`) prints one line, such as `moth 1.11.0`,
 and ends with 0. The release version comes from `package.json`, built into
@@ -1618,6 +1663,9 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`wasm-binary.js`](wasm-binary.js) | WebAssembly's binary format, written byte by byte |
 | [`wasm.js`](wasm.js) | Moth to WebAssembly, with escape analysis and unboxed numbers |
 | [`wasm.moth`](wasm.moth) | The same, written in Moth: wasm.js's bytes exactly, and `moth build --target wasm` |
+| [`npm/`](npm) | mothlang for JavaScript: `run`, `load`, `check`, `format` and `test` on Moth's engine, and the `mothlang` command; `make-package.mjs` makes the npm package |
+| [`moth-wasm.moth`](moth-wasm.moth), `moth.wasm` | Moth's compiler as a WebAssembly module of its own, made by itself with `make-moth-wasm.mjs`; the playground compiles with it |
+| [`site/`](site) | The website: Next.js and GSAP, built from the engine, the lessons and the generated docs (`npm run build` in `site/`) |
 | [`wasm-runtime.js`](wasm-runtime.js) | The part of their runtime written once, as WebAssembly, which both assemble: text, and numbers shown in it; `make-wasm-runtime.mjs` writes it into `wasm-runtime.moth` for wasm.moth |
 | [`checker.js`](checker.js) | Finds mistakes without running the program |
 | [`compiler.moth`](compiler.moth) | Moth's compiler, written in Moth |

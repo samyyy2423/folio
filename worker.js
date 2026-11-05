@@ -4,7 +4,7 @@
 // A line said to the error output goes to the page as { error: line }, among the others, and `stop the
 // program` ends the run (or the app) with the number it gave, which the page shows. Each sound goes to the
 // page too, which plays them one after the other.
-import { run, memoryDisk, seeded, excerpt, describeTrail, MothError } from "./moth.js";
+import { run, memoryDisk, seeded, excerpt, describeTrail, MothError, mothWasmCompiler, compileToWasmBytes } from "./moth.js";
 import { realClock } from "./vm.js";
 
 // shortcut: past these, output and drawing are dropped rather than paged; raise them if programs need more.
@@ -24,6 +24,8 @@ let app = null; // the running app, once the program has set it up
 let lines = [];
 let drawn = [];
 let played = [];
+let page = null; // the newest page the program showed (page.moth, DESIGN §145) since the last message
+let pages = 0; // pages shown this run
 let sent = 0;
 // A picture drawn again and again (a game's sprite) goes to the page once: the drawing names it by number.
 const pictureIds = new Map();
@@ -36,8 +38,9 @@ const pictureId = (image) => {
   return pictureIds.get(image);
 };
 const flush = () => {
-  if (lines.length || drawn.length || played.length) postMessage({ lines, drawn, pictures, played });
+  if (lines.length || drawn.length || played.length || page !== null) postMessage({ lines, drawn, pictures, played, page });
   lines = [];
+  page = null;
   drawn = [];
   pictures = [];
   played = [];
@@ -51,7 +54,7 @@ let files = {};
 // A mistake ends the program, or the app; anything else that goes wrong is Moth's own.
 // A page's files are the ones picked or dropped on it (`start`, by name), and `write` makes more, for this
 // run. `read "https://..."` reads a site, if the site lets pages read it; the browser keeps the program to
-// what any page can do.
+// what any page can do. What's written to "<page>" isn't kept: it's the page the program shows (page.moth).
 function pageDisk(start) {
   const files = memoryDisk(start);
   return {
@@ -85,7 +88,12 @@ function pageDisk(start) {
       if (request.status >= 300) throw new Error(`the site answered ${request.status}`);
       return request.responseText;
     },
-    write: files.write,
+    write: (name, data) => {
+      if (name !== "<page>") return files.write(name, data);
+      page = typeof data === "string" ? data : new TextDecoder().decode(data);
+      pages++;
+      due();
+    },
     remove: files.remove,
     folder: files.folder,
   };
@@ -125,8 +133,21 @@ function handle(run) {
 onmessage = ({ data }) => {
   if (data.event) return handle(() => app.send(data.event, data.inputs)); // a key or a click, from the page
   ({ source, files = {} } = data);
-  const { engine, answers = [], seed = 1, disk = {} } = data;
+  const { engine, answers = [], seed = 1, disk = {}, mothWasm } = data;
+  // On WebAssembly, the program is compiled by Moth's own compiler, moth.wasm (DESIGN §144), which the page has
+  // compiled once and sends with each run; until it has, or where it couldn't fetch it, by wasm.js. A mistake
+  // in the program is moth.wasm's to say; anything else that goes wrong in it, wasm.js compiles it after all.
+  const mothCompiler = engine === "wasm" && mothWasm ? mothWasmCompiler(mothWasm) : null;
+  const compiled = mothCompiler && ((text) => {
+    try {
+      return mothCompiler(text, files);
+    } catch (err) {
+      if (err instanceof MothError) throw err;
+      return compileToWasmBytes(text, { files: (name) => files[name] });
+    }
+  });
   let said = 0;
+  pages = 0;
   let total = 0;
   let pictured = 0; // drawn since the last clear
   let sounds = 0;
@@ -164,6 +185,7 @@ onmessage = ({ data }) => {
         due();
       },
       engine,
+      ...(compiled && { wasm: compiled }),
       ask,
       files: (name) => files[name],
       disk: pageDisk(disk), // the files picked or dropped on the page, and what `write` makes, for this run
@@ -182,7 +204,7 @@ onmessage = ({ data }) => {
       },
     }) ?? null;
     flush();
-    postMessage({ done: true, app: app?.waits, empty: said === 0 && total === 0 && sounds === 0, ms: performance.now() - start, stopped });
+    postMessage({ done: true, app: app?.waits, empty: said === 0 && total === 0 && sounds === 0 && pages === 0, ms: performance.now() - start, stopped, byMothWasm: !!compiled });
     app?.waits.forEach((wait, i) => wait.event === "every" && setInterval(() => handle(() => app.handle(i)), Math.max(FASTEST, wait.interval)));
   } catch (err) {
     if (err instanceof Waiting) return; // the page asks, and runs it again

@@ -5984,3 +5984,421 @@ joining it, comparing it and showing a number in it no longer leave the module.
   to JavaScript to be said. A module for `say 1` grew from 7.8 KB to 12.4 KB,
   and making one in wasm.js takes about a millisecond longer, the shared
   runtime's code assembled and encoded once and kept.
+
+## 140. The moth command, for the first hour and after
+
+Moth could do a great deal by the time a person had written something, and
+little to help them start, or to look after what they'd written. Seven commands
+fill that in, each in moth.moth, run in the tests as moth.exe itself.
+
+- **`moth new`.** A folder named for the project, with what each kind needs:
+  an app's `main.moth`, what it does in `<name>.moth` and tests of that in
+  `<name>.test.moth`, so the tests don't run the program; a web server's
+  answers kept from `server.moth`, so its tests ask them without a server; a
+  package for other programs; a library for C and Python. Each has a README, a
+  `.gitignore` and a GitHub workflow that installs moth with the installer and
+  runs `moth test`. Its tests pass as it's made: the test makes each kind, runs
+  its tests, and runs the app. A name is a letter, then letters, digits and
+  `_`, and not `main`, as it names files and a package.
+- **`moth explain`.** A file's first mistake, as `moth check` says it (a
+  mistake in reading it, or one that will fail), or a mistake's words pasted
+  from a run, matched against 32 mistakes moth knows: what each means, why it
+  happens and how to put it right, with code that makes it and the same code
+  put right. A test checks every example put right reads as Moth, which found
+  two of them that didn't.
+- **`moth upgrade`.** The newest release, from GitHub's API, put in place of
+  the moth on PATH: downloaded with curl, its SHA-256 (from the system's own
+  `certutil` or `sha256sum`, as hashing 30 MB in Moth would be slow) checked
+  against the release's `SHA256SUMS.txt`, and only then moved in. On Windows a
+  running program can't be written over, but it can be moved aside, so the old
+  one is `moth.exe.old` until the next upgrade. A moth from Scoop, winget, pip
+  or the .deb is left to that package manager, and the command for it said.
+  `MOTH_RELEASES` names a folder or address laid out as a release is, which is
+  how the test runs it: an old release, a download whose sum is wrong, and a
+  new one.
+- **`moth doc`.** What `make-docs.mjs` does for the standard library, for any
+  program: a page for each file, with its opening comment and, for each
+  function and kind at its top level, the line that makes it and the comment
+  above it; lines indented in a comment are code. More than one file gets an
+  index.
+- **`moth bench`.** A `.bench.moth` file is built with a driver at its end, as
+  `moth test` does with tests: each `bench_` function is called as many times
+  as take 50 ms or more (doubling from one), then that many again five times
+  over; it says the mean time a call, how far the five spread, and calls a
+  second. `the clock` counts milliseconds, so 50 ms keeps its error under 2%.
+- **`moth watch`.** Any other command, run again whenever a `.moth` file here
+  or inside changes (by its text, read four times a second, as a file's time of
+  change needs a library). For that, `cli_main` became `cli_dispatch`, which
+  takes the command and gives back the number to end with, where it had
+  stopped the program itself.
+- **`moth publish`.** What the package index's README says to do by hand: the
+  package's main file found at the top of the folder, its origin on GitHub
+  (whose main file anyone must be able to read), a line about it from its
+  opening comment or `--about`, its tests run, and the index changed and
+  proposed as a pull request with GitHub's `gh`, from a fork. The index is
+  written as its repository lays it out, which a test holds to
+  `JSON.stringify(index, null, 2)`. Without gh it says how to do it in the
+  browser; `--dry-run` only says what it would add.
+
+## 141. MCP servers, PDF files and spreadsheets
+
+Three libraries for work people do with programs now: tools for AI apps, and
+the two file formats offices send each other. Each is Moth alone, on every
+engine, with its tests in `tools/` run on all three. (Markdown and HTML
+templates, also asked for, were packages in the index already: `markdown` and
+`template`.)
+
+- **mcp.moth.** A server is a name, a version, and the tools, resources and
+  prompts it offers. `serve()` reads the app's JSON-RPC messages a line at a
+  time with `ask for 1 bytes` (as `moth lsp` reads its editor's), since `ask`
+  shows its question and repeats what's piped to it, which would put text in
+  the app's replies; `answer()` answers one message, so the tests run on the
+  JavaScript engines too. What a tool needs is said in words (`"number"`,
+  `"text or nothing: a city"`) and made into the JSON Schema the protocol
+  wants, or given as one. It answers `initialize` with the protocol version
+  the app asked for if it speaks it (2024-11-05, 2025-03-26, 2025-06-18), and
+  its newest if not; a tool's mistake is its result with `isError`, as the
+  protocol says, so the model sees it, and the server goes on. A test builds a
+  server with moth.exe and talks to it through its input, with `\r\n` line
+  ends as Windows pipes have them; built, it is a program of 156 KB.
+- **pdf.moth.** PDF 1.4, written as text: each object, then the table of where
+  each starts, which a test reads back to check every offset. Text is in the
+  14 fonts every reader has, in their WinAnsi encoding, so nothing is embedded
+  and a page of text is a few kilobytes; letters outside it are `?`. Text wraps
+  by Adobe's own widths for Helvetica and Times (Courier's are all 600), so
+  `paragraph()` breaks lines where a reader will draw them: the test checks
+  each line fits, and that the next word wouldn't have. A report made with it
+  opens in pypdf and PyMuPDF, and draws as it should.
+- **xlsx.moth.** A workbook is a zip of XML, so it is `zip.moth` and
+  `xml.moth`: four small files and one per sheet, each cell a number, text
+  (written inline, so there's no shared table to keep), yes or no. Reading
+  takes what Excel writes too: shared strings, rich text in runs, cells and
+  rows left out, a formula's last value, a sheet found by its relationship
+  rather than its place. openpyxl reads what it writes back exactly.
+
+## 142. Moth from JavaScript: mothlang on npm
+
+Python could call Moth (§136); JavaScript, where Moth's engine was born,
+couldn't, but for copying `moth.js` out of the repository. `npm/` is the
+package.
+
+- **What it is.** The engine as the VS Code extension carries it (the same
+  `ENGINE` list, so the two can't differ), the standard library's files in
+  `lib/`, where `use "json.moth"` finds them after the program's own, and
+  `mothlang.js`: `run` (what a program said, a line each, or a `MothError`),
+  `load` (a program's top level by name, its functions JavaScript ones, as
+  `moth.js`'s `load` gives Moth's compiler to the tests), `runFile` and
+  `loadFile` (with `use` finding files beside them), `check`, `format` and
+  `test`. Programs get the computer's own clock and randomness, as a program
+  `moth build` makes does, and a disk only when they're given one.
+- **Its command.** `mothlang run`, `check`, `test` and `tidy`, on the JIT,
+  answering `ask` from the input a line at a time (read as it comes, with
+  `readSync`), and ending with the number the program ended with.
+- **Published as releases are.** `make-package.mjs` stamps Moth's version on
+  it; the npm workflow runs its tests and publishes it with npm's provenance
+  when a release is published. The name has to be made on npm once, by hand,
+  as PyPI's was (docs/npm-package.md). `npm pack` makes it 423 KB, 72 files.
+- **Tested** as it would be installed: the package made in a folder of its
+  own, its files checked against what the engine imports, every engine run
+  through it, a function loaded and called with lists and dictionaries, and
+  its command run, checked, tested and tidied with.
+
+## 143. What a function needs: where
+
+A function could check its inputs only with an `if` and a `fail with` at its
+top, worded each time. `to withdraw with amount where amount is greater than
+0` says it in the function's first line, and the mistake words itself.
+
+- **Where it goes.** At first it was a statement, `needs amount is greater
+  than 0`. But a statement that starts with a name and a value is a call
+  (`greet "Sam"`), so a program with a function called `needs` would have
+  changed meaning, and VERSIONING.md promises Moth never reserves a new word in
+  1.x and that a line that worked before means what it meant. After a
+  function's inputs (and its `gives`) nothing could be written before, and
+  `where` is a word already (`dictionary where`), so editors color it already.
+- **Only the parsers, again** (§66, §95). Both parsers read the condition and
+  put an `if not ...` with a `fail with` at the start of the body, so the VM,
+  the JIT, WebAssembly, machine code, the checker and the formatter have
+  nothing new; compiler.moth makes the JIT's JavaScript exactly, as before.
+  The mistake is the program's own, so a `try` catches it, and its trail says
+  where the call was.
+- **What it says.** The condition as written, made again from its tokens with
+  a space between each (none after `(`, nor before `)`, a comma or `'s`), the
+  same in both parsers; and when the condition compares a name with something,
+  `, but amount is -5`, the name's value as `+` joins it.
+- **Tested** on every engine, compiler.moth and wasm.moth, and in machine code:
+  a check that holds and one that fails, with `and`, brackets, `length of`,
+  inputs with types and `or`, a kind's function and `self's`, a `try`, and a
+  name and a function called `where` and `needs` that are as they were.
+
+## 144. moth.wasm, and the playground compiling with it
+
+Stages 3 and 4 of §125's four, done before the end of stage 2 (§139), as
+they could be: the compiler is Moth's own in the browser now, while the
+modules it makes still take most of their runtime from vm.js until stage 2
+is done.
+
+- **moth.wasm.** `moth-wasm.moth` is the compiler as a program: compiler.moth
+  reads the program it's given (its arguments are the program's text, then
+  each file's name and text), wasm.moth makes the module, and it says the
+  module's bytes on one line, with what running it needs in its section
+  "moth", as `moth build --target wasm` writes it; or `mistake` and the
+  mistake as JSON, which `mothWasmCompiler` in moth.js throws as the
+  MothError wasm.js would.
+- **Made by itself.** `make-moth-wasm.mjs` has wasm.js make it once; that
+  module, run, makes `moth-wasm.moth` again, and what it makes is moth.wasm;
+  and moth.wasm, run, must make itself into its own bytes, or nothing is
+  written. It is 1,556,161 bytes, 400 KB of them the positions and messages
+  its section keeps for its own mistakes. A test makes it again and checks the
+  file is what it makes, as webpage.moth's does.
+- **The same compiler.** On every playground example, hand-written case, typed
+  program and 800 programs the generators make, broken or not, moth.wasm makes
+  wasm.js's bytes exactly and stops at the same mistakes, and what it makes
+  runs as the VM runs it. A program takes 17 ms to compile on average in
+  Node, as each call runs moth.wasm's program again, and makes the runtime
+  every module has again with it.
+- **The playground.** The page compiles moth.wasm once, when it loads, and
+  sends the compiled module with each run, so the code the browser makes of it
+  is kept between runs (each run has a worker of its own). On the WebAssembly
+  engine, the worker compiles the program with it, and says so: "Ran in 37 ms
+  on WebAssembly, compiled by moth.wasm". The first run after the page loads
+  takes 350 ms while the browser compiles moth.wasm's code; the runs after it,
+  40 to 60. Until moth.wasm is there, or where it can't be fetched (a page
+  `moth build --web` made, which has no moth.wasm beside it), the worker
+  compiles with wasm.js, as it would for a mistake in moth.wasm itself that
+  isn't the program's.
+- **What's left.** The modules moth.wasm makes import their checks, mistakes,
+  dictionaries and built-ins from vm.js (§139 has the parts), so the page still
+  carries the engine's JavaScript; when stage 2 is done, it's a loader, and
+  moth.wasm and what it makes can run with no JavaScript at all.
+
+## 145. Web pages made in Moth: page.moth
+
+A full real web page, both ways: a program in the browser makes its own page and is told what's done on
+it; and a site, served by a Moth server, makes its pages with the same library (`apps/recipes`).
+
+- **A part at a time.** `tools/page.moth` builds a page as a list of HTML parts: headings, paragraphs,
+  links, pictures, lists, tables, boxes (`start(p, "card")` ... `finish(p)`), text boxes, text areas,
+  checkboxes, dropdowns and buttons, in a look of Moth's own, with `style()` for CSS of the page's own.
+  Every text is escaped; `html()` is the one way to put HTML in as it's written. Anything left open is
+  closed when the page is made.
+- **Shown by writing a file.** `show()` writes the page to `"<page>"`. The playground's worker, and so a page
+  `moth build --web` makes, keeps no file of that name: it sends the page to the page. So showing a page
+  needed no new statement, and no word reserved (VERSIONING.md). Elsewhere, `html_of()` is the HTML, to
+  write to a file or for `server.moth` to send.
+- **One new event.** `when the page is used with what` gives one value, a dictionary: its "type" ("click",
+  "change", or "enter" for Enter in a text box), the "name" of what was used (its `data-moth`, which every
+  control page.moth makes has), its "value", and "values", every field on the page by name. With every
+  field in each event, the program never asks the page anything: it keeps what it knows, and shows the page
+  again. It's the ninth of vm.js's EVENTS and of compiler.moth's event_names; machine.moth's app_timer moved
+  to 9, after it.
+- **In a sandboxed frame.** The page is shown in an iframe with `sandbox="allow-scripts allow-popups
+  allow-popups-to-escape-sandbox"` and no `allow-same-origin`, so it has an origin of its own: the page a
+  shared link's program makes can't read what the site keeps, or reach the playground. A script put before
+  the program's HTML is the only way between them: it posts what was done to the page, which takes only a
+  message from the frame, of only text and yes or no, and sends it to the worker as the event's dictionary.
+- **Shown again in place.** A run's first page loads into the frame; each page after it goes to the frame's
+  script, which puts its head and body in place of the ones before, and the focus back on the control of the
+  same name, with its selection, so a page shown again on each Enter keeps the typing where it was. Chrome
+  sends a change after Enter, of the same value; the script drops it, so Enter is one event.
+- **As a page of its own.** In a page `moth build --web` makes, the page is the whole window. An app that only
+  waits for its page has no drawing, so the drawing isn't shown, and the status says "use the page".
+- **The playground finds the standard library.** A file a program uses that isn't beside the page is looked
+  for in `tools/`, so `use "page.moth"`, and the other libraries that need nothing of the system, work there.
+- **Checked.** page.test.moth's 5 tests, on all three engines. moth.test.js runs a to-do app on each engine,
+  sends it the dictionaries the frame sends, and checks what it said and the page it showed after. In the
+  browser, on WebAssembly compiled by moth.wasm: the to-do app typed into, with Enter and with Add; and the
+  frame's script's messages for a text box, a dropdown, a checkbox ticked through its label, a click inside a
+  named element, and Enter.
+- **What it isn't.** Programs built for Windows or Linux have no page: `when the page is used` never happens
+  there, and `show()` writes a file called `<page>`, a name Windows doesn't allow. They use `html_of()`.
+- **A site's pages.** A page a server sends is used by the browser, not by the program: its links go to the
+  site's other pages, and its forms send their fields. So page.moth has `menu()` and `list_link()`, links that
+  open where the page is (`link()` opens a tab of its own, as a page in the playground's frame has nowhere of
+  its own to go), and `start_form()` to `end_form()` with `submit()`, a POST by default or a GET for a search.
+  Each `end_...()` checks that what it ends is what was started last, and says which is still open if not.
+- **apps/recipes.** A recipe box, a site of six kinds of page: home, every recipe or those a search finds,
+  each recipe, a form to add one, about, and a 404, each with the same menu and footer; and the recipes as
+  JSON. `kitchen.moth` is what it does, with no network: SQLite (every value a parameter, a search's `%` and
+  `_` only themselves), the checks on a new recipe, the pages, and `answer_with()`, which machine.test.js
+  runs as `guestbook` is run: its 4 tests (`kitchen.test.moth`) with moth.exe, then the site built and used
+  over HTTP. A refused recipe is shown again, 400, with what was wrong and what was written; an added one is
+  a 303 to its own page. A browser ends a text area's lines with \r\n; `lines_of()` takes them as they come.
+
+## 146. Mistakes in the WebAssembly module
+
+The second of stage 2's parts (§139): a mistake the program makes itself is thrown and caught in the module,
+not by JavaScript. A module imports 62 functions, not 65: `fail`, `unset` and `failWith` are gone.
+
+- **A tag of the module's own.** A WebAssembly exception tag, `mistake`, is thrown with three things: what `if it
+  fails with` gets (a `fail with`'s value, or the mistake's words as text), 1 if that's a `fail with`'s value, and
+  the mistake's position. `fail with x` throws it; so does a name with no value yet, and a name nothing sets.
+  wasm-binary.js and wasm.moth write tags (section 13), `throw` and `catch`, the same bytes.
+- **Caught in the module.** A `try` catches the tag and gives its value to `if it fails with`, restoring the call
+  depth, with no call out. The checks still in vm.js (an item that isn't there, a sum of text and a list...)
+  throw JavaScript's MothError, which the same `try` catches as before, with `catch_all`, JavaScript saying
+  whether it's one to catch: so `tryStart`, `caught` and `caughtValue` stay until those checks move in too. A
+  worker's mistake is caught the same two ways, and `workerFailed` is given its value.
+- **Seen by JavaScript only when nothing caught it.** The tag is exported, and a mistake that leaves `main`, or an
+  app's handler, uncaught becomes the MothError the other engines make there: its words (or a `fail with`'s value,
+  shown, and kept as WebAssembly holds it), its position, and its trail, read from the module's own record of
+  the calls in progress, which nothing has undone.
+- **Words made when they're needed.** A variable with no value yet says `'x' has no value yet (give it one with
+  'set x to ...')`. Making those words for every variable when a program starts made moth.wasm 13% bigger,
+  and slower to start. So each check keeps only where the variable's name is in the program's data (which every
+  module now has, empty or not) and how long it is, and `noValueYet`, in the shared runtime, makes the name and
+  the words around it (three texts the module is made with: `text` in wasm-runtime.js) only when one is thrown.
+  moth.wasm is 1,606,736 bytes, 3% more than it was; a module for `say 1`, 12,658 bytes, 223 more.
+- **What it gave.** On the WebAssembly engine, catching 100,000 `fail with`s in a loop went from 769 ms to 30, and
+  100,000 names with no value yet from 819 ms to 37: no JavaScript error, with its stack, is made for them.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test when
+  called: it catches a `fail with` and a name with no value yet, and the `fail with` it doesn't catch reaches
+  JavaScript as the module's exception, with its value. Mistakes, their values and trails, on the VM and on
+  WebAssembly, the same; and every program the engines are tested with, made by wasm.js, wasm.moth and
+  moth.wasm byte for byte.
+
+## 147. Dictionaries in the WebAssembly module
+
+The third of stage 2's parts (§139): a dictionary lives in the module, not in a JavaScript Map. A module imports
+55 functions, not 62: the six that read, changed and searched a Map are gone, and so is `jsText`, which made a
+key's JavaScript string.
+
+- **What one is.** Its keys and its values in two lists, in the order the keys were first set (the order a Map
+  keeps, which `say`, `keys of` and JSON show), how many places of the lists are used, how many keys it has,
+  and its slots: for each, the place of a key plus 1, or 0, as many as a power of 2 at least twice the places
+  used, found from the key's hash and the slots after it. A key taken out leaves nothing in its place, which
+  finding passes over and which no key matches, so taking one out and putting it back puts it last, as a Map
+  does; when the places run out, the dictionary is made again without them. It's type 9, which was the
+  struct that held a Map, so no other type's number moved.
+- **Keys as a Map has them.** Text, by its units; or a number, as vm.js's canon has it: a whole number, or one
+  that isn't finite, as it is, any other to 15 digits, so `item 0.3 of d` finds what `set item 0.1 + 0.2 of d`
+  put; -0 is 0, and NaN is NaN. A whole number an i31 holds is always kept as one, so it hashes by its value
+  and two such keys are the same key exactly when they're the same i31; other numbers hash by their bits, and
+  text by its units (FNV-1a). Written once, in wasm-runtime.js, for both back ends.
+- **Mistakes still worded by JavaScript.** A key that isn't there, a key that isn't text or a number, `remove`
+  from something that isn't a dictionary: the module does the work and calls out only to fail, giving
+  JavaScript a copy of the dictionary to word the mistake from (`did you mean` and all). So does `is`
+  between two dictionaries, and the built-ins, which see a dictionary as a Map made from it, as they saw
+  a copy before; a Map they give back is made into a dictionary of the module's.
+- **What it gave, and cost.** On the WebAssembly engine, setting and reading 100,000 number keys went from
+  35.7 ms to 18.6, and 50,000 text keys from 74.7 ms to 33.9; counting 200,000 words, each one found three
+  times, from 41.2 ms to 43.0. moth.wasm is 1,624,784 bytes, 1% more; a module for `say 1`, 13,695 bytes,
+  as every module now has the dictionary's code.
+- **Checked.** A module run with every import but `say`, `grant` and `refill` failing the test: it makes a
+  dictionary, sets 300 text keys, takes 290 out (making it again on the way), sets a number key that canon
+  rounds and -0, and finds them. Every program the engines are tested with, made by wasm.js, wasm.moth and
+  moth.wasm byte for byte, and saying what the VM says.
+
+## 148. The website, in Next.js and GSAP
+
+Moth's site is a Next.js app in `site/`, exported as static pages for GitHub Pages under /moth, with GSAP for
+its motion. It takes everything it shows from the rest of the repository, so nothing is written twice.
+
+- **What it takes, and from where.** `site/scripts/sync.mjs`, run before each build, copies the engine into
+  `public/` (the modules make-web.mjs lists, moth.wasm, the Moth files a program may `use`, `tools/`, the apps,
+  the pictures), and makes `src/generated/`: the lessons and examples as they are, and the pages make-docs.mjs
+  and make-guides.mjs wrote (reference, cookbook, examples), each cut into its top, body and own script, its
+  links pointed at the new addresses. Those generators, and their tests, are unchanged.
+- **The playground is index.html's.** Its whole behaviour is index.html's module script, which sync.mjs copies
+  word for word to `/moth/playground.js`. The new page has every element the script looks for, by the same
+  ids, in a new look, and loads it once the page is there. The page is at /moth/playground with no slash at
+  the end, so the script's own `./worker.js` and `./moth.wasm` are /moth/worker.js and /moth/moth.wasm.
+  `site.test.mjs` checks that every id the script looks up is on the page; index.html itself, and the page
+  `moth build --web` makes of it, are as they were.
+- **Old addresses.** A shared program at /moth/#code=..., or /moth/#playground, goes to the playground before
+  the page shows; learn.html and docs/x.html are where they were (a static export writes learn.html for
+  /moth/learn); docs/ and docs/cookbook/ have pages that send a browser on to /moth/docs and the cookbook.
+- **The look.** Taken from the sites Awwwards gave Site of the Day in November 2026: bone white and ink with one
+  colour, the orange of a lamp; Archivo, whose width and weight move, uppercase and condensed for what's big;
+  Instrument Serif in italics for what's said; JetBrains Mono for code and labels, with its ligatures off, so
+  `>=` stays the two characters the page is about. Hairlines instead of cards; nothing round but the pills.
+  The fonts are Fontsource's packages, served from the site.
+- **The motion.** The first visit's curtain counts to 100 as moth.wasm comes in (so the playground has it
+  already), and lifts. The headline's letters come up into place, and grow heavier near the pointer. The
+  reel, pinned, runs programs up through a lens, as obys.agency runs its work: the one in the lens in colour,
+  the rest grey, and beside it what it says. The seal turns with the page; numbers count up; the list of
+  programs shows each one's picture by the pointer; the name across the foot comes up letter by letter. All
+  of it waits for `prefers-reduced-motion` to allow it, and what it would bring in is shown anyway if it hasn't
+  started in 3 seconds.
+- **What it weighs.** 63 pages; 103 kB of JavaScript every page shares, 175 kB in all for the front page; the
+  site, engine and fonts together, 13 MB, most of it the Moth files and moth.wasm the playground uses.
+- **Publishing.** `.github/workflows/site.yml` builds it on each push to main and deploys it to GitHub Pages,
+  which serves it once the repository's Pages source is GitHub Actions.
+## 149. Faster on the VM, the JIT and in machine code, measured
+
+- **Why.** The playground runs programs on the VM and the JIT as well as WebAssembly, and machine code is what
+  `moth build` makes. Each was measured first, on one set of programs, and changed where the time went.
+  §128 found 12% of moth building compiler.moth in `is` between texts; that is where machine code starts here.
+  (A third stage after §138's bits, said to be worth 27%, isn't on any branch, so nothing here is from it.)
+- **How it was measured.** Sixteen programs: loops, sums with fractions, primes, fib(30), calls of four
+  inputs, joining text, comparing letters, adding to text, lists, dictionaries and records. Before and after
+  run in turns, each in a process of its own, so whatever else the machine is doing falls on both alike;
+  the median of 15 runs of each (VM and JIT: after one run to warm up; machine code: the whole program, less
+  an empty program's time). Windows 11, an AMD Ryzen 5 4600H, Node 24. Machine code was also counted with
+  callgrind on Linux (§128), which gives the same number every time.
+- **The VM's switch.** Its cases were opcodes read from OP, which V8 can't make a table of, so it compared
+  each opcode with the cases in turn, up to 63 of them. Each case is now its number, `case 23 /* ADD_TO */:`,
+  and a test checks every number against OP. 10,000,000 rounds of `add i to total` took 650 ms, now 380.
+- **The VM's operations.** `-`, `*` and `/` of two numbers, an item of a list or a text key of a dictionary
+  (read or set), a record's field, a record made, `add` to a number and `is` with text are done right where
+  they are; anything else, and every mistake, goes to the same functions as before. A call's scope is made
+  as an array with no holes, by pushing, which V8 reads and writes without checking for one.
+- **Text and numbers shown.** `show()` made a Set for each value it showed, for lists that hold themselves,
+  so `"x" + i` made two. It makes one only for a list, record or dictionary. `+` of two texts joins them
+  without showing either. This is in vm.js, so the VM, the JIT and WebAssembly's text all have it.
+- **The JIT's helpers.** With no limit on steps (the playground and run() set none unless asked), a loop's
+  round and a call count nothing. A call with as many inputs as the function has, none saying what it is,
+  only notes itself for a mistake's trail; anything else goes through the checks as before. `is` with text is
+  `===`; `in` and `item` of a dictionary look the key up straight away; `less than` and the rest are each
+  written out, where one function made all four and V8 couldn't put them in line.
+- **Records in the JIT.** `record with x 1, y 2` was `record(["x", "y"], [1, 2])`, a call that set each field
+  by a name in a variable. It is now `($t1 = new Record(), $t1["x"] = 1, $t1["y"] = 2, $t1)`, each field set
+  by its own name. compiler.moth writes the same, byte for byte, and moth.wasm is made again from it.
+- **Machine code: `is` with text the program wrote.** `kind of node is "call"` went to rt_cmp_is and
+  rt_equal, about 80 instructions and `repe cmpsb`. For a text of up to 32 bytes it's now done in line:
+  whether the value is text, how many bytes it has, and its bytes, four at a time against the text's, written
+  in the instructions. A number is never the same as text, so a value known to be one jumps straight on.
+- **Machine code: texts compared.** rt_text_same compares two texts eight bytes at a time, then one at a
+  time, where `repe cmpsb` took longer to start than most texts take to compare. rt_equal goes to it first
+  when both are text, before saving any register, and so does a dictionary finding a text key.
+- **Machine code: dictionary keys.** A text key was hashed a byte at a time, 75 instructions for five letters.
+  It's now eight bytes at a time, each xored in, multiplied by an odd number and its high bits brought down,
+  then the last one to seven bytes as one piece, read as two that may overlap, with the count of bytes mixed
+  in first; murmur3's last mix after, as before. Only the index uses the hash, so nothing a program sees
+  changes: a dictionary keeps its keys in the order they came.
+- **Tried, and not kept.** `is divisible by` with two whole numbers below 2^32 dividing as 32 bits, which
+  §128 found slower as 64 on a Xeon: on this Ryzen the primes took 25.4 ms either way.
+- **What it gave.** Milliseconds, the median of 15, before and after:
+
+  | | VM | | JIT | | Machine code | |
+  |:--|--:|--:|--:|--:|--:|--:|
+  | loop: add 1 to 10,000,000 | 746 | 417 | 88 | 72 | 3.0 | 3.1 |
+  | loop: repeat while, 3,000,000 | 508 | 306 | 53 | 45 | 4.6 | 4.2 |
+  | numbers: pi by 5,000,000 fractions | 1,155 | 646 | 96 | 88 | 24.1 | 23.4 |
+  | numbers: primes below 150,000 | 820 | 462 | 94 | 82 | 25.8 | 25.7 |
+  | recursion: fib(30) | 776 | 390 | 100 | 86 | 6.4 | 7.3 |
+  | calls: 4 inputs, 1,000,000 | 727 | 463 | 90 | 88 | 8.0 | 8.1 |
+  | text: join 300,000 pieces | 125 | 67 | 96 | 65 | 31.6 | 32.3 |
+  | text: 1,000,000 letters compared | 266 | 179 | 79 | 59 | 100.6 | 29.7 |
+  | text: 2 letters added 1,000,000 times | 257 | 72 | 179 | 28 | 34.9 | 34.8 |
+  | lists: 1,000,000 adds, summed by item | 214 | 120 | 40 | 36 | 10.4 | 10.7 |
+  | lists: for each over 1,000,000 | 195 | 122 | 58 | 53 | 9.7 | 10.5 |
+  | lists: set item 2,000,000 times | 647 | 248 | 117 | 91 | 11.0 | 11.1 |
+  | dictionary: 1,000,000 counts | 564 | 264 | 140 | 92 | 49.9 | 42.3 |
+  | dictionary: 200,000 keys made, set, read | 276 | 184 | 207 | 158 | 89.7 | 80.1 |
+  | records: 1,000,000 made and read | 556 | 326 | 89 | 23 | 48.1 | 47.6 |
+  | records: made by calls, 500,000 | 697 | 383 | 119 | 76 | 45.2 | 45.1 |
+
+  Machine code, counted on Linux: the letters compared, 479.7 million instructions to 150.0 million; the
+  1,000,000 counts, 539.6 million to 472.7 million; the keys made, 282.3 million to 246.9 million; the other
+  13 programs ran exactly as many instructions as before, so their differences above (fib's 6.4 and 7.3 ms
+  among them) are the machine's own. moth building compiler.moth: 3,287 million instructions to 2,910
+  million, and 572 ms to 532 timed on Windows (the median of 11, in turns). On Linux in WSL, timed the same
+  way, the letters compared took 109 ms, now 39; the counts 50, now 42; the keys 108, now 99.
+- **Tested.** All of `node --test` passes, machine.test.js too. compiler.moth writes the JIT's JavaScript
+  byte for byte on every case, and compiles itself to the same. Machine code against the VM and the JIT on
+  Windows and Linux: `is` and `is not` with texts of 0 to 33 bytes (é, emoji, ÿ, a text one byte longer or
+  shorter, or differing in its last byte) against texts, numbers, -0, nothing, yes, no, a list and a record,
+  in `if`, `or`, `and`, `not` and `repeat while`, after a call; texts of every length compared with copies of
+  themselves, slices of a longer text, and inside lists, records and `is in`; and dictionaries with text keys
+  of 0 to 17 bytes and number keys, 3,000 more made as text, read, removed and gone through.

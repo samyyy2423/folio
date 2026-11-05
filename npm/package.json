@@ -1,0 +1,47 @@
+{
+  "name": "mothlang",
+  "version": "0.0.0",
+  "description": "Moth, the programming language that reads like plain English, from JavaScript: run Moth programs and call their functions",
+  "type": "module",
+  "main": "./mothlang.js",
+  "types": "./mothlang.d.ts",
+  "exports": {
+    ".": {
+      "types": "./mothlang.d.ts",
+      "default": "./mothlang.js"
+    }
+  },
+  "bin": {
+    "mothlang": "bin/mothlang.js"
+  },
+  "files": [
+    "mothlang.js",
+    "mothlang.d.ts",
+    "bin/",
+    "engine/",
+    "lib/",
+    "LICENSE",
+    "LICENSE-DejaVu",
+    "NOTICE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "author": "Samyak Pudke",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samyyy2423/moth.git",
+    "directory": "npm"
+  },
+  "homepage": "https://samyyy2423.github.io/moth/",
+  "bugs": "https://github.com/samyyy2423/moth/issues",
+  "keywords": [
+    "moth",
+    "programming-language",
+    "plain-english",
+    "compiler",
+    "education"
+  ]
+}

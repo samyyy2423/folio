@@ -1459,6 +1459,250 @@ test("moth.exe runs a program, passing its arguments, input, output and exit cod
   }
 });
 
+// moth new (DESIGN §140): a project of each kind in a folder of its own, whose tests pass as it's made, and whose
+// program runs
+test("moth.exe new makes a project of each kind, whose tests pass and whose program runs", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "new");
+  mkdirSync(sub);
+  const moth = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
+  for (const kind of ["app", "web", "package", "library"]) {
+    const made = moth(sub, "new", kind, `my_${kind}`);
+    assert.equal(made.status, 0, made.stderr);
+    assert.match(made.stdout, new RegExp(`^made my_${kind}/, `));
+    const folder = join(sub, `my_${kind}`);
+    for (const file of [`my_${kind}.moth`, `my_${kind}.test.moth`, "README.md", ".gitignore", join(".github", "workflows", "test.yml")]) {
+      assert.ok(existsSync(join(folder, file)), `${kind}: ${file}`);
+    }
+    const tested = moth(folder, "test");
+    assert.equal(tested.status, 0, `${kind}: ${tested.stdout}${tested.stderr}`);
+    assert.match(tested.stdout, /\d+ passed/);
+  }
+  assert.equal(moth(join(sub, "my_app"), "run", "main.moth").stdout, "Hello, world!\n");
+  assert.equal(moth(sub, "new", "plain").status, 0); // an app, unless it says
+  assert.ok(existsSync(join(sub, "plain", "main.moth")));
+  const again = moth(sub, "new", "plain");
+  assert.deepEqual([again.status, again.stderr], [1, "moth: there's already something called plain here\n"]);
+  assert.equal(moth(sub, "new", "9lives").status, 1);
+  assert.equal(moth(sub, "new", "gadget", "thing").status, 2); // no such kind: how to use moth
+});
+
+// moth explain (DESIGN §140): the first mistake moth check finds in a file, said as check says it, then what it
+// means, why it happens and how to put it right; or the mistake a message is from
+test("moth.exe explains the first mistake moth check finds in a file, or the mistake a message is from", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "explain");
+  mkdirSync(sub);
+  const moth = (...args) => spawnSync(exe, args, { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "slip.moth"), "say totl\nset total to 1\nsay total\n");
+  const slip = moth("explain", "slip.moth");
+  assert.equal(slip.status, 0);
+  assert.match(slip.stdout, /^slip\.moth:1:5: will fail: 'totl' has no value yet\. Did you mean 'total'\?\nsay totl\n {4}\^\n\nA name is used before anything gives it a value\.\n/);
+  assert.match(slip.stdout, /This makes the mistake:\n\n {4}say total\n {4}set total to 5\n\nand this puts it right:\n\n {4}set total to 5\n {4}say total\n$/);
+  writeFileSync(join(sub, "symbol.moth"), "if x > 3\n    say x\nend\n");
+  assert.match(moth("explain", "symbol.moth").stdout, /error: I don't understand '>'[^]*A symbol Moth doesn't have\./);
+  assert.match(moth("explain", "can't", "divide", "by", "zero").stdout, /^\nA division by 0\.\n/);
+  assert.match(moth("explain", "line 4: there is no item 0, items are counted from 1").stdout, /An item number below 1\./);
+  const unknown = moth("explain", "something odd happened");
+  assert.deepEqual([unknown.status, unknown.stdout.startsWith("\nmoth has no more to say")], [1, true]);
+  writeFileSync(join(sub, "fine.moth"), 'say "fine"\n');
+  assert.equal(moth("explain", "fine.moth").status, 1);
+});
+
+// moth explain's examples, put right, are Moth that reads; each is in moth.moth as a Moth text
+test("moth explain's examples put right are Moth that reads without a mistake", () => {
+  const literal = (text) => JSON.parse(text.replace(/\\\{/g, "{"));
+  const quoted = '("(?:[^"\\\\]|\\\\.)*")';
+  const entries = [...here("moth.moth").matchAll(new RegExp(`add record with has cli_has, title ${quoted}, why ${quoted}, wrong ${quoted}, right ${quoted} to cli_known`, "g"))];
+  assert.ok(entries.length >= 30, `only ${entries.length}`);
+  for (const [, title, , , right] of entries) {
+    const code = literal(right);
+    if (code.startsWith("moth ")) continue; // a command to type, not a program; any other file it uses is there, empty
+    const errors = check(code, { files: (name) => (name === "math.moth" ? here("math.moth") : "") }).filter((p) => p.kind === "error");
+    assert.deepEqual(errors, [], `${literal(title)}\n${code}`);
+  }
+});
+
+// moth upgrade (DESIGN §140): a release from a place of its own (MOTH_RELEASES), laid out as GitHub's are, put in
+// place of the moth on PATH only once its SHA-256 is the one SHA256SUMS.txt says
+test("moth.exe upgrade puts a newer release in place of the moth on PATH, only once its sum checks out", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "upgrade");
+  const bin = join(sub, "bin");
+  const releases = join(sub, "releases");
+  mkdirSync(bin, { recursive: true });
+  mkdirSync(releases);
+  const windows = process.platform === "win32";
+  const asset = windows ? "moth-windows.exe" : "moth-linux";
+  const installed = join(bin, windows ? "moth.exe" : "moth");
+  copyFileSync(exe, installed);
+  const release = (tag, bytes, sum = createHash("sha256").update(bytes).digest("hex")) => {
+    writeFileSync(join(releases, "latest.json"), JSON.stringify({ tag_name: tag }));
+    writeFileSync(join(releases, asset), bytes);
+    writeFileSync(join(releases, "SHA256SUMS.txt"), `${sum}  ${asset}\n`);
+  };
+  const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === "PATH") ?? "PATH";
+  const env = { ...process.env, MOTH_RELEASES: releases, [pathKey]: `${bin}${windows ? ";" : ":"}${process.env[pathKey]}` };
+  const upgrade = (...args) => spawnSync(installed, ["upgrade", ...args], { cwd: sub, encoding: "utf8", env });
+  const version = JSON.parse(here("package.json")).version;
+  const same = () => readFileSync(installed).equals(readFileSync(exe));
+
+  release("v1.0.0", "an old moth");
+  assert.deepEqual([upgrade().stdout, upgrade("--check").stdout], [`moth ${version} is the latest\n`, `moth ${version} is the latest\n`]);
+  release("v99.0.0", "a moth changed on the way", "0".repeat(64));
+  const tampered = upgrade();
+  assert.equal(tampered.status, 1);
+  assert.match(tampered.stderr, /isn't what SHA256SUMS\.txt says it is, so moth is as it was/);
+  assert.ok(same());
+  release("v99.0.0", "the new moth");
+  assert.equal(upgrade("--check").stdout, `moth 99.0.0 is out (this is ${version}): moth upgrade gets it\n`);
+  assert.ok(same());
+  const done = upgrade();
+  assert.deepEqual([done.status, done.stderr], [0, ""]);
+  assert.match(done.stdout, new RegExp(`^moth ${version.replace(/\./g, "\\.")} -> 99\\.0\\.0, at .*${windows ? "moth\\.exe" : "moth"}\\n$`));
+  assert.equal(readFileSync(installed, "utf8"), "the new moth");
+});
+
+// moth doc (DESIGN §140): a page for each file from its comments, and an index for more than one
+test("moth.exe doc makes a page of HTML for each file from its comments, and an index for more than one", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "doc");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "shapes.moth"), "# Shapes & sizes: areas of <things>.\n#\n#   say area(2, 3)\n\n# the area of a rectangle,\n# its width times its height\nto area with width, height\n    return width * height\nend\n\nto untold\n    return 1\nend\n");
+  writeFileSync(join(sub, "more.moth"), "# More of them.\n\nkind square with side\n    to area with self\n        return side * side\n    end\nend\n");
+  const made = spawnSync(exe, ["doc", "shapes.moth", "more.moth", "--into", "pages"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([made.status, made.stdout, made.stderr], [0, "wrote pages/shapes.html\nwrote pages/more.html\nwrote pages/index.html\n", ""]);
+  const page = readFileSync(join(sub, "pages", "shapes.html"), "utf8");
+  assert.match(page, /^<!doctype html>\n/);
+  assert.match(page, /<h1>shapes<\/h1>\n<p>Shapes &amp; sizes: areas of &lt;things&gt;\.<\/p>\n<pre><code>say area\(2, 3\)\n<\/code><\/pre>\n/);
+  assert.match(page, /<pre class="called"><code>to area with width, height<\/code><\/pre>\n<p>the area of a rectangle, its width times its height<\/p>\n<\/section>/);
+  assert.match(page, /<section id="untold">\n<h2><code>untold<\/code><\/h2>\n<pre class="called"><code>to untold<\/code><\/pre>\n<\/section>/);
+  assert.match(readFileSync(join(sub, "pages", "more.html"), "utf8"), /<pre class="called"><code>kind square with side<\/code><\/pre>/);
+  assert.match(readFileSync(join(sub, "pages", "index.html"), "utf8"), /<li><a href="shapes\.html"><code>shapes<\/code><\/a> Shapes &amp; sizes: areas of &lt;things&gt;\.<\/li>/);
+  assert.equal(spawnSync(exe, ["doc", "shapes.moth"], { cwd: sub, encoding: "utf8" }).stdout, "wrote doc/shapes.html\n");
+});
+
+// moth bench (DESIGN §140): each bench_ function's time a call, from five samples of as many calls as take 50 ms
+test("moth.exe bench times each bench_ function, as the mean of five samples, with their spread", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "bench");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "fast.bench.moth"), "set numbers to list of 5, 3, 8, 1\n\nto bench_add\n    set s to 0\n    for each n in numbers\n        add n to s\n    end\nend\n\nto bench_order\n    set put to numbers in order\nend\n");
+  const ran = spawnSync(exe, ["bench"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([ran.status, ran.stderr], [0, ""]);
+  const line = (name) => `${name} +[\\d.]+ (ns|µs|ms|s) ± \\d+%  \\(5 samples of \\d+ calls, \\d+ a second\\)\\n`;
+  assert.match(ran.stdout, new RegExp(`^fast\\.bench\\.moth\\n${line("bench_add  ")}${line("bench_order")}$`));
+  writeFileSync(join(sub, "none.moth"), "say 1\n");
+  const none = spawnSync(exe, ["bench", "none.moth"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([none.status, none.stderr], [1, "moth: none.moth has no bench_ functions to time\n"]);
+  const empty = join(sub, "empty");
+  mkdirSync(empty);
+  const nothing = spawnSync(exe, ["bench"], { cwd: empty, encoding: "utf8" });
+  assert.deepEqual([nothing.status, nothing.stderr], [1, "moth: no benchmarks found: name a file, or put bench_ functions in files ending in .bench.moth\n"]);
+});
+
+// moth watch (DESIGN §140): a command, run again each time a .moth file changes, until it's stopped
+test("moth.exe watch runs a command again each time a .moth file here changes", { skip }, async () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "watch");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "w.moth"), 'say "one"\n');
+  const child = spawn(exe, ["watch", "run", "w.moth"], { cwd: sub });
+  let out = "";
+  let said = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (said += d));
+  const seen = async (text) => {
+    for (let waited = 0; !out.includes(text); waited += 50) {
+      if (waited > 60000) assert.fail(`'${text}' never came: ${out} ${said}`);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  };
+  try {
+    await seen("one\n");
+    writeFileSync(join(sub, "w.moth"), 'say "two"\n');
+    await seen("two\n");
+  } finally {
+    child.kill();
+  }
+  assert.equal(out, "one\ntwo\n");
+  assert.match(said, /^moth watch: that ended with 0; it runs again when a \.moth file here changes \(Ctrl\+C stops\)\n/);
+});
+
+// moth publish (DESIGN §140): the package here, checked, as the index would have it; --dry-run says what it would add
+test("moth.exe publish finds the package here, checks it, and says what it would add to the index", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "publish");
+  mkdirSync(sub);
+  const moth = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
+  assert.equal(moth(sub, "new", "package", "greeter").status, 0);
+  const folder = join(sub, "greeter");
+  const git = (...args) => spawnSync("git", ["-c", "user.name=Moth", "-c", "user.email=moth@example.com", ...args], { cwd: folder, encoding: "utf8" });
+  git("init", "-q");
+  git("add", "-A");
+  git("commit", "-qm", "the package");
+  git("remote", "add", "origin", join(sub, "elsewhere", "greeter"));
+  const index = (packages) => writeFileSync(join(sub, "index.json"), `${JSON.stringify({ packages }, null, 2)}\n`);
+  index({ cron: { repository: "github.com/samyyy2423/moth-cron", about: "Cron schedules" } });
+  const dry = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Says hello, loudly");
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.match(dry.stdout, /^moth publish: its tests first\n[^]*2 passed\nmoth publish would add to the index:\n {2}"greeter": \{"repository":".*greeter","about":"Says hello, loudly"\}\n$/);
+  const long = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "x".repeat(101));
+  assert.equal(long.status, 1);
+  assert.match(long.stderr, /needs a line about greeter, of at most 100 characters/);
+  index({ greeter: { repository: "github.com/someone/greeter", about: "Another" } });
+  const taken = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"));
+  assert.equal(taken.status, 1);
+  assert.match(taken.stderr, /the index has a package called greeter already, from github\.com\/someone\/greeter: choose another name/);
+  writeFileSync(join(folder, "greeter.test.moth"), 'use "greeter.moth" as lib\n\nto test_wrong\n    expect lib\'s shout("hi") is "hi"\nend\n');
+  const failing = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Hi");
+  assert.equal(failing.status, 1);
+  assert.match(failing.stderr, /greeter's tests don't pass, so it isn't published/);
+});
+
+// the index moth publish writes is laid out as the index's own repository lays it out, as JSON.stringify does
+test("moth publish writes the index as its repository has it: two spaces a level, the names in order", () => {
+  const source = here("moth.moth");
+  const start = source.indexOf("to cli_index_text with cli_packages\n");
+  const code = source.slice(start, source.indexOf("\nend\n", start) + 5);
+  const packages = { zed: { repository: "github.com/a/zed", about: 'Quotes " and \\ and é' }, alpha: { repository: "github.com/a/alpha", about: "First" } };
+  const said = [];
+  const program = [code, 'set zed to dictionary where "repository" is "github.com/a/zed", "about" is "Quotes \\" and \\\\ and é"',
+    'set alpha to dictionary where "repository" is "github.com/a/alpha", "about" is "First"', 'set made to dictionary where "zed" is zed, "alpha" is alpha', "say cli_index_text(made)"];
+  run(program.join("\n"), (line) => said.push(line), { engine: "vm" });
+  const sorted = Object.fromEntries(Object.keys(packages).sort().map((name) => [name, packages[name]]));
+  assert.equal(`${said.join("\n")}\n`, `${JSON.stringify({ packages: sorted }, null, 2)}\n\n`);
+});
+
+// mcp.moth (DESIGN §141): a server moth builds answers an AI app over its input and output, a message a line
+test("an MCP server moth builds answers an app's messages over its input and output", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "mcp");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "calc.moth"), [
+    'use "mcp.moth" as mcp', "", "to add_up with given", '    return item "a" of given + item "b" of given', "end", "",
+    'set calc to mcp\'s server("calculator", "1.0.0")', 'set needs to dictionary where "a" is "number", "b" is "number"',
+    'mcp\'s tool(calc, "add", "Adds two numbers", needs, add_up)', "mcp's serve(calc)", "",
+  ].join("\n"));
+  const built = spawnSync(exe, ["build", "calc.moth"], { cwd: sub, encoding: "utf8" });
+  assert.equal(built.status, 0, built.stderr);
+  const messages = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } },
+    { jsonrpc: "2.0", method: "notifications/initialized" },
+    { jsonrpc: "2.0", id: 2, method: "tools/list" },
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "add", arguments: { a: 2, b: 40 } } },
+  ];
+  const input = `${messages.map((m) => JSON.stringify(m)).join("\r\n")}\r\n`;
+  const served = spawnSync(join(sub, process.platform === "win32" ? "calc.exe" : "calc"), [], { cwd: sub, encoding: "utf8", input });
+  assert.deepEqual([served.status, served.stderr], [0, ""]);
+  const replies = served.stdout.trimEnd().split("\n").map((line) => JSON.parse(line));
+  assert.deepEqual(replies, [
+    { jsonrpc: "2.0", id: 1, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "calculator", version: "1.0.0" } } },
+    { jsonrpc: "2.0", id: 2, result: { tools: [{ name: "add", description: "Adds two numbers", inputSchema: { type: "object", properties: { a: { type: "number" }, b: { type: "number" } }, required: ["a", "b"] } }] } },
+    { jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "42" }], isError: false } },
+  ]);
+});
+
 // `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
 // here is tidy already, so --check must say so; then messy and randomly broken programs, each tidied to
 // exactly the bytes format() makes of it.
@@ -5269,6 +5513,53 @@ test("apps/guestbook: a web app with a database, built by moth.exe, tested, then
     running.kill();
   }
   assert.match(out, /^The guestbook is at http:\/\/localhost:\d+\/ \(Ctrl\+C stops it\)\n/);
+});
+
+// apps/recipes (DESIGN §145): a site of pages made by page.moth, served by server.moth and kept in SQLite, built by
+// moth.exe from its own folder: its own tests, then its pages over HTTP, a search, a recipe added with a form and
+// shown at the address it was sent to, one refused with what was written kept, the recipes as JSON, and a 404
+test("apps/recipes: a site of page.moth pages with a form and a database, built by moth.exe, tested, then used over HTTP", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, async () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "recipes");
+  mkdirSync(sub);
+  for (const name of ["recipes.moth", "kitchen.moth", "kitchen.test.moth"]) writeFileSync(join(sub, name), here(`apps/recipes/${name}`));
+  const allow = ["--allow-libraries", "--allow-read", "--allow-write"];
+  const tested = spawnSync(exe, ["test", "kitchen.test.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  assert.deepEqual([tested.stdout.split("\n").at(-2), tested.status], ["4 passed", 0], tested.stdout + tested.stderr);
+  const built = spawnSync(exe, ["build", "recipes.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  assert.equal(built.status, 0, built.stdout + built.stderr);
+  const port = 23000 + ((process.pid + 300) % 2000);
+  const running = spawn(executable(sub, "recipes"), [String(port)], { cwd: sub, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", err = "";
+  running.stdout.on("data", (d) => (out += d));
+  running.stderr.on("data", (d) => (err += d));
+  try {
+    for (let waited = 0; !err.includes("listening") && waited < 10000; waited += 20) await new Promise((r) => setTimeout(r, 20));
+    const site = `http://127.0.0.1:${port}`;
+    const form = (fields) => ({ method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(fields).toString(), redirect: "manual" });
+    const home = await fetch(`${site}/`);
+    assert.match(home.headers.get("content-type"), /^text\/html/);
+    const homePage = await home.text();
+    assert.match(homePage, /^<!doctype html>/);
+    assert.match(homePage, /<a href="\/recipes\/3">Chickpea curry · 40 minutes · serves 4<\/a>/);
+    assert.match(await (await fetch(`${site}/recipes?q=coconut`)).text(), /Chickpea curry/);
+    const added = await fetch(`${site}/new`, form({ title: "Toast & jam", minutes: "5", serves: "1", ingredients: "Bread\r\nJam", steps: "Toast the bread.\r\nSpread the jam." }));
+    assert.deepEqual([added.status, added.headers.get("location")], [303, "/recipes/4"]);
+    const toast = await (await fetch(`${site}/recipes/4`)).text();
+    assert.ok(toast.includes("<h1>Toast &amp; jam</h1>") && toast.includes("<li>Bread</li>\n<li>Jam</li>"), toast);
+    const refused = await fetch(`${site}/new`, form({ title: "<b>Tea</b>", minutes: "", serves: "1", ingredients: "tea", steps: "brew" }));
+    assert.equal(refused.status, 400);
+    const again = await refused.text();
+    assert.ok(again.includes("Minutes is a whole number, from 1 to 1440.") && again.includes('value="&lt;b&gt;Tea&lt;/b&gt;"'), again);
+    const recipes = await (await fetch(`${site}/api/recipes`)).json();
+    assert.deepEqual(recipes.map((r) => [r.id, r.title]), [[1, "Tomato soup"], [2, "Lemon pancakes"], [3, "Chickpea curry"], [4, "Toast & jam"]]);
+    assert.deepEqual(recipes[3].steps, ["Toast the bread.", "Spread the jam."]);
+    assert.equal((await fetch(`${site}/nowhere`)).status, 404);
+    assert.ok(existsSync(join(sub, "recipes.db")));
+  } finally {
+    running.kill();
+  }
+  assert.match(out, /^The recipe box is at http:\/\/localhost:\d+\/ \(Ctrl\+C stops it\)\n/);
 });
 
 // tools/server.moth with HTTPS: a certificate made for the test by the openssl command, OpenSSL 3's libraries

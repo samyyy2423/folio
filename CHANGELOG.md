@@ -6,6 +6,50 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **A new website.** Moth's site is now a Next.js app (`site/`) with GSAP motion and a new look: the front
+  page, the playground, the lessons and the whole reference, cookbook and examples. The playground is the
+  same one, every feature and all; the pages are made from the same sources as before. Old links still work.
+- **Dictionaries in WebAssembly.** On the WebAssembly engine, dictionaries live inside the module, with no
+  JavaScript: number and text keys are about twice as fast to set and read. The third part of making Moth's
+  WebAssembly run with no JavaScript at all.
+- **Mistakes in WebAssembly.** On the WebAssembly engine, `fail with`, a name with no value yet, and `try`
+  catching them happen inside the module, with no JavaScript: catching a mistake in a loop is about 25 times
+  faster. The second part of making Moth's WebAssembly run with no JavaScript at all.
+- **Faster on the VM, the JIT and in machine code.** Measured on sixteen programs, before and after in turns:
+  the VM takes 1.5 to 3.6 times less time (its switch goes straight to each instruction), the JIT 1.1 to 6.4
+  times less on all but calls of four inputs (adding to text 179 ms to 28, records 89 to 23), and machine code compares
+  `x is "text"` in line (1,000,000 letters compared, 101 ms to 30) and hashes dictionary keys eight bytes at a
+  time (1.1 to 1.2 times faster); moth builds compiler.moth with 11% fewer instructions (DESIGN §149).
+- **Web pages, made in Moth.** `page.moth` makes a page a part at a time: headings, text, links, pictures,
+  lists, tables, boxes, text boxes, checkboxes, dropdowns and buttons, in Moth's look or with CSS of its own.
+  The playground shows it, and so does a page `moth build --web` makes, as the whole window. `when the page is
+  used with what` runs when something on it is clicked, typed or chosen, with every field's value, and the
+  program shows the page again. The page is in a sandboxed frame, so it can't reach the site it's shown on.
+  For a site, `html_of()` is the page's HTML for `server.moth` to send, with menus and forms.
+- **`apps/recipes`**, a whole site in Moth: pages made with `page.moth`, a menu, a search, a form that adds a
+  recipe and shows it again with what was wrong, a SQLite database, its own tests, and the recipes as JSON.
+- The playground finds the standard library: `use "page.moth"`, `"json.moth"` and the rest work there.
+- **moth.wasm.** Moth's compiler, `compiler.moth` and `wasm.moth`, is a WebAssembly module of its own,
+  `moth.wasm`, made by itself and checked to make itself again. The playground compiles with it on the
+  WebAssembly engine, so the programs it runs there are compiled by Moth, not by JavaScript.
+- **What a function needs.** `to withdraw with amount where amount is greater than 0` checks its condition at
+  the start of each call: if it isn't so, the call is a mistake that says what the function needs, as written,
+  and what the name was: `'withdraw' needs amount is greater than 0, but amount is -5`. `where` goes on the
+  function's first line, after its inputs, so no program that worked before means anything different.
+- **New commands.** `moth new [app|web|package|library] <name>` starts a project: its code, tests that pass
+  as made, a README and a GitHub workflow that runs them. `moth explain` says what a mistake means, why it
+  happens and how to put it right, for the first mistake in a file or for a mistake's words. `moth upgrade`
+  puts the newest release in place of the moth on PATH, once its SHA-256 checks out. `moth doc` makes pages
+  of HTML from a program's comments, `moth bench` times `bench_` functions, `moth watch` runs a command again
+  on each change, and `moth publish` opens a pull request that puts a package in the package index.
+- **MCP servers, PDF files and spreadsheets.** `mcp.moth` makes servers whose tools Claude and other AI apps
+  can call; `pdf.moth` writes PDF files with text, lines, boxes and colours; `xlsx.moth` reads and writes
+  Excel workbooks. All three are in the standard library, in Moth alone.
+- **mothlang for JavaScript.** `npm install mothlang` runs Moth in Node.js on the playground's engine:
+  `run(source)` gives what a program said, `load(source)` its functions as JavaScript ones, and `check`,
+  `format` and `test` are `moth check`'s, `moth tidy`'s and `moth test`'s; `npx mothlang run hello.moth` runs a
+  file. A workflow publishes it with each release, once the name is set up on npm
+  ([docs/npm-package.md](docs/npm-package.md)).
 - **Installers.** `irm https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.ps1 | iex` on
   Windows and `curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh` on
   Linux install the latest release, checked against its `SHA256SUMS.txt`, and put `moth` on PATH. Scoop

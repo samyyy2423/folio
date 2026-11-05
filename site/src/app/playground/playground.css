@@ -1,0 +1,134 @@
+/* The playground: a workbench on the site's bone paper. The code is an ink sheet, what it says a paper one, the
+   drawing an ink square; one orange thing on the page, Run. */
+
+.studio { background: var(--paper); color: var(--ink); min-height: 100vh; }
+.studio .icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- the top ---------- */
+.pg-top { display: flex; align-items: center; gap: 24px; height: 64px; padding: 0 var(--gutter); border-bottom: 1px solid var(--ink); }
+.pg-top .brand { margin-right: 0; }
+.pg-title { font: 700 22px/1 var(--display); font-stretch: 72%; text-transform: uppercase; color: var(--ink-3); padding-left: 24px; border-left: 1px solid var(--line-2); margin-right: auto; }
+.pg-top nav { display: flex; align-items: center; gap: 4px; }
+.pg-top nav a:not(.btn) { padding: 8px 12px; font: 500 12.5px/1 var(--mono); text-transform: uppercase; color: var(--ink-2); text-decoration: none; }
+.pg-top nav a:not(.btn):hover { color: var(--ink); text-decoration: underline; text-underline-offset: 5px; }
+.pg-top nav .btn { margin-left: 10px; }
+
+.playground { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: calc(100vh - 64px); height: calc(100dvh - 64px); }
+.playground.dropping { outline: 2px dashed var(--lamp); outline-offset: -8px; }
+
+/* ---------- the bench's tools: Run, then words ---------- */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding: 14px var(--gutter); }
+.tools { display: flex; align-items: center; gap: 2px; }
+.tools + .tools { padding-left: 18px; border-left: 1px solid var(--line-2); }
+.spacer { flex: 1; }
+.playground .tools button { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: 500 12.5px/1 var(--mono); text-transform: uppercase; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.playground .tools button:hover:not(:disabled) { background: var(--paper-2); }
+.playground .tools button:disabled { color: var(--ink-3); opacity: 0.5; cursor: default; }
+.playground #run { height: 48px; padding: 0 26px 0 20px; margin-right: 8px; background: var(--lamp); color: var(--ink); font: 600 14px/1 var(--mono); box-shadow: 0 10px 24px -12px rgba(255, 77, 23, 0.9); }
+.playground #run:hover { background: var(--ink); color: var(--paper); }
+.playground #run .icon, .playground #stop .icon { fill: currentColor; stroke: none; }
+.playground #stop:not(:disabled) { color: #c4311a; }
+.playground #debug .icon { color: var(--lamp); }
+
+.field { display: inline-flex; align-items: center; gap: 10px; font: 500 11px/1 var(--mono); text-transform: uppercase; color: var(--ink-3); cursor: pointer; }
+.playground select { appearance: none; height: 40px; padding: 0 34px 0 16px; border: 1px solid var(--ink); border-radius: 999px; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%230f0e0d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center; color: var(--ink); font: 600 13px/1 var(--sans); cursor: pointer; text-overflow: ellipsis; white-space: nowrap; transition: background-color 0.2s; }
+.playground select:hover { background-color: var(--paper-2); }
+#example { min-width: 190px; max-width: 240px; font: 700 15px/1 var(--display); font-stretch: 80%; text-transform: uppercase; }
+#engine { min-width: 150px; }
+
+/* ---------- the two sides ---------- */
+.workspace { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 16px; min-height: 0; padding: 0 var(--gutter) 12px; }
+.pane { display: flex; flex-direction: column; min-height: 0; }
+.pane-head { display: flex; flex: none; align-items: center; gap: 10px; height: 44px; font: 700 20px/1 var(--display); font-stretch: 72%; text-transform: uppercase; }
+.pane-head .tag { font: 500 11px/1 var(--mono); color: var(--lamp); }
+.pane-head .grow { flex: 1; }
+.pane-head .keys { font: 500 11px/1 var(--mono); color: var(--ink-3); text-transform: uppercase; }
+.toggle { display: inline-flex; align-items: center; gap: 10px; font: 500 11px/1 var(--mono); text-transform: uppercase; color: var(--ink-3); cursor: pointer; }
+#compiled { height: 32px; font-size: 12px; max-width: 230px; }
+
+/* the code: an ink sheet, the numbers down its side, a coloured copy under a see-through textarea */
+.code-pane .editor, .code-pane #lines { border-radius: 6px; background: var(--ink); color: var(--night-text); }
+.editor { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.gutter { margin: 0; padding: 18px 12px 18px 18px; min-width: 2ch; overflow: hidden; color: #5c574f; text-align: right; user-select: none; border-right: 1px solid var(--night-line); }
+.code { position: relative; flex: 1; }
+.code textarea, .code pre { position: absolute; inset: 0; margin: 0; padding: 18px 20px 18px 16px; border: 0; overflow: auto; white-space: pre; tab-size: 4; }
+.code textarea { color: transparent; background: transparent; caret-color: var(--lamp); resize: none; outline: none; }
+.code textarea::selection { background: rgba(255, 77, 23, 0.35); }
+.code pre { pointer-events: none; color: var(--night-text); }
+.gutter, .code textarea, .code pre, #lines { font: 14.5px/1.7 var(--mono); }
+.squiggle { text-decoration: underline wavy; text-decoration-skip-ink: none; text-underline-offset: 4px; }
+.squiggle.bad { text-decoration-color: #ff6b5e; } .squiggle.meh { text-decoration-color: #ffb547; }
+#lines { position: relative; flex: 1; margin: 0; padding: 18px 12px 18px 54px; overflow: auto; }
+#lines li { min-height: 1.7em; padding-left: 8px; white-space: pre; border-left: 2px solid transparent; }
+#lines li::marker { color: #5c574f; }
+#lines li.current { background: rgba(255, 77, 23, 0.16); border-left-color: var(--lamp); }
+
+/* the results: sheets, the newest kind on top */
+.side-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
+.sheet { flex: none; border: 1px solid var(--line-2); border-radius: 6px; background: var(--card); overflow: hidden; }
+.sheet.ink { background: var(--ink); border-color: var(--ink); color: var(--night-text); }
+.out-sheet { flex: 1 0 auto; min-height: 160px; display: flex; flex-direction: column; }
+.title { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); font: 500 11px/1 var(--mono); text-transform: uppercase; color: var(--ink-3); }
+.title::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); }
+.sheet.ink .title { border-bottom-color: var(--night-line); color: var(--night-dim); }
+#drawing-view .title::before, #output-title::before, #page-view .title::before { background: var(--lamp); }
+.side pre { margin: 0; padding: 14px 16px; font: 14px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+#output { flex: 1; color: var(--ink); }
+#output:empty::before { content: "What the program says shows here."; font: italic 400 22px/1.2 var(--serif); color: var(--ink-3); }
+#output.error, #output .error-output { color: #c4311a; }
+#page-frame { display: block; width: 100%; height: 60vh; border: 0; background: #fff; }
+#canvas { display: block; width: min(100% - 32px, 480px); aspect-ratio: 1; margin: 16px auto; background: radial-gradient(circle at 50% 45%, #1f1c18, #0b0a09 75%); border-radius: 4px; touch-action: none; }
+#canvas:focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; }
+#bytecode { color: var(--ink-2); }
+#variables { color: var(--ink); }
+#problems { margin: 0; padding: 6px 0; list-style: none; }
+#problems li { display: flex; align-items: center; gap: 8px; padding-right: 16px; }
+#problems li > button:first-child { flex: 1; display: block; height: auto; padding: 6px 16px; border: 0; border-radius: 0; background: none; text-align: left; font: 13px/1.5 var(--mono); cursor: pointer; }
+#problems li > button:first-child:hover { background: var(--paper-2); }
+#problems .bad { color: #c4311a; } #problems .meh { color: #9a6b00; }
+.playground button.fix { flex: none; height: 28px; padding: 0 14px; border: 0; border-radius: 999px; color: var(--ink); background: var(--lamp); font: 600 11.5px/1 var(--mono); text-transform: uppercase; white-space: nowrap; cursor: pointer; }
+.playground button.fix:hover { background: var(--ink); color: var(--paper); }
+#output button.fix { margin: 8px 0 2px; }
+#files { margin: 0; padding: 6px 0; list-style: none; font: 13px/1.5 var(--mono); }
+#files li { display: flex; align-items: center; gap: 8px; padding: 4px 16px; }
+#files li span { flex: 1; overflow-wrap: anywhere; } #files small { color: var(--ink-3); }
+.playground #files button { height: 26px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: transparent; font: 500 11px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
+
+/* a question the program asks, answered here */
+.answer { display: flex; align-items: center; gap: 10px; margin: 0 16px 16px; padding: 12px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); font: 13px/1.5 var(--mono); }
+.answer > span { color: var(--ink); font-weight: 600; }
+.answer.drawing { flex-direction: column; align-items: flex-start; }
+.answer.drawing div { display: flex; gap: 8px; }
+.answer input { flex: 1; min-width: 0; height: 38px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--card); font: inherit; }
+.answer input:focus { border-color: var(--lamp); outline: none; }
+.playground .answer button { height: 38px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 999px; background: transparent; font: 600 12px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
+.playground .answer button:not([type="button"]) { background: var(--lamp); border-color: var(--lamp); }
+.pad { width: 220px; height: 220px; background: var(--ink); border-radius: 6px; touch-action: none; cursor: crosshair; }
+
+/* ---------- the status line: quiet, and orange while debugging ---------- */
+.status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 40px; padding: 6px var(--gutter); border-top: 1px solid var(--ink); font: 500 11.5px/1.3 var(--mono); text-transform: uppercase; color: var(--ink-2); }
+.status.debugging { background: var(--ink); color: var(--paper); border-top-color: var(--ink); }
+.playground .status button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: 600 11px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
+.playground .status.debugging button:hover { background: var(--lamp); border-color: var(--lamp); color: var(--ink); }
+.status .icon { width: 12px; height: 12px; }
+#timeline { flex: 1; min-width: 120px; accent-color: var(--lamp); }
+#position { font-variant-numeric: tabular-nums; }
+.hint { margin-left: auto; color: var(--ink-3); }
+.status.debugging .hint { color: var(--night-dim); }
+
+@media (max-width: 1100px) {
+  .pg-top nav a:not(.btn) { display: none; }
+  .field > span { display: none; }
+  .pane-head .keys { display: none; }
+}
+@media (max-width: 820px) {
+  .pg-title { display: none; }
+  .playground { height: auto; }
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .code-pane { height: 60vh; height: 60svh; min-height: 340px; }
+  .side-body { overflow: visible; }
+  .toolbar { gap: 10px; }
+  .tools + .tools { border-left: 0; padding-left: 0; }
+  .status.debugging { position: sticky; bottom: 0; z-index: 2; }
+  .hint { display: none; }
+}

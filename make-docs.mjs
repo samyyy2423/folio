@@ -30,7 +30,7 @@ export const HELPERS = {
   "server.moth": /^web_/, "sockets.moth": /^net_/, "stats.moth": /^stats_/, "system.moth": /^system_/,
   "toml.moth": /^toml_(?!of$)/, "ui.moth": /^ui_/, "websocket.moth": /^ws_/, "windows.moth": /^ui_/, "yaml.moth": /^yaml_(?!of$)/,
   "zones.moth": /^zones_/, "dates.moth": /^dates_/, "game.moth": /^game_/, "http.moth": /^http_/,
-  "tasks.moth": /^task_/, "wire.moth": /^wire_/, "properties.moth": /^properties_/, "text.moth": [/^text_/, "find_all_from", "csv_value"], "python.moth": /^python_/,
+  "tasks.moth": /^task_/, "wire.moth": /^wire_/, "properties.moth": /^properties_/, "mcp.moth": /^mcp_/, "page.moth": /^page_/, "pdf.moth": /^pdf_/, "xlsx.moth": /^xlsx_/, "text.moth": [/^text_/, "find_all_from", "csv_value"], "python.moth": /^python_/,
   "mysql.moth": [/^my_/, "native_scramble", "sha2_scramble", "rsa_oaep"],
   "postgres.moth": [/^pg_/, "scram_first", "scram_final"],
   "big.moth": ["read_big", "made_big", "written_big", "compare_parts", "add_parts", "take_parts", "times_parts", "scaled_parts",
@@ -65,17 +65,17 @@ export const SAME_AS = { "linux.moth": "ui.moth", "windows.moth": "ui.moth" };
 // the index's sections, each library in one; a library that isn't listed goes in the last
 export const SECTIONS = [
   ["Text and data", "Reading and writing the formats data comes in, and working with text, dates and numbers.",
-    ["json", "yaml", "toml", "xml", "text", "dates", "zones", "base64", "zip", "images", "charts"]],
+    ["json", "yaml", "toml", "xml", "text", "dates", "zones", "base64", "zip", "images", "charts", "pdf", "xlsx"]],
   ["Numbers and collections", "Maths beyond what's built in, statistics, arrays, and ways to keep things.",
     ["math", "stats", "arrays", "big", "fractions", "collections", "lists", "sets"]],
-  ["The web and networks", "Serving and asking web pages, sockets, mail, and signing in.",
-    ["http", "server", "websocket", "sockets", "email", "oauth", "jwt", "s3", "wire"]],
+  ["The web and networks", "Web pages made in Moth, serving and asking for them, sockets, mail, and signing in.",
+    ["page", "http", "server", "websocket", "sockets", "email", "oauth", "jwt", "s3", "wire"]],
   ["Databases", "SQLite in a file, and the database servers companies run.", ["sqlite", "postgres", "mysql", "redis"]],
   ["Secrets and security", "Hashes, encryption and randomness no one can guess.", ["hash", "crypto", "secrets"]],
   ["The system and programs", "Files and folders, command lines, logs, background work, and every core.",
     ["system", "options", "log", "tasks", "cores", "sync", "installer"]],
   ["Windows and games", "The system's own windows and controls, and games drawn 60 times a second.", ["ui", "windows", "linux", "game"]],
-  ["Models and other languages", "Large language models, trained models and Python, from Moth.", ["ai", "onnx", "python"]],
+  ["Models and other languages", "Large language models, MCP servers for AI apps, trained models and Python, from Moth.", ["ai", "mcp", "onnx", "python"]],
   ["More", "", []],
 ];
 

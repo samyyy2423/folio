@@ -1,0 +1,191 @@
+/* Folio's website. Bone white and ink, with one colour: the orange of a lamp a moth flies to. Archivo, whose
+   width moves, for what's big; Instrument Serif in italics for what's said; JetBrains Mono for code and labels.
+   Hairlines, not cards; nothing rounded but the pills. */
+
+:root {
+  --paper: #eeeae2;
+  --paper-2: #e5e0d6;
+  --paper-3: #d9d3c7;
+  --card: #f6f3ee;
+  --ink: #0f0e0d;
+  --ink-2: #4d4943;
+  --ink-3: #8d877d;
+  --line: rgba(15, 14, 13, 0.14);
+  --line-2: rgba(15, 14, 13, 0.3);
+  --lamp: #ff4d17;
+  --lamp-2: #ff7a4d;
+  --violet: var(--lamp); /* the names the other pages' styles use */
+  --violet-2: var(--lamp-2);
+  --coral: var(--lamp);
+  --amber: #ffb547;
+  --teal: #2e9e6b;
+  --wing: var(--lamp);
+  --night: #0f0e0d;
+  --night-2: #171614;
+  --night-3: #22201d;
+  --night-line: #2f2c28;
+  --night-text: #eeeae2;
+  --night-dim: #8d877d;
+  --code-k: #ff7a4d;
+  --code-s: #cfdda0;
+  --code-n: #a9cde8;
+  --code-c: #6e695f;
+
+  --display: "Archivo Variable", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --sans: "Archivo Variable", "Helvetica Neue", Arial, sans-serif;
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --mono: "JetBrains Mono Variable", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+
+  --radius: 4px;
+  --radius-s: 3px;
+  --shadow: none;
+  --shadow-lift: 0 40px 80px -40px rgba(15, 14, 13, 0.4);
+  --gutter: clamp(16px, 2.2vw, 32px);
+  --wrap: 1440px;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--sans); font-stretch: 100%; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+::selection { background: var(--lamp); color: var(--paper); }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; }
+
+.wrap { width: min(var(--wrap), 100% - 2 * var(--gutter)); margin-inline: auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; font-stretch: 72%; text-transform: uppercase; letter-spacing: -0.01em; line-height: 0.88; text-wrap: balance; }
+h1 { font-size: clamp(56px, 10.5vw, 196px); }
+h2 { font-size: clamp(44px, 7vw, 120px); }
+h3 { font-size: clamp(24px, 2.4vw, 34px); line-height: 0.95; }
+p { margin: 0; text-wrap: pretty; }
+em, .said-it { font-family: var(--serif); font-style: italic; font-weight: 400; text-transform: none; letter-spacing: -0.01em; font-stretch: 100%; }
+.wing-text { font-family: var(--serif); font-style: italic; font-weight: 400; text-transform: none; color: var(--lamp); font-stretch: 100%; letter-spacing: -0.01em; }
+code, pre, kbd, textarea { font-family: var(--mono); font-variant-ligatures: none; } /* >= stays >=: the point is which symbols there are */
+:not(pre) > code { font-size: 0.86em; background: var(--paper-2); border: 1px solid var(--line); border-radius: 3px; padding: 0.05em 0.35em; }
+.label, .eyebrow { display: inline-flex; align-items: center; gap: 10px; font: 500 12px/1.2 var(--mono); letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); }
+.eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); }
+
+/* ---------- pills: words, and a lamp beside them that fills the pill on hover ---------- */
+.btn { position: relative; display: inline-flex; align-items: center; gap: 14px; height: 54px; padding: 0 8px 0 26px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font: 500 15px/1 var(--sans); text-decoration: none; cursor: pointer; overflow: hidden; isolation: isolate; transition: color 0.45s cubic-bezier(.7,0,.2,1); }
+.btn::after { content: ""; width: 38px; height: 38px; border-radius: 50%; background: var(--lamp); flex: none; transition: transform 0.6s cubic-bezier(.7,0,.2,1); z-index: -1; }
+.btn:hover { color: var(--paper); }
+.btn:hover::after { transform: scale(14); }
+.btn span { position: relative; z-index: 1; }
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn.ghost::after { background: var(--ink); width: 8px; height: 8px; margin-right: 15px; }
+.btn.ghost:hover::after { transform: scale(60); }
+.btn.small { height: 42px; font-size: 14px; padding-left: 18px; }
+.btn.small::after { width: 28px; height: 28px; }
+.btn.light { border-color: var(--night-text); color: var(--night-text); }
+
+/* ---------- the top bar: full width over the first screen; scrolled, it gathers into an ink dock ---------- */
+.topbar { position: fixed; inset: 0 0 auto; z-index: 60; pointer-events: none; }
+.bar { pointer-events: auto; display: flex; align-items: center; gap: 18px; width: calc(100% - 2 * var(--gutter)); max-width: var(--wrap); height: 76px; margin: 0 auto; padding: 0 2px; border-radius: 999px; color: var(--ink);
+  transition: max-width 0.9s cubic-bezier(.7,0,.2,1), height 0.7s cubic-bezier(.7,0,.2,1), margin-top 0.7s cubic-bezier(.7,0,.2,1), padding 0.7s cubic-bezier(.7,0,.2,1), background-color 0.5s, color 0.5s, box-shadow 0.6s; }
+.topbar.docked .bar { max-width: 900px; height: 60px; margin-top: 14px; padding: 0 8px 0 22px; background: var(--ink); color: var(--paper); box-shadow: 0 24px 60px -24px rgba(15, 14, 13, 0.55); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 700 22px/1 var(--display); font-stretch: 80%; text-transform: uppercase; letter-spacing: -0.01em; text-decoration: none; margin-right: auto; }
+.brand svg { width: 30px; height: 30px; overflow: visible; }
+.brand svg .wing { transform-box: fill-box; }
+.brand svg .wing.left { transform-origin: 100% 60%; }
+.brand svg .wing.right { transform-origin: 0% 60%; }
+.brand:hover svg .wing.left { animation: flap-left 0.18s ease-in-out 6 alternate; }
+.brand:hover svg .wing.right { animation: flap-right 0.18s ease-in-out 6 alternate; }
+@keyframes flap-left { to { transform: scaleX(0.35); } }
+@keyframes flap-right { to { transform: scaleX(0.35); } }
+.brand sup { font: 500 10px/1 var(--mono); margin-left: -6px; align-self: flex-start; margin-top: 2px; }
+
+/* the links, and the lamp: an orange pill that rests on the page you're on and flies to the link you point at */
+.links { position: relative; display: flex; align-items: center; isolation: isolate; }
+.links a { position: relative; z-index: 1; padding: 11px 15px; font: 500 13px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.02em; color: inherit; text-decoration: none; opacity: 0.72; transition: opacity 0.25s, color 0.3s; }
+.links a:hover, .links a[aria-current="page"], .links a.lit { opacity: 1; }
+.links a.lit { color: var(--ink); }
+.lamp { position: absolute; left: 0; top: 50%; z-index: 0; width: 60px; height: 36px; margin-top: -18px; border-radius: 999px; background: var(--lamp); opacity: 0; pointer-events: none; }
+.ends { display: flex; align-items: center; gap: 6px; }
+.ends .gh { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: inherit; transition: background-color 0.3s; }
+.ends .gh svg { width: 19px; height: 19px; }
+.ends .gh:hover { background: rgba(127, 127, 127, 0.16); }
+.get { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 20px; border-radius: 999px; background: var(--ink); color: var(--paper); font: 600 13px/1 var(--mono); text-transform: uppercase; text-decoration: none; transition: background-color 0.4s, color 0.4s; }
+.get::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); transition: transform 0.4s cubic-bezier(.7,0,.2,1); }
+.get:hover::before { transform: scale(1.8); }
+.topbar.docked .get { background: var(--lamp); color: var(--ink); }
+.topbar.docked .get::before { background: var(--ink); }
+.menu-button { display: none; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; font: 600 13px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
+.menu-button i { display: grid; gap: 4px; }
+.menu-button i::before, .menu-button i::after { content: ""; display: block; width: 16px; height: 1.5px; background: currentColor; }
+@media (max-width: 960px) {
+  .links, .ends .gh { display: none; }
+  .menu-button { display: inline-flex; }
+  .topbar.docked .bar { max-width: calc(100% - 24px); }
+}
+@media (max-width: 520px) { .get { display: none; } }
+
+/* the whole-screen menu, on a narrow screen */
+.menu { position: fixed; inset: 0; z-index: 59; display: flex; flex-direction: column; justify-content: flex-end; gap: 32px; padding: 110px var(--gutter) 32px; background: var(--ink); color: var(--paper); clip-path: inset(0 0 100% 0); visibility: hidden; transition: clip-path 0.8s cubic-bezier(.7,0,.2,1), visibility 0s 0.8s; }
+.menu.open { clip-path: inset(0 0 0 0); visibility: visible; transition: clip-path 0.8s cubic-bezier(.7,0,.2,1), visibility 0s; }
+.menu ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--night-line); }
+.menu li { overflow: hidden; border-bottom: 1px solid var(--night-line); }
+.menu li a { display: flex; align-items: baseline; gap: 16px; padding: 12px 0; color: inherit; text-decoration: none; transform: translateY(105%); transition: transform 0.8s cubic-bezier(.2,.8,.2,1); transition-delay: calc(0.25s + var(--i) * 0.06s); }
+.menu.open li a { transform: none; }
+.menu li .n { font: 500 12px/1 var(--mono); color: var(--lamp); }
+.menu li .t { font: 800 clamp(44px, 13vw, 96px)/0.9 var(--display); font-stretch: 66%; text-transform: uppercase; }
+.menu-foot { display: flex; justify-content: space-between; gap: 16px; font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.menu-foot a { color: inherit; }
+.topbar.menu-open .bar { color: var(--paper); background: transparent; box-shadow: none; }
+
+/* ---------- the veil between pages ---------- */
+.veil { position: fixed; inset: 0; z-index: 150; pointer-events: none; visibility: hidden; }
+.veil.on { pointer-events: auto; visibility: visible; }
+.veil-lamp, .veil-ink { position: absolute; inset: 0; } /* placed by Transition.jsx, below the screen until they're wanted */
+.veil-lamp { background: var(--lamp); }
+.veil-ink { display: flex; flex-direction: column; justify-content: space-between; padding: 26px var(--gutter) 18px; background: var(--ink); color: var(--paper); }
+.veil-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.veil-mark { display: inline-flex; align-items: center; gap: 10px; color: var(--paper); font: 700 20px/1 var(--display); font-stretch: 80%; }
+.veil-mark svg { width: 28px; height: 28px; }
+.veil-word { overflow: hidden; margin: 0; }
+/* as big as the screen allows, and smaller for a long name, so all of it shows (each letter is about 0.45em wide);
+   no kerning, so the name as one run (the ::before) and as letters are the same width, letter for letter */
+.veil-word > span { display: block; font: 800 min(clamp(80px, 17vw, 300px), calc((100vw - 2 * var(--gutter)) / (var(--veil-chars, 5) * 0.47)))/0.84 var(--display); font-stretch: 62%; letter-spacing: -0.02em; text-transform: uppercase; white-space: nowrap; font-kerning: none; }
+.veil-word .ch { display: inline-block; will-change: transform; }
+html.veiled .veil { visibility: visible; }
+html.veiled .veil-word > span::before { content: var(--veil-word); } /* the name, before the page's script is there to write it */
+
+/* ---------- the foot: links, then the name across the whole width ---------- */
+.foot { position: relative; margin-top: 160px; background: var(--ink); color: var(--night-text); overflow: hidden; }
+.foot .cols { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 32px; padding: 72px 0 0; }
+.foot .lead { font: italic 400 clamp(28px, 2.8vw, 42px)/1.05 var(--serif); max-width: 18ch; }
+.foot h4 { margin: 0 0 16px; font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.foot ul a { color: var(--night-text); text-decoration: none; font-size: 15px; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size 0.4s cubic-bezier(.7,0,.2,1); }
+.foot ul a:hover { background-size: 100% 1px; }
+.foot .legal { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 56px 0 18px; color: var(--night-dim); font: 500 12px/1.4 var(--mono); text-transform: uppercase; }
+.foot .wordmark { display: block; width: 100%; margin: 0 0 -0.12em; font: 800 25.4vw/0.8 var(--display); font-stretch: 62%; text-align: center; letter-spacing: -0.02em; color: var(--night-text); user-select: none; white-space: nowrap; }
+.foot .wordmark span { display: inline-block; }
+@media (max-width: 760px) { .foot .cols { grid-template-columns: 1fr 1fr; } .foot .cols > div:first-child { grid-column: 1 / -1; } }
+
+/* ---------- code, as the site shows it ---------- */
+.codeview { margin: 0; background: var(--night); color: var(--night-text); border-radius: var(--radius); overflow: hidden; }
+.codeview .bar { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; border-bottom: 1px solid var(--night-line); font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.codeview .bar i { display: none; }
+.codeview .bar::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); }
+.codeview pre { margin: 0; padding: 18px 20px; font: 14px/1.7 var(--mono); white-space: pre; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--night-3) transparent; }
+.k { color: var(--code-k); } .s { color: var(--code-s); } .n { color: var(--code-n); } .c { color: var(--code-c); font-style: italic; }
+.codeview .said { border-top: 1px dashed var(--night-line); color: var(--night-text); }
+.codeview .said::before { content: "→ says"; display: block; margin-bottom: 6px; font: 500 11px/1 var(--mono); text-transform: uppercase; color: var(--lamp); }
+
+/* ---------- the cursor: a lamp the size of a dot, bigger over what it opens ---------- */
+.cursor { position: fixed; left: 0; top: 0; z-index: 100; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--lamp); pointer-events: none; display: grid; place-items: center; transition: width 0.35s cubic-bezier(.7,0,.2,1), height 0.35s cubic-bezier(.7,0,.2,1), margin 0.35s cubic-bezier(.7,0,.2,1), opacity 0.2s; }
+.cursor b { font: 600 11px/1 var(--mono); text-transform: uppercase; color: var(--paper); opacity: 0; transition: opacity 0.2s; white-space: nowrap; }
+.cursor.big { width: 84px; height: 84px; margin: -42px 0 0 -42px; }
+.cursor.big b { opacity: 1; }
+@media (hover: none), (pointer: coarse) { .cursor { display: none; } }
+
+/* ---------- what the motion brings in starts out of sight, unless motion is turned down ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-reveal] { opacity: 0; }
+}
+html.reveal-all [data-reveal] { opacity: 1 !important; transform: none !important; }
