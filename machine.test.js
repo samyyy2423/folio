@@ -1674,6 +1674,35 @@ test("moth publish writes the index as its repository has it: two spaces a level
   assert.equal(`${said.join("\n")}\n`, `${JSON.stringify({ packages: sorted }, null, 2)}\n\n`);
 });
 
+// mcp.moth (DESIGN §141): a server moth builds answers an AI app over its input and output, a message a line
+test("an MCP server moth builds answers an app's messages over its input and output", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "mcp");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "calc.moth"), [
+    'use "mcp.moth" as mcp', "", "to add_up with given", '    return item "a" of given + item "b" of given', "end", "",
+    'set calc to mcp\'s server("calculator", "1.0.0")', 'set needs to dictionary where "a" is "number", "b" is "number"',
+    'mcp\'s tool(calc, "add", "Adds two numbers", needs, add_up)', "mcp's serve(calc)", "",
+  ].join("\n"));
+  const built = spawnSync(exe, ["build", "calc.moth"], { cwd: sub, encoding: "utf8" });
+  assert.equal(built.status, 0, built.stderr);
+  const messages = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } },
+    { jsonrpc: "2.0", method: "notifications/initialized" },
+    { jsonrpc: "2.0", id: 2, method: "tools/list" },
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "add", arguments: { a: 2, b: 40 } } },
+  ];
+  const input = `${messages.map((m) => JSON.stringify(m)).join("\r\n")}\r\n`;
+  const served = spawnSync(join(sub, process.platform === "win32" ? "calc.exe" : "calc"), [], { cwd: sub, encoding: "utf8", input });
+  assert.deepEqual([served.status, served.stderr], [0, ""]);
+  const replies = served.stdout.trimEnd().split("\n").map((line) => JSON.parse(line));
+  assert.deepEqual(replies, [
+    { jsonrpc: "2.0", id: 1, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "calculator", version: "1.0.0" } } },
+    { jsonrpc: "2.0", id: 2, result: { tools: [{ name: "add", description: "Adds two numbers", inputSchema: { type: "object", properties: { a: { type: "number" }, b: { type: "number" } }, required: ["a", "b"] } }] } },
+    { jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "42" }], isError: false } },
+  ]);
+});
+
 // `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
 // here is tidy already, so --check must say so; then messy and randomly broken programs, each tidied to
 // exactly the bytes format() makes of it.

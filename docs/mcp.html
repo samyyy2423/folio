@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mcp.moth · Moth's standard library</title>
+  <meta name="description" content="MCP servers: tools, resources and prompts that Claude and other AI apps can use, served over the Model Context Protocol on a program's input and output, a…">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../#playground">Playground</a>
+      <a class="go" href="../learn.html">Learn</a>
+      <a class="go" href="../docs/" aria-current="page">Docs</a>
+      <a class="go" href="../docs/cookbook/">Cookbook</a>
+      <a class="go" href="../docs/examples.html">Examples</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The standard library</a></p>
+      <h1><em>mcp</em>.moth</h1>
+      <p>MCP servers: tools, resources and prompts that Claude and other AI apps can use, served over the Model Context Protocol on a program's input and output, a…</p>
+      <p class="use"><code>use "mcp.moth" as mcp</code></p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="mcp.moth's functions">
+      <h2>6 functions</h2>
+      <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
+      <ol id="toc"><li><a href="#server">server</a></li><li><a href="#tool">tool</a></li><li><a href="#resource">resource</a></li><li><a href="#prompt">prompt</a></li><li><a href="#answer">answer</a></li><li><a href="#serve">serve</a></li></ol>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth">The source</a></p>
+    </nav>
+    <main>
+      <section class="about">
+        <h2>What it's for</h2>
+          <p>MCP servers: tools, resources and prompts that Claude and other AI apps can use, served over the Model Context Protocol on a program's input and output, a JSON-RPC message a line, as such an app starts the program. A tool is a function the app can call with what it needs as a dictionary; a resource, text it can read by its address; a prompt, a message it can be given, made from what it's told.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">to</span> add_up <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">item</span> <span class="s">&quot;a&quot;</span> <span class="k">of</span> given + <span class="k">item</span> <span class="s">&quot;b&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">set</span> calc <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+<span class="k">set</span> needs <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;a&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>, <span class="s">&quot;b&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>
+mcp's tool(calc, <span class="s">&quot;add&quot;</span>, <span class="s">&quot;Adds two numbers&quot;</span>, needs, add_up)
+mcp's serve(calc)</code></pre></div>
+          <p>Built with moth build calc.moth, the app runs calc.exe (or calc on Linux) as its own program: in Claude Desktop's claude_desktop_config.json, &quot;mcpServers&quot;: {&quot;calculator&quot;: {&quot;command&quot;: &quot;C:\\tools\\calc.exe&quot;}}. What a tool needs is a dictionary of each input's name and what it is: &quot;number&quot;, &quot;whole number&quot;, &quot;text&quot;, &quot;yes or no&quot;, &quot;list&quot; or &quot;dictionary&quot;, with &quot;or nothing&quot; after it for one the call may leave out and &quot;: what it's for&quot; after that, as &quot;text or nothing: a city's name&quot;; or a JSON Schema of its own. A tool's function gives back text, or anything else, sent as JSON; a mistake in it is sent as the tool's error, and the server goes on. Only a program moth builds can serve, as it reads its input as it comes; <a href="#answer">answer</a>() answers one message anywhere.</p>
+      </section>
+      <section class="fns">
+        <h2>Functions</h2>
+        <section class="fn" id="server">
+          <h3><a href="#server"><code>mcp's server(name, version)</code></a></h3>
+          <p>a server, by the name and version the app is told</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>name</code></li><li><code>version</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to server with name, version</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth#L26">mcp.moth line 26</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">set</span> s <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+<span class="k">say</span> s</code></pre><pre class="says"><code>(record with name &quot;calculator&quot;, version &quot;1.0.0&quot;, tools [], resources [], prompts [])</code></pre></div>
+        </section>
+        <section class="fn" id="tool">
+          <h3><a href="#tool"><code>mcp's tool(on, name, description, needs, does)</code></a></h3>
+          <p>a tool the app can call: its name, what it does (which the app's model reads), what it needs, and the function that does it, given what the app sent as a dictionary</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>description</code></li><li><code>needs</code></li><li><code>does</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to tool with on, name, description, needs, does</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth#L32">mcp.moth line 32</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">to</span> add_up <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">item</span> <span class="s">&quot;a&quot;</span> <span class="k">of</span> given + <span class="k">item</span> <span class="s">&quot;b&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">set</span> calc <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+<span class="k">set</span> needs <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;a&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>, <span class="s">&quot;b&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>
+mcp's tool(calc, <span class="s">&quot;add&quot;</span>, <span class="s">&quot;Adds two numbers&quot;</span>, needs, add_up)</code></pre></div>
+        </section>
+        <section class="fn" id="resource">
+          <h3><a href="#resource"><code>mcp's resource(on, address, name, description, type, reads)</code></a></h3>
+          <p>text the app can read, by its address (as &quot;notes://today&quot;): its name, what it is, its type (as &quot;text/plain&quot;), and the function that gives the text, given the address</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>address</code></li><li><code>name</code></li><li><code>description</code></li><li><code>type</code></li><li><code>reads</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to resource with on, address, name, description, type, reads</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth#L39">mcp.moth line 39</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">to</span> add_up <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">item</span> <span class="s">&quot;a&quot;</span> <span class="k">of</span> given + <span class="k">item</span> <span class="s">&quot;b&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">to</span> fails_always <span class="k">with</span> given
+    <span class="k">fail</span> <span class="k">with</span> <span class="s">&quot;the sky fell&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> listing <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="s">&quot;two&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> notes_today <span class="k">with</span> address
+    <span class="k">return</span> <span class="s">&quot;buy milk&quot;</span>
+<span class="k">end</span>
+<span class="k">set</span> s <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+<span class="k">set</span> two <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;a&quot;</span> <span class="k">is</span> <span class="s">&quot;number: the first&quot;</span>, <span class="s">&quot;b&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>
+mcp's tool(s, <span class="s">&quot;add&quot;</span>, <span class="s">&quot;Adds two numbers&quot;</span>, two, add_up)
+mcp's tool(s, <span class="s">&quot;fail&quot;</span>, <span class="s">&quot;Always fails&quot;</span>, <span class="k">nothing</span>, fails_always)
+<span class="k">set</span> how <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;how&quot;</span> <span class="k">is</span> <span class="s">&quot;text or nothing&quot;</span>
+mcp's tool(s, <span class="s">&quot;list&quot;</span>, <span class="s">&quot;Gives a list&quot;</span>, how, listing)
+mcp's resource(s, <span class="s">&quot;notes://today&quot;</span>, <span class="s">&quot;Today&quot;</span>, <span class="s">&quot;Today's notes&quot;</span>, <span class="s">&quot;text/plain&quot;</span>, notes_today)</code></pre></div>
+        </section>
+        <section class="fn" id="prompt">
+          <h3><a href="#prompt"><code>mcp's prompt(on, name, description, needs, makes)</code></a></h3>
+          <p>a prompt the app can offer: its name, what it's for, what it needs (as a tool's are said), and the function that gives the message's text, given what was filled in as a dictionary</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>description</code></li><li><code>needs</code></li><li><code>makes</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to prompt with on, name, description, needs, makes</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth#L46">mcp.moth line 46</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">to</span> add_up <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">item</span> <span class="s">&quot;a&quot;</span> <span class="k">of</span> given + <span class="k">item</span> <span class="s">&quot;b&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">to</span> fails_always <span class="k">with</span> given
+    <span class="k">fail</span> <span class="k">with</span> <span class="s">&quot;the sky fell&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> listing <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="s">&quot;two&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> notes_today <span class="k">with</span> address
+    <span class="k">return</span> <span class="s">&quot;buy milk&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> greeting_prompt <span class="k">with</span> given
+    <span class="k">return</span> <span class="s">&quot;Say hello to &quot;</span> + <span class="k">item</span> <span class="s">&quot;name&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">set</span> s <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+<span class="k">set</span> two <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;a&quot;</span> <span class="k">is</span> <span class="s">&quot;number: the first&quot;</span>, <span class="s">&quot;b&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>
+mcp's tool(s, <span class="s">&quot;add&quot;</span>, <span class="s">&quot;Adds two numbers&quot;</span>, two, add_up)
+mcp's tool(s, <span class="s">&quot;fail&quot;</span>, <span class="s">&quot;Always fails&quot;</span>, <span class="k">nothing</span>, fails_always)
+<span class="k">set</span> how <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;how&quot;</span> <span class="k">is</span> <span class="s">&quot;text or nothing&quot;</span>
+mcp's tool(s, <span class="s">&quot;list&quot;</span>, <span class="s">&quot;Gives a list&quot;</span>, how, listing)
+mcp's resource(s, <span class="s">&quot;notes://today&quot;</span>, <span class="s">&quot;Today&quot;</span>, <span class="s">&quot;Today's notes&quot;</span>, <span class="s">&quot;text/plain&quot;</span>, notes_today)
+<span class="k">set</span> who <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;name&quot;</span> <span class="k">is</span> <span class="s">&quot;text: who&quot;</span>
+mcp's prompt(s, <span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Greets someone&quot;</span>, who, greeting_prompt)</code></pre></div>
+        </section>
+        <section class="fn" id="answer">
+          <h3><a href="#answer"><code>mcp's answer(on, line)</code></a></h3>
+          <p>A message from the app, as the line of JSON it sent, answered: the reply's line of JSON, or nothing for a notification, which has no reply.</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>line</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to answer with on, line</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth#L265">mcp.moth line 265</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">to</span> made
+    <span class="k">set</span> s <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+    <span class="k">set</span> two <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;a&quot;</span> <span class="k">is</span> <span class="s">&quot;number: the first&quot;</span>, <span class="s">&quot;b&quot;</span> <span class="k">is</span> <span class="s">&quot;number&quot;</span>
+    mcp's tool(s, <span class="s">&quot;add&quot;</span>, <span class="s">&quot;Adds two numbers&quot;</span>, two, add_up)
+    mcp's tool(s, <span class="s">&quot;fail&quot;</span>, <span class="s">&quot;Always fails&quot;</span>, <span class="k">nothing</span>, fails_always)
+    <span class="k">set</span> how <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;how&quot;</span> <span class="k">is</span> <span class="s">&quot;text or nothing&quot;</span>
+    mcp's tool(s, <span class="s">&quot;list&quot;</span>, <span class="s">&quot;Gives a list&quot;</span>, how, listing)
+    mcp's resource(s, <span class="s">&quot;notes://today&quot;</span>, <span class="s">&quot;Today&quot;</span>, <span class="s">&quot;Today's notes&quot;</span>, <span class="s">&quot;text/plain&quot;</span>, notes_today)
+    <span class="k">set</span> who <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;name&quot;</span> <span class="k">is</span> <span class="s">&quot;text: who&quot;</span>
+    mcp's prompt(s, <span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Greets someone&quot;</span>, who, greeting_prompt)
+    <span class="k">return</span> s
+<span class="k">end</span>
+<span class="k">to</span> add_up <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">item</span> <span class="s">&quot;a&quot;</span> <span class="k">of</span> given + <span class="k">item</span> <span class="s">&quot;b&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">to</span> fails_always <span class="k">with</span> given
+    <span class="k">fail</span> <span class="k">with</span> <span class="s">&quot;the sky fell&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> listing <span class="k">with</span> given
+    <span class="k">return</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="s">&quot;two&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> notes_today <span class="k">with</span> address
+    <span class="k">return</span> <span class="s">&quot;buy milk&quot;</span>
+<span class="k">end</span>
+<span class="k">to</span> greeting_prompt <span class="k">with</span> given
+    <span class="k">return</span> <span class="s">&quot;Say hello to &quot;</span> + <span class="k">item</span> <span class="s">&quot;name&quot;</span> <span class="k">of</span> given
+<span class="k">end</span>
+<span class="k">say</span> mcp's answer(made(), <span class="s">&quot;\{\&quot;jsonrpc\&quot;: \&quot;2.0\&quot;, \&quot;method\&quot;: \&quot;notifications/initialized\&quot;}&quot;</span>)</code></pre><pre class="says"><code>nothing</code></pre></div>
+        </section>
+        <section class="fn" id="serve">
+          <h3><a href="#serve"><code>mcp's serve(on)</code></a></h3>
+          <p>serves the app that started the program: each line it sends answered, until its input ends</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to serve with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/mcp.moth#L321">mcp.moth line 321</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;mcp.moth&quot;</span> <span class="k">as</span> mcp
+<span class="k">set</span> calc <span class="k">to</span> mcp's server(<span class="s">&quot;calculator&quot;</span>, <span class="s">&quot;1.0.0&quot;</span>)
+mcp's serve(calc)</code></pre></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../#playground">Playground</a>
+      <a href="../learn.html">Learn</a>
+      <a href="../docs/">The standard library</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+  <script>
+    // the list of functions, filtered as a name is typed
+    const filter = document.getElementById("filter");
+    filter.oninput = () => {
+      const wanted = filter.value.trim().toLowerCase();
+      for (const li of document.getElementById("toc").children) li.hidden = !li.textContent.toLowerCase().includes(wanted);
+    };
+  </script>
+</body>
+</html>

@@ -1136,7 +1136,7 @@ test("json.moth passes its own tests, json.test.moth, on all three engines", () 
   }
 });
 
-test("text.moth, dates.moth, hash.moth, base64.moth, big.moth, xml.moth, zip.moth, toml.moth, options.moth, collections.moth, lists.moth, stats.moth, arrays.moth, ai.moth and properties.moth pass their own tests on all three engines", () => {
+test("text.moth, dates.moth, hash.moth, base64.moth, big.moth, xml.moth, zip.moth, toml.moth, options.moth, collections.moth, lists.moth, stats.moth, arrays.moth, ai.moth, properties.moth, mcp.moth, pdf.moth and xlsx.moth pass their own tests on all three engines", () => {
   const found = (name) => (name === "math.moth" ? readFileSync(new URL("./math.moth", import.meta.url), "utf8") : tool(name));
   for (const engine of ENGINES) {
     for (const [file, names] of [
@@ -1168,7 +1168,13 @@ test("text.moth, dates.moth, hash.moth, base64.moth, big.moth, xml.moth, zip.mot
       ["charts.test.moth", ["test_axis_numbers", "test_svg", "test_png", "test_mistakes"]],
       ["xml.test.moth", ["test_elements", "test_finding", "test_around_the_element", "test_entities_and_cdata",
         "test_writing", "test_mistakes"]],
-      ["zip.test.moth", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_mistakes"]]]) {
+      ["zip.test.moth", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_mistakes"]],
+      ["mcp.test.moth", ["test_initialize", "test_a_version_it_doesnt_know_gets_its_newest", "test_notifications_have_no_reply",
+        "test_tools_list", "test_tools_call", "test_a_tool_that_gives_a_list_gives_json", "test_a_tools_mistake_is_its_error",
+        "test_unknown_tools_and_methods", "test_what_isnt_json", "test_resources", "test_prompts", "test_ping"]],
+      ["pdf.test.moth", ["test_widths", "test_text_colours_and_lines", "test_paragraphs_wrap_to_their_width", "test_the_file_finds_its_objects",
+        "test_mistakes"]],
+      ["xlsx.test.moth", ["test_column_names", "test_round_trips", "test_reading_what_excel_writes", "test_mistakes"]]]) {
       const results = testMoth(tool(file), { engine, files: found });
       assert.deepEqual(results.map((r) => [r.name, r.error?.message]), names.map((n) => [n, undefined]), `${file} on ${engine}`);
     }

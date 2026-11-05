@@ -1,0 +1,69 @@
+use "xlsx.moth" as xlsx
+use "zip.moth" as zip
+
+to test_column_names
+    expect xlsx's column_name(1) is "A"
+    expect xlsx's column_name(26) is "Z"
+    expect xlsx's column_name(27) is "AA"
+    expect xlsx's column_name(52) is "AZ"
+    expect xlsx's column_name(703) is "AAA"
+end
+
+to test_round_trips
+    set book to xlsx's workbook()
+    set sales to list of (list of "Month", "Sales", "Done"), (list of "January", 120, yes), (list of "Fe<b> & \"co\"", 95.5, no), (list of " spaced ", nothing, 0.1 + 0.2)
+    xlsx's sheet(book, "Sales", sales)
+    xlsx's sheet(book, "Empty", empty list)
+    set read_back to xlsx's read_book(xlsx's bytes_of(book))
+    expect keys of read_back is list of "Sales", "Empty"
+    set rows to item "Sales" of read_back
+    expect item 1 of rows is list of "Month", "Sales", "Done"
+    expect item 2 of rows is list of "January", 120, yes
+    expect item 3 of rows is list of "Fe<b> & \"co\"", 95.5, no
+    expect item 4 of rows is list of " spaced ", nothing, 0.3
+    expect item "Empty" of read_back is empty list
+    expect xlsx's rows_of(xlsx's bytes_of(book)) is rows
+end
+
+# a workbook as Excel writes it: shared strings, rich text, cells skipped, rows skipped, a sheet's own name
+to test_reading_what_excel_writes
+    set head to "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+    set names to list of "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "xl/sharedStrings.xml", "xl/worksheets/data.xml"
+    set workbook_xml to head + "<workbook xmlns=\"x\" xmlns:r=\"y\"><sheets><sheet name=\"Data\" sheetId=\"7\" r:id=\"rId3\"/></sheets></workbook>"
+    set rels to head + "<Relationships xmlns=\"z\"><Relationship Id=\"rId3\" Target=\"worksheets/data.xml\"/></Relationships>"
+    set strings to head + "<sst count=\"2\"><si><t>Name</t></si><si><r><t>Bold</t></r><r><t> and not</t></r></si></sst>"
+    set cells to "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"C1\" t=\"s\"><v>1</v></c></row><row r=\"3\"><c r=\"B3\"><v>1.5</v></c><c r=\"C3\" t=\"str\"><f>A1</f><v>Name</v></c></row>"
+    set sheet_xml to head + "<worksheet><sheetData>" + cells + "</sheetData></worksheet>"
+    set data to zip's zipped(names, list of workbook_xml, rels, strings, sheet_xml)
+    set rows to item "Data" of xlsx's read_book(data)
+    expect rows is list of (list of "Name", nothing, "Bold and not"), empty list, (list of nothing, 1.5, "Name")
+end
+
+to test_mistakes
+    set book to xlsx's workbook()
+    try
+        xlsx's bytes_of(book)
+        fail with "no sheets"
+    if it fails with why
+        expect "needs a sheet" is in why
+    end
+    try
+        xlsx's sheet(book, "a/b", empty list)
+        fail with "a bad name"
+    if it fails with why
+        expect "can't have / in it" is in why
+    end
+    xlsx's sheet(book, "One", empty list)
+    try
+        xlsx's sheet(book, "one", empty list)
+        fail with "the same name twice"
+    if it fails with why
+        expect "has a sheet called one already" is in why
+    end
+    try
+        xlsx's read_book("not a zip" as bytes)
+        fail with "not a workbook"
+    if it fails with why
+        expect "isn't a workbook" is in why
+    end
+end

@@ -6049,7 +6049,7 @@ to cli_new_next with cli_kind, cli_name
     return "moth run main.moth, and moth test"
 end
 
-to cli_new with cli_kind, cli_name
+to cli_new_project with cli_kind, cli_name
     if not cli_project_name(cli_name)
         say "moth: a project's name is a letter, then letters, digits and _ (and not main), not '" + cli_name + "'" to the error output
         return 1
@@ -6080,7 +6080,7 @@ to cli_new with cli_kind, cli_name
     return 0
 end
 
-# the files of a new project of a kind (see cli_new), each a record of its path in the project's folder and its
+# the files of a new project of a kind (see cli_new_project), each a record of its path in the project's folder and its
 # text, with the project's name where it goes
 to cli_new_files with cli_kind, cli_name
     set cli_files to empty list
@@ -6438,7 +6438,6 @@ to cli_new_files with cli_kind, cli_name
     return cli_files
 end
 
-
 # ---------- moth explain ----------
 # moth explain <file.moth> | moth explain <a mistake's words> (DESIGN §140): what a mistake means, why it happens
 # and how to put it right, with code that makes it and the same code put right. Given a file, the first mistake
@@ -6626,7 +6625,6 @@ to cli_explanations
     add record with has cli_has, title "A program's ending number out of range.", why "A program ends with a whole number from 0 to 255: 0 for all went well, anything else for what went wrong.", wrong "stop the program with -1", right "stop the program with 1" to cli_known
     return cli_known
 end
-
 
 # ---------- moth upgrade ----------
 # moth upgrade [--check] (DESIGN §140): the newest release of moth in place of the moth on PATH, its download
@@ -7032,7 +7030,7 @@ to cli_doc_bottom
     return "<footer>Made by <code>moth doc</code>.</footer>\n</body>\n</html>\n"
 end
 
-to cli_doc with cli_paths, cli_into
+to cli_doc_pages with cli_paths, cli_into
     set cli_folder to cli_into
     if cli_folder is nothing
         set cli_folder to "doc"
@@ -7513,7 +7511,7 @@ to cli_dispatch with cli_given
             set cli_name to item 3 of cli_given
         end
         if cli_kind is in cli_new_kinds
-            return cli_new(cli_kind, cli_name)
+            return cli_new_project(cli_kind, cli_name)
         end
     end
     if cli_command is "explain" and length of cli_given is at least 2 # what a mistake means
@@ -7545,7 +7543,7 @@ to cli_dispatch with cli_given
             end
         end
         if cli_doc_fine and length of cli_doc_files is greater than 0
-            return cli_doc(cli_doc_files, cli_doc_into)
+            return cli_doc_pages(cli_doc_files, cli_doc_into)
         end
     end
     if cli_command is "watch" and length of cli_given is at least 2 and item 2 of cli_given is not "watch" # again on each change
