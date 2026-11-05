@@ -295,8 +295,8 @@ let standalone = null;
 function mothExe() {
   if (standalone) return standalone;
   const dir = mkdtempSync(join(tmpdir(), "moth-standalone-"));
-  const sources = Object.fromEntries(["moth.moth", "machine.moth", "compiler.moth", "wasm.moth", "stdlib.moth", "webpage.moth", "checker-rules.moth", "moth-debugger.moth", "tools/hash.moth", "moth-coverage.moth", "package.json"].map((f) => [f, here(f)]));
-  const made = machine(sources["moth.moth"], { files: { "machine.moth": sources["machine.moth"], "compiler.moth": sources["compiler.moth"], "wasm.moth": sources["wasm.moth"], "stdlib.moth": sources["stdlib.moth"], "webpage.moth": sources["webpage.moth"], "checker-rules.moth": sources["checker-rules.moth"], "tools/hash.moth": sources["tools/hash.moth"], "moth-coverage.moth": sources["moth-coverage.moth"] }, target, name: "moth.moth", allow: ["--allow-read", "--allow-write", "--allow-run"],
+  const sources = Object.fromEntries(["moth.moth", "machine.moth", "compiler.moth", "wasm.moth", "wasm-runtime.moth", "stdlib.moth", "webpage.moth", "checker-rules.moth", "moth-debugger.moth", "tools/hash.moth", "moth-coverage.moth", "package.json"].map((f) => [f, here(f)]));
+  const made = machine(sources["moth.moth"], { files: { "machine.moth": sources["machine.moth"], "compiler.moth": sources["compiler.moth"], "wasm.moth": sources["wasm.moth"], "wasm-runtime.moth": sources["wasm-runtime.moth"], "stdlib.moth": sources["stdlib.moth"], "webpage.moth": sources["webpage.moth"], "checker-rules.moth": sources["checker-rules.moth"], "tools/hash.moth": sources["tools/hash.moth"], "moth-coverage.moth": sources["moth-coverage.moth"] }, target, name: "moth.moth", allow: ["--allow-read", "--allow-write", "--allow-run"],
     include: Object.fromEntries(["moth-debugger.moth", "package.json"].map((file) => [file, Buffer.from(sources[file])])) });
   const exe = executable(dir, "moth-first");
   writeFileSync(exe, made);

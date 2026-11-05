@@ -5921,3 +5921,66 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
   whole numbers written on the right, in functions, loops and sums, and the
   mistakes with their lines and calls: in machine code against the
   JavaScript engine, and on the VM, the JIT and WebAssembly, which agree.
+
+## 139. Text in the WebAssembly module
+
+The second of `moth.wasm`'s four stages (§125) is the runtime in WebAssembly,
+so a module imports nothing from `vm.js`. It goes in parts, and text is the
+first, as nearly everything after it (a mistake's words, a dictionary's keys,
+the built-ins) needs it. A module made 68 imports; it makes 65 now, and text,
+joining it, comparing it and showing a number in it no longer leave the module.
+
+- **Written once.** wasm.js and wasm.moth must make the same bytes, so each
+  piece of runtime would be written twice: as JavaScript calls, and as text in
+  Moth. [`wasm-runtime.js`](wasm-runtime.js) holds the new runtime once, as
+  WebAssembly's own instructions, a function at a time, with named inputs and
+  locals. wasm.js assembles it; `make-wasm-runtime.mjs` writes it into
+  `wasm-runtime.moth`, which wasm.moth reads and assembles by the same rules.
+  Both make its functions before the rest of the runtime, so the rest can call
+  them, and write their code last, so they can call the rest. A test checks
+  `wasm-runtime.moth` is up to date, and the corpus checks the two agree.
+- **Text as UTF-16, in the module.** A text was a struct holding a JavaScript
+  string. It is now a view of the first so many units of a buffer, in UTF-16
+  like JavaScript's strings, so its length, its order (unit by unit) and what
+  JSON makes of half an emoji stay what the VM's are. Text that ends where
+  its buffer's units in use end gets more added in place, the buffer growing
+  by half when it's full; units past those in use never change, so every
+  text that was a view of the buffer stays as it was. So joining text in a
+  loop takes as long as the text is, as JavaScript's strings do, and text past
+  JavaScript's longest (536,870,888 units) hands the program to the VM, which
+  says what it says.
+- **The program's own text** is in the module's data, each text's units made
+  into an array by `array.new_data` when the program starts, and not asked of
+  JavaScript one by one.
+- **JavaScript's text, while it's needed.** Dictionaries are still Maps, and
+  `say` and the built-ins are still JavaScript's, so text still crosses. It
+  crosses through a memory of the module's own, 32,768 units at a time, which
+  is where WASI will want text too; a text keeps the JavaScript string it was
+  made into, and text JavaScript made gets units only when the module needs
+  them. wasm.moth reads the units of a program's text from its letters, and
+  half of an emoji on its own, which its UTF-8 can't hold, from `as json`.
+- **Numbers as text, as the VM shows them.** `"n is " + n` is joined in the
+  module, so a number becomes text there: to 15 significant digits, laid out
+  as JavaScript lays numbers out. It is machine code's way (§25), redone in
+  WebAssembly: a whole number below 2^53 by its digits; anything else below
+  that by its first 16 digits, from its whole part and from its fraction times
+  2^120 (held in four 30-bit pieces, and below 2^-68 as big whole numbers),
+  rounded half up as `toPrecision` rounds, and less the zeros at the end;
+  whole numbers from 2^53 by the fewest digits that read back as them
+  (Steele and White's way, with big whole numbers); and numbers below
+  2^-1021, where 15 digits no longer read back as one double each, by the
+  double they read back as, and then its fewest digits.
+- **Tested.** 9 million numbers (any bits at all, a few digits somewhere, the
+  smallest numbers, big whole numbers) against JavaScript's own, every one the
+  same, and a test runs 120,000 of them each time. Text joined in place, the
+  text it began kept as it was; text compared, with emoji and half of one; a
+  module run with no imports at all showing numbers and joining text. And
+  every program the engines are tested with, made by wasm.js and wasm.moth
+  byte for byte, and run against the VM.
+- **What it gave, and cost.** On the WebAssembly engine, comparing text 500,000
+  times went from 117 ms to 10 (it called JavaScript each time); joining
+  200,000 letters in a loop from 10.7 ms to 9.9, and 100,000 numbers from 20
+  to 15.6. Saying 20,000 lines went from 12 ms to 16, as the text now crosses
+  to JavaScript to be said. A module for `say 1` grew from 7.8 KB to 12.4 KB,
+  and making one in wasm.js takes about a millisecond longer, the shared
+  runtime's code assembled and encoded once and kept.

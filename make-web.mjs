@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 // what the page and its worker import, and what those import
-export const MODULES = ["vm.js", "pictures.js", "scope.js", "jit.js", "wasm-binary.js", "wasm.js", "checker.js", "moth.js", "examples.js", "worker.js"];
+export const MODULES = ["vm.js", "pictures.js", "scope.js", "jit.js", "wasm-binary.js", "wasm-runtime.js", "wasm.js", "checker.js", "moth.js", "examples.js", "worker.js"];
 export const PLACE = "/*MOTH_APP*/null"; // where moth puts the program, its name and the files it uses, as JSON
 
 // text that's safe inside a <script>: no "</script" or "<!--" in it

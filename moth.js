@@ -2761,17 +2761,19 @@ export function runWasm(bytes, print = console.log, { maxSteps = Infinity, draw,
   }
 }
 
-// Moth's WebAssembly back end written in Moth (wasm.moth, which reads programs with compiler.moth): give it both
-// files' text and get back a function that turns a program, and the files it uses ({ "name.moth": text }), into
-// what compileToWasmModule in wasm.js gives: { bytes, ats, names, messages, texts, kinds }, the same bytes and all.
-export function wasmMothCompiler(wasmSource, compilerSource) {
-  const { wasm_compile: compileWasm } = loadProgram(compileToJs(wasmSource, { files: (name) => (name === "compiler.moth" ? compilerSource : undefined), file: "wasm.moth" }));
+// Moth's WebAssembly back end written in Moth (wasm.moth, which reads programs with compiler.moth, and the shared
+// part of its runtime from wasm-runtime.moth): give it the three files' text and get back a function that turns
+// a program, and the files it uses ({ "name.moth": text }), into what compileToWasmModule in wasm.js gives:
+// { bytes, ats, names, messages, kinds }, the same bytes and all.
+export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
+  const used = { "compiler.moth": compilerSource, "wasm-runtime.moth": runtimeSource };
+  const { wasm_compile: compileWasm } = loadProgram(compileToJs(wasmSource, { files: (name) => used[name], file: "wasm.moth" }));
   return (source, files = {}) => {
     try {
       const made = compileWasm(source, Object.keys(files), Object.values(files));
       // a position as moth.js's tokens have one: the program's own file is no file
       const ats = made.ats.map((at) => ({ type: at.type, line: at.line, col: at.col, file: at.file || undefined }));
-      return { bytes: Uint8Array.from(made.code), ats, names: made.names, messages: made.messages, texts: made.texts, kinds: made.kinds };
+      return { bytes: Uint8Array.from(made.code), ats, names: made.names, messages: made.messages, kinds: made.kinds };
     } catch (err) {
       if (err instanceof MothError && isRecord(err.value) && Object.hasOwn(err.value, "reason")) fail(err.value.at, err.value.reason);
       if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");

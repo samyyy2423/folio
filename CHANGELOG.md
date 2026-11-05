@@ -31,6 +31,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **`moth build --target wasm`** makes `<file>.wasm`, a WebAssembly module, from
   [`wasm.moth`](wasm.moth): Moth's WebAssembly back end, now written in Moth too, which makes exactly the
   bytes the playground's WebAssembly engine makes. `runWasm` in `moth.js` runs one.
+- **Text on the WebAssembly engine** lives in the module now, as UTF-16, the first part of the runtime moving
+  out of JavaScript (DESIGN §139): joining text, comparing it and showing numbers in it happen in WebAssembly,
+  and text that's added to grows in place. Comparing text is 12 times faster there, and joining it a little
+  faster. A number joined to text is shown exactly as the other engines show it, to 15 digits.
 - **Fixed:** on the WebAssembly engine, a function that used a variable from outside it only in `ask`'s
   question, `wait`'s amount or `play note`'s note or time found it had no value.
 - **A cookbook, examples and exercises.** [The cookbook](https://samyyy2423.github.io/moth/docs/cookbook/) has

@@ -16,7 +16,7 @@ import { deflateRawSync, inflateRawSync } from "node:zlib";
 const here = (file) => new URL(file, import.meta.url);
 const repo = (file) => new URL(`../../${file}`, import.meta.url);
 const manifest = JSON.parse(readFileSync(here("package.json"), "utf8"));
-export const ENGINE = ["moth.js", "vm.js", "scope.js", "jit.js", "wasm.js", "wasm-binary.js", "checker.js", "pictures.js"];
+export const ENGINE = ["moth.js", "vm.js", "scope.js", "jit.js", "wasm.js", "wasm-binary.js", "wasm-runtime.js", "checker.js", "pictures.js"];
 const OWN = ["package.json", "extension.js", "client.js", "debug-adapter.js", "find-moth.js", "language-configuration.json", "syntaxes/moth.tmLanguage.json", "snippets/moth.json", "images/icon.png", "README.md", "CHANGELOG.md"];
 const ENGINE_PACKAGE = Buffer.from('{ "type": "module" }\n'); // the engine's files are modules
 // every file of the extension's folder that goes in the package, as vsce lists them (vsce ls), the engine's
