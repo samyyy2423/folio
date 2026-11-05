@@ -6,6 +6,15 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
+  `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
+  `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,
+  whose name isn't a package's name, whose source or version starts with `-`, or whose commit isn't one, and
+  runs git with no hooks. A clone that can't go to the version asked for isn't left behind (DESIGN §152).
+- **Deeply nested code is the same mistake everywhere.** `format` and the compilers written in Folio let
+  JavaScript's stack running out escape as a RangeError; now each says "the code is nested too deeply". The
+  checker is much faster on long sums: 1,000 terms in 20 ms, not 198.
+- **git's messages keep their r's.** What `folio add`, `get` and `update` said git said had lost every r.
 - **More mistakes worded in WebAssembly.** A call of what isn't a function, a function given the wrong number
   of inputs, a range of what isn't numbers, and a field of what isn't a record are worded inside the module,
   with the program's own names (DESIGN §151).

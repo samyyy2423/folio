@@ -324,7 +324,16 @@ class Checker extends Scope {
   }
 
   // What we can know about an expression: its type (a function, since types settle later) and its value, if written out.
+  // Made once for each expression: a long sum has a sum in it at each `+`, and a rule asks about each (DESIGN §152)
   type(e) {
+    const made = (this.typed ??= new WeakMap()).get(e);
+    if (made) return made;
+    const type = this.typeOf(e);
+    this.typed.set(e, type);
+    return type;
+  }
+
+  typeOf(e) {
     switch (e.kind) {
       case "value": {
         const t = literalType(e.value);
@@ -334,14 +343,18 @@ class Checker extends Scope {
         const key = this.resolve(e.name) && this.key(e.name);
         return () => (key ? this.slotType(key) : null);
       }
-      case "math": {
+      case "math": { // worked out again only once a variable's type has changed (all.round), as a sum's are asked often
         const [left, right] = [this.type(e.left), this.type(e.right)];
-        return () => {
+        const all = this.all;
+        let round = -1;
+        let type;
+        const work = () => {
           const [a, b] = [base(left()), base(right())];
           if (a === undefined || b === undefined) return undefined;
           if (e.op === "+" && (a === "text" || b === "text")) return "text";
           return this.known(a, b) ? resultTypeOf(e.op, a, b) : null;
         };
+        return () => (round === all.round ? type : ((type = work()), (round = all.round), type));
       }
       case "compare":
       case "not":
@@ -839,13 +852,14 @@ function ends(body) {
 export function check(program) {
   const all = { scopes: 0, sources: new Map(), types: { sure: new Map(), said: new Map() }, mode: "sure", checks: [], warnings: [], used: new Set(),
     made: new Map(), defines: new Map(), declared: new Map(), gives: new Map(), kinds: new Map(), makers: new Map(), fieldsSet: new Set(),
-    unknownKinds: new Set() };
+    unknownKinds: new Set(), round: 0 };
   new Checker(null, "main", [], program, all);
   // Work out every variable's type: repeat until nothing changes. A type can only go from unknown, to one
   // type, to one that says less, to "could be several", so this stops after a few rounds. Then again, with
   // what the code says of itself, where an input that says what it is is that.
   for (const mode of ["sure", "said"]) {
     all.mode = mode;
+    all.round++;
     const types = all.types[mode];
     for (let changed = true; changed; ) {
       changed = false;
@@ -855,12 +869,14 @@ export function check(program) {
         else for (const source of sources) type = join(type, source());
         if (type !== types.get(key)) {
           types.set(key, type);
+          all.round++;
           changed = true;
         }
       }
     }
   }
   all.mode = "said";
+  all.round++;
   for (const gives of all.gives.values()) gives(); // a kind a `gives` names that the program doesn't make
   for (const run of all.checks) run();
   for (const [key, { at, message }] of all.made) {

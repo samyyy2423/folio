@@ -542,10 +542,10 @@ test("folio add, update, get and remove keep packages/ and folio.packages, and u
   // mistakes
   assert.deepEqual(folio(other, "add", "../shout"), ["", "folio: there's a package called shout here already: folio update shout moves it to its newest\n", 1]);
   assert.deepEqual(folio(other, "add", "../shout", "bad/name"),
-    ["", "folio: 'bad/name' can't be a package's name (letters, digits, '-', '_' and '.' make one): give it one, as in folio add ../shout thing\n", 1]);
+    ["", "folio: 'bad/name' can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.'): give it one, as in folio add ../shout thing\n", 1]);
   const nowhere = folio(other, "add", "../nowhere");
   assert.equal(nowhere[2], 1);
-  assert.match(nowhere[1], /^folio: git couldn't fetch \.\.\/nowhere: /);
+  assert.match(nowhere[1], /^folio: git couldn't fetch \.\.\/nowhere: fatal: repository '\.\.\/nowhere' does not exist/);
   assert.deepEqual(folio(other, "remove", "nope"), ["", "folio: there's no package called nope here: folio packages lists them\n", 1]);
   assert.equal(folio(other, "add")[2], 2);
   assert.deepEqual(folio(root, "get"), ["", "folio: there's no folio.packages here: folio add <git repository> adds a package\n", 1]);
@@ -554,6 +554,95 @@ test("folio add, update, get and remove keep packages/ and folio.packages, and u
   assert.deepEqual(folio(other, "remove", "greet"), ["removed greet\n", "", 0]);
   assert.deepEqual(readdirSync(join(other, "packages")), ["shout"]);
   assert.deepEqual(folio(other, "packages"), [`shout at ${shouting.slice(0, 7)}, from ../shout\n`, "", 0]);
+});
+
+// What a folio.packages, a program's or a package's own, can't make folio do (DESIGN §152): take away a folder
+// outside packages/, give git an option, which --upload-pack makes a command, or have git run a hook a
+// package's .git has
+test("folio won't take a package whose name, source or commit would reach outside packages/ or into git's options", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { exe } = folioExe();
+  const root = mkdtempSync(join(tmpdir(), "folio-guarded-"));
+  const git = (cwd, ...args) => {
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    assert.equal(done.status, 0, done.stderr);
+    return done.stdout.trim();
+  };
+  const folio = (cwd, ...args) => {
+    const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
+    return [done.stdout, done.stderr, done.status];
+  };
+  try {
+    const lib = join(root, "kind");
+    mkdirSync(lib);
+    writeFileSync(join(lib, "kind.folio"), 'set word to "one"\n');
+    git(lib, "init", "-q");
+    git(lib, "add", ".");
+    git(lib, "commit", "-qm", "one");
+    const one = git(lib, "rev-parse", "HEAD");
+    writeFileSync(join(lib, "kind.folio"), 'set word to "two"\n');
+    git(lib, "commit", "-qam", "two");
+    const two = git(lib, "rev-parse", "HEAD");
+    mkdirSync(join(root, "precious"));
+    writeFileSync(join(root, "precious", "keep.txt"), "keep");
+    const marker = join(root, "ran.txt").replace(/\\/g, "/");
+
+    // a program's folio.packages: each line refused, by every command that reads it, and nothing done
+    const app = join(root, "app");
+    mkdirSync(join(app, "packages"), { recursive: true });
+    git(root, "clone", "-q", "--bare", lib, join(app, "packages", "kind.git")); // what git clone ... packages/kind would find
+    const notName = "that can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.')";
+    const option = `--upload-pack=sh -c 'echo x > ${marker}'`;
+    for (const [line, name, why] of [
+      [`../../precious ../kind ${one}`, "../../precious", notName],
+      [`... ../kind ${one}`, "...", notName],
+      [`kind ${option} ${one}`, "kind", `where it comes from, '${option}', starts with '-', as git's options do`],
+      [`kind ../kind@--detach ${one}`, "kind", "its version, '--detach', starts with '-', as git's options do"],
+      [`kind ../kind --orphan=x`, "kind", "its commit, '--orphan=x', isn't one: a commit is 40 hex digits, or 64"],
+    ]) {
+      writeFileSync(join(app, "folio.packages"), line + "\n");
+      const said = `folio: folio.packages lists ${name}, which folio won't use: ${why}\n`;
+      for (const command of [["get"], ["update"], ["packages"], ["remove", name]]) assert.deepEqual(folio(app, ...command), ["", said, 1], `${command[0]}: ${line}`);
+    }
+    assert.equal(readFileSync(join(root, "precious", "keep.txt"), "utf8"), "keep");
+    assert.equal(existsSync(marker), false);
+    assert.deepEqual(readdirSync(join(app, "packages")), ["kind.git"]);
+
+    // folio add's source and version, checked as a line is
+    rmSync(join(app, "folio.packages"));
+    assert.deepEqual(folio(app, "add", "../kind@-x", "kind"), ["", "folio: folio won't add ../kind@-x: its version, '-x', starts with '-', as git's options do\n", 1]);
+    assert.deepEqual(folio(app, "add", "--template=../kind", "kind"), ["", "folio: folio won't add --template=../kind: where it comes from, '--template=../kind', starts with '-', as git's options do\n", 1]);
+    assert.deepEqual(readdirSync(join(app, "packages")), ["kind.git"]);
+
+    // a package's own folio.packages: what it lists that folio won't take isn't fetched, and folio add says so
+    const evil = join(root, "evil");
+    mkdirSync(evil);
+    writeFileSync(join(evil, "evil.folio"), 'set word to "evil"\n');
+    writeFileSync(join(evil, "folio.packages"), `../../outside ../kind ${one}\n`);
+    git(evil, "init", "-q");
+    git(evil, "add", ".");
+    git(evil, "commit", "-qm", "evil");
+    const using = join(root, "using");
+    mkdirSync(using);
+    assert.deepEqual(folio(using, "add", "../evil"), [`added evil at ${git(evil, "rev-parse", "HEAD").slice(0, 7)}, from ../evil\n`,
+      `folio: packages/evil/folio.packages lists ../../outside, which folio won't use: ${notName}\n`, 1]);
+    assert.equal(existsSync(join(root, "outside")), false);
+
+    // a hook in a package's .git: git runs it, and folio's git doesn't
+    const hooked = join(root, "hooked");
+    mkdirSync(hooked);
+    assert.equal(folio(hooked, "add", "../kind")[2], 0);
+    const hook = join(hooked, "packages", "kind", ".git", "hooks", "post-checkout");
+    writeFileSync(hook, `#!/bin/sh\necho ran > "${marker}"\n`);
+    chmodSync(hook, 0o755);
+    git(join(hooked, "packages", "kind"), "checkout", "-q", one);
+    assert.equal(existsSync(marker), true, "git itself runs the hook");
+    rmSync(marker);
+    assert.deepEqual(folio(hooked, "get"), [`kind at ${two.slice(0, 7)}\n`, "", 0]);
+    assert.equal(existsSync(marker), false, "folio's git doesn't");
+    assert.equal(git(join(hooked, "packages", "kind"), "rev-parse", "HEAD"), two);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 // A package uses the standard library as a program does (DESIGN §127): `use "text.folio"` in packages/datey is

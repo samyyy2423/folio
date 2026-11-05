@@ -160,6 +160,13 @@ worth knowing what you get.
 - **Same everywhere.** folio checks a package out with its line ends as committed and a symbolic link as a
   small file holding where it points, whatever the system or your git settings, so its files and their sum
   are the same on Windows and Linux, and a link in a package can't point `use` at a file outside it.
+- **Kept to packages/.** folio takes a `folio.packages` line, a program's own or a package's, only if its name
+  is a package's name, so its folder is in `packages/` and nowhere else; where it comes from and its version
+  don't start with `-`, so git can't take them for its options; and its commit is a commit. It runs git with
+  no hooks, no fsmonitor and no `ext::`, so a package's `.git` can't make it run a command. A `packages/`
+  folder you got some other way, in a zip say, is trusted as it is, as git reads its `.git/config`: delete it
+  and let `folio get` fetch it. (Before the release after 1.11.0, a `folio.packages` could do both: see
+  [DESIGN.md](DESIGN.md) §152.)
 
 ### Advisories and folio audit
 

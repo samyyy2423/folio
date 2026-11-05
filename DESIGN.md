@@ -6462,3 +6462,58 @@ program's names. It has both now, and four checks are worded in it. A module imp
   test, its six mistakes caught in it and said, the same as the VM says them; and every program the
   engines are tested with, made by wasm.js, wasm.folio and folio.wasm byte for byte.
 
+## 152. A security pass: permissions, packages and broken code
+
+What a program, a project's files or a package can make folio do that it shouldn't, tried on folio.exe and on
+every front end, after the rename (§150). Two holes were found in packages, both from `folio.packages`, and
+fixed; the permissions held; and broken code found three ways to escape as a JavaScript error, or to take far
+too long, which are fixed too, but for one, below.
+
+- **Permissions held.** 38 tries at getting round `--allow-read=data`, `--allow-write=out` and
+  `--allow-net=example.invalid` on Windows: `..` and `.\..` in every spelling, a whole path, `\\?\` and `\\.\`
+  paths, a share (`\\localhost\C$`), a stream (`::$DATA`), `C:x` (relative to the drive's own folder),
+  `\Users\...` (from the drive's top), a trailing dot or space, a junction inside the allowed folder that
+  points out of it; and for sites, a user before an `@`, a `#`, a backslash, `%2f`, a trailing dot, a
+  look-alike name and `file://`. Each was refused, or was the allowed place itself.
+- **folio add held.** 21 addresses and versions made to be git's options, or a shell's (`--upload-pack=`,
+  `ext::`, `-oProxyCommand=`, `--config=`, `;`, `$(...)`, backquotes): none ran a command, as a name made from
+  one isn't a package's name, git won't take `ext::`, and the place git got as a repository didn't exist.
+- **A folio.packages line could reach out of packages/.** Its name made a path unchecked: with `../../x`,
+  `folio get` (which fetches a package with no sum again, taking its folder away first) and `folio remove`
+  took away a folder outside the project.
+- **A folio.packages line could make git run a command.** Its source went to `git clone` as it was, before
+  the folder to clone into, so one of `--upload-pack=<command>` was an option, and the folder git's
+  repository: with a repository's files at `packages/<name>.git`, which a project can hold, `folio get` ran
+  the command. folio add reads each package's own folio.packages the same way, so a package could do it too.
+  Its commit, and a version after an `@`, went to `git checkout` as options the same way.
+- **What folio takes now** (`cli_package_fault`), from a program's folio.packages, from a package's, and from
+  folio add: a package's name (no `/`, `\` or `:`, and not ending in `.`, which Windows drops, so that `...`
+  isn't `packages/` itself), a source and a version that don't start with `-`, and a commit of 40 or 64 hex
+  digits. A line that isn't is said, with why, and the command ends with 1 having done nothing. git gets the
+  source after `--`. A clone that can't go to the version asked for is taken away, not left for the next
+  folio add to find in its way.
+- **git runs nothing of a package's.** Every git folio starts has `core.hooksPath=/dev/null`,
+  `core.fsmonitor=false` and `protocol.ext.allow=never`: a `post-checkout` hook in `packages/kind/.git`, which
+  git itself runs, folio's git doesn't. What's left is a `packages/` got some other way than folio's clone,
+  in a zip say, whose `.git/config` git reads when folio fetches into it (SECURITY.md says so).
+- **git's words keep their r's.** Folio's text has only `\n` and `\t`, so `"\r"` is `"r"`, and the line made
+  of what git said dropped every r ("Could not esolve host"). It's `cli_cr` now, as the rest of folio.folio has.
+- **Broken code.** 20,000 programs broken at random, beyond the 8,000 the tests break (§60): Folio's words
+  and symbols put in, pieces cut out or copied, lines swapped, programs spliced, each through `check`,
+  `format`, the VM's, the JIT's and the WebAssembly compiler, and compiler.folio, and each that compiled run
+  on all three engines with a step limit. Only FolioErrors came of them.
+- **Deep code.** About 1,000 levels of nesting runs JavaScript's stack out. `build()` made that "the code is
+  nested too deeply", but `format()` didn't, and the compilers written in Folio, as JavaScript and as
+  folio.wasm, only made their own depth limit that mistake, so a RangeError got out. All of them do it now
+  (`ranOut`, which counts Firefox's InternalError too), and the tests check seven front ends give the same
+  mistake for four shapes of deep code. folio.exe ends every one of them with a mistake too.
+- **The checker on long sums.** It made the type of each sum in a sum again for each `+`, and worked each
+  out again for each: 3,000 terms took 3 s, 5,000 14.6 s to find them too deeply nested. A type is made once
+  for each expression now, and a sum's worked out again only once a variable's type has changed
+  (`all.round`): 1,000 terms take 20 ms, not 198, and what it finds is the same.
+- **Still slow, for later.** compiler.folio looks a name up by going through every name so far, so a
+  program of 20,000 top-level variables takes folio.exe 20 s to run (5,000: 1 s), where folio.js takes 0.2 s
+  for 50,000; and folio.exe's check takes seconds on a chain of thousands of `-` or `+` (8,000 `-`: 6 s), and
+  minutes on 50,000. They're programs no one writes by hand, but a page or a tool that checks code it's sent
+  should limit its size.
+

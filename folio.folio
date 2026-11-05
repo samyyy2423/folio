@@ -4290,8 +4290,14 @@ end
 # files are checked out as they are in the repository, whatever the system or the person's own settings, so
 # their sum is the same everywhere: line ends as they were committed, and a symbolic link as a file holding
 # where it points.
+# git, run with its options; a package's own .git can't make it run a command: no hooks, no fsmonitor, no ext::
+# (DESIGN §152)
 to cli_git with cli_git_args
     set cli_all_args to list of "-c", "core.longpaths=true", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "-c", "core.symlinks=false"
+    for each cli_safe in list of "core.hooksPath=/dev/null", "core.fsmonitor=false", "protocol.ext.allow=never"
+        add "-c" to cli_all_args
+        add cli_safe to cli_all_args
+    end
     for each cli_arg in cli_git_args
         add cli_arg to cli_all_args
     end
@@ -4313,7 +4319,7 @@ to cli_git_said with cli_answer
     for each cli_c in cli_said
         if cli_c is "\n"
             add " " to cli_one
-        else if cli_c is not "\r"
+        else if cli_c is not cli_cr
             add cli_c to cli_one
         end
     end
@@ -4347,9 +4353,10 @@ to cli_read_or_nothing with cli_path
     end
 end
 
-# a package's name: letters, digits, '-', '_' and '.', as `use the package` takes
+# a package's name: letters, digits, '-', '_' and '.', as `use the package` takes, and not ending in '.', which
+# Windows drops: packages/... would be packages/ itself
 to cli_package_name with cli_name
-    if cli_name is "" or cli_name is "." or cli_name is ".."
+    if cli_name is "" or item (length of cli_name) of cli_name is "."
         return no
     end
     for each cli_c in cli_name
@@ -4391,9 +4398,44 @@ to cli_words_of with cli_line
     return cli_found
 end
 
+# whether a text is a commit, as git names one: 40 hex digits, or 64
+to cli_is_commit with cli_commit
+    if length of cli_commit is not 40 and length of cli_commit is not 64
+        return no
+    end
+    for each cli_c in cli_commit
+        if not (cli_c is in "0123456789abcdefABCDEF")
+            return no
+        end
+    end
+    return yes
+end
+
+# why folio won't take a package as given, or nothing if it will (DESIGN §152): a name that isn't one (../x is a
+# folder outside packages/, which get or remove would take away), where it comes from or its version starting
+# with '-', which git would take for one of its options, or a commit that isn't one. cli_commit is nothing for
+# folio add, which finds the commit
+to cli_package_fault with cli_name, cli_source, cli_commit
+    if not cli_package_name(cli_name)
+        return "that can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.')"
+    end
+    if cli_source is "" or item 1 of cli_source is "-"
+        return "where it comes from, '" + cli_source + "', starts with '-', as git's options do"
+    end
+    set cli_ref to ref of cli_source_and_ref(cli_source)
+    if cli_ref is not nothing and item 1 of cli_ref is "-"
+        return "its version, '" + cli_ref + "', starts with '-', as git's options do"
+    end
+    if cli_commit is not nothing and not cli_is_commit(cli_commit)
+        return "its commit, '" + cli_commit + "', isn't one: a commit is 40 hex digits, or 64"
+    end
+    return nothing
+end
+
 # the packages a folio.packages text lists, each a record of its name, source and commit, and its sum: what a
-# folio.sums text (or nothing) has for that name at that commit, or nothing
-to cli_packages_in with cli_text, cli_sums_text
+# folio.sums text (or nothing) has for that name at that commit, or nothing. no, said why, if a line lists one
+# folio won't take (see cli_package_fault); cli_whose is the file, for that
+to cli_packages_in with cli_text, cli_sums_text, cli_whose
     set cli_sums to empty list
     if cli_sums_text is not nothing
         for each cli_line in cli_text_lines(cli_sums_text)
@@ -4416,6 +4458,11 @@ to cli_packages_in with cli_text, cli_sums_text
             end
             set cli_name to item 1 of cli_words
             set cli_commit to item (length of cli_words) of cli_words
+            set cli_fault to cli_package_fault(cli_name, cli_from, cli_commit)
+            if cli_fault is not nothing
+                say "folio: " + cli_whose + " lists " + cli_name + ", which folio won't use: " + cli_fault to the error output
+                return no
+            end
             set cli_sum to nothing
             for each cli_known in cli_sums
                 if item 1 of cli_known is cli_name and item 2 of cli_known is cli_commit
@@ -4429,13 +4476,13 @@ to cli_packages_in with cli_text, cli_sums_text
 end
 
 # folio.packages, read, with folio.sums's sums: a record of each line's name, source, commit and sum, or nothing
-# if there isn't one
+# if there isn't one, or no, said why, if it lists a package folio won't take
 to cli_package_list
     set cli_text to cli_read_or_nothing("folio.packages")
     if cli_text is nothing
         return nothing
     end
-    return cli_packages_in(cli_text, cli_read_or_nothing("folio.sums"))
+    return cli_packages_in(cli_text, cli_read_or_nothing("folio.sums"), "folio.packages")
 end
 
 to cli_write_packages with cli_list
@@ -4475,7 +4522,7 @@ end
 to cli_fetch with cli_name, cli_source, cli_commit
     set cli_dir to "packages/" + cli_name
     set cli_split to cli_source_and_ref(cli_source)
-    set cli_answer to cli_git(list of "clone", "--quiet", place of cli_split, cli_dir)
+    set cli_answer to cli_git(list of "clone", "--quiet", "--", place of cli_split, cli_dir)
     if cli_answer is nothing
         return nothing
     end
@@ -4490,6 +4537,7 @@ to cli_fetch with cli_name, cli_source, cli_commit
         end
         if code of cli_answer is not 0
             say "folio: " + place of cli_split + " has no tag, branch or commit called " + ref of cli_split + ": " + cli_git_said(cli_answer) to the error output
+            cli_remove_folder(cli_dir)
             return nothing
         end
     end
@@ -4500,6 +4548,7 @@ to cli_fetch with cli_name, cli_source, cli_commit
         end
         if code of cli_answer is not 0
             say "folio: " + cli_name + "'s commit " + cli_commit + " isn't in " + cli_source + ": " + cli_git_said(cli_answer) to the error output
+            cli_remove_folder(cli_dir)
             return nothing
         end
     end
@@ -4970,6 +5019,9 @@ end
 # couldn't be checked
 to cli_audit with cli_index
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         say "folio: there's no folio.packages here: folio add <git repository> adds a package" to the error output
         return 1
@@ -5080,10 +5132,18 @@ to cli_add with cli_given, cli_named, cli_only_signed
         set cli_name to cli_package_name_of(place of cli_source_and_ref(cli_source))
     end
     if not cli_package_name(cli_name)
-        say "folio: '" + cli_name + "' can't be a package's name (letters, digits, '-', '_' and '.' make one): give it one, as in folio add " + cli_given + " thing" to the error output
+        say "folio: '" + cli_name + "' can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.'): give it one, as in folio add " + cli_given + " thing" to the error output
+        return 1
+    end
+    set cli_fault to cli_package_fault(cli_name, cli_source, nothing)
+    if cli_fault is not nothing
+        say "folio: folio won't add " + cli_given + ": " + cli_fault to the error output
         return 1
     end
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         set cli_list to empty list
     end
@@ -5125,7 +5185,12 @@ to cli_add with cli_given, cli_named, cli_only_signed
         set cli_needing to name of item cli_k of cli_list
         set cli_needs to cli_read_or_nothing("packages/" + cli_needing + "/folio.packages")
         if cli_needs is not nothing
-            for each cli_need in cli_packages_in(cli_needs, cli_read_or_nothing("packages/" + cli_needing + "/folio.sums"))
+            set cli_needed to cli_packages_in(cli_needs, cli_read_or_nothing("packages/" + cli_needing + "/folio.sums"), "packages/" + cli_needing + "/folio.packages")
+            if cli_needed is no
+                set cli_failed to yes
+                set cli_needed to empty list
+            end
+            for each cli_need in cli_needed
                 set cli_have to no
                 for each cli_one in cli_list
                     if name of cli_one is name of cli_need
@@ -5161,6 +5226,9 @@ end
 # one with no sum there yet fetched again and its sum written down. With --signed, each must be signed
 to cli_get with cli_only_signed
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         say "folio: there's no folio.packages here: folio add <git repository> adds a package" to the error output
         return 1
@@ -5195,6 +5263,9 @@ end
 # commit that isn't signed isn't taken
 to cli_update with cli_named, cli_only_signed
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         say "folio: there's no folio.packages here: folio add <git repository> adds a package" to the error output
         return 1
@@ -5261,6 +5332,9 @@ end
 # `folio remove <name>`: the package's folder gone, and its line
 to cli_remove_package with cli_named
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         set cli_list to empty list
     end
@@ -5286,6 +5360,9 @@ end
 # `folio packages`: each, its commit, where it comes from, and whether it's been fetched
 to cli_list_packages
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing or length of cli_list is 0
         say "no packages: folio add <git repository> adds one"
         return 0

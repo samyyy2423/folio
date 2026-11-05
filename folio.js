@@ -2364,10 +2364,15 @@ function build(source, backEnd, { files, file } = {}) {
     return backEnd(parse(tokenize(source), { files, loaded: new Set(file ? [file] : []), open: file ? [file] : [] }));
   } catch (err) {
     // shortcut: points at line 1, since the overflow hides where the nesting was; only ~1,000 levels of brackets get here
-    if (err instanceof RangeError) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+    if (ranOut(err)) fail({ line: 1, col: 1 }, "the code is nested too deeply");
     throw err;
   }
 }
+
+// The stack ran out reading or compiling a program: past the depth the JIT keeps to (TooDeep), or past
+// JavaScript's own stack (a RangeError, or Firefox's InternalError), as ~1,000 levels of nesting can. Every front
+// end makes that the same mistake, never a JavaScript error (DESIGN §152).
+const ranOut = (err) => err instanceof TooDeep || err instanceof RangeError || err?.name === "InternalError";
 
 // Compiles Folio source to bytecode for vm.js. Options: `slots` carries over the top-level variables of
 // earlier shell entries; `debug` adds LINE markers so a debugger can pause at each statement.
@@ -2473,7 +2478,12 @@ function joined(pieces, line, tight) {
 // compile()), and the result must read exactly the same, piece for piece.
 export function format(source) {
   const [layout, tight] = [new Map(), new Set()];
-  parse(tokenize(source), { files: () => "", loaded: new Set(), open: [], layout, tight }); // what a used file holds doesn't matter here
+  try {
+    parse(tokenize(source), { files: () => "", loaded: new Set(), open: [], layout, tight }); // what a used file holds doesn't matter here
+  } catch (err) {
+    if (ranOut(err)) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+    throw err;
+  }
   const tidy = [];
   let indent = 0; // the indent of the statement being written, for the lines that carry it on
   let waiting = []; // lines with only a comment, which take the indent of the code after them
@@ -2742,7 +2752,7 @@ export function folioCompiler(compilerSource, using = compileToJs) {
     } catch (err) {
       // a mistake in the program it compiles comes back as `fail with` a record of where and why
       if (err instanceof FolioError && isRecord(err.value) && Object.hasOwn(err.value, "reason")) fail(err.value.at, err.value.reason);
-      if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+      if (ranOut(err)) fail({ line: 1, col: 1 }, "the code is nested too deeply");
       throw err;
     }
     const names = [];
@@ -2771,7 +2781,7 @@ export function machineCompiler(machineSource, compilerSource) {
         Object.keys(include), Object.values(include).map((b) => Uint8Array.from(b))));
     } catch (err) {
       if (err instanceof FolioError && isRecord(err.value) && Object.hasOwn(err.value, "reason")) fail(err.value.at, err.value.reason);
-      if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+      if (ranOut(err)) fail({ line: 1, col: 1 }, "the code is nested too deeply");
       throw err;
     }
   };
@@ -2806,7 +2816,7 @@ export function wasmFolioCompiler(wasmSource, compilerSource, runtimeSource) {
       return { bytes: Uint8Array.from(made.code), ats, names: made.names, kinds: made.kinds };
     } catch (err) {
       if (err instanceof FolioError && isRecord(err.value) && Object.hasOwn(err.value, "reason")) fail(err.value.at, err.value.reason);
-      if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+      if (ranOut(err)) fail({ line: 1, col: 1 }, "the code is nested too deeply");
       throw err;
     }
   };
@@ -2825,7 +2835,7 @@ export function folioWasmCompiler(bytes) {
     try {
       compiler.run((line) => said.push(line), undefined, Infinity, undefined, undefined, given, seeded(), { handlers: [] }, (line) => said.push(line));
     } catch (err) {
-      if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
+      if (ranOut(err)) fail({ line: 1, col: 1 }, "the code is nested too deeply");
       throw err;
     }
     const line = said.join("\n");

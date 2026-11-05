@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync, readdirSync } from "node:fs";
-import { run, test as testFolio, format, suggestedFix, debug, timeline, check, compile, compileToJs, compileToWasm, load, folioCompiler, memoryDisk, excerpt, describeTrail, FolioError, soundSamples, soundWav, LANGUAGE } from "./folio.js";
+import { run, test as testFolio, format, suggestedFix, debug, timeline, check, compile, compileToJs, compileToWasm, compileToWasmBytes, load, folioCompiler, folioWasmCompiler, memoryDisk, excerpt, describeTrail, FolioError, soundSamples, soundWav, LANGUAGE } from "./folio.js";
 import { Machine, BEEP, Ended, OP } from "./vm.js";
 import examples from "./examples.js";
 import { generatePrograms } from "./generate.js";
@@ -479,6 +479,37 @@ test("the compiler written in Folio matches the JIT on randomly broken programs"
   for (const source of brokenPrograms(1, 3000)) {
     if (/[\ud800-\udfff]/u.test(source)) continue;
     assert.deepEqual(compiled(folio, source), compiled(compileToJs, source), source);
+  }
+});
+
+// Code nested deeper than a front end can read is the same mistake in every one (DESIGN §152): format() and
+// the compilers written in Folio let the JavaScript stack running out escape, as a RangeError, before. And
+// format() and check() take any broken program: a mistake, or the program tidied, never a JavaScript error.
+test("code nested too deeply is the same mistake in every front end, and format and check take any broken program", () => {
+  const frontEnds = { format, compile, compileToJs, compileToWasmBytes, "compiler.folio": folioCompiler(COMPILER),
+    "folio.wasm": folioWasmCompiler(readFileSync(new URL("./folio.wasm", import.meta.url))) };
+  const deep = {
+    brackets: "say " + "(".repeat(5000) + "1" + ")".repeat(5000),
+    lists: "say " + "list of ".repeat(5000) + "1",
+    blocks: "if yes\n".repeat(5000),
+    functions: Array.from({ length: 5000 }, (_, i) => `to f${i}\n`).join(""),
+  };
+  for (const [shape, source] of Object.entries(deep)) {
+    assert.deepEqual(check(source), [{ line: 1, col: 1, kind: "error", message: "the code is nested too deeply" }], shape);
+    for (const [name, frontEnd] of Object.entries(frontEnds)) {
+      assert.throws(() => frontEnd(source), (err) => err instanceof FolioError && err.message === "line 1: the code is nested too deeply", `${name}: ${shape}`);
+    }
+  }
+  for (const source of brokenPrograms(7, 3000)) {
+    assert.ok(Array.isArray(check(source)), source);
+    let tidy;
+    try {
+      tidy = format(source);
+    } catch (err) {
+      if (!(err instanceof FolioError)) throw err;
+      continue;
+    }
+    assert.equal(format(tidy), tidy, source);
   }
 });
 
