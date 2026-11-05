@@ -6288,3 +6288,39 @@ key's JavaScript string.
   dictionary, sets 300 text keys, takes 290 out (making it again on the way), sets a number key that canon
   rounds and -0, and finds them. Every program the engines are tested with, made by wasm.js, wasm.moth and
   moth.wasm byte for byte, and saying what the VM says.
+
+## 148. The website, in Next.js and GSAP
+
+Moth's site is a Next.js app in `site/`, exported as static pages for GitHub Pages under /moth, with GSAP for
+its motion. It takes everything it shows from the rest of the repository, so nothing is written twice.
+
+- **What it takes, and from where.** `site/scripts/sync.mjs`, run before each build, copies the engine into
+  `public/` (the modules make-web.mjs lists, moth.wasm, the Moth files a program may `use`, `tools/`, the apps,
+  the pictures), and makes `src/generated/`: the lessons and examples as they are, and the pages make-docs.mjs
+  and make-guides.mjs wrote (reference, cookbook, examples), each cut into its top, body and own script, its
+  links pointed at the new addresses. Those generators, and their tests, are unchanged.
+- **The playground is index.html's.** Its whole behaviour is index.html's module script, which sync.mjs copies
+  word for word to `/moth/playground.js`. The new page has every element the script looks for, by the same
+  ids, in a new look, and loads it once the page is there. The page is at /moth/playground with no slash at
+  the end, so the script's own `./worker.js` and `./moth.wasm` are /moth/worker.js and /moth/moth.wasm.
+  `site.test.mjs` checks that every id the script looks up is on the page; index.html itself, and the page
+  `moth build --web` makes of it, are as they were.
+- **Old addresses.** A shared program at /moth/#code=..., or /moth/#playground, goes to the playground before
+  the page shows; learn.html and docs/x.html are where they were (a static export writes learn.html for
+  /moth/learn); docs/ and docs/cookbook/ have pages that send a browser on to /moth/docs and the cookbook.
+- **The look.** Taken from the sites Awwwards gave Site of the Day in November 2026: bone white and ink with one
+  colour, the orange of a lamp; Archivo, whose width and weight move, uppercase and condensed for what's big;
+  Instrument Serif in italics for what's said; JetBrains Mono for code and labels, with its ligatures off, so
+  `>=` stays the two characters the page is about. Hairlines instead of cards; nothing round but the pills.
+  The fonts are Fontsource's packages, served from the site.
+- **The motion.** The first visit's curtain counts to 100 as moth.wasm comes in (so the playground has it
+  already), and lifts. The headline's letters come up into place, and grow heavier near the pointer. The
+  reel, pinned, runs programs up through a lens, as obys.agency runs its work: the one in the lens in colour,
+  the rest grey, and beside it what it says. The seal turns with the page; numbers count up; the list of
+  programs shows each one's picture by the pointer; the name across the foot comes up letter by letter. All
+  of it waits for `prefers-reduced-motion` to allow it, and what it would bring in is shown anyway if it hasn't
+  started in 3 seconds.
+- **What it weighs.** 63 pages; 103 kB of JavaScript every page shares, 175 kB in all for the front page; the
+  site, engine and fonts together, 13 MB, most of it the Moth files and moth.wasm the playground uses.
+- **Publishing.** `.github/workflows/site.yml` builds it on each push to main and deploys it to GitHub Pages,
+  which serves it once the repository's Pages source is GitHub Actions.

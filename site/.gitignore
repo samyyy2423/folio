@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+# made by scripts/sync.mjs from the rest of the repository
+src/generated/
+public/*
+!public/docs/
+public/docs/*
+!public/docs/index.html
+!public/docs/cookbook/
+public/docs/cookbook/*
+!public/docs/cookbook/index.html
+!public/404-moth.txt

@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **A new website.** Moth's site is now a Next.js app (`site/`) with GSAP motion and a new look: the front
+  page, the playground, the lessons and the whole reference, cookbook and examples. The playground is the
+  same one, every feature and all; the pages are made from the same sources as before. Old links still work.
 - **Dictionaries in WebAssembly.** On the WebAssembly engine, dictionaries live inside the module, with no
   JavaScript: number and text keys are about twice as fast to set and read. The third part of making Moth's
   WebAssembly run with no JavaScript at all.
