@@ -5,8 +5,8 @@ import { BASE, GITHUB } from "@/lib/site";
 import RunPlayground from "./run";
 
 export const metadata = {
-  title: "Playground · Moth",
-  description: "Write Moth and run it in your browser: on a JIT, a bytecode VM, or WebAssembly compiled by Moth's own compiler. Draw, make apps and games, and share them.",
+  title: "Playground · Folio",
+  description: "Write Folio and run it in your browser: on a JIT, a bytecode VM, or WebAssembly compiled by Folio's own compiler. Draw, make apps and games, and share them.",
 };
 
 const Icon = ({ name }) => <svg className="icon" aria-hidden="true"><use href={`#i-${name}`} /></svg>;
@@ -31,7 +31,7 @@ export default function Playground() {
       </svg>
 
       <header className="pg-top">
-        <a className="brand" href={`${BASE}/`} title="Moth's front page"><MothMark />Moth<sup>®</sup></a>
+        <a className="brand" href={`${BASE}/`} title="Folio's front page"><MothMark />Folio<sup>®</sup></a>
         <p className="pg-title">Playground</p>
         <nav aria-label="Pages">
           <Link href="/learn">Learn</Link>
@@ -51,7 +51,7 @@ export default function Playground() {
           </div>
           <div className="tools" role="group" aria-label="Code">
             <button id="share" type="button" title="Copy a link with the code in it"><Icon name="share" />Share</button>
-            <button id="tidy" type="button" title="Indents, spaces and blank lines, the one way Moth writes them"><Icon name="tidy" />Tidy</button>
+            <button id="tidy" type="button" title="Indents, spaces and blank lines, the one way Folio writes them"><Icon name="tidy" />Tidy</button>
             <button id="add-files" type="button" title="Files a program can read by name, like pictures for draw picture: pick them here, or drop them on the playground"><Icon name="files" />Files</button>
             <input id="file-picker" type="file" multiple hidden />
           </div>
@@ -86,7 +86,7 @@ export default function Playground() {
                   <option value="">hidden</option>
                   <option value="bytecode">bytecode (VM)</option>
                   <option value="js">JavaScript (JIT)</option>
-                  <option value="moth">JavaScript (compiler written in Moth)</option>
+                  <option value="moth">JavaScript (compiler written in Folio)</option>
                   <option value="wasm">WebAssembly</option>
                 </select>
               </label>

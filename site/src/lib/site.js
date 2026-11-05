@@ -11,7 +11,7 @@ export const PAGES = [
   { name: "Examples", href: "/docs/examples" },
 ];
 
-// Moth's words, for colouring code: the same set the playground colours
+// Folio's words, for colouring code: the same set the playground colours
 const WORDS = new Set(("set add say if else end repeat while for to return and or not is yes no nothing list empty length item "
   + "move turn pen record dictionary where remove keys byte bytes as hex binary shift bit xor read write arguments expect clear draw box circle "
   + "button random when every milliseconds seconds pressed clicked dragged mouse key fail stop ask use try fails uppercase lowercase split join "
@@ -19,7 +19,7 @@ const WORDS = new Set(("set add say if else end repeat while for to return and o
   + "largest smallest chart picture play note beep send json headers checkbox tick untick area showing choice ticked dropdown slider moved choose "
   + "library gives package function power items rounded remainder divided without repeats page used order").split(" "));
 
-// Moth as tokens: [kind, text], kind "k" a word of Moth's, "s" text, "n" a number, "c" a comment, "" the rest
+// Folio as tokens: [kind, text], kind "k" a word of Folio's, "s" text, "n" a number, "c" a comment, "" the rest
 export function tokens(code) {
   const out = [];
   const pattern = /("(?:[^"\\]|\\.)*"?)|(#[^\n]*)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|(\s+|.)/g;

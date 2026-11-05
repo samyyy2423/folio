@@ -37,10 +37,10 @@ export default function Footer() {
         </div>
         <div className="legal">
           <span>Open source · Apache License 2.0</span>
-          <span>The playground runs Moth, compiled to WebAssembly by Moth</span>
+          <span>The playground runs Folio, compiled to WebAssembly by Folio</span>
         </div>
       </div>
-      <p className="wordmark" aria-hidden="true">{"MOTH".split("").map((c, i) => <span key={i}>{c}</span>)}</p>
+      <p className="wordmark" aria-hidden="true">{"FOLIO".split("").map((c, i) => <span key={i}>{c}</span>)}</p>
     </footer>
   );
 }

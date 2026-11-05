@@ -5,12 +5,30 @@ import MothMark from "@/components/MothMark";
 import { Highlighted } from "@/components/CodeView";
 import Footer from "@/components/Footer";
 import { BASE, RELEASES, playgroundLink } from "@/lib/site";
-import { gsap, ScrollTrigger, SplitText, motionReady } from "@/lib/motion";
+import { gsap, ScrollTrigger, SplitText, motionReady, afterVeil } from "@/lib/motion";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollSmoother);
 
-// The reel: Moth, a thing at a time, and what each program says (each run on Moth's JIT to check)
+const pad = (n) => String(n).padStart(2, "0");
+
+// The line the first screen types, and what each says (each run on Folio's JIT to check)
+const LIVE = [
+  ['say "Hello, world"', "Hello, world"],
+  ['say "a week has " 7 * 24 " hours"', "a week has 168 hours"],
+  ["say 0.1 + 0.2", "0.3"],
+  ["say 5 km + 300 m", "5.3 km"],
+  ['say uppercase of "folio"', "FOLIO"],
+  ["say 2 to the power of 10", "1024"],
+];
+
+// English, and the Folio it becomes: each line of the program comes from a phrase (it says "We won!")
+const ENGLISH = ["Take the scores 70, 90 and 55.", "Add them all up,", "and if the total is at least 200,", "say we won."];
+const WRITTEN = ["set scores to list of 70, 90, 55", "set total to 0", "for each score in scores", "    add score to total", "end", "if total is at least 200", '    say "We won!"', "end"];
+const FROM = [0, 1, 1, 1, 1, 2, 3, 2];
+const STEPS = ENGLISH.length + 1; // each phrase, then what it says
+
+// The reel: Folio, a thing at a time, and what each program says
 const REEL = [
   { name: "Say", code: 'say "Hello, world!"\nsay "2 + 3 is " 2 + 3', said: ["Hello, world!", "2 + 3 is 5"], about: "Words in quotes, sums without. Pieces side by side are joined as written." },
   { name: "Remember", code: 'set name to "Ada"\nset age to 36\nadd 1 to age\nsay "{name} is now {age}"', said: ["Ada is now 37"], about: "set gives a value a name. Braces put it in text." },
@@ -25,22 +43,18 @@ const REEL = [
   { name: "Mistakes", code: "set total to 10\nsay totl", said: ["line 2: 'totl' has no value yet. Did you mean 'total'?"], bad: true, about: "Mistakes in a sentence, at the spot, with a guess." },
 ];
 
-const ENGINES = [
-  ["JIT", "JavaScript, in your browser", "The playground's default: Moth compiled to JavaScript, which the browser compiles to machine code."],
-  ["VM", "Bytecode you can step backwards", "Every step recorded: the debugger goes forward and back through a run."],
-  ["WebAssembly", "Compiled by Moth itself", "moth.wasm is Moth's compiler, written in Moth, made by itself, running in the page."],
-  ["Machine code", "moth build, for Windows and Linux", "A program of its own: no runtime beside it, and an installer if you want one."],
+// Where one program goes, and how: the departures board
+const BOARD = [
+  ["THE PLAYGROUND", "YOUR BROWSER", "WEBASSEMBLY"],
+  ["FOLIO BUILD", "WINDOWS", "MACHINE CODE"],
+  ["FOLIO BUILD", "LINUX", "MACHINE CODE"],
+  ["FOLIO BUILD --TARGET WASM", "A .WASM FILE", "WEBASSEMBLY"],
+  ["FOLIO DEBUG", "THE DEBUGGER", "STEP BY STEP"],
 ];
+const WIDTHS = [25, 12, 12];
+const FLAPS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-";
 
-const SAME = {
-  moth: 'set scores to list of 42, 77, 91\nfor each s in scores\n    if s is greater than 50\n        say s " passed"\n    end\nend',
-  python: 'scores = [42, 77, 91]\nfor s in scores:\n    if s > 50:\n        print(f"{s} passed")',
-  js: "const scores = [42, 77, 91];\nfor (const s of scores) {\n  if (s > 50) {\n    console.log(`${s} passed`);\n  }\n}",
-};
-
-const pad = (n) => String(n).padStart(2, "0");
-
-// The first visit's curtain: a count to 100 while the page fetches Moth's compiler for the playground (so it's
+// The first visit's curtain: a count to 100 while the page fetches Folio's compiler for the playground (so it's
 // ready there), then up it goes. Not again in the same tab, and not when motion is turned down.
 function Curtain({ onDone }) {
   const [count, setCount] = useState(0);
@@ -52,8 +66,7 @@ function Curtain({ onDone }) {
     const started = performance.now();
     const tick = () => {
       if (finished) return;
-      const elapsed = performance.now() - started;
-      target = Math.max(target, Math.min(100, (elapsed / 1600) * 100)); // never slower than this
+      target = Math.max(target, Math.min(100, ((performance.now() - started) / 1600) * 100)); // never slower than this
       shown = Math.min(target, 100, shown + (target - shown) * 0.12 + 0.2);
       setCount(Math.floor(shown));
       if (shown >= 100) {
@@ -66,7 +79,6 @@ function Curtain({ onDone }) {
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-    // what's fetched, as far as it's got
     fetch(`${BASE}/moth.wasm`).then(async (response) => {
       const total = Number(response.headers.get("content-length")) || 1_700_000;
       const reader = response.body?.getReader();
@@ -84,15 +96,180 @@ function Curtain({ onDone }) {
   }, [onDone]);
   return (
     <div className="curtain" ref={curtain} aria-hidden="true">
-      <p className="what"><MothMark />Loading Moth&apos;s compiler, written in Moth</p>
+      <p className="what"><MothMark />Loading Folio&apos;s compiler, written in Folio</p>
       <p className="count">{String(count).padStart(3, "0")}</p>
     </div>
   );
 }
 
-export default function Home({ libraries, functions, lessons, gallery }) {
+// A line of Folio to type in, run as it's typed (on Folio's JIT, in a worker), with what it says beside it. Until
+// it's clicked it types examples of its own, with what they say.
+function LiveLine() {
+  const [code, setCode] = useState(LIVE[0][0]);
+  const [said, setSaid] = useState({ lines: [LIVE[0][1]], bad: false, note: "" });
+  const [mine, setMine] = useState(false);
+  const box = useRef(null);
+  const field = useRef(null);
+  const open = useRef(null);
+  const worker = useRef(null);
+
+  useEffect(() => {
+    if (mine || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let alive = true;
+    let timer = null;
+    let visible = true;
+    const seen = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
+    seen.observe(box.current);
+    const wait = (ms) => new Promise((done) => { timer = setTimeout(done, ms); });
+    (async () => {
+      let k = 0;
+      await wait(3200);
+      while (alive) {
+        while (alive && !visible) await wait(400);
+        let text = LIVE[k][0];
+        while (alive && text.length) { text = text.slice(0, -1); setCode(text); await wait(16); }
+        if (!alive) break;
+        setSaid({ lines: [], bad: false, note: "" });
+        k = (k + 1) % LIVE.length;
+        const [next, out] = LIVE[k];
+        for (let i = 1; alive && i <= next.length; i++) { setCode(next.slice(0, i)); await wait(34 + Math.random() * 46); }
+        await wait(240);
+        if (!alive) break;
+        setSaid({ lines: [out], bad: false, note: "" });
+        await wait(2600);
+      }
+    })();
+    return () => { alive = false; clearTimeout(timer); seen.disconnect(); };
+  }, [mine]);
+
+  useEffect(() => {
+    if (!mine) return;
+    const later = setTimeout(() => run(code), 260);
+    return () => clearTimeout(later);
+  }, [code, mine]);
+  useEffect(() => () => worker.current?.terminate(), []);
+
+  function run(source) {
+    worker.current?.terminate();
+    worker.current = null;
+    if (!source.trim()) return setSaid({ lines: [], bad: false, note: "" });
+    const w = (worker.current = new Worker(`${BASE}/worker.js`, { type: "module" }));
+    const lines = [];
+    const finish = (result) => {
+      clearTimeout(limit);
+      w.terminate();
+      if (worker.current !== w) return;
+      worker.current = null;
+      setSaid(result);
+    };
+    const limit = setTimeout(() => finish({ lines: ["stopped after 2 seconds: does it loop for ever?"], bad: true, note: "" }), 2000);
+    w.onmessage = ({ data }) => {
+      for (const line of data.lines ?? []) lines.push(typeof line === "string" ? [line, false] : [line.error, true]);
+      if (data.question !== undefined) return finish({ lines: ["it asks a question: press Enter to answer it in the playground"], bad: false, note: "" });
+      if (data.error) return finish({ lines: [data.error.replace(/^Error: /, "").split("\n")[0]], bad: true, note: "Folio found a mistake" });
+      if (data.done) {
+        const ms = data.ms < 10 ? data.ms.toFixed(1) : Math.round(data.ms);
+        finish({ lines: lines.length ? lines.map(([text]) => text) : ["(it says nothing)"], bad: lines.some(([, bad]) => bad), note: `ran in ${ms} ms, in this tab` });
+      }
+    };
+    w.postMessage({ source, engine: "jit", answers: [], files: {}, seed: Math.floor(Math.random() * 2 ** 32), disk: {} });
+  }
+
+  return (
+    <div className="live" ref={box} data-reveal>
+      <div className="live-row">
+        <label className="prompt" htmlFor="live-code"><span>Try it</span>›</label>
+        <div className={`live-field${mine ? " mine" : ""}`}>
+          <pre aria-hidden="true"><Highlighted code={code} /><i className="caret" /></pre>
+          <input id="live-code" ref={field} value={code} maxLength={90} spellCheck={false} autoComplete="off" autoCapitalize="off"
+            aria-describedby="live-said" data-cursor="Type"
+            onFocus={() => { if (!mine) { setMine(true); requestAnimationFrame(() => field.current?.select()); } }}
+            onChange={(e) => setCode(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); open.current?.click(); } if (e.key === "Escape") field.current?.blur(); }} />
+        </div>
+        <div className={`live-said${said.bad ? " bad" : ""}`} id="live-said" aria-live="polite">
+          {said.lines.slice(0, 3).map((line, k) => <p key={`${line}-${k}`}>{line}</p>)}
+        </div>
+      </div>
+      <div className="live-foot">
+        <span>{said.note || (mine ? "" : "An example. Click the line to write your own.")}</span>
+        <a ref={open} href={playgroundLink(code)}>Enter opens it in the playground ↗</a>
+      </div>
+    </div>
+  );
+}
+
+// The departures board: each cell a row of flaps, which turn over when the board comes into view, and a row at a
+// time now and then after that
+function Board() {
+  const board = useRef(null);
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const clock = () => setTime(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
+    clock();
+    const every = setInterval(clock, 20000);
+    const root = board.current;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return () => clearInterval(every);
+    const turning = new Map();
+    let frame = 0;
+    let last = 0;
+    let visible = false;
+    const tick = (now) => {
+      if (now - last > 55 && turning.size) {
+        last = now;
+        for (const [tile, left] of turning) {
+          if (left <= 0) {
+            tile.textContent = tile.dataset.c;
+            tile.classList.remove("turning");
+            turning.delete(tile);
+          } else {
+            tile.textContent = FLAPS[Math.floor(Math.random() * FLAPS.length)];
+            turning.set(tile, left - 1);
+          }
+        }
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    const rows = [...root.querySelectorAll(".board-row")];
+    const turn = (row) => row.querySelectorAll(".tile").forEach((tile, i) => {
+      if (tile.dataset.c === " ") return;
+      turning.set(tile, 3 + Math.floor(i * 0.3) + Math.floor(Math.random() * 4));
+      tile.classList.add("turning");
+    });
+    const watch = ScrollTrigger.create({
+      trigger: root, start: "top 80%", end: "bottom top",
+      onToggle: (self) => { visible = self.isActive; },
+      onEnter: () => rows.forEach((row, k) => setTimeout(() => turn(row), k * 200)),
+    });
+    const now_and_then = setInterval(() => { if (visible && !document.hidden) turn(rows[Math.floor(Math.random() * rows.length)]); }, 4200);
+    return () => { cancelAnimationFrame(frame); clearInterval(every); clearInterval(now_and_then); watch.kill(); };
+  }, []);
+  const tiles = (text, width) => text.padEnd(width).split("").map((c, i) => {
+    const shown = c === " " ? " " : c;
+    return <span className="tile" data-c={shown} key={i}>{shown}</span>;
+  });
+  return (
+    <div className="board" ref={board}>
+      <div className="board-top"><span><MothMark />hello.folio · departures</span><span suppressHydrationWarning>{time}</span></div>
+      <div className="board-scroll">
+        <div className="board-grid" role="table" aria-label="Where hello.folio runs, and how">
+          <div className="board-head" role="row"><span role="columnheader">Via</span><span role="columnheader">To</span><span role="columnheader">As</span></div>
+          {BOARD.map((row, k) => (
+            <div className="board-row" role="row" key={k} aria-label={row.join(", ").toLowerCase()}>
+              {row.map((cell, c) => <span className="cell" role="cell" key={c} aria-hidden="true">{tiles(cell, WIDTHS[c])}</span>)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Home({ lessons, gallery }) {
   const scope = useRef(null);
   const [active, setActive] = useState(0);
+  const [step, setStep] = useState(0);
   const [curtain, setCurtain] = useState(false);
   const [ready, setReady] = useState(false);
   const preview = useRef(null);
@@ -112,29 +289,62 @@ export default function Home({ libraries, functions, lessons, gallery }) {
     const media = gsap.matchMedia();
     media.add("(prefers-reduced-motion: no-preference)", () => {
       const smoother = ScrollSmoother.create({ wrapper: "#smooth-wrapper", content: "#smooth-content", smooth: 1.1, effects: true });
+      motionReady();
 
-      // the headline: each letter up into place, then heavier where the pointer is
+      // the headline: each letter up into place, as the veil between pages lifts if it's there
       const split = SplitText.create(root.querySelectorAll(".hero h1 .line:not(.said)"), { type: "chars", charsClass: "char" });
+      const chars = split.chars;
       const said = root.querySelector(".hero h1 .said em");
-      gsap.timeline({ defaults: { ease: "expo.out" } })
-        .from(split.chars, { yPercent: 105, duration: 1.3, stagger: 0.025 })
+      const intro = gsap.timeline({ paused: true, defaults: { ease: "expo.out" } })
+        .from(chars, { yPercent: 105, duration: 1.3, stagger: 0.025 })
         .from(said, { yPercent: 105, rotate: 4, duration: 1.3 }, "-=1.05")
-        .fromTo(root.querySelectorAll(".hero [data-reveal]"), { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 1, stagger: 0.08 }, "-=1");
-      const weights = split.chars.map((char) => gsap.quickTo(char, "fontWeight", { duration: 0.6, ease: "power3" }));
-      const heavier = (e) => {
-        for (const [k, char] of split.chars.entries()) {
-          const box = char.getBoundingClientRect();
-          const distance = Math.hypot(e.clientX - (box.left + box.width / 2), e.clientY - (box.top + box.height / 2));
-          weights[k](900 - Math.min(1, distance / 420) * 600);
-        }
-      };
-      const lighter = () => weights.forEach((w) => w(700));
-      const hero = root.querySelector(".hero");
-      hero.addEventListener("pointermove", heavier);
-      hero.addEventListener("pointerleave", lighter);
+        .fromTo(root.querySelectorAll(".hero [data-reveal]"), { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 1, stagger: 0.1 }, "-=0.95");
+      const stopWaiting = afterVeil(() => intro.play());
 
-      // lines that draw themselves across, and things that come up as they're reached
-      for (const rule of root.querySelectorAll(".rule")) gsap.fromTo(rule, { scaleX: 0 }, { scaleX: 1, duration: 1.4, ease: "expo.out", scrollTrigger: { trigger: rule, start: "top 90%" } });
+      // then heavier near the pointer, smoothly: each letter keeps the width it has a little past its usual weight,
+      // so a heavier one never pushes the others along, and where the letters are is worked out once, not as the
+      // pointer moves; the pointer is read as it moves, and the letters change once a frame
+      const hero = root.querySelector(".hero");
+      const headline = root.querySelector(".hero h1");
+      let centres = [];
+      const measure = () => {
+        chars.forEach((char) => { char.style.width = ""; });
+        gsap.set(chars, { fontWeight: 800 });
+        centres = chars.map((char) => {
+          let x = char.offsetLeft + char.offsetWidth / 2;
+          let y = char.offsetTop + char.offsetHeight / 2;
+          for (let at = char.offsetParent; at && at !== hero; at = at.offsetParent) { x += at.offsetLeft; y += at.offsetTop; }
+          return [x, y, char.offsetWidth];
+        });
+        chars.forEach((char, k) => { char.style.width = `${centres[k][2]}px`; });
+        gsap.set(chars, { fontWeight: 700 });
+      };
+      measure();
+      document.fonts?.ready.then(measure);
+      let resizing = null;
+      const resized = () => { clearTimeout(resizing); resizing = setTimeout(measure, 150); };
+      addEventListener("resize", resized);
+      const weights = chars.map((char) => gsap.quickTo(char, "fontWeight", { duration: 0.9, ease: "power2.out" }));
+      let pointer = null;
+      let moved = false;
+      const follow = (e) => { pointer = [e.clientX, e.clientY]; moved = true; };
+      const lighter = () => { pointer = null; weights.forEach((w) => w(700)); };
+      const frame = () => {
+        if (!moved || !pointer) return;
+        moved = false;
+        const box = hero.getBoundingClientRect();
+        const x = pointer[0] - box.left;
+        const y = pointer[1] - box.top;
+        centres.forEach(([cx, cy], k) => {
+          const t = Math.max(0, 1 - Math.hypot(x - cx, y - cy) / 600);
+          weights[k](560 + 340 * t * t * (3 - 2 * t)); // light far off, heaviest under the pointer, eased between
+        });
+      };
+      gsap.ticker.add(frame);
+      headline.addEventListener("pointermove", follow);
+      headline.addEventListener("pointerleave", lighter);
+
+      // what comes up as it's reached
       for (const group of root.querySelectorAll("[data-reveal-group]")) {
         gsap.fromTo(group.querySelectorAll("[data-reveal]"), { autoAlpha: 0, yPercent: 30 }, { autoAlpha: 1, yPercent: 0, duration: 1.1, stagger: 0.07, ease: "expo.out", scrollTrigger: { trigger: group, start: "top 80%" } });
       }
@@ -143,45 +353,43 @@ export default function Home({ libraries, functions, lessons, gallery }) {
         gsap.from(lines.lines, { yPercent: 105, duration: 1.2, stagger: 0.08, ease: "expo.out", scrollTrigger: { trigger: heading, start: "top 85%" } });
         return lines;
       });
-
-      // the seal turns as the page goes by
-      gsap.to(root.querySelector(".seal svg"), { rotate: 360, ease: "none", scrollTrigger: { trigger: root.querySelector(".engines"), start: "top bottom", end: "bottom top", scrub: 0.5 } });
-
-      // the numbers count up to what they are
-      for (const number of root.querySelectorAll("[data-count]")) {
-        const to = Number(number.dataset.count);
-        const counter = { value: 0 };
-        gsap.to(counter, { value: to, duration: 1.8, ease: "expo.out", scrollTrigger: { trigger: number, start: "top 88%" }, onUpdate: () => { number.textContent = Math.round(counter.value).toLocaleString("en"); } });
-      }
-
       // the name, at the very end, letter by letter
       gsap.from(".foot .wordmark span", { yPercent: 100, duration: 1.4, stagger: 0.06, ease: "expo.out", scrollTrigger: { trigger: ".foot", start: "top 70%" } });
 
-      motionReady();
       return () => {
-        hero.removeEventListener("pointermove", heavier);
-        hero.removeEventListener("pointerleave", lighter);
+        stopWaiting();
+        gsap.ticker.remove(frame);
+        removeEventListener("resize", resized);
+        headline.removeEventListener("pointermove", follow);
+        headline.removeEventListener("pointerleave", lighter);
         headings.forEach((lines) => lines.revert());
         split.revert();
         smoother.kill();
       };
     });
 
-    // the reel, on a wide screen: the page stops while the programs go up through the lens, one at a time
     media.add("(min-width: 900px) and (prefers-reduced-motion: no-preference)", () => {
+      // English into Folio: the page stops while each phrase lights the lines it becomes, then what they say
+      const translate = ScrollTrigger.create({
+        trigger: root.querySelector(".translate"), start: "top top", end: () => `+=${window.innerHeight * 2.4}`, pin: true, scrub: true,
+        snap: { snapTo: (v) => Math.min(STEPS - 0.5, Math.floor(v * STEPS) + 0.5) / STEPS, duration: { min: 0.2, max: 0.5 }, ease: "power2.inOut", delay: 0.05 },
+        onUpdate: (self) => setStep(Math.min(STEPS - 1, Math.floor(self.progress * STEPS))),
+      });
+
+      // the reel: the programs go up through the lens, one at a time
       const section = root.querySelector(".reel");
       const track = section.querySelector(".track");
       const cards = [...track.children];
-      const step = () => cards[1].offsetTop - cards[0].offsetTop;
+      const gap = () => cards[1].offsetTop - cards[0].offsetTop;
       const place = (p) => {
-        gsap.set(track, { y: -p * step() });
+        gsap.set(track, { y: -p * gap() });
         cards.forEach((card, k) => {
           const d = Math.min(1, Math.abs(k - p));
           gsap.set(card, { opacity: 1 - 0.72 * d, scale: 1 - 0.1 * d, filter: `grayscale(${d})` });
         });
       };
       place(0);
-      const trigger = ScrollTrigger.create({
+      const reel = ScrollTrigger.create({
         trigger: section, start: "top top", end: () => `+=${(REEL.length - 1) * window.innerHeight * 0.5}`, pin: true, scrub: true,
         snap: { snapTo: 1 / (REEL.length - 1), duration: { min: 0.2, max: 0.6 }, ease: "power2.inOut", delay: 0.05 },
         onUpdate: (self) => {
@@ -190,9 +398,12 @@ export default function Home({ libraries, functions, lessons, gallery }) {
           setActive(Math.round(p));
         },
       });
-      return () => { trigger.kill(); gsap.set([track, ...cards], { clearProps: "all" }); };
+      return () => { translate.kill(); reel.kill(); gsap.set([track, ...cards], { clearProps: "all" }); setStep(0); };
     });
-    media.add("(prefers-reduced-motion: reduce)", () => motionReady());
+    media.add("(max-width: 899px), (prefers-reduced-motion: reduce)", () => {
+      setStep(STEPS - 1); // no scrolling through it: all of it lit
+      motionReady();
+    });
     return () => media.revert();
   }, [ready]);
 
@@ -216,29 +427,51 @@ export default function Home({ libraries, functions, lessons, gallery }) {
           <main ref={scope} className="home">
             <section className="hero">
               <div className="wrap">
-                <div className="meta" data-reveal>
-                  <span>(01)</span><span>A programming language</span><span>Windows · Linux · the web</span><span>Open source</span>
-                </div>
                 <h1 aria-label="Write code the way you'd say it.">
                   <span className="line" aria-hidden="true">Write code</span>
                   <span className="line" aria-hidden="true">the way you&apos;d</span>
                   <span className="line said" aria-hidden="true"><em>say it.</em></span>
                 </h1>
-                <div className="hero-foot">
-                  <p className="intro" data-reveal>Moth has no symbols to learn. <code>if age is at least 18</code>, not <code>if (age &gt;= 18) {"{"}</code>. Run it here in your browser; build it into a program of its own for Windows or Linux.</p>
-                  <div className="cta" data-reveal>
+                <LiveLine />
+                <div className="hero-foot" data-reveal>
+                  <p className="intro">Folio is a programming language with no symbols to learn. Run it here in your browser, then build it into a program of its own for Windows or Linux.</p>
+                  <div className="cta">
                     <a className="btn primary" href={`${BASE}/playground`} data-cursor="Write"><span>Open the playground</span></a>
                     <Link className="btn ghost" href="/learn" data-cursor="Learn"><span>{lessons} lessons</span></Link>
                   </div>
-                  <p className="install" data-reveal><code>moth build hello.moth</code><span>→ hello.exe</span></p>
                 </div>
               </div>
             </section>
 
-            <section className="reel" aria-label="Moth, a thing at a time">
+            <section className="translate" aria-label="English into Folio">
+              <div className="translate-stage wrap">
+                <div className="say">
+                  <h2>You say</h2>
+                  <p className="english">
+                    <span className="quote">“</span>
+                    {ENGLISH.map((phrase, k) => (
+                      <span key={k} className={`phrase${k < step ? " was" : ""}${k === step ? " now" : ""}`}>{phrase}{k < ENGLISH.length - 1 ? " " : ""}</span>
+                    ))}
+                    <span className="quote">”</span>
+                  </p>
+                </div>
+                <div className="write">
+                  <h2>You write</h2>
+                  <div className="sheet">
+                    <div className="sheet-head"><span>scores.folio</span><span>{Math.min(step + 1, STEPS)}/{STEPS}</span></div>
+                    <pre>{WRITTEN.map((line, k) => (
+                      <span key={k} className={`ln${FROM[k] < step ? " was" : ""}${FROM[k] === step ? " now" : ""}`}><Highlighted code={line} /></span>
+                    ))}</pre>
+                    <p className={`result${step >= STEPS - 1 ? " on" : ""}`}><span>→ says</span>We won!</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="reel" aria-label="Folio, a thing at a time">
               <div className="reel-stage wrap">
                 <div className="reel-list">
-                  <p className="label">(02) Moth, a thing at a time</p>
+                  <p className="label">A thing at a time</p>
                   <ol>{REEL.map((r, k) => <li key={r.name} className={k === active ? "on" : ""}><span>{pad(k + 1)}</span>{r.name}</li>)}</ol>
                 </div>
                 <div className="reel-lens">
@@ -246,7 +479,7 @@ export default function Home({ libraries, functions, lessons, gallery }) {
                   <ol className="track">
                     {REEL.map((r) => (
                       <li key={r.name} className="reel-card">
-                        <div className="card-head"><span>{r.name.toLowerCase()}.moth</span><span>run ↗</span></div>
+                        <div className="card-head"><span>{r.name.toLowerCase()}.folio</span><span>run ↗</span></div>
                         <pre><code><Highlighted code={r.code} /></code></pre>
                         <a className="cover" href={playgroundLink(r.code)} data-cursor="Run" aria-label={`Run the ${r.name} program in the playground`} />
                       </li>
@@ -257,67 +490,26 @@ export default function Home({ libraries, functions, lessons, gallery }) {
                   <p className="index"><b>{pad(active + 1)}</b>/{pad(REEL.length)}</p>
                   <p className="about">{now.about}</p>
                   <div className={`said-box${now.bad ? " bad" : ""}`} key={active}>
-                    <p className="label">{now.bad ? "Moth says, stopping" : "→ says"}</p>
+                    <p className="label">{now.bad ? "Folio says, and stops" : "→ says"}</p>
                     {now.said.map((line, k) => <p key={k} className="said-line" style={{ animationDelay: `${0.08 * k}s` }}>{line}</p>)}
                   </div>
                 </div>
               </div>
             </section>
 
-            <section className="engines wrap">
-              <span className="rule" />
-              <div className="engines-head">
-                <p className="label">(03) Where it runs</p>
-                <h2 className="split">One language. <em>Four engines.</em> Every machine.</h2>
-                <div className="seal" aria-hidden="true">
-                  <svg viewBox="0 0 200 200">
-                    <defs><path id="seal-circle" d="M100,100 m-78,0 a78,78 0 1,1 156,0 a78,78 0 1,1 -156,0" /></defs>
-                    <text><textPath href="#seal-circle">READS LIKE ENGLISH · RUNS LIKE MACHINE CODE · </textPath></text>
-                  </svg>
-                  <MothMark className="seal-mark" />
-                </div>
+            <section className="departures wrap" data-reveal-group>
+              <div className="departures-head">
+                <h2 className="split">One program. Every machine.</h2>
+                <p data-reveal>The same <code>hello.folio</code> runs in a browser tab, builds into a program for Windows or Linux, or goes through the debugger a step at a time, backwards too. Every engine says exactly the same things: the tests hold all four to it.</p>
               </div>
-              <ol className="engine-rows" data-reveal-group>
-                {ENGINES.map(([name, line, more], k) => (
-                  <li key={name} data-reveal>
-                    <span className="n">{pad(k + 1)}</span>
-                    <span className="name">{name}</span>
-                    <span className="line">{line}</span>
-                    <span className="more">{more}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
-            <section className="versus wrap">
-              <span className="rule" />
-              <p className="label">(04) The same program</p>
-              <h2 className="split">Only one of them <em>reads out loud.</em></h2>
-              <div className="columns" data-reveal-group>
-                <div className="col moth" data-reveal>
-                  <p className="label">Moth</p>
-                  <pre><code><Highlighted code={SAME.moth} /></code></pre>
-                  <p className="out">→ 77 passed<br />→ 91 passed</p>
-                </div>
-                <div className="col" data-reveal><p className="label">Python</p><pre><code>{SAME.python}</code></pre></div>
-                <div className="col" data-reveal><p className="label">JavaScript</p><pre><code>{SAME.js}</code></pre></div>
-              </div>
-            </section>
-
-            <section className="numbers wrap">
-              <span className="rule" />
-              <p className="label">(05) In numbers</p>
-              <div className="grid" data-reveal-group>
-                <div data-reveal><b data-count="4">4</b><span>engines, saying exactly the same things</span></div>
-                <div data-reveal><b data-count={libraries}>{libraries}</b><span>libraries that come with it</span></div>
-                <div data-reveal><b data-count={functions}>{functions.toLocaleString("en")}</b><span>functions, each with an example</span></div>
-                <div data-reveal><b data-count={lessons}>{lessons}</b><span>lessons, one evening</span></div>
-              </div>
+              <Board />
             </section>
 
             <section className="works wrap" onPointerLeave={() => setHovered(null)}>
-              <span className="rule" />
-              <p className="label">(06) Made with Moth</p>
+              <div className="works-head">
+                <h2 className="split">Made with Folio</h2>
+                <p>Games, drawings, a neural network that learns. Each opens in the playground, ready to run and change.</p>
+              </div>
               <ol data-reveal-group>
                 {gallery.map((g, k) => (
                   <li key={g.name} data-reveal onPointerEnter={() => setHovered(k)}>
@@ -325,7 +517,7 @@ export default function Home({ libraries, functions, lessons, gallery }) {
                       <span className="n">{pad(k + 1)}</span>
                       <span className="name">{g.name}</span>
                       <span className="about">{g.about}</span>
-                      <span className="go">Open in the playground ↗</span>
+                      <span className="go">Open ↗</span>
                     </a>
                   </li>
                 ))}
@@ -335,17 +527,11 @@ export default function Home({ libraries, functions, lessons, gallery }) {
               </div>
             </section>
 
-            <section className="start wrap" data-reveal-group>
-              <span className="rule" />
-              <h2 className="split">Start writing Moth <em>in ten seconds.</em></h2>
-              <div className="start-foot">
-                <p data-reveal>No install, no account: the playground runs it in this tab. When you&apos;re ready, one command makes it a program of its own.</p>
-                <div className="cta" data-reveal>
-                  <a className="btn primary" href={`${BASE}/playground`} data-cursor="Write"><span>Open the playground</span></a>
-                  <a className="btn ghost" href={RELEASES} data-cursor="Get it"><span>Download Moth</span></a>
-                </div>
-              </div>
-            </section>
+            <nav className="ways wrap" aria-label="Where to go next" data-reveal-group>
+              <a className="way" href={`${BASE}/playground`} data-reveal data-cursor="Write"><span className="t">Write some Folio</span><span className="s">The playground runs it in this tab. Nothing to install.</span><span className="arrow">→</span></a>
+              <Link className="way" href="/learn" data-reveal data-cursor="Learn"><span className="t">Learn it tonight</span><span className="s">{lessons} lessons, each a program to run and change.</span><span className="arrow">→</span></Link>
+              <a className="way" href={RELEASES} data-reveal data-cursor="Get it"><span className="t">Get Folio</span><span className="s">For Windows and Linux. One program, nothing beside it.</span><span className="arrow">→</span></a>
+            </nav>
           </main>
           <Footer />
         </div>

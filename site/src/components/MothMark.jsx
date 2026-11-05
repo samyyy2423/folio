@@ -1,4 +1,4 @@
-// Moth's mark: a moth, its fore wings the lamp's orange, the rest ink
+// Folio's mark: a moth, its fore wings the lamp's orange, the rest ink
 export default function MothMark({ className, title }) {
   return (
     <svg className={className} viewBox="0 0 48 48" role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title}>

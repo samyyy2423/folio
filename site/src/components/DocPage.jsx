@@ -20,7 +20,7 @@ export default function DocPage({ slug }) {
       <main className="doc">
         <section className="doc-hero"><div className="wrap" dangerouslySetInnerHTML={{ __html: page.hero }} /></section>
         <div className="doc-body" dangerouslySetInnerHTML={{ __html: page.body }} />
-        <DocScript code={page.script} />
+        <DocScript key={slug} code={page.script} />
       </main>
       <Footer />
     </>

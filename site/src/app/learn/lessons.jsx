@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Highlighted } from "@/components/CodeView";
 import { BASE, playgroundLink } from "@/lib/site";
 import { LESSONS } from "@/generated/learn-lessons.js";
-import { gsap, motionReady, revealOnScroll } from "@/lib/motion";
+import { gsap, motionReady, revealOnScroll, entrance } from "@/lib/motion";
 
 const STORE = "moth-learn-done"; // what learn.html kept, so progress made there carries on here
 
@@ -52,7 +52,7 @@ function Lesson({ lesson, index, onRun }) {
       if (data.error) {
         clearTimeout(limit);
         setLines((said) => [...said, [data.error.replace(/^Error: /, ""), true]]);
-        setStatus("Moth found a mistake: read what it says above");
+        setStatus("Folio found a mistake: read what it says above");
         stop();
       }
       if (data.done) {
@@ -79,7 +79,7 @@ function Lesson({ lesson, index, onRun }) {
   const reset = () => { stop(); answers.current = []; setCode(lesson.code); setLines([]); setStatus(""); setQuestion(null); };
   const keys = (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); }
-    if (e.key === "Tab" && !e.shiftKey) { // four spaces, as Moth is written
+    if (e.key === "Tab" && !e.shiftKey) { // four spaces, as Folio is written
       e.preventDefault();
       const { selectionStart: a, selectionEnd: b, value } = e.currentTarget;
       const next = value.slice(0, a) + "    " + value.slice(b);
@@ -94,7 +94,7 @@ function Lesson({ lesson, index, onRun }) {
       <div className="intro" data-reveal dangerouslySetInnerHTML={{ __html: lesson.intro }} />
       <div className="box" data-reveal>
         <div className="head">
-          <span className="name">lesson-{index + 1}.moth</span>
+          <span className="name">lesson-{index + 1}.folio</span>
           <span className="grow" />
           <button type="button" className="quiet" onClick={reset} title="Put the lesson's program back">Reset</button>
           <a className="quiet" href={playgroundLink(code)} target="_blank" rel="noopener">Open in the playground ↗</a>
@@ -134,9 +134,11 @@ export default function Lessons() {
   useEffect(() => {
     const media = gsap.matchMedia();
     media.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.fromTo(scope.current.querySelectorAll(".learn-hero [data-reveal]"), { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 1, stagger: 0.1, ease: "power4.out" });
-      revealOnScroll(scope.current);
       motionReady();
+      const heading = scope.current.querySelector(".learn-hero h1");
+      const undo = entrance(heading, [...scope.current.querySelectorAll(".learn-hero [data-reveal]")].filter((el) => el !== heading));
+      revealOnScroll(scope.current);
+      return undo;
     });
     media.add("(prefers-reduced-motion: reduce)", () => motionReady());
     // which lesson is being read, for the list beside them
@@ -151,9 +153,9 @@ export default function Lessons() {
   return (
     <main ref={scope} className="learn">
       <section className="learn-hero wrap">
-        <p className="eyebrow" data-reveal>Learn Moth</p>
+        <p className="eyebrow" data-reveal>Learn Folio</p>
         <h1 data-reveal>Eleven lessons. <span className="wing-text">One evening.</span></h1>
-        <p className="lede" data-reveal>Each lesson is a short program to run, change and break. You need nothing but this page: Moth runs right here, in your browser.</p>
+        <p className="lede" data-reveal>Each lesson is a short program to run, change and break. You need nothing but this page: Folio runs right here, in your browser.</p>
         <div className="meter" data-reveal><div className="bar"><i style={{ width: `${share}%` }} /></div><span>{done.size ? `${done.size} of ${LESSONS.length} run` : `${LESSONS.length} lessons`}</span></div>
       </section>
       <div className="learn-layout wrap">

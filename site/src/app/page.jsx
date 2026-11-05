@@ -8,7 +8,7 @@ export default function Page() {
   return (
     <>
       <TopBar />
-      <Home libraries={site.libraries} functions={site.functions} lessons={LESSONS.length} gallery={site.gallery} />
+      <Home lessons={LESSONS.length} gallery={site.gallery} />
     </>
   );
 }

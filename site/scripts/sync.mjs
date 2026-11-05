@@ -19,6 +19,11 @@ const GENERATED = join(SITE, "src", "generated");
 export const BASE = process.env.MOTH_BASE_PATH ?? "/moth";
 
 const read = (file) => readFileSync(join(ROOT, file), "utf8");
+
+// The site calls the language Folio, its new name; the repository still calls it Moth until it's renamed there
+// too. The name as a word, then (MothError and the like are other words), and not the .moth of a file or the moth
+// command, which are still what runs.
+export const brand = (text) => text.replace(/\bMoth\b/g, "Folio").replace(/\bMOTH\b/g, "FOLIO");
 const copy = (from, to = from) => {
   mkdirSync(dirname(join(PUBLIC, to)), { recursive: true });
   copyFileSync(join(ROOT, from), join(PUBLIC, to));
@@ -55,7 +60,7 @@ export async function gallery() {
     ["Tree", "A function that calls itself", "tree.svg"],
     ["Neural network", "Learns, in Moth", "neural.svg"],
     ["Handwriting", "Reads the digit you draw", "handwriting.svg"],
-  ].map(([name, about, picture]) => ({ name, about, picture, code: fromFile[name] ? read(fromFile[name]).trimEnd() : examples[name] }));
+  ].map(([name, about, picture]) => ({ name, about: brand(about), picture, code: brand(fromFile[name] ? read(fromFile[name]).trimEnd() : examples[name]) }));
 }
 
 // ---------- the playground's script ----------
@@ -114,14 +119,14 @@ const between = (text, from, to, label) => {
 export function pageParts(file) {
   const html = read(file);
   const from = OLD + file;
-  const title = between(html, "<title>", "</title>", file).replace(/&amp;/g, "&");
-  const description = between(html, '<meta name="description" content="', '"', file).replace(/&amp;/g, "&").replace(/&quot;/g, '"');
-  const hero = relink(between(html, '<div class="hero wrap">', "\n    </div>\n  </header>", file), from);
-  const body = relink(between(html, "</header>", "<footer", file), from);
+  const title = brand(between(html, "<title>", "</title>", file).replace(/&amp;/g, "&"));
+  const description = brand(between(html, '<meta name="description" content="', '"', file).replace(/&amp;/g, "&").replace(/&quot;/g, '"'));
+  const hero = brand(relink(between(html, '<div class="hero wrap">', "\n    </div>\n  </header>", file), from));
+  const body = brand(relink(between(html, "</header>", "<footer", file), from));
   let script = html.slice(html.indexOf("</footer>") + "</footer>".length, html.lastIndexOf("</body>")).trim();
   script = script.replace(/^<script>/, "").replace(/<\/script>$/, "");
   // the search's links, written as a template in the script: to a library's page, at a function
-  script = script.replace(/href="\$\{library\}\.html#/g, `href="${BASE}/docs/\${library}#`);
+  script = brand(script.replace(/href="\$\{library\}\.html#/g, `href="${BASE}/docs/\${library}#`)); // its search's words too
   return { title, description, hero, body, script };
 }
 
@@ -147,12 +152,13 @@ export function libraryCounts(pages) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   syncEngine();
   const script = playgroundScript();
-  writeFileSync(join(PUBLIC, "playground.js"), script);
+  writeFileSync(join(PUBLIC, "playground.js"), brand(script));
+  writeFileSync(join(PUBLIC, "examples.js"), brand(read("examples.js")));
   mkdirSync(GENERATED, { recursive: true });
   const pages = docsPages();
   writeFileSync(join(GENERATED, "pages.json"), JSON.stringify(pages));
   writeFileSync(join(GENERATED, "site.json"), JSON.stringify({ ...libraryCounts(pages), playgroundIds: idsUsed(script), gallery: await gallery() }));
-  copyFileSync(join(ROOT, "learn-lessons.js"), join(GENERATED, "learn-lessons.js"));
-  copyFileSync(join(ROOT, "examples.js"), join(GENERATED, "examples.js"));
+  writeFileSync(join(GENERATED, "learn-lessons.js"), brand(read("learn-lessons.js")));
+  writeFileSync(join(GENERATED, "examples.js"), brand(read("examples.js")));
   console.log(`synced: the engine, playground.js (${idsUsed(script).length} ids), ${Object.keys(pages).length} docs pages`);
 }

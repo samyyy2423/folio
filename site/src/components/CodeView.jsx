@@ -1,12 +1,12 @@
 import { tokens } from "@/lib/site";
 
-// Moth, coloured
+// Folio, coloured
 export function Highlighted({ code }) {
   return tokens(code).map(([kind, text], i) => (kind ? <span key={i} className={kind}>{text}</span> : text));
 }
 
 // A window of code: its file's name, the code, and what it says, if it's known
-export default function CodeView({ name = "program.moth", code, said, className = "", lang = "moth" }) {
+export default function CodeView({ name = "program.folio", code, said, className = "", lang = "moth" }) {
   return (
     <figure className={`codeview ${className}`}>
       <div className="bar"><i /><i /><i /><span>{name}</span></div>

@@ -1,4 +1,4 @@
-/* Moth's website. Bone white and ink, with one colour: the orange of a lamp a moth flies to. Archivo, whose
+/* Folio's website. Bone white and ink, with one colour: the orange of a lamp a moth flies to. Archivo, whose
    width moves, for what's big; Instrument Serif in italics for what's said; JetBrains Mono for code and labels.
    Hairlines, not cards; nothing rounded but the pills. */
 
@@ -83,30 +83,76 @@ code, pre, kbd, textarea { font-family: var(--mono); font-variant-ligatures: non
 .btn.small::after { width: 28px; height: 28px; }
 .btn.light { border-color: var(--night-text); color: var(--night-text); }
 
-/* ---------- the top bar ---------- */
-.topbar { position: fixed; inset: 0 0 auto; z-index: 60; transition: background 0.4s, border-color 0.4s, transform 0.5s cubic-bezier(.7,0,.2,1); border-bottom: 1px solid transparent; }
-.topbar.scrolled { background: rgba(238, 234, 226, 0.86); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom-color: var(--line); }
-.topbar.hidden { transform: translateY(-100%); }
-.topbar .wrap { display: flex; align-items: center; gap: 8px; height: 68px; }
+/* ---------- the top bar: full width over the first screen; scrolled, it gathers into an ink dock ---------- */
+.topbar { position: fixed; inset: 0 0 auto; z-index: 60; pointer-events: none; }
+.bar { pointer-events: auto; display: flex; align-items: center; gap: 18px; width: calc(100% - 2 * var(--gutter)); max-width: var(--wrap); height: 76px; margin: 0 auto; padding: 0 2px; border-radius: 999px; color: var(--ink);
+  transition: max-width 0.9s cubic-bezier(.7,0,.2,1), height 0.7s cubic-bezier(.7,0,.2,1), margin-top 0.7s cubic-bezier(.7,0,.2,1), padding 0.7s cubic-bezier(.7,0,.2,1), background-color 0.5s, color 0.5s, box-shadow 0.6s; }
+.topbar.docked .bar { max-width: 900px; height: 60px; margin-top: 14px; padding: 0 8px 0 22px; background: var(--ink); color: var(--paper); box-shadow: 0 24px 60px -24px rgba(15, 14, 13, 0.55); }
 .brand { display: inline-flex; align-items: center; gap: 10px; font: 700 22px/1 var(--display); font-stretch: 80%; text-transform: uppercase; letter-spacing: -0.01em; text-decoration: none; margin-right: auto; }
-.brand svg { width: 30px; height: 30px; }
+.brand svg { width: 30px; height: 30px; overflow: visible; }
+.brand svg .wing { transform-box: fill-box; }
+.brand svg .wing.left { transform-origin: 100% 60%; }
+.brand svg .wing.right { transform-origin: 0% 60%; }
+.brand:hover svg .wing.left { animation: flap-left 0.18s ease-in-out 6 alternate; }
+.brand:hover svg .wing.right { animation: flap-right 0.18s ease-in-out 6 alternate; }
+@keyframes flap-left { to { transform: scaleX(0.35); } }
+@keyframes flap-right { to { transform: scaleX(0.35); } }
 .brand sup { font: 500 10px/1 var(--mono); margin-left: -6px; align-self: flex-start; margin-top: 2px; }
-.topbar nav { display: flex; align-items: center; gap: 4px; }
-.topbar nav a { position: relative; padding: 8px 12px; font: 500 13px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-2); text-decoration: none; }
-.topbar nav a::before { content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: 100% 50%; transition: transform 0.45s cubic-bezier(.7,0,.2,1); }
-.topbar nav a:hover { color: var(--ink); }
-.topbar nav a:hover::before, .topbar nav a[aria-current="page"]::before { transform: scaleX(1); transform-origin: 0 50%; }
-.topbar nav a[aria-current="page"] { color: var(--ink); }
-.topbar .gh { margin-left: 12px; }
-.menu-button { display: none; height: 42px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; font: 500 13px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
-@media (max-width: 860px) {
-  .topbar nav { display: none; position: fixed; inset: 68px 0 auto; flex-direction: column; align-items: stretch; gap: 0; padding: 8px var(--gutter) 24px; background: var(--paper); border-bottom: 1px solid var(--line); }
-  .topbar nav.open { display: flex; }
-  .topbar nav a { padding: 16px 0; font-size: 22px; font-family: var(--display); font-stretch: 75%; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); }
-  .topbar nav a::before { display: none; }
-  .topbar .gh { margin: 16px 0 0; align-self: flex-start; }
-  .menu-button { display: inline-flex; align-items: center; }
+
+/* the links, and the lamp: an orange pill that rests on the page you're on and flies to the link you point at */
+.links { position: relative; display: flex; align-items: center; isolation: isolate; }
+.links a { position: relative; z-index: 1; padding: 11px 15px; font: 500 13px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.02em; color: inherit; text-decoration: none; opacity: 0.72; transition: opacity 0.25s, color 0.3s; }
+.links a:hover, .links a[aria-current="page"], .links a.lit { opacity: 1; }
+.links a.lit { color: var(--ink); }
+.lamp { position: absolute; left: 0; top: 50%; z-index: 0; width: 60px; height: 36px; margin-top: -18px; border-radius: 999px; background: var(--lamp); opacity: 0; pointer-events: none; }
+.ends { display: flex; align-items: center; gap: 6px; }
+.ends .gh { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: inherit; transition: background-color 0.3s; }
+.ends .gh svg { width: 19px; height: 19px; }
+.ends .gh:hover { background: rgba(127, 127, 127, 0.16); }
+.get { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 20px; border-radius: 999px; background: var(--ink); color: var(--paper); font: 600 13px/1 var(--mono); text-transform: uppercase; text-decoration: none; transition: background-color 0.4s, color 0.4s; }
+.get::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); transition: transform 0.4s cubic-bezier(.7,0,.2,1); }
+.get:hover::before { transform: scale(1.8); }
+.topbar.docked .get { background: var(--lamp); color: var(--ink); }
+.topbar.docked .get::before { background: var(--ink); }
+.menu-button { display: none; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; font: 600 13px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
+.menu-button i { display: grid; gap: 4px; }
+.menu-button i::before, .menu-button i::after { content: ""; display: block; width: 16px; height: 1.5px; background: currentColor; }
+@media (max-width: 960px) {
+  .links, .ends .gh { display: none; }
+  .menu-button { display: inline-flex; }
+  .topbar.docked .bar { max-width: calc(100% - 24px); }
 }
+@media (max-width: 520px) { .get { display: none; } }
+
+/* the whole-screen menu, on a narrow screen */
+.menu { position: fixed; inset: 0; z-index: 59; display: flex; flex-direction: column; justify-content: flex-end; gap: 32px; padding: 110px var(--gutter) 32px; background: var(--ink); color: var(--paper); clip-path: inset(0 0 100% 0); visibility: hidden; transition: clip-path 0.8s cubic-bezier(.7,0,.2,1), visibility 0s 0.8s; }
+.menu.open { clip-path: inset(0 0 0 0); visibility: visible; transition: clip-path 0.8s cubic-bezier(.7,0,.2,1), visibility 0s; }
+.menu ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--night-line); }
+.menu li { overflow: hidden; border-bottom: 1px solid var(--night-line); }
+.menu li a { display: flex; align-items: baseline; gap: 16px; padding: 12px 0; color: inherit; text-decoration: none; transform: translateY(105%); transition: transform 0.8s cubic-bezier(.2,.8,.2,1); transition-delay: calc(0.25s + var(--i) * 0.06s); }
+.menu.open li a { transform: none; }
+.menu li .n { font: 500 12px/1 var(--mono); color: var(--lamp); }
+.menu li .t { font: 800 clamp(44px, 13vw, 96px)/0.9 var(--display); font-stretch: 66%; text-transform: uppercase; }
+.menu-foot { display: flex; justify-content: space-between; gap: 16px; font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.menu-foot a { color: inherit; }
+.topbar.menu-open .bar { color: var(--paper); background: transparent; box-shadow: none; }
+
+/* ---------- the veil between pages ---------- */
+.veil { position: fixed; inset: 0; z-index: 150; pointer-events: none; visibility: hidden; }
+.veil.on { pointer-events: auto; visibility: visible; }
+.veil-lamp, .veil-ink { position: absolute; inset: 0; } /* placed by Transition.jsx, below the screen until they're wanted */
+.veil-lamp { background: var(--lamp); }
+.veil-ink { display: flex; flex-direction: column; justify-content: space-between; padding: 26px var(--gutter) 18px; background: var(--ink); color: var(--paper); }
+.veil-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.veil-mark { display: inline-flex; align-items: center; gap: 10px; color: var(--paper); font: 700 20px/1 var(--display); font-stretch: 80%; }
+.veil-mark svg { width: 28px; height: 28px; }
+.veil-word { overflow: hidden; margin: 0; }
+/* as big as the screen allows, and smaller for a long name, so all of it shows (each letter is about 0.45em wide);
+   no kerning, so the name as one run (the ::before) and as letters are the same width, letter for letter */
+.veil-word > span { display: block; font: 800 min(clamp(80px, 17vw, 300px), calc((100vw - 2 * var(--gutter)) / (var(--veil-chars, 5) * 0.47)))/0.84 var(--display); font-stretch: 62%; letter-spacing: -0.02em; text-transform: uppercase; white-space: nowrap; font-kerning: none; }
+.veil-word .ch { display: inline-block; will-change: transform; }
+html.veiled .veil { visibility: visible; }
+html.veiled .veil-word > span::before { content: var(--veil-word); } /* the name, before the page's script is there to write it */
 
 /* ---------- the foot: links, then the name across the whole width ---------- */
 .foot { position: relative; margin-top: 160px; background: var(--ink); color: var(--night-text); overflow: hidden; }
@@ -117,7 +163,7 @@ code, pre, kbd, textarea { font-family: var(--mono); font-variant-ligatures: non
 .foot ul a { color: var(--night-text); text-decoration: none; font-size: 15px; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size 0.4s cubic-bezier(.7,0,.2,1); }
 .foot ul a:hover { background-size: 100% 1px; }
 .foot .legal { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 56px 0 18px; color: var(--night-dim); font: 500 12px/1.4 var(--mono); text-transform: uppercase; }
-.foot .wordmark { display: block; width: 100%; margin: 0 0 -0.12em; font: 800 31.5vw/0.8 var(--display); font-stretch: 62%; text-align: center; letter-spacing: -0.02em; color: var(--night-text); user-select: none; white-space: nowrap; }
+.foot .wordmark { display: block; width: 100%; margin: 0 0 -0.12em; font: 800 25.4vw/0.8 var(--display); font-stretch: 62%; text-align: center; letter-spacing: -0.02em; color: var(--night-text); user-select: none; white-space: nowrap; }
 .foot .wordmark span { display: inline-block; }
 @media (max-width: 760px) { .foot .cols { grid-template-columns: 1fr 1fr; } .foot .cols > div:first-child { grid-column: 1 / -1; } }
 
