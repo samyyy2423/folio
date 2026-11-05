@@ -6,6 +6,12 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **New commands.** `moth new [app|web|package|library] <name>` starts a project: its code, tests that pass
+  as made, a README and a GitHub workflow that runs them. `moth explain` says what a mistake means, why it
+  happens and how to put it right, for the first mistake in a file or for a mistake's words. `moth upgrade`
+  puts the newest release in place of the moth on PATH, once its SHA-256 checks out. `moth doc` makes pages
+  of HTML from a program's comments, `moth bench` times `bench_` functions, `moth watch` runs a command again
+  on each change, and `moth publish` opens a pull request that puts a package in the package index.
 - **Installers.** `irm https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.ps1 | iex` on
   Windows and `curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh` on
   Linux install the latest release, checked against its `SHA256SUMS.txt`, and put `moth` on PATH. Scoop

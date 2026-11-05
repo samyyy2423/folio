@@ -35,6 +35,7 @@ set cli_usage to cli_usage + "\n  moth new [app|web|package|library] <name>: sta
 set cli_usage to cli_usage + "\n  moth explain <file.moth> | moth explain <a mistake's words>: what a mistake means, why it happens and how\n    to put it right, with code that makes it and the same code put right: the first mistake moth check finds in\n    a file, or the one a message is from."
 set cli_usage to cli_usage + "\n  moth upgrade [--check]: the newest release in place of the moth on PATH, checked against its SHA256SUMS.txt\n    first (or, for a moth a package manager put there, what to run instead); --check only says if there is one."
 set cli_usage to cli_usage + "\n  moth bench [files.bench.moth...] [--allow-...]: each bench_ function timed, as the mean of five samples of as\n    many calls as take 50 ms, with how far they spread; with no file, every .bench.moth file here and inside.\n  moth watch <a moth command>: the command, run again each time a .moth file here or inside changes: moth\n    watch test, moth watch run app.moth. Ctrl+C stops it."
+set cli_usage to cli_usage + "\n  moth publish [name] [--about \"<one line>\"] [--dry-run]: the package here put in the package index, by a\n    pull request made with GitHub's gh, once its tests pass; --dry-run only says what it would add."
 set cli_usage to cli_usage + "\n  moth doc <files.moth...> [--into <folder>]: a page of HTML for each file, from its comments: what the file is\n    for, and each function it makes, how it's called and what it does; and index.html for more than one. In doc/."
 
 # the folder a file is in, with its last / or \, or "" for the folder moth runs in
@@ -7237,6 +7238,236 @@ to cli_watch with cli_command_words
     end
 end
 
+# ---------- moth publish ----------
+# moth publish [name] [--about "<one line>"] [--dry-run] [--index <address or file>] (DESIGN §140): the package
+# in this folder put in the package index, by a pull request to samyyy2423/moth-packages made with GitHub's gh, as
+# the index's README says to by hand. The package is the .moth file at the top here (or the one named), on
+# GitHub as origin says, said in a line by --about or by its opening comment's first sentence; its tests must
+# pass. --dry-run only says what it would add. Without gh, it says how to add it in the browser.
+
+set cli_index_repository to "samyyy2423/moth-packages"
+
+# the line about a package: its file's opening comment, up to the end of its first sentence
+to cli_publish_about with cli_source
+    set cli_said to cli_lsp_file_comment(cli_source)
+    set cli_out to ""
+    for each cli_k from 1 to length of cli_said
+        set cli_c to item cli_k of cli_said
+        add cli_c to cli_out
+        if cli_c is "." and (cli_k is length of cli_said or item (cli_k + 1) of cli_said is " ")
+            return cli_trimmed(cli_out)
+        end
+    end
+    return cli_trimmed(cli_out)
+end
+
+# where origin is, as moth add takes it: github.com/someone/thing for one on GitHub, or nothing
+to cli_publish_origin
+    set cli_got to cli_git(list of "remote", "get-url", "origin")
+    if cli_got is nothing or code of cli_got is not 0
+        return nothing
+    end
+    set cli_url to cli_trimmed(output of cli_got)
+    for each cli_start in list of "https://github.com/", "http://github.com/", "git@github.com:", "ssh://git@github.com/"
+        if cli_begins_with(cli_url, cli_start)
+            set cli_rest to cli_tail(cli_url, length of cli_start + 1)
+            if length of cli_rest is greater than 4 and cli_tail(cli_rest, length of cli_rest - 3) is ".git"
+                set cli_rest to cli_first(cli_rest, length of cli_rest - 4)
+            end
+            return "github.com/" + cli_rest
+        end
+    end
+    return cli_url # somewhere else: as it is
+end
+
+# the index as JSON is written in its repository: two spaces in for each level, the names in order
+to cli_index_text with cli_packages
+    set cli_names to (keys of cli_packages) in order
+    set cli_out to "\{\n  \"packages\": \{"
+    set cli_k to 0
+    for each cli_name in cli_names
+        add 1 to cli_k
+        set cli_entry to item cli_name of cli_packages
+        if cli_k is greater than 1
+            add "," to cli_out
+        end
+        set cli_quoted_name to cli_name as json
+        set cli_quoted_repository to item "repository" of cli_entry
+        set cli_quoted_repository to cli_quoted_repository as json
+        set cli_quoted_about to item "about" of cli_entry
+        set cli_quoted_about to cli_quoted_about as json
+        add "\n    " + cli_quoted_name + ": \{\n      \"repository\": " + cli_quoted_repository to cli_out
+        add ",\n      \"about\": " + cli_quoted_about + "\n    }" to cli_out
+    end
+    if cli_k is greater than 0
+        add "\n  " to cli_out
+    end
+    return cli_out + "}\n}\n"
+end
+
+to cli_publish with cli_all
+    set cli_flagged to cli_index_flag(cli_all)
+    set cli_name to nothing
+    set cli_about to nothing
+    set cli_dry to no
+    set cli_k to 1
+    set cli_rest to rest of cli_flagged
+    repeat while cli_k is at most length of cli_rest
+        set cli_arg to item cli_k of cli_rest
+        if cli_arg is "--about" and cli_k is less than length of cli_rest
+            set cli_about to item (cli_k + 1) of cli_rest
+            add 2 to cli_k
+        else if cli_arg is "--dry-run"
+            set cli_dry to yes
+            add 1 to cli_k
+        else if cli_name is nothing and not cli_begins_with(cli_arg, "--")
+            set cli_name to cli_arg
+            add 1 to cli_k
+        else
+            say cli_usage to the error output
+            return 2
+        end
+    end
+    # the package: the one .moth file at the top here that isn't tests or benchmarks, or the one named
+    if cli_name is nothing
+        set cli_found to empty list
+        for each cli_entry in cli_sorted_entries(read the folder ".")
+            set cli_file to name of cli_entry
+            if not folder of cli_entry and length of cli_file is greater than 5 and cli_tail(cli_file, length of cli_file - 4) is ".moth" and not cli_is_tests(cli_file)
+                if not (length of cli_file is greater than 11 and cli_tail(cli_file, length of cli_file - 10) is ".bench.moth")
+                    add cli_stem(cli_file) to cli_found
+                end
+            end
+        end
+        if length of cli_found is not 1
+            say "moth: name the package to publish (moth publish <name>): its main file is <name>.moth, here" to the error output
+            return 1
+        end
+        set cli_name to item 1 of cli_found
+    end
+    if not cli_package_name(cli_name) or lowercase of cli_name is not cli_name
+        say "moth: '" + cli_name + "' can't be a package's name in the index: it's lowercase letters, digits and _, starting with a letter" to the error output
+        return 1
+    end
+    set cli_source to cli_text_of(cli_name + ".moth")
+    if cli_source is nothing
+        return 1
+    end
+    if cli_about is nothing
+        set cli_about to cli_publish_about(cli_source)
+    end
+    if cli_about is "" or length of cli_about is greater than 100
+        say "moth: the index needs a line about " + cli_name + ", of at most 100 characters: give it with --about \"...\" (its file's opening comment has " + length of cli_about + ")" to the error output
+        return 1
+    end
+    set cli_repository to cli_publish_origin()
+    if cli_repository is nothing
+        say "moth: publishing needs the package in a Git repository with an origin: push it to GitHub first" to the error output
+        return 1
+    end
+    if cli_begins_with(cli_repository, "github.com/") # there, and public: its main file can be read by anyone
+        set cli_raw to "https://raw.githubusercontent.com/" + cli_tail(cli_repository, 12) + "/HEAD/" + cli_name + ".moth"
+        set cli_seen to run program "curl" with (list of "-fsSIL", cli_raw) keeping its output
+        if code of cli_seen is not 0
+            say "moth: " + cli_repository + " has no " + cli_name + ".moth that anyone can read: push it, and make the repository public" to the error output
+            return 1
+        end
+    end
+    if length of cli_find_tests("", "/", empty list) is greater than 0
+        say "moth publish: its tests first"
+        if cli_dispatch(list of "test") is not 0
+            say "moth: " + cli_name + "'s tests don't pass, so it isn't published" to the error output
+            return 1
+        end
+    end
+    set cli_index_read to cli_index_json(index of cli_flagged)
+    if cli_index_read is nothing
+        return 1
+    end
+    set cli_packages to item "packages" of cli_index_read
+    if cli_name is in cli_packages
+        set cli_listed to item cli_name of cli_packages
+        set cli_listed_from to item "repository" of cli_listed
+        if cli_listed_from is cli_repository
+            say cli_name + " is in the index already, from " + cli_repository
+            return 0
+        end
+        say "moth: the index has a package called " + cli_name + " already, from " + cli_listed_from + ": choose another name" to the error output
+        return 1
+    end
+    set cli_new_entry to dictionary where "repository" is cli_repository, "about" is cli_about
+    set item cli_name of cli_packages to cli_new_entry
+    set cli_entry_json to cli_new_entry as json
+    set cli_entry_text to "\"" + cli_name + "\": " + cli_entry_json
+    if cli_dry
+        say "moth publish would add to the index:"
+        say "  " + cli_entry_text
+        return 0
+    end
+    # the pull request, through gh: the index's repository forked, cloned, changed, and pushed to the fork
+    set cli_gh to nothing
+    try
+        set cli_gh to run program "gh" with (list of "api", "user", "--jq", ".login") keeping its output
+    if it fails
+        set cli_gh to nothing
+    end
+    if cli_gh is nothing or code of cli_gh is not 0
+        say "To add " + cli_name + " to the index, open https://github.com/" + cli_index_repository + "/edit/main/index.json, put this among the"
+        say "packages in alphabetical order, and propose the change (or install GitHub's gh, log in, and run moth publish again):"
+        say "  " + cli_entry_text
+        return 0
+    end
+    set cli_login to cli_trimmed(output of cli_gh)
+    set cli_work to ".moth-publish"
+    if cli_folder_here(cli_work)
+        cli_remove_folder(cli_work)
+    end
+    set cli_steps to list of (list of "gh", "repo", "fork", cli_index_repository, "--clone=false"),
+        (list of "git", "clone", "--depth", "1", "https://github.com/" + cli_index_repository, cli_work)
+    for each cli_step in cli_steps
+        set cli_args to empty list
+        for each cli_j from 2 to length of cli_step
+            add item cli_j of cli_step to cli_args
+        end
+        set cli_done to run program item 1 of cli_step with cli_args keeping its output
+        if code of cli_done is not 0
+            say "moth: " + item 1 of cli_step + " " + item 2 of cli_step + " didn't work: " + cli_trimmed(mistakes of cli_done) to the error output
+            return 1
+        end
+    end
+    set cli_index_written to cli_index_text(cli_packages)
+    set cli_index_path to cli_work + "/index.json"
+    write cli_index_written to cli_index_path
+    set cli_branch to "add-" + cli_name
+    set cli_steps to list of (list of "checkout", "-b", cli_branch), (list of "commit", "-am", "Add " + cli_name),
+        (list of "push", "--force", "https://github.com/" + cli_login + "/moth-packages", cli_branch)
+    for each cli_step in cli_steps
+        set cli_args to list of "-C", cli_work
+        for each cli_arg in cli_step
+            add cli_arg to cli_args
+        end
+        set cli_done to cli_git(cli_args)
+        if cli_done is nothing
+            cli_remove_folder(cli_work)
+            return 1
+        end
+        if code of cli_done is not 0
+            say "moth: git " + item 1 of cli_step + " didn't work: " + cli_git_said(cli_done) to the error output
+            cli_remove_folder(cli_work)
+            return 1
+        end
+    end
+    set cli_pr to run program "gh" with (list of "pr", "create", "--repo", cli_index_repository, "--head", cli_login + ":" + cli_branch,
+        "--title", "Add " + cli_name, "--body", cli_name + ": " + cli_about + "\n\nFrom " + cli_repository + ", by moth publish.") keeping its output
+    cli_remove_folder(cli_work)
+    if code of cli_pr is not 0
+        say "moth: gh pr create didn't work: " + cli_trimmed(mistakes of cli_pr) to the error output
+        return 1
+    end
+    say "asked for " + cli_name + " to go in the index: " + cli_trimmed(output of cli_pr)
+    return 0
+end
+
 # A moth command: what it was given, in, and the number moth ends with, out. moth watch runs one again and
 # again, so nothing here stops the program itself.
 to cli_dispatch with cli_given
@@ -7352,6 +7583,13 @@ to cli_dispatch with cli_given
             end
             return cli_bench_all(cli_bench_paths, cli_host(), cli_bench_flags)
         end
+    end
+    if cli_command is "publish" # the package here, in the package index
+        set cli_rest to empty list
+        for each cli_k from 2 to length of cli_given
+            add item cli_k of cli_given to cli_rest
+        end
+        return cli_publish(cli_rest)
     end
     if cli_command is "lsp" and length of cli_given is 1 # the language server, for an editor
         return cli_lsp()

@@ -5984,3 +5984,58 @@ joining it, comparing it and showing a number in it no longer leave the module.
   to JavaScript to be said. A module for `say 1` grew from 7.8 KB to 12.4 KB,
   and making one in wasm.js takes about a millisecond longer, the shared
   runtime's code assembled and encoded once and kept.
+
+## 140. The moth command, for the first hour and after
+
+Moth could do a great deal by the time a person had written something, and
+little to help them start, or to look after what they'd written. Seven commands
+fill that in, each in moth.moth, run in the tests as moth.exe itself.
+
+- **`moth new`.** A folder named for the project, with what each kind needs:
+  an app's `main.moth`, what it does in `<name>.moth` and tests of that in
+  `<name>.test.moth`, so the tests don't run the program; a web server's
+  answers kept from `server.moth`, so its tests ask them without a server; a
+  package for other programs; a library for C and Python. Each has a README, a
+  `.gitignore` and a GitHub workflow that installs moth with the installer and
+  runs `moth test`. Its tests pass as it's made: the test makes each kind, runs
+  its tests, and runs the app. A name is a letter, then letters, digits and
+  `_`, and not `main`, as it names files and a package.
+- **`moth explain`.** A file's first mistake, as `moth check` says it (a
+  mistake in reading it, or one that will fail), or a mistake's words pasted
+  from a run, matched against 32 mistakes moth knows: what each means, why it
+  happens and how to put it right, with code that makes it and the same code
+  put right. A test checks every example put right reads as Moth, which found
+  two of them that didn't.
+- **`moth upgrade`.** The newest release, from GitHub's API, put in place of
+  the moth on PATH: downloaded with curl, its SHA-256 (from the system's own
+  `certutil` or `sha256sum`, as hashing 30 MB in Moth would be slow) checked
+  against the release's `SHA256SUMS.txt`, and only then moved in. On Windows a
+  running program can't be written over, but it can be moved aside, so the old
+  one is `moth.exe.old` until the next upgrade. A moth from Scoop, winget, pip
+  or the .deb is left to that package manager, and the command for it said.
+  `MOTH_RELEASES` names a folder or address laid out as a release is, which is
+  how the test runs it: an old release, a download whose sum is wrong, and a
+  new one.
+- **`moth doc`.** What `make-docs.mjs` does for the standard library, for any
+  program: a page for each file, with its opening comment and, for each
+  function and kind at its top level, the line that makes it and the comment
+  above it; lines indented in a comment are code. More than one file gets an
+  index.
+- **`moth bench`.** A `.bench.moth` file is built with a driver at its end, as
+  `moth test` does with tests: each `bench_` function is called as many times
+  as take 50 ms or more (doubling from one), then that many again five times
+  over; it says the mean time a call, how far the five spread, and calls a
+  second. `the clock` counts milliseconds, so 50 ms keeps its error under 2%.
+- **`moth watch`.** Any other command, run again whenever a `.moth` file here
+  or inside changes (by its text, read four times a second, as a file's time of
+  change needs a library). For that, `cli_main` became `cli_dispatch`, which
+  takes the command and gives back the number to end with, where it had
+  stopped the program itself.
+- **`moth publish`.** What the package index's README says to do by hand: the
+  package's main file found at the top of the folder, its origin on GitHub
+  (whose main file anyone must be able to read), a line about it from its
+  opening comment or `--about`, its tests run, and the index changed and
+  proposed as a pull request with GitHub's `gh`, from a fork. The index is
+  written as its repository lays it out, which a test holds to
+  `JSON.stringify(index, null, 2)`. Without gh it says how to do it in the
+  browser; `--dry-run` only says what it would add.

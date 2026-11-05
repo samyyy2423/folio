@@ -1487,7 +1487,7 @@ test("moth.exe new makes a project of each kind, whose tests pass and whose prog
   assert.equal(moth(sub, "new", "gadget", "thing").status, 2); // no such kind: how to use moth
 });
 
-// moth explain (DESIGN §141): the first mistake moth check finds in a file, said as check says it, then what it
+// moth explain (DESIGN §140): the first mistake moth check finds in a file, said as check says it, then what it
 // means, why it happens and how to put it right; or the mistake a message is from
 test("moth.exe explains the first mistake moth check finds in a file, or the mistake a message is from", { skip }, () => {
   const { dir, exe } = mothExe();
@@ -1523,7 +1523,7 @@ test("moth explain's examples put right are Moth that reads without a mistake", 
   }
 });
 
-// moth upgrade (DESIGN §142): a release from a place of its own (MOTH_RELEASES), laid out as GitHub's are, put in
+// moth upgrade (DESIGN §140): a release from a place of its own (MOTH_RELEASES), laid out as GitHub's are, put in
 // place of the moth on PATH only once its SHA-256 is the one SHA256SUMS.txt says
 test("moth.exe upgrade puts a newer release in place of the moth on PATH, only once its sum checks out", { skip }, () => {
   const { dir, exe } = mothExe();
@@ -1627,6 +1627,51 @@ test("moth.exe watch runs a command again each time a .moth file here changes", 
   }
   assert.equal(out, "one\ntwo\n");
   assert.match(said, /^moth watch: that ended with 0; it runs again when a \.moth file here changes \(Ctrl\+C stops\)\n/);
+});
+
+// moth publish (DESIGN §140): the package here, checked, as the index would have it; --dry-run says what it would add
+test("moth.exe publish finds the package here, checks it, and says what it would add to the index", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "publish");
+  mkdirSync(sub);
+  const moth = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
+  assert.equal(moth(sub, "new", "package", "greeter").status, 0);
+  const folder = join(sub, "greeter");
+  const git = (...args) => spawnSync("git", ["-c", "user.name=Moth", "-c", "user.email=moth@example.com", ...args], { cwd: folder, encoding: "utf8" });
+  git("init", "-q");
+  git("add", "-A");
+  git("commit", "-qm", "the package");
+  git("remote", "add", "origin", join(sub, "elsewhere", "greeter"));
+  const index = (packages) => writeFileSync(join(sub, "index.json"), `${JSON.stringify({ packages }, null, 2)}\n`);
+  index({ cron: { repository: "github.com/samyyy2423/moth-cron", about: "Cron schedules" } });
+  const dry = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Says hello, loudly");
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.match(dry.stdout, /^moth publish: its tests first\n[^]*2 passed\nmoth publish would add to the index:\n {2}"greeter": \{"repository":".*greeter","about":"Says hello, loudly"\}\n$/);
+  const long = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "x".repeat(101));
+  assert.equal(long.status, 1);
+  assert.match(long.stderr, /needs a line about greeter, of at most 100 characters/);
+  index({ greeter: { repository: "github.com/someone/greeter", about: "Another" } });
+  const taken = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"));
+  assert.equal(taken.status, 1);
+  assert.match(taken.stderr, /the index has a package called greeter already, from github\.com\/someone\/greeter: choose another name/);
+  writeFileSync(join(folder, "greeter.test.moth"), 'use "greeter.moth" as lib\n\nto test_wrong\n    expect lib\'s shout("hi") is "hi"\nend\n');
+  const failing = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Hi");
+  assert.equal(failing.status, 1);
+  assert.match(failing.stderr, /greeter's tests don't pass, so it isn't published/);
+});
+
+// the index moth publish writes is laid out as the index's own repository lays it out, as JSON.stringify does
+test("moth publish writes the index as its repository has it: two spaces a level, the names in order", () => {
+  const source = here("moth.moth");
+  const start = source.indexOf("to cli_index_text with cli_packages\n");
+  const code = source.slice(start, source.indexOf("\nend\n", start) + 5);
+  const packages = { zed: { repository: "github.com/a/zed", about: 'Quotes " and \\ and é' }, alpha: { repository: "github.com/a/alpha", about: "First" } };
+  const said = [];
+  const program = [code, 'set zed to dictionary where "repository" is "github.com/a/zed", "about" is "Quotes \\" and \\\\ and é"',
+    'set alpha to dictionary where "repository" is "github.com/a/alpha", "about" is "First"', 'set made to dictionary where "zed" is zed, "alpha" is alpha', "say cli_index_text(made)"];
+  run(program.join("\n"), (line) => said.push(line), { engine: "vm" });
+  const sorted = Object.fromEntries(Object.keys(packages).sort().map((name) => [name, packages[name]]));
+  assert.equal(`${said.join("\n")}\n`, `${JSON.stringify({ packages: sorted }, null, 2)}\n\n`);
 });
 
 // `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
