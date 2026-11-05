@@ -1,0 +1,9 @@
+to is_pangram with sentence
+    set small to lowercase of sentence
+    for each letter in split "abcdefghijklmnopqrstuvwxyz" by ""
+        if position of letter in small is 0
+            return no
+        end
+    end
+    return yes
+end

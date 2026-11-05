@@ -1,0 +1,40 @@
+# difference-of-squares's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test difference_of_squares.test.moth`
+
+use "difference_of_squares.moth" as difference_of_squares
+
+to test_square_the_sum_of_the_numbers_up_to_the_given_number_square_of_sum_1
+    expect difference_of_squares's square_of_sum(1) is 1
+end
+
+to test_square_the_sum_of_the_numbers_up_to_the_given_number_square_of_sum_5
+    expect difference_of_squares's square_of_sum(5) is 225
+end
+
+to test_square_the_sum_of_the_numbers_up_to_the_given_number_square_of_sum_100
+    expect difference_of_squares's square_of_sum(100) is 25502500
+end
+
+to test_sum_the_squares_of_the_numbers_up_to_the_given_number_sum_of_squares_1
+    expect difference_of_squares's sum_of_squares(1) is 1
+end
+
+to test_sum_the_squares_of_the_numbers_up_to_the_given_number_sum_of_squares_5
+    expect difference_of_squares's sum_of_squares(5) is 55
+end
+
+to test_sum_the_squares_of_the_numbers_up_to_the_given_number_sum_of_squares_100
+    expect difference_of_squares's sum_of_squares(100) is 338350
+end
+
+to test_subtract_sum_of_squares_from_square_of_sums_difference_of_squares_1
+    expect difference_of_squares's difference_of_squares(1) is 0
+end
+
+to test_subtract_sum_of_squares_from_square_of_sums_difference_of_squares_5
+    expect difference_of_squares's difference_of_squares(5) is 170
+end
+
+to test_subtract_sum_of_squares_from_square_of_sums_difference_of_squares_100
+    expect difference_of_squares's difference_of_squares(100) is 25164150
+end

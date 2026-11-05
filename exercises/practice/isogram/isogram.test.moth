@@ -1,0 +1,60 @@
+# isogram's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test isogram.test.moth`
+
+use "isogram.moth" as isogram
+
+to test_empty_string
+    expect isogram's is_isogram("")
+end
+
+to test_isogram_with_only_lower_case_characters
+    expect isogram's is_isogram("isogram")
+end
+
+to test_word_with_one_duplicated_character
+    expect not isogram's is_isogram("eleven")
+end
+
+to test_word_with_one_duplicated_character_from_the_end_of_the_alphabet
+    expect not isogram's is_isogram("zzyzx")
+end
+
+to test_longest_reported_english_isogram
+    expect isogram's is_isogram("subdermatoglyphic")
+end
+
+to test_word_with_duplicated_character_in_mixed_case
+    expect not isogram's is_isogram("Alphabet")
+end
+
+to test_word_with_duplicated_character_in_mixed_case_lowercase_first
+    expect not isogram's is_isogram("alphAbet")
+end
+
+to test_hypothetical_isogrammic_word_with_hyphen
+    expect isogram's is_isogram("thumbscrew-japingly")
+end
+
+to test_hypothetical_word_with_duplicated_character_following_hyphen
+    expect not isogram's is_isogram("thumbscrew-jappingly")
+end
+
+to test_isogram_with_duplicated_hyphen
+    expect isogram's is_isogram("six-year-old")
+end
+
+to test_made_up_name_that_is_an_isogram
+    expect isogram's is_isogram("Emily Jung Schwartzkopf")
+end
+
+to test_duplicated_character_in_the_middle
+    expect not isogram's is_isogram("accentor")
+end
+
+to test_same_first_and_last_characters
+    expect not isogram's is_isogram("angola")
+end
+
+to test_word_with_duplicated_character_and_with_two_hyphens
+    expect not isogram's is_isogram("up-to-date")
+end

@@ -1,0 +1,60 @@
+# hamming's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test hamming.test.moth`
+
+use "hamming.moth" as hamming
+
+to test_empty_strands
+    expect hamming's distance("", "") is 0
+end
+
+to test_single_letter_identical_strands
+    expect hamming's distance("A", "A") is 0
+end
+
+to test_single_letter_different_strands
+    expect hamming's distance("G", "T") is 1
+end
+
+to test_long_identical_strands
+    expect hamming's distance("GGACTGAAATCTG", "GGACTGAAATCTG") is 0
+end
+
+to test_long_different_strands
+    expect hamming's distance("GGACGGATTCTG", "AGGACGGATTCT") is 9
+end
+
+to test_disallow_first_strand_longer
+    try
+        hamming's distance("AATG", "AAA")
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "strands must be of equal length"
+    end
+end
+
+to test_disallow_second_strand_longer
+    try
+        hamming's distance("ATA", "AGTG")
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "strands must be of equal length"
+    end
+end
+
+to test_disallow_empty_first_strand
+    try
+        hamming's distance("", "G")
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "strands must be of equal length"
+    end
+end
+
+to test_disallow_empty_second_strand
+    try
+        hamming's distance("G", "")
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "strands must be of equal length"
+    end
+end

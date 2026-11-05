@@ -1,0 +1,3 @@
+to is_pangram with sentence
+    fail with "Please write is_pangram"
+end

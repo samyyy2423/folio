@@ -1,0 +1,40 @@
+# acronym's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test acronym.test.moth`
+
+use "acronym.moth" as acronym
+
+to test_basic
+    expect acronym's abbreviate("Portable Network Graphics") is "PNG"
+end
+
+to test_lowercase_words
+    expect acronym's abbreviate("Ruby on Rails") is "ROR"
+end
+
+to test_punctuation
+    expect acronym's abbreviate("First In, First Out") is "FIFO"
+end
+
+to test_all_caps_word
+    expect acronym's abbreviate("GNU Image Manipulation Program") is "GIMP"
+end
+
+to test_punctuation_without_whitespace
+    expect acronym's abbreviate("Complementary metal-oxide semiconductor") is "CMOS"
+end
+
+to test_very_long_abbreviation
+    expect acronym's abbreviate("Rolling On The Floor Laughing So Hard That My Dogs Came Over And Licked Me") is "ROTFLSHTMDCOALM"
+end
+
+to test_consecutive_delimiters
+    expect acronym's abbreviate("Something - I made up from thin air") is "SIMUFTA"
+end
+
+to test_apostrophes
+    expect acronym's abbreviate("Halley's Comet") is "HC"
+end
+
+to test_underscore_emphasis
+    expect acronym's abbreviate("The Road _Not_ Taken") is "TRNT"
+end

@@ -1,0 +1,11 @@
+to equilateral with sides
+    fail with "Please write equilateral"
+end
+
+to isosceles with sides
+    fail with "Please write isosceles"
+end
+
+to scalene with sides
+    fail with "Please write scalene"
+end

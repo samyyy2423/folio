@@ -1,0 +1,30 @@
+to valid with value
+    set digits to empty list
+    for each c in split value by ""
+        if c is not " "
+            if position of c in "0123456789" is 0
+                return no
+            end
+            add number of c to digits
+        end
+    end
+    if length of digits is at most 1
+        return no
+    end
+    set sum to 0
+    set doubling to no
+    set k to length of digits
+    repeat while k is at least 1
+        set d to item k of digits
+        if doubling
+            set d to d * 2
+            if d is greater than 9
+                set d to d - 9
+            end
+        end
+        set sum to sum + d
+        set doubling to not doubling
+        set k to k - 1
+    end
+    return sum is divisible by 10
+end

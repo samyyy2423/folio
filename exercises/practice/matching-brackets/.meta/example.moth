@@ -1,0 +1,19 @@
+to is_paired with value
+    set closing to dictionary where "(" is ")", "[" is "]", "\{" is "}"
+    set waiting to empty list
+    for each c in split value by ""
+        if c is in closing
+            add item c of closing to waiting
+        else if c is ")" or c is "]" or c is "}"
+            if length of waiting is 0 or item (length of waiting) of waiting is not c
+                return no
+            end
+            if length of waiting is 1
+                set waiting to empty list
+            else
+                set waiting to items 1 to (length of waiting - 1) of waiting
+            end
+        end
+    end
+    return length of waiting is 0
+end

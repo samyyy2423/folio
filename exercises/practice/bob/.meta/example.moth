@@ -1,0 +1,38 @@
+# whether text has a letter in it
+to has_letters with words
+    return uppercase of words is not lowercase of words
+end
+
+# the text without spaces, tabs, new lines or returns at either end
+to trimmed with words
+    set spaces to list of " ", "\t", "\n", (list of 13) as bytes as text
+    set letters to split words by ""
+    set first to 1
+    set last to length of letters
+    repeat while first is at most last and item first of letters is in spaces
+        add 1 to first
+    end
+    repeat while last is at least first and item last of letters is in spaces
+        set last to last - 1
+    end
+    if last is less than first
+        return ""
+    end
+    return items first to last of words
+end
+
+to response with hey_bob
+    set said to trimmed(hey_bob)
+    set shouting to has_letters(said) and said is uppercase of said
+    set asking to said is not "" and item (length of said) of said is "?"
+    if said is ""
+        return "Fine. Be that way!"
+    else if shouting and asking
+        return "Calm down, I know what I'm doing!"
+    else if shouting
+        return "Whoa, chill out!"
+    else if asking
+        return "Sure."
+    end
+    return "Whatever."
+end

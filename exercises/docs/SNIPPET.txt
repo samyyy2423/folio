@@ -1,0 +1,7 @@
+to area with width and height
+    return width * height
+end
+
+for each size in list of 2, 3, 4
+    say size " by " size " is " area(size, size)
+end

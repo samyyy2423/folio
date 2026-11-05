@@ -1,0 +1,12 @@
+to is_isogram with phrase
+    set seen to empty dictionary
+    for each letter in split lowercase of phrase by ""
+        if letter is not " " and letter is not "-"
+            if letter is in seen
+                return no
+            end
+            set item letter of seen to yes
+        end
+    end
+    return yes
+end

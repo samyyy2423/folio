@@ -1,0 +1,12 @@
+to score with word
+    set values to dictionary where "aeioulnrst" is 1, "dg" is 2, "bcmp" is 3, "fhvwy" is 4, "k" is 5, "jx" is 8, "qz" is 10
+    set sum to 0
+    for each letter in split lowercase of word by ""
+        for each letters in keys of values
+            if position of letter in letters is greater than 0
+                set sum to sum + item letters of values
+            end
+        end
+    end
+    return sum
+end

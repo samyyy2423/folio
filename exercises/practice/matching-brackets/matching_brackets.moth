@@ -1,0 +1,3 @@
+to is_paired with value
+    fail with "Please write is_paired"
+end

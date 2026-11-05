@@ -1,0 +1,8 @@
+# hello-world's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test hello_world.test.moth`
+
+use "hello_world.moth" as hello_world
+
+to test_say_hi
+    expect hello_world's hello() is "Hello, World!"
+end

@@ -1,0 +1,15 @@
+to steps with n
+    if n is less than 1
+        fail with "Only positive integers are allowed"
+    end
+    set taken to 0
+    repeat while n is not 1
+        if n is divisible by 2
+            set n to n / 2
+        else
+            set n to 3 * n + 1
+        end
+        add 1 to taken
+    end
+    return taken
+end

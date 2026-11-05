@@ -111,8 +111,9 @@ moth                         the Moth shell: Moth a line at a time
 
 <p align="center"><img src="docs/build.gif" width="760" alt="A terminal: fib.moth, a Fibonacci function in plain English, is built by moth build into fib.exe, which works out fib(32) in 16 ms; the same program in Python takes 341 ms"></p>
 
-[The language](#the-language) has all of Moth on one page, and
-[CONTRIBUTING.md](CONTRIBUTING.md) says how to help.
+[The language](#the-language) has all of Moth on one page,
+[the exercises](exercises/README.md) are 25 problems to practise on, each with tests
+that say when you've solved it, and [CONTRIBUTING.md](CONTRIBUTING.md) says how to help.
 
 ## What makes it different
 
@@ -1412,6 +1413,7 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`neural.moth`](neural.moth), [`math.moth`](math.moth) | The neural network, and the maths it needs, in Moth |
 | [`digits.moth`](digits.moth), [`digit-shapes.moth`](digit-shapes.moth), [`digits-train.moth`](digits-train.moth), [`handwriting.moth`](handwriting.moth) | Reading handwriting: strokes to pictures, the network, its training, and the program that asks you to draw |
 | [`tools/`](tools) | Real tools in Moth: a picture maker, a word counter, a JSON reader and its tests, SQLite, Windows' own controls, and a notepad made with them |
+| [`exercises/`](exercises), [`exercises.test.js`](exercises.test.js) | Practice exercises in Exercism's track format, each with tests and a solution that passes them |
 | [`bootstrap.mjs`](bootstrap.mjs) | Makes the first moth.exe from the source, with Node.js |
 | [`index.html`](index.html), [`worker.js`](worker.js) | The playground |
 
@@ -1445,6 +1447,8 @@ calls that led there.
 - the WebAssembly back end written in Moth against wasm.js, byte for byte, on
   7,822 programs, and what it makes against the VM, mistakes and trails included
 - the neural network and the handwriting reader, on all three engines
+- the practice exercises ([`exercises.test.js`](exercises.test.js)): each
+  example solution passes every test with `moth test`, and each stub none
 - `stop`, the text helpers, `ask` and `use`, including that `ask` never asks
   twice when a run is handed over, and that a mistake in a used file names it
 - `try`, dictionaries, bytes and bits, files and arguments (a run handed over

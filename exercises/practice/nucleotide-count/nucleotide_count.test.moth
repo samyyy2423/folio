@@ -1,0 +1,29 @@
+# nucleotide-count's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test nucleotide_count.test.moth`
+
+use "nucleotide_count.moth" as nucleotide_count
+
+to test_empty_strand
+    expect nucleotide_count's nucleotide_counts("") is dictionary where "A" is 0, "C" is 0, "G" is 0, "T" is 0
+end
+
+to test_can_count_one_nucleotide_in_single_character_input
+    expect nucleotide_count's nucleotide_counts("G") is dictionary where "A" is 0, "C" is 0, "G" is 1, "T" is 0
+end
+
+to test_strand_with_repeated_nucleotide
+    expect nucleotide_count's nucleotide_counts("GGGGGGG") is dictionary where "A" is 0, "C" is 0, "G" is 7, "T" is 0
+end
+
+to test_strand_with_multiple_nucleotides
+    expect nucleotide_count's nucleotide_counts("AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTGTGTGGATTAAAAAAAGAGTGTCTGATAGCAGC") is dictionary where "A" is 20, "C" is 12, "G" is 17, "T" is 21
+end
+
+to test_strand_with_invalid_nucleotides
+    try
+        nucleotide_count's nucleotide_counts("AGXXACT")
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "Invalid nucleotide in strand"
+    end
+end

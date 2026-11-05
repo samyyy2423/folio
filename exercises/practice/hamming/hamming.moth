@@ -1,0 +1,3 @@
+to distance with strand1, strand2
+    fail with "Please write distance"
+end

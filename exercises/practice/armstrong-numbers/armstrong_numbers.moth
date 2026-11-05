@@ -1,0 +1,3 @@
+to is_armstrong_number with n
+    fail with "Please write is_armstrong_number"
+end

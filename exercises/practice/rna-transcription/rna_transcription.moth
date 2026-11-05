@@ -1,0 +1,3 @@
+to to_rna with dna
+    fail with "Please write to_rna"
+end

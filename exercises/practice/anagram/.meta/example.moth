@@ -1,0 +1,14 @@
+# a word's letters, small, in order
+to letters_of with word
+    return (split lowercase of word by "") in order
+end
+
+to find_anagrams with subject, candidates
+    set found to empty list
+    for each candidate in candidates
+        if lowercase of candidate is not lowercase of subject and letters_of(candidate) is letters_of(subject)
+            add candidate to found
+        end
+    end
+    return found
+end

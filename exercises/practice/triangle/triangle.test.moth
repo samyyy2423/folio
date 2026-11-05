@@ -1,0 +1,88 @@
+# triangle's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test triangle.test.moth`
+
+use "triangle.moth" as triangle
+
+to test_equilateral_triangle_all_sides_are_equal
+    expect triangle's equilateral((list of 2, 2, 2))
+end
+
+to test_equilateral_triangle_any_side_is_unequal
+    expect not triangle's equilateral((list of 2, 3, 2))
+end
+
+to test_equilateral_triangle_no_sides_are_equal
+    expect not triangle's equilateral((list of 5, 4, 6))
+end
+
+to test_equilateral_triangle_all_zero_sides_is_not_a_triangle
+    expect not triangle's equilateral((list of 0, 0, 0))
+end
+
+to test_equilateral_triangle_sides_may_be_floats
+    expect triangle's equilateral((list of 0.5, 0.5, 0.5))
+end
+
+to test_isosceles_triangle_last_two_sides_are_equal
+    expect triangle's isosceles((list of 3, 4, 4))
+end
+
+to test_isosceles_triangle_first_two_sides_are_equal
+    expect triangle's isosceles((list of 4, 4, 3))
+end
+
+to test_isosceles_triangle_first_and_last_sides_are_equal
+    expect triangle's isosceles((list of 4, 3, 4))
+end
+
+to test_isosceles_triangle_equilateral_triangles_are_also_isosceles
+    expect triangle's isosceles((list of 4, 4, 4))
+end
+
+to test_isosceles_triangle_no_sides_are_equal
+    expect not triangle's isosceles((list of 2, 3, 4))
+end
+
+to test_isosceles_triangle_first_triangle_inequality_violation
+    expect not triangle's isosceles((list of 1, 1, 3))
+end
+
+to test_isosceles_triangle_second_triangle_inequality_violation
+    expect not triangle's isosceles((list of 1, 3, 1))
+end
+
+to test_isosceles_triangle_third_triangle_inequality_violation
+    expect not triangle's isosceles((list of 3, 1, 1))
+end
+
+to test_isosceles_triangle_sides_may_be_floats
+    expect triangle's isosceles((list of 0.5, 0.4, 0.5))
+end
+
+to test_scalene_triangle_no_sides_are_equal
+    expect triangle's scalene((list of 5, 4, 6))
+end
+
+to test_scalene_triangle_all_sides_are_equal
+    expect not triangle's scalene((list of 4, 4, 4))
+end
+
+to test_scalene_triangle_first_and_second_sides_are_equal
+    expect not triangle's scalene((list of 4, 4, 3))
+end
+
+to test_scalene_triangle_first_and_third_sides_are_equal
+    expect not triangle's scalene((list of 3, 4, 3))
+end
+
+to test_scalene_triangle_second_and_third_sides_are_equal
+    expect not triangle's scalene((list of 4, 3, 3))
+end
+
+to test_scalene_triangle_may_not_violate_triangle_inequality
+    expect not triangle's scalene((list of 7, 3, 2))
+end
+
+to test_scalene_triangle_sides_may_be_floats
+    expect triangle's scalene((list of 0.5, 0.4, 0.6))
+end

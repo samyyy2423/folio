@@ -1,0 +1,3 @@
+to find_anagrams with subject, candidates
+    fail with "Please write find_anagrams"
+end

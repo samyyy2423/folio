@@ -1,0 +1,3 @@
+to two_fer with name or nothing
+    fail with "Please write two_fer"
+end

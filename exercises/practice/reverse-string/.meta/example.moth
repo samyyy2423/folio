@@ -1,0 +1,7 @@
+to reverse with value
+    set made to ""
+    for each c in split value by ""
+        set made to c + made
+    end
+    return made
+end

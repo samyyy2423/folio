@@ -1,0 +1,36 @@
+kind clock_time with minutes
+    to shown with self
+        set hours to (minutes of self - remainder of minutes of self divided by 60) / 60
+        set left to remainder of minutes of self divided by 60
+        set hh to "" + hours
+        set mm to "" + left
+        if hours is less than 10
+            set hh to "0" + hh
+        end
+        if left is less than 10
+            set mm to "0" + mm
+        end
+        return hh + ":" + mm
+    end
+end
+
+# minutes into the day, from 0 to 1439, however far round the clock they've gone
+to round_the_clock with minutes
+    return remainder of (remainder of minutes divided by 1440 + 1440) divided by 1440
+end
+
+to create with hour, minute
+    return clock_time(round_the_clock(hour * 60 + minute))
+end
+
+to add_minutes with clock, minutes
+    return clock_time(round_the_clock(minutes of clock + minutes))
+end
+
+to subtract_minutes with clock, minutes
+    return clock_time(round_the_clock(minutes of clock - minutes))
+end
+
+to equal with a, b
+    return minutes of a is minutes of b
+end

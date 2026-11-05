@@ -1,0 +1,10 @@
+to nucleotide_counts with strand
+    set counts to dictionary where "A" is 0, "C" is 0, "G" is 0, "T" is 0
+    for each n in split strand by ""
+        if not (n is in counts)
+            fail with "Invalid nucleotide in strand"
+        end
+        set item n of counts to item n of counts + 1
+    end
+    return counts
+end

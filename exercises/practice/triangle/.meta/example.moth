@@ -1,0 +1,19 @@
+# whether three sides make a triangle
+to is_triangle with sides
+    set a to item 1 of sides
+    set b to item 2 of sides
+    set c to item 3 of sides
+    return a is greater than 0 and b is greater than 0 and c is greater than 0 and a + b is at least c and b + c is at least a and a + c is at least b
+end
+
+to equilateral with sides
+    return is_triangle(sides) and item 1 of sides is item 2 of sides and item 2 of sides is item 3 of sides
+end
+
+to isosceles with sides
+    return is_triangle(sides) and (item 1 of sides is item 2 of sides or item 2 of sides is item 3 of sides or item 1 of sides is item 3 of sides)
+end
+
+to scalene with sides
+    return is_triangle(sides) and not isosceles(sides)
+end

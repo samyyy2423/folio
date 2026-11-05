@@ -1,0 +1,48 @@
+# scrabble-score's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test scrabble_score.test.moth`
+
+use "scrabble_score.moth" as scrabble_score
+
+to test_lowercase_letter
+    expect scrabble_score's score("a") is 1
+end
+
+to test_uppercase_letter
+    expect scrabble_score's score("A") is 1
+end
+
+to test_valuable_letter
+    expect scrabble_score's score("f") is 4
+end
+
+to test_short_word
+    expect scrabble_score's score("at") is 2
+end
+
+to test_short_valuable_word
+    expect scrabble_score's score("zoo") is 12
+end
+
+to test_medium_word
+    expect scrabble_score's score("street") is 6
+end
+
+to test_medium_valuable_word
+    expect scrabble_score's score("quirky") is 22
+end
+
+to test_long_mixed_case_word
+    expect scrabble_score's score("OxyphenButazone") is 41
+end
+
+to test_english_like_word
+    expect scrabble_score's score("pinata") is 8
+end
+
+to test_empty_input
+    expect scrabble_score's score("") is 0
+end
+
+to test_entire_alphabet_available
+    expect scrabble_score's score("abcdefghijklmnopqrstuvwxyz") is 87
+end

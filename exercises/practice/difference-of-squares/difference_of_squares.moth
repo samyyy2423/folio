@@ -1,0 +1,11 @@
+to square_of_sum with n
+    fail with "Please write square_of_sum"
+end
+
+to sum_of_squares with n
+    fail with "Please write sum_of_squares"
+end
+
+to difference_of_squares with n
+    fail with "Please write difference_of_squares"
+end

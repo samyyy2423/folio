@@ -1,0 +1,63 @@
+# grains's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test grains.test.moth`
+
+use "grains.moth" as grains
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_1
+    expect grains's square(1) is "1"
+end
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_2
+    expect grains's square(2) is "2"
+end
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_3
+    expect grains's square(3) is "4"
+end
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_4
+    expect grains's square(4) is "8"
+end
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_16
+    expect grains's square(16) is "32768"
+end
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_32
+    expect grains's square(32) is "2147483648"
+end
+
+to test_returns_the_number_of_grains_on_the_square_grains_on_square_64
+    expect grains's square(64) is "9223372036854775808"
+end
+
+to test_returns_the_number_of_grains_on_the_square_square_0_is_invalid
+    try
+        grains's square(0)
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "square must be between 1 and 64"
+    end
+end
+
+to test_returns_the_number_of_grains_on_the_square_negative_square_is_invalid
+    try
+        grains's square(-1)
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "square must be between 1 and 64"
+    end
+end
+
+to test_returns_the_number_of_grains_on_the_square_square_greater_than_64_is_invalid
+    try
+        grains's square(65)
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "square must be between 1 and 64"
+    end
+end
+
+to test_returns_the_total_number_of_grains_on_the_board
+    expect grains's total_grains() is "18446744073709551615"
+end

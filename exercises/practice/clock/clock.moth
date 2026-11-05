@@ -1,0 +1,15 @@
+to create with hour, minute
+    fail with "Please write create"
+end
+
+to add_minutes with clock, minutes
+    fail with "Please write add_minutes"
+end
+
+to subtract_minutes with clock, minutes
+    fail with "Please write subtract_minutes"
+end
+
+to equal with a, b
+    fail with "Please write equal"
+end

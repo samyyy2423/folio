@@ -1,0 +1,8 @@
+to to_rna with dna
+    set complement to dictionary where "G" is "C", "C" is "G", "T" is "A", "A" is "U"
+    set rna to ""
+    for each nucleotide in split dna by ""
+        add item nucleotide of complement to rna
+    end
+    return rna
+end

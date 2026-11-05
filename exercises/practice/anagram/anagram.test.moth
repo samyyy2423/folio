@@ -1,0 +1,76 @@
+# anagram's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test anagram.test.moth`
+
+use "anagram.moth" as anagram
+
+to test_no_matches
+    expect anagram's find_anagrams("diaper", (list of "hello", "world", "zombies", "pants")) is empty list
+end
+
+to test_detects_two_anagrams
+    expect anagram's find_anagrams("solemn", (list of "lemons", "cherry", "melons")) is list of "lemons", "melons"
+end
+
+to test_does_not_detect_anagram_subsets
+    expect anagram's find_anagrams("good", (list of "dog", "goody")) is empty list
+end
+
+to test_detects_anagram
+    expect anagram's find_anagrams("listen", (list of "enlists", "google", "inlets", "banana")) is list of "inlets"
+end
+
+to test_detects_three_anagrams
+    expect anagram's find_anagrams("allergy", (list of "gallery", "ballerina", "regally", "clergy", "largely", "leading")) is list of "gallery", "regally", "largely"
+end
+
+to test_detects_multiple_anagrams_with_different_case
+    expect anagram's find_anagrams("nose", (list of "Eons", "ONES")) is list of "Eons", "ONES"
+end
+
+to test_does_not_detect_non_anagrams_with_identical_checksum
+    expect anagram's find_anagrams("mass", (list of "last")) is empty list
+end
+
+to test_detects_anagrams_case_insensitively
+    expect anagram's find_anagrams("Orchestra", (list of "cashregister", "Carthorse", "radishes")) is list of "Carthorse"
+end
+
+to test_detects_anagrams_using_case_insensitive_subject
+    expect anagram's find_anagrams("Orchestra", (list of "cashregister", "carthorse", "radishes")) is list of "carthorse"
+end
+
+to test_detects_anagrams_using_case_insensitive_possible_matches
+    expect anagram's find_anagrams("orchestra", (list of "cashregister", "Carthorse", "radishes")) is list of "Carthorse"
+end
+
+to test_does_not_detect_an_anagram_if_the_original_word_is_repeated
+    expect anagram's find_anagrams("go", (list of "goGoGO")) is empty list
+end
+
+to test_anagrams_must_use_all_letters_exactly_once
+    expect anagram's find_anagrams("tapper", (list of "patter")) is empty list
+end
+
+to test_words_are_not_anagrams_of_themselves
+    expect anagram's find_anagrams("BANANA", (list of "BANANA")) is empty list
+end
+
+to test_words_are_not_anagrams_of_themselves_even_if_letter_case_is_partially_different
+    expect anagram's find_anagrams("BANANA", (list of "Banana")) is empty list
+end
+
+to test_words_are_not_anagrams_of_themselves_even_if_letter_case_is_completely_different
+    expect anagram's find_anagrams("BANANA", (list of "banana")) is empty list
+end
+
+to test_words_other_than_themselves_can_be_anagrams
+    expect anagram's find_anagrams("LISTEN", (list of "LISTEN", "Silent")) is list of "Silent"
+end
+
+to test_handles_case_of_greek_letters
+    expect anagram's find_anagrams("ΑΒΓ", (list of "ΒΓΑ", "ΒΓΔ", "γβα", "αβγ")) is list of "ΒΓΑ", "γβα"
+end
+
+to test_different_characters_may_have_the_same_bytes
+    expect anagram's find_anagrams("a⬂", (list of "€a")) is empty list
+end

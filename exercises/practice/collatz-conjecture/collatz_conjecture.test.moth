@@ -1,0 +1,38 @@
+# collatz-conjecture's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test collatz_conjecture.test.moth`
+
+use "collatz_conjecture.moth" as collatz_conjecture
+
+to test_zero_steps_for_one
+    expect collatz_conjecture's steps(1) is 0
+end
+
+to test_divide_if_even
+    expect collatz_conjecture's steps(16) is 4
+end
+
+to test_even_and_odd_steps
+    expect collatz_conjecture's steps(12) is 9
+end
+
+to test_large_number_of_even_and_odd_steps
+    expect collatz_conjecture's steps(1000000) is 152
+end
+
+to test_zero_is_an_error
+    try
+        collatz_conjecture's steps(0)
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "Only positive integers are allowed"
+    end
+end
+
+to test_negative_value_is_an_error
+    try
+        collatz_conjecture's steps(-15)
+        expect "a mistake" is "no mistake"
+    if it fails with why
+        expect why is "Only positive integers are allowed"
+    end
+end

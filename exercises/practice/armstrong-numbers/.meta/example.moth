@@ -1,0 +1,8 @@
+to is_armstrong_number with n
+    set digits to split ("" + n) by ""
+    set sum to 0
+    for each digit in digits
+        set sum to sum + (number of digit) to the power of length of digits
+    end
+    return sum is n
+end

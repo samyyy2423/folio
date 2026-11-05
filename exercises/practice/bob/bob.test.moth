@@ -1,0 +1,108 @@
+# bob's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test bob.test.moth`
+
+use "bob.moth" as bob
+
+to test_asking_a_question
+    expect bob's response("Does this cryogenic chamber make me look fat?") is "Sure."
+end
+
+to test_shouting
+    expect bob's response("WATCH OUT!") is "Whoa, chill out!"
+end
+
+to test_forceful_question
+    expect bob's response("WHAT'S GOING ON?") is "Calm down, I know what I'm doing!"
+end
+
+to test_silence
+    expect bob's response("") is "Fine. Be that way!"
+end
+
+to test_stating_something
+    expect bob's response("Tom-ay-to, tom-aaaah-to.") is "Whatever."
+end
+
+to test_asking_a_numeric_question
+    expect bob's response("You are, what, like 15?") is "Sure."
+end
+
+to test_asking_gibberish
+    expect bob's response("fffbbcbeab?") is "Sure."
+end
+
+to test_question_with_no_letters
+    expect bob's response("4?") is "Sure."
+end
+
+to test_non_letters_with_question
+    expect bob's response(":) ?") is "Sure."
+end
+
+to test_prattling_on
+    expect bob's response("Wait! Hang on. Are you going to be OK?") is "Sure."
+end
+
+to test_ending_with_whitespace
+    expect bob's response("Okay if like my  spacebar  quite a bit?   ") is "Sure."
+end
+
+to test_multiple_line_question
+    expect bob's response("\nDoes this cryogenic chamber make\n me look fat?") is "Sure."
+end
+
+to test_shouting_gibberish
+    expect bob's response("FCECDFCAAB") is "Whoa, chill out!"
+end
+
+to test_shouting_a_statement_containing_a_question_mark
+    expect bob's response("DO LIONS EAT PEOPLE? AHHHHH.") is "Whoa, chill out!"
+end
+
+to test_shouting_numbers
+    expect bob's response("1, 2, 3 GO!") is "Whoa, chill out!"
+end
+
+to test_shouting_with_special_characters
+    expect bob's response("ZOMG THE %^*@#$(*^ ZOMBIES ARE COMING!!11!!1!") is "Whoa, chill out!"
+end
+
+to test_shouting_with_no_exclamation_mark
+    expect bob's response("I HATE THE DENTIST") is "Whoa, chill out!"
+end
+
+to test_prolonged_silence
+    expect bob's response("          ") is "Fine. Be that way!"
+end
+
+to test_alternate_silence
+    expect bob's response("\t\t\t\t\t\t\t\t\t\t") is "Fine. Be that way!"
+end
+
+to test_other_whitespace
+    expect bob's response(("\n" + (list of 13) as bytes as text + " \t")) is "Fine. Be that way!"
+end
+
+to test_talking_forcefully
+    expect bob's response("Hi there!") is "Whatever."
+end
+
+to test_using_acronyms_in_regular_speech
+    expect bob's response("It's OK if you don't want to go work for NASA.") is "Whatever."
+end
+
+to test_no_letters
+    expect bob's response("1, 2, 3") is "Whatever."
+end
+
+to test_statement_containing_question_mark
+    expect bob's response("Ending with ? means a question.") is "Whatever."
+end
+
+to test_starting_with_whitespace
+    expect bob's response("         hmmmmmmm...") is "Whatever."
+end
+
+to test_non_question_ending_with_whitespace
+    expect bob's response("This is a statement ending with whitespace      ") is "Whatever."
+end

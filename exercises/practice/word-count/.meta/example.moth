@@ -1,0 +1,35 @@
+# whether a character is part of a word: a letter, a digit, or an apostrophe
+to in_a_word with c
+    return uppercase of c is not lowercase of c or position of c in "0123456789'" is greater than 0
+end
+
+to count_words with sentence
+    set counts to empty dictionary
+    set words to empty list
+    set word to ""
+    for each c in split (lowercase of sentence + " ") by ""
+        if in_a_word(c)
+            add c to word
+        else if word is not ""
+            add word to words
+            set word to ""
+        end
+    end
+    for each found in words
+        # an apostrophe at either end is a quote, not part of the word
+        repeat while length of found is greater than 0 and item 1 of found is "'"
+            set found to items 2 to (length of found) of found
+        end
+        repeat while length of found is greater than 0 and item (length of found) of found is "'"
+            set found to items 1 to (length of found - 1) of found
+        end
+        if found is not ""
+            if found is in counts
+                set item found of counts to item found of counts + 1
+            else
+                set item found of counts to 1
+            end
+        end
+    end
+    return counts
+end

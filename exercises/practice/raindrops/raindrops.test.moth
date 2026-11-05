@@ -1,0 +1,76 @@
+# raindrops's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test raindrops.test.moth`
+
+use "raindrops.moth" as raindrops
+
+to test_the_sound_for_1_is_1
+    expect raindrops's convert(1) is "1"
+end
+
+to test_the_sound_for_3_is_pling
+    expect raindrops's convert(3) is "Pling"
+end
+
+to test_the_sound_for_5_is_plang
+    expect raindrops's convert(5) is "Plang"
+end
+
+to test_the_sound_for_7_is_plong
+    expect raindrops's convert(7) is "Plong"
+end
+
+to test_the_sound_for_6_is_pling_as_it_has_a_factor_3
+    expect raindrops's convert(6) is "Pling"
+end
+
+to test_2_to_the_power_3_does_not_make_a_raindrop_sound_as_3_is_the_exponent_not_the_base
+    expect raindrops's convert(8) is "8"
+end
+
+to test_the_sound_for_9_is_pling_as_it_has_a_factor_3
+    expect raindrops's convert(9) is "Pling"
+end
+
+to test_the_sound_for_10_is_plang_as_it_has_a_factor_5
+    expect raindrops's convert(10) is "Plang"
+end
+
+to test_the_sound_for_14_is_plong_as_it_has_a_factor_of_7
+    expect raindrops's convert(14) is "Plong"
+end
+
+to test_the_sound_for_15_is_plingplang_as_it_has_factors_3_and_5
+    expect raindrops's convert(15) is "PlingPlang"
+end
+
+to test_the_sound_for_21_is_plingplong_as_it_has_factors_3_and_7
+    expect raindrops's convert(21) is "PlingPlong"
+end
+
+to test_the_sound_for_25_is_plang_as_it_has_a_factor_5
+    expect raindrops's convert(25) is "Plang"
+end
+
+to test_the_sound_for_27_is_pling_as_it_has_a_factor_3
+    expect raindrops's convert(27) is "Pling"
+end
+
+to test_the_sound_for_35_is_plangplong_as_it_has_factors_5_and_7
+    expect raindrops's convert(35) is "PlangPlong"
+end
+
+to test_the_sound_for_49_is_plong_as_it_has_a_factor_7
+    expect raindrops's convert(49) is "Plong"
+end
+
+to test_the_sound_for_52_is_52
+    expect raindrops's convert(52) is "52"
+end
+
+to test_the_sound_for_105_is_plingplangplong_as_it_has_factors_3_5_and_7
+    expect raindrops's convert(105) is "PlingPlangPlong"
+end
+
+to test_the_sound_for_3125_is_plang_as_it_has_a_factor_5
+    expect raindrops's convert(3125) is "Plang"
+end

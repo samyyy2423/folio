@@ -1,0 +1,3 @@
+to leap_year with year
+    fail with "Please write leap_year"
+end

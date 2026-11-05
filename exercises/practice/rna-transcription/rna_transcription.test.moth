@@ -1,0 +1,28 @@
+# rna-transcription's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test rna_transcription.test.moth`
+
+use "rna_transcription.moth" as rna_transcription
+
+to test_empty_rna_sequence
+    expect rna_transcription's to_rna("") is ""
+end
+
+to test_rna_complement_of_cytosine_is_guanine
+    expect rna_transcription's to_rna("C") is "G"
+end
+
+to test_rna_complement_of_guanine_is_cytosine
+    expect rna_transcription's to_rna("G") is "C"
+end
+
+to test_rna_complement_of_thymine_is_adenine
+    expect rna_transcription's to_rna("T") is "A"
+end
+
+to test_rna_complement_of_adenine_is_uracil
+    expect rna_transcription's to_rna("A") is "U"
+end
+
+to test_rna_complement
+    expect rna_transcription's to_rna("ACGTGGTCTTAA") is "UGCACCAGAAUU"
+end

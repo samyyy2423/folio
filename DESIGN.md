@@ -5305,3 +5305,32 @@ engines stay: as the fallback, and as what the tests compare against.
   calls of four inputs, 573 million; moth building compiler.moth, 3,579
   million. The sections after this one each say what they changed, from
   these.
+
+## 131. Practice exercises, in Exercism's format
+
+- **Why.** People learn a language by solving small problems with tests that say when they're done, and
+  Exercism is where many go to do it, with a track for each language. A Moth track needs exercises in its
+  format first; they're useful before there's a track, too, to anyone learning Moth.
+- **What's there.** exercises/ is a track as Exercism lays one out: its config.json, and 25 practice exercises
+  from Exercism's open problem-specifications (MIT), from hello-world and leap to clock and matching-brackets.
+  Each has the instructions problem-specifications has, what it asks for in Moth (the names of its functions
+  and what they give), a stub, its canonical cases as a `.test.moth` file, an example solution, and
+  tests.toml, which says which cases the tests have. docs/exercism-track.md says how to propose the track,
+  and what Exercism asks for before one launches.
+- **Moth's own test runner.** A test is a `test_` function and `expect` says what should be so, so an
+  exercise's tests run with `moth test`, as any Moth program's do: no framework to learn first. A case that
+  expects a mistake is a `try` whose `if it fails with why` checks the why. A canonical case that another
+  reimplements is left out, as tracks do; so is one Moth can't hold, with its reason in tests.toml: two
+  Armstrong numbers of 33 and 39 digits (a number keeps 15), and two reversals of letters written with a
+  separate mark (Moth's text is code points). grains asks for its numbers as text, with big.moth, as they go
+  past 15 digits.
+- **Moth's words.** An exercise's names had to be ones Moth lets a program make: clock's add and subtract are
+  `add_minutes` and `subtract_minutes`, as `add` is Moth's own, and raindrops' input is `n`, not `number`.
+  A clock is a record of a kind with a `shown` function, so its tests compare `"{clock}"` with `"08:00"`.
+- **Made, then kept.** exercises/bin/generate.mjs made them from a copy of problem-specifications: the Moth
+  for each case is written once, per exercise, so a new case or a new exercise is a line or two, and the
+  uuids config.json gave each exercise are kept when it runs again.
+- **Tested.** exercises.test.js: config.json lists the folders in exercises/practice, and only those, with
+  uuids of their own; each exercise has the files its .meta/config.json names, and a test for each case
+  tests.toml includes; and, with moth built from the source, `moth test` passes every test of each example
+  solution and none of each stub, each in a folder as a student downloads it.

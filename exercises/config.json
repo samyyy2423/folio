@@ -1,0 +1,287 @@
+{
+  "language": "Moth",
+  "slug": "moth",
+  "active": false,
+  "status": {
+    "concept_exercises": false,
+    "test_runner": false,
+    "representer": false,
+    "analyzer": false
+  },
+  "blurb": "Moth is a programming language that reads like plain English: small enough to learn in an afternoon, with a compiler written in Moth that makes Windows and Linux programs as fast as C.",
+  "version": 3,
+  "online_editor": {
+    "indent_style": "space",
+    "indent_size": 4
+  },
+  "test_runner": {
+    "average_run_time": 2
+  },
+  "files": {
+    "solution": [
+      "%{snake_slug}.moth"
+    ],
+    "test": [
+      "%{snake_slug}.test.moth"
+    ],
+    "example": [
+      ".meta/example.moth"
+    ],
+    "exemplar": [
+      ".meta/exemplar.moth"
+    ]
+  },
+  "exercises": {
+    "concept": [],
+    "practice": [
+      {
+        "slug": "hello-world",
+        "name": "Hello World",
+        "uuid": "06846579-0645-42a9-a073-19dd99329a58",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "two-fer",
+        "name": "Two-Fer",
+        "uuid": "17ea2d24-7c03-4ddf-9870-a93b22558c4c",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "leap",
+        "name": "Leap",
+        "uuid": "c85f0b85-1eed-4b3c-b499-64d88aefeed7",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "raindrops",
+        "name": "Raindrops",
+        "uuid": "e2e3a936-6224-4877-8d20-b4b11d4f2329",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "bob",
+        "name": "Bob",
+        "uuid": "e3dfc703-6046-486b-bdf3-a9e9f6298174",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      },
+      {
+        "slug": "isogram",
+        "name": "Isogram",
+        "uuid": "ce65e8c2-7b6b-4ea8-be15-361999c0574d",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      },
+      {
+        "slug": "pangram",
+        "name": "Pangram",
+        "uuid": "44f03a0a-9e20-4750-810d-cb3764b1de8e",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "word-count",
+        "name": "Word Count",
+        "uuid": "79b12c3f-7700-4b76-a131-446e7ecf3563",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 3
+      },
+      {
+        "slug": "anagram",
+        "name": "Anagram",
+        "uuid": "4be92d03-c952-4d1e-ac0e-1beb5b231160",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 3
+      },
+      {
+        "slug": "acronym",
+        "name": "Acronym",
+        "uuid": "26ddf89f-86dd-4c5d-ac81-6280631c12f2",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "hamming",
+        "name": "Hamming",
+        "uuid": "20a768aa-278e-4aa1-9e2b-c874dd290e5b",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "rna-transcription",
+        "name": "RNA Transcription",
+        "uuid": "877bd89b-42a4-4348-9570-d80e42cffd8d",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "grains",
+        "name": "Grains",
+        "uuid": "53623482-2d31-4a67-b64a-b388d63ddb4b",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "collatz-conjecture",
+        "name": "Collatz Conjecture",
+        "uuid": "2ca2612e-8f53-4e68-adc9-4832244bf552",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "armstrong-numbers",
+        "name": "Armstrong Numbers",
+        "uuid": "b4b9ea91-5ed0-4b75-bf34-8bb7c08574b1",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "reverse-string",
+        "name": "Reverse String",
+        "uuid": "18b8518d-f9b4-4a1a-999c-1f00e2eddefb",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "matching-brackets",
+        "name": "Matching Brackets",
+        "uuid": "0803d07d-b85a-439e-a055-88459dddbe16",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      },
+      {
+        "slug": "clock",
+        "name": "Clock",
+        "uuid": "777f74b4-212f-491b-9853-bda39284e6ec",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 3
+      },
+      {
+        "slug": "sieve",
+        "name": "Sieve",
+        "uuid": "bea190ac-ffab-47b7-bf84-0b0b899ac650",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      },
+      {
+        "slug": "luhn",
+        "name": "Luhn",
+        "uuid": "33bd6500-f35d-4c93-b563-9473eeaec164",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      },
+      {
+        "slug": "difference-of-squares",
+        "name": "Difference of Squares",
+        "uuid": "677d9062-04de-4918-baca-dd053a282a19",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "scrabble-score",
+        "name": "Scrabble Score",
+        "uuid": "0ed19c2b-fbea-4fc9-aeb6-5a22643f520d",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "nucleotide-count",
+        "name": "Nucleotide Count",
+        "uuid": "6daf6107-9e14-4979-89d8-dbce2bc69037",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 1
+      },
+      {
+        "slug": "prime-factors",
+        "name": "Prime Factors",
+        "uuid": "852f4027-dcd7-4448-89c6-d183b44964c9",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      },
+      {
+        "slug": "triangle",
+        "name": "Triangle",
+        "uuid": "4f1d3735-6589-4e85-8f96-ab4a5134ccb5",
+        "practices": [],
+        "prerequisites": [],
+        "difficulty": 2
+      }
+    ],
+    "foregone": []
+  },
+  "concepts": [],
+  "key_features": [
+    {
+      "title": "Reads like English",
+      "content": "Programs say what they do: set, say, for each, repeat while, to ... with.",
+      "icon": "easy"
+    },
+    {
+      "title": "Fast",
+      "content": "moth build compiles to machine code for Windows and Linux, as fast as C.",
+      "icon": "fast"
+    },
+    {
+      "title": "No dependencies",
+      "content": "One program, with a standard library from JSON to web servers built in.",
+      "icon": "batteries-included"
+    },
+    {
+      "title": "Clear mistakes",
+      "content": "Every error says what went wrong, where, in plain words.",
+      "icon": "helpful"
+    },
+    {
+      "title": "Tested",
+      "content": "Tests are functions, expect says what should be so, and moth test runs them.",
+      "icon": "safe"
+    },
+    {
+      "title": "Everywhere",
+      "content": "The same program runs in the browser's playground and as a native program.",
+      "icon": "cross-platform"
+    }
+  ],
+  "tags": [
+    "paradigm/imperative",
+    "paradigm/procedural",
+    "typing/dynamic",
+    "execution_mode/compiled",
+    "execution_mode/interpreted",
+    "platform/windows",
+    "platform/linux",
+    "platform/web",
+    "runtime/standalone_executable",
+    "used_for/scripts",
+    "used_for/web_development",
+    "used_for/games"
+  ]
+}

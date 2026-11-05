@@ -1,0 +1,3 @@
+to valid with value
+    fail with "Please write valid"
+end

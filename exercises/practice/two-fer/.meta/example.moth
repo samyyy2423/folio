@@ -1,0 +1,6 @@
+to two_fer with name or nothing
+    if name is nothing
+        set name to "you"
+    end
+    return "One for " + name + ", one for me."
+end

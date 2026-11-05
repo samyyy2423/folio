@@ -1,0 +1,12 @@
+to distance with strand1, strand2
+    if length of strand1 is not length of strand2
+        fail with "strands must be of equal length"
+    end
+    set differ to 0
+    for each k from 1 to length of strand1
+        if item k of strand1 is not item k of strand2
+            add 1 to differ
+        end
+    end
+    return differ
+end

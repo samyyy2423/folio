@@ -1,0 +1,44 @@
+# pangram's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test pangram.test.moth`
+
+use "pangram.moth" as pangram
+
+to test_empty_sentence
+    expect not pangram's is_pangram("")
+end
+
+to test_perfect_lower_case
+    expect pangram's is_pangram("abcdefghijklmnopqrstuvwxyz")
+end
+
+to test_only_lower_case
+    expect pangram's is_pangram("the quick brown fox jumps over the lazy dog")
+end
+
+to test_missing_the_letter_x
+    expect not pangram's is_pangram("a quick movement of the enemy will jeopardize five gunboats")
+end
+
+to test_missing_the_letter_h
+    expect not pangram's is_pangram("five boxing wizards jump quickly at it")
+end
+
+to test_with_underscores
+    expect pangram's is_pangram("the_quick_brown_fox_jumps_over_the_lazy_dog")
+end
+
+to test_with_numbers
+    expect pangram's is_pangram("the 1 quick brown fox jumps over the 2 lazy dogs")
+end
+
+to test_missing_letters_replaced_by_numbers
+    expect not pangram's is_pangram("7h3 qu1ck brown fox jumps ov3r 7h3 lazy dog")
+end
+
+to test_mixed_case_and_punctuation
+    expect pangram's is_pangram("\"Five quacking Zephyrs jolt my wax bed.\"")
+end
+
+to test_a_m_and_a_m_are_26_different_characters_but_not_a_pangram
+    expect not pangram's is_pangram("abcdefghijklm ABCDEFGHIJKLM")
+end

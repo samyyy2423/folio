@@ -1,0 +1,60 @@
+# word-count's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test word_count.test.moth`
+
+use "word_count.moth" as word_count
+
+to test_count_one_word
+    expect word_count's count_words("word") is dictionary where "word" is 1
+end
+
+to test_count_one_of_each_word
+    expect word_count's count_words("one of each") is dictionary where "one" is 1, "of" is 1, "each" is 1
+end
+
+to test_multiple_occurrences_of_a_word
+    expect word_count's count_words("one fish two fish red fish blue fish") is dictionary where "one" is 1, "fish" is 4, "two" is 1, "red" is 1, "blue" is 1
+end
+
+to test_handles_cramped_lists
+    expect word_count's count_words("one,two,three") is dictionary where "one" is 1, "two" is 1, "three" is 1
+end
+
+to test_handles_expanded_lists
+    expect word_count's count_words("one,\ntwo,\nthree") is dictionary where "one" is 1, "two" is 1, "three" is 1
+end
+
+to test_ignore_punctuation
+    expect word_count's count_words("car: carpet as java: javascript!!&@$%^&") is dictionary where "car" is 1, "carpet" is 1, "as" is 1, "java" is 1, "javascript" is 1
+end
+
+to test_include_numbers
+    expect word_count's count_words("testing, 1, 2 testing") is dictionary where "1" is 1, "2" is 1, "testing" is 2
+end
+
+to test_normalize_case
+    expect word_count's count_words("go Go GO Stop stop") is dictionary where "go" is 3, "stop" is 2
+end
+
+to test_with_apostrophes
+    expect word_count's count_words("'First: don't laugh. Then: don't cry. You're getting it.'") is dictionary where "first" is 1, "don't" is 2, "laugh" is 1, "then" is 1, "cry" is 1, "you're" is 1, "getting" is 1, "it" is 1
+end
+
+to test_with_quotations
+    expect word_count's count_words("Joe can't tell between 'large' and large.") is dictionary where "joe" is 1, "can't" is 1, "tell" is 1, "between" is 1, "large" is 2, "and" is 1
+end
+
+to test_substrings_from_the_beginning
+    expect word_count's count_words("Joe can't tell between app, apple and a.") is dictionary where "joe" is 1, "can't" is 1, "tell" is 1, "between" is 1, "app" is 1, "apple" is 1, "and" is 1, "a" is 1
+end
+
+to test_multiple_spaces_not_detected_as_a_word
+    expect word_count's count_words(" multiple   whitespaces") is dictionary where "multiple" is 1, "whitespaces" is 1
+end
+
+to test_alternating_word_separators_not_detected_as_a_word
+    expect word_count's count_words(",\n,one,\n ,two \n 'three'") is dictionary where "one" is 1, "two" is 1, "three" is 1
+end
+
+to test_quotation_for_word_with_apostrophe
+    expect word_count's count_words("can, can't, 'can't'") is dictionary where "can" is 1, "can't" is 2
+end

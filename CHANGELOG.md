@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Practice exercises**, in [exercises/](exercises/README.md): 25 from Exercism's problem-specifications, in
+  Exercism's track format, each with its instructions, a stub, tests that `moth test` runs, and an example
+  solution that passes them; and [docs/exercism-track.md](docs/exercism-track.md), on proposing a Moth track
+  to Exercism.
 - **`moth build --target wasm`** makes `<file>.wasm`, a WebAssembly module, from
   [`wasm.moth`](wasm.moth): Moth's WebAssembly back end, now written in Moth too, which makes exactly the
   bytes the playground's WebAssembly engine makes. `runWasm` in `moth.js` runs one.

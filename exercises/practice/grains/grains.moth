@@ -1,0 +1,7 @@
+to square with n
+    fail with "Please write square"
+end
+
+to total_grains
+    fail with "Please write total_grains"
+end

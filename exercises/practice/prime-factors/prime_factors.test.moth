@@ -1,0 +1,52 @@
+# prime-factors's tests, from Exercism's problem-specifications (canonical-data.json, MIT): run them with
+# `moth test prime_factors.test.moth`
+
+use "prime_factors.moth" as prime_factors
+
+to test_no_factors
+    expect prime_factors's factors(1) is empty list
+end
+
+to test_prime_number
+    expect prime_factors's factors(2) is list of 2
+end
+
+to test_another_prime_number
+    expect prime_factors's factors(3) is list of 3
+end
+
+to test_square_of_a_prime
+    expect prime_factors's factors(9) is list of 3, 3
+end
+
+to test_product_of_first_prime
+    expect prime_factors's factors(4) is list of 2, 2
+end
+
+to test_cube_of_a_prime
+    expect prime_factors's factors(8) is list of 2, 2, 2
+end
+
+to test_product_of_second_prime
+    expect prime_factors's factors(27) is list of 3, 3, 3
+end
+
+to test_product_of_third_prime
+    expect prime_factors's factors(625) is list of 5, 5, 5, 5
+end
+
+to test_product_of_first_and_second_prime
+    expect prime_factors's factors(6) is list of 2, 3
+end
+
+to test_product_of_primes_and_non_primes
+    expect prime_factors's factors(12) is list of 2, 2, 3
+end
+
+to test_product_of_primes
+    expect prime_factors's factors(901255) is list of 5, 17, 23, 461
+end
+
+to test_factors_include_a_large_prime
+    expect prime_factors's factors(93819012551) is list of 11, 9539, 894119
+end

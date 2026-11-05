@@ -1,0 +1,3 @@
+to nucleotide_counts with strand
+    fail with "Please write nucleotide_counts"
+end

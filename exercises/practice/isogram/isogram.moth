@@ -1,0 +1,3 @@
+to is_isogram with phrase
+    fail with "Please write is_isogram"
+end

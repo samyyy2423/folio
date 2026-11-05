@@ -1,0 +1,16 @@
+to factors with value
+    set found to empty list
+    set divisor to 2
+    repeat while value is greater than 1
+        if divisor * divisor is greater than value
+            add value to found
+            return found
+        end
+        repeat while value is divisible by divisor
+            add divisor to found
+            set value to value / divisor
+        end
+        add 1 to divisor
+    end
+    return found
+end

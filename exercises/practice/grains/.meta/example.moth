@@ -1,0 +1,12 @@
+use "big.moth" as big
+
+to square with n
+    if n is less than 1 or n is greater than 64
+        fail with "square must be between 1 and 64"
+    end
+    return big's power(2, n - 1)
+end
+
+to total_grains
+    return big's minus(big's power(2, 64), 1)
+end
