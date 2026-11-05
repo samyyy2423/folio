@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync, readdirSync } from "node:fs";
 import { run, test as testMoth, format, suggestedFix, debug, timeline, check, compile, compileToJs, compileToWasm, load, mothCompiler, memoryDisk, excerpt, describeTrail, MothError, soundSamples, soundWav, LANGUAGE } from "./moth.js";
-import { Machine, BEEP, Ended } from "./vm.js";
+import { Machine, BEEP, Ended, OP } from "./vm.js";
 import examples from "./examples.js";
 import { generatePrograms } from "./generate.js";
 import { PROGRAMS, ERRORS, SAVING, TYPED, brokenPrograms } from "./cases.js";
@@ -76,6 +76,12 @@ test("errors point at the exact spot", () => {
 
 test("maxSteps stops a loop that never ends", () => {
   assert.equal(error("repeat while yes\nend", { maxSteps: 1000 }).message, "line 1: stopped after 1,000 steps (is there a loop that never ends?)");
+});
+
+test("each case of the VM's switch is its opcode's number, and every opcode has one", () => {
+  const cases = [...Machine.prototype.run.toString().matchAll(/case (\d+) \/\* ([A-Z_]+) \*\//g)].map(([, n, name]) => [name, Number(n)]);
+  assert.deepEqual(cases.map(([name]) => name).sort(), Object.keys(OP).sort());
+  for (const [name, n] of cases) assert.equal(n, OP[name], name);
 });
 
 test("the drawing examples draw", () => {
