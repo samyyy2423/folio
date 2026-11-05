@@ -6039,3 +6039,39 @@ fill that in, each in moth.moth, run in the tests as moth.exe itself.
   written as its repository lays it out, which a test holds to
   `JSON.stringify(index, null, 2)`. Without gh it says how to do it in the
   browser; `--dry-run` only says what it would add.
+
+## 141. MCP servers, PDF files and spreadsheets
+
+Three libraries for work people do with programs now: tools for AI apps, and
+the two file formats offices send each other. Each is Moth alone, on every
+engine, with its tests in `tools/` run on all three. (Markdown and HTML
+templates, also asked for, were packages in the index already: `markdown` and
+`template`.)
+
+- **mcp.moth.** A server is a name, a version, and the tools, resources and
+  prompts it offers. `serve()` reads the app's JSON-RPC messages a line at a
+  time with `ask for 1 bytes` (as `moth lsp` reads its editor's), since `ask`
+  shows its question and repeats what's piped to it, which would put text in
+  the app's replies; `answer()` answers one message, so the tests run on the
+  JavaScript engines too. What a tool needs is said in words (`"number"`,
+  `"text or nothing: a city"`) and made into the JSON Schema the protocol
+  wants, or given as one. It answers `initialize` with the protocol version
+  the app asked for if it speaks it (2024-11-05, 2025-03-26, 2025-06-18), and
+  its newest if not; a tool's mistake is its result with `isError`, as the
+  protocol says, so the model sees it, and the server goes on. A test builds a
+  server with moth.exe and talks to it through its input, with `\r\n` line
+  ends as Windows pipes have them; built, it is a program of 156 KB.
+- **pdf.moth.** PDF 1.4, written as text: each object, then the table of where
+  each starts, which a test reads back to check every offset. Text is in the
+  14 fonts every reader has, in their WinAnsi encoding, so nothing is embedded
+  and a page of text is a few kilobytes; letters outside it are `?`. Text wraps
+  by Adobe's own widths for Helvetica and Times (Courier's are all 600), so
+  `paragraph()` breaks lines where a reader will draw them: the test checks
+  each line fits, and that the next word wouldn't have. A report made with it
+  opens in pypdf and PyMuPDF, and draws as it should.
+- **xlsx.moth.** A workbook is a zip of XML, so it is `zip.moth` and
+  `xml.moth`: four small files and one per sheet, each cell a number, text
+  (written inline, so there's no shared table to keep), yes or no. Reading
+  takes what Excel writes too: shared strings, rich text in runs, cells and
+  rows left out, a formula's last value, a sheet found by its relationship
+  rather than its place. openpyxl reads what it writes back exactly.

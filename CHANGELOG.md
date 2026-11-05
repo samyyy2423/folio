@@ -12,6 +12,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   puts the newest release in place of the moth on PATH, once its SHA-256 checks out. `moth doc` makes pages
   of HTML from a program's comments, `moth bench` times `bench_` functions, `moth watch` runs a command again
   on each change, and `moth publish` opens a pull request that puts a package in the package index.
+- **MCP servers, PDF files and spreadsheets.** `mcp.moth` makes servers whose tools Claude and other AI apps
+  can call; `pdf.moth` writes PDF files with text, lines, boxes and colours; `xlsx.moth` reads and writes
+  Excel workbooks. All three are in the standard library, in Moth alone.
 - **Installers.** `irm https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.ps1 | iex` on
   Windows and `curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh` on
   Linux install the latest release, checked against its `SHA256SUMS.txt`, and put `moth` on PATH. Scoop

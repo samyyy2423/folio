@@ -535,6 +535,16 @@ bytes and dictionaries:
   authorization code flow and PKCE, a server of the program's own on
   127.0.0.1 for the browser to come back to, as command-line tools do;
   `client_credentials`; `refresh`; and `discover` for OpenID Connect.
+- [`mcp.moth`](tools/mcp.moth) makes MCP servers: tools, resources and
+  prompts that Claude and other AI apps use, served over the Model Context
+  Protocol on the program's input and output. `moth build` makes the server a
+  program of its own, for the app's settings to start.
+- [`pdf.moth`](tools/pdf.moth) writes PDF files: pages of text in the 14 fonts
+  every reader has, lines, boxes and colours, and paragraphs wrapped by the
+  fonts' own widths.
+- [`xlsx.moth`](tools/xlsx.moth) reads and writes Excel workbooks: each sheet
+  a list of rows of numbers, text and yes or no, as Excel, LibreOffice and
+  Google Sheets open them.
 - [`zip.moth`](tools/zip.moth) squeezes bytes and back as gzip and .zip files
   do (DEFLATE, with codes made for each block as zlib's are), and makes and
   reads zip archives, in Moth alone: what it makes, zlib, Python and `tar`
