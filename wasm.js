@@ -15,7 +15,7 @@ import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
 import { TooDeep } from "./jit.js";
-import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, show, divisible, canon, noValue, stoppedMessage, makeRecord, failWith, BUILTINS, askFor, readFile, writeFile,
+import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, show, canon, noValue, stoppedMessage, makeRecord, failWith, BUILTINS, askFor, readFile, writeFile,
   trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, everyInterval, Quantity, isQuantity, isRecord, Ended, exitCode, removeFile, fakeClock,
   nowValue, waitFor, readFolder, soundOf, BEEP, CantCopy, DEEPEST_COPY, madeInside, tooDeepToCopy, workerEnded, workerResult, workerRoom,
   workerTaken, enterWorker, leaveWorker } from "./vm.js";
@@ -42,8 +42,6 @@ const IMPORTS = {
   say: [[EQ], []],
   sayError: [[EQ], []], // a line for the error output
   exit: [[EQ, I32], []], // `stop the program with` this, and a position
-  remainder: [[F64, F64], [F64]],
-  divisible: [[F64, F64], [I32]],
   stopped: [[I32], []],
   refill: [[I32], [I32]], // more steps, as a step count's last ran out: how many are left after this one
   grant: [[], [I32]], // the steps a run (or an app's handler) starts with
@@ -380,7 +378,7 @@ function declareRuntime(m, T, im) {
 
   // `is divisible by` on two numbers. For whole numbers below 2^52, a is divisible by b exactly when
   // a = trunc(a / b) * b: a whole quotient divides exactly, and every product here is a whole number a
-  // float holds exactly. Fractions and huge numbers go to JavaScript's %, and 0 to the shared check's error.
+  // float holds exactly. Fractions and huge numbers go to divisibleF, and 0 to compareRest's mistake.
   fn("dvf", [F64, F64, I32], [I32], (c) => {
     const whole = (x) => c.emit("local.get", x).emit("local.get", x).emit("f64.trunc").emit("f64.eq").emit("local.get", x).emit("f64.abs").emit("f64.const", 2 ** 52).emit("f64.lt").emit("i32.and");
     c.emit("local.get", 1).emit("f64.const", 0).emit("f64.eq").emit("if");
@@ -390,7 +388,7 @@ function declareRuntime(m, T, im) {
     whole(1);
     c.emit("i32.and").emit("if", I32);
     c.emit("local.get", 0).emit("local.get", 0).emit("local.get", 1).emit("f64.div").emit("f64.trunc").emit("local.get", 1).emit("f64.mul").emit("f64.eq");
-    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.divisible).emit("end"); // to 15 digits, in JavaScript
+    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", R.divisibleF).emit("end"); // to 15 digits
   });
 
   fn("dv", [EQ, EQ, I32], [I32], (c) => {
@@ -1962,8 +1960,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     say: (parts) => print(toJs(parts).map((p) => show(p)).join("")),
     sayError: (parts) => printError(toJs(parts).map((p) => show(p)).join("")),
     exit: (code, k) => throwing(new Ended(exitCode(toJs(code), errors[k]))), // kept as the last thing thrown, which no `try` catches
-    remainder: (a, b) => a % b,
-    divisible: (a, b) => (divisible(a, b) ? 1 : 0),
     stopped: (k) => {
       const err = new FolioError(ats[k], stoppedMessage(maxSteps), undefined, trail());
       err.final = true; // no try catches it

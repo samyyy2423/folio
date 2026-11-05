@@ -684,8 +684,6 @@ to wasm_runtime
     wasm_import(m, "say", (list of eq), none)
     wasm_import(m, "sayError", (list of eq), none)
     wasm_import(m, "exit", (list of eq, i32), none)
-    wasm_import(m, "remainder", (list of f64, f64), (list of f64))
-    wasm_import(m, "divisible", (list of f64, f64), (list of i32))
     wasm_import(m, "stopped", (list of i32), none)
     wasm_import(m, "refill", (list of i32), (list of i32))
     wasm_import(m, "grant", none, (list of i32))
@@ -863,7 +861,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 0 f64.trunc f64.eq local.get 0 f64.abs f64.const 2^52 f64.lt i32.and")
     wasm_asm(f, "local.get 1 local.get 1 f64.trunc f64.eq local.get 1 f64.abs f64.const 2^52 f64.lt i32.and")
     wasm_asm(f, "i32.and if i32 local.get 0 local.get 0 local.get 1 f64.div f64.trunc local.get 1 f64.mul f64.eq")
-    wasm_asm(f, "else local.get 0 local.get 1 call im.divisible end") # to 15 digits, in JavaScript
+    wasm_asm(f, "else local.get 0 local.get 1 call R.divisibleF end") # to 15 digits
 
     set f to wasm_rt(m, "dv", (list of eq, eq, i32), (list of i32))
     wasm_asm(f, wasm_both_nums(0, 1) + " if i32 " + wasm_num_of(0) + wasm_num_of(1) + " local.get 2 call R.dvf")

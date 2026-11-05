@@ -15,6 +15,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   distance" on the WebAssembly engine, as on the others, not "not undefined" (DESIGN §154).
 - **The operators stay in WebAssembly.** `+ - * /` with text, amounts or a mistake, `-` before a value, comparing,
   `is` by value and `is in` are the module's own: it imports 34 functions, not 40 (DESIGN §155).
+- **A program with many variables compiles fast.** The compiler written in Folio found each name by going through
+  every name in its scope; it keeps a dictionary of them now. A program of 20,000 variables runs in folio.exe in
+  0.4 seconds, not 20, and one of 50,000 in 1 second, not more than 3 minutes (DESIGN §156).
+- **`is divisible by` stays in WebAssembly.** An exact remainder of two numbers, from their bits, as C's fmod
+  gives it: the module imports 32 functions (DESIGN §157).
 - **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
   `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
   `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,

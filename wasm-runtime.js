@@ -2382,6 +2382,108 @@ end
 local.get a local.get b local.get op local.get k call R.cantCheck
 i32.const 0
 
+;; ---------- a remainder of two numbers, exactly (DESIGN §157) ----------
+;; JavaScript's % on numbers is exact, with the first number's sign: C's fmod. WebAssembly has no remainder for
+;; floats, and x - trunc(x / y) * y isn't exact, so it's worked out from the bits, as musl's fmod does: the two
+;; significands lined up, then y taken from x a bit at a time.
+
+;; x % y, as JavaScript has it
+func fmod x:f64 y:f64 -> f64
+local ux i64
+local uy i64
+local ex i32
+local ey i32
+local sx i64
+local i i64
+local.get x i64.reinterpret_f64 local.set ux
+local.get y i64.reinterpret_f64 local.set uy
+local.get ux i64.const 52 i64.shr_u i32.wrap_i64 i32.const 2047 i32.and local.set ex
+local.get uy i64.const 52 i64.shr_u i32.wrap_i64 i32.const 2047 i32.and local.set ey
+local.get ux i64.const 63 i64.shr_u i64.const 63 i64.shl local.set sx
+;; y 0 or NaN, or x infinite or NaN: NaN
+local.get uy i64.const 1 i64.shl i64.eqz local.get y local.get y f64.ne i32.or local.get ex i32.const 2047 i32.eq i32.or if
+  local.get x local.get y f64.mul local.get x local.get y f64.mul f64.div return
+end
+;; |x| no more than |y|: 0 (x's sign) if they're the same, x if it's less
+local.get uy i64.const 1 i64.shl local.get ux i64.const 1 i64.shl i64.lt_u i32.eqz if
+  local.get ux i64.const 1 i64.shl local.get uy i64.const 1 i64.shl i64.eq if
+    f64.const d0 local.get x f64.mul return
+  end
+  local.get x return
+end
+;; each significand with its leading 1, a subnormal's shifted up to have one
+local.get ex i32.eqz if
+  local.get ux i64.const 12 i64.shl local.set i
+  block loop
+    local.get i i64.const 63 i64.shr_u i64.eqz i32.eqz br_if 1
+    local.get ex i32.const 1 i32.sub local.set ex
+    local.get i i64.const 1 i64.shl local.set i
+    br 0
+  end end
+  local.get ux i32.const 1 local.get ex i32.sub i64.extend_i32_u i64.shl local.set ux
+else
+  local.get ux i64.const 4503599627370495 i64.and i64.const 4503599627370496 i64.or local.set ux
+end
+local.get ey i32.eqz if
+  local.get uy i64.const 12 i64.shl local.set i
+  block loop
+    local.get i i64.const 63 i64.shr_u i64.eqz i32.eqz br_if 1
+    local.get ey i32.const 1 i32.sub local.set ey
+    local.get i i64.const 1 i64.shl local.set i
+    br 0
+  end end
+  local.get uy i32.const 1 local.get ey i32.sub i64.extend_i32_u i64.shl local.set uy
+else
+  local.get uy i64.const 4503599627370495 i64.and i64.const 4503599627370496 i64.or local.set uy
+end
+;; y taken from x a bit at a time
+block loop
+  local.get ex local.get ey i32.le_s br_if 1
+  local.get ux local.get uy i64.sub local.tee i i64.const 63 i64.shr_u i64.eqz if
+    local.get i i64.eqz if
+      f64.const d0 local.get x f64.mul return
+    end
+    local.get i local.set ux
+  end
+  local.get ux i64.const 1 i64.shl local.set ux
+  local.get ex i32.const 1 i32.sub local.set ex
+  br 0
+end end
+local.get ux local.get uy i64.sub local.tee i i64.const 63 i64.shr_u i64.eqz if
+  local.get i i64.eqz if
+    f64.const d0 local.get x f64.mul return
+  end
+  local.get i local.set ux
+end
+block loop
+  local.get ux i64.const 52 i64.shr_u i64.eqz i32.eqz br_if 1
+  local.get ux i64.const 1 i64.shl local.set ux
+  local.get ex i32.const 1 i32.sub local.set ex
+  br 0
+end end
+;; back to a double, with x's sign
+local.get ex i32.const 0 i32.gt_s if
+  local.get ux i64.const 4503599627370496 i64.sub local.get ex i64.extend_i32_u i64.const 52 i64.shl i64.or local.set ux
+else
+  local.get ux i32.const 1 local.get ex i32.sub i64.extend_i32_u i64.shr_u local.set ux
+end
+local.get ux local.get sx i64.or f64.reinterpret_i64
+
+;; for JavaScript's tests, as numberText is: x % y
+export remainderOf x:f64 y:f64 -> f64
+local.get x local.get y call R.fmod
+
+;; 1 if x is a whole number, as Number.isInteger has it (and so not infinite)
+func isWhole x:f64 -> i32
+local.get x local.get x f64.trunc f64.eq local.get x local.get x f64.sub f64.const d0 f64.eq i32.and
+
+;; vm.js's divisible: two whole numbers by their remainder, anything else by a / b to 15 digits being whole
+func divisibleF a:f64 b:f64 -> i32
+local.get a call R.isWhole local.get b call R.isWhole i32.and if
+  local.get a local.get b call R.fmod f64.const d0 f64.eq return
+end
+local.get a local.get b f64.div call R.canonAny call R.isWhole
+
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so
 ;; text that ends where its buffer's in-use units end can have more added in place, and joining text in a

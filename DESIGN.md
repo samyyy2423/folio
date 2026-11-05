@@ -6602,3 +6602,36 @@ functions, not 40: `plus`, `arithmetic`, `negate`, `compare`, `numberOrder` and 
   mistakes, as the VM says them; amounts on both engines; and every program the engines are tested with, made by
   wasm.js, wasm.folio and folio.wasm byte for byte.
 
+## 156. A name found in a scope at once
+
+The security pass (§152) found compiler.folio looked a name up by going through every name in its scope:
+`slot_of` from the first to the last, for every name used and, as a scope was made, for every name it made. A
+program of 20,000 top-level variables took folio.exe 20 seconds to run, and one of 50,000 more than 3 minutes,
+where folio.js took 0.2 seconds; compiler.folio on the JIT took 55. Each scope keeps a dictionary of each name's
+slot now, beside its list of names, set as each name is added: the last slot with that name, as slot_of found
+it, so a function with two inputs of the same name has the second. `new_scope`, `reaches` and `resolve` look
+there. The slots are the ones they were, so what every back end makes is the same, byte for byte.
+
+| | 5,000 variables | 20,000 | 50,000 |
+|:--|--:|--:|--:|
+| compiler.folio on the JIT, before | | | 55 s |
+| compiler.folio on the JIT, now | 0.15 s | 0.41 s | 1.0 s |
+| folio.exe run, before | 1.0 s | 20 s | over 200 s |
+| folio.exe run, now | 0.21 s | 0.43 s | 0.98 s |
+
+Still slow, and not about names: folio.exe on code nested a thousand blocks deep (100 seconds, where the JIT
+takes a quarter of one), likely its collector going through a stack that deep each time it runs; and folio.exe's
+check on a chain of thousands of `-` or `+` (8,000: 6 seconds), whose types it works out again for each, as
+checker.js did before §152. Neither is a program anyone writes by hand.
+
+## 157. A remainder of two numbers, exactly, in the module
+
+JavaScript's `%` on numbers is exact, with the first number's sign: C's fmod. WebAssembly has no remainder for
+floats, and `x - trunc(x / y) * y` isn't exact, so `fmod` is worked out from the bits, as musl's fmod does: each
+significand with its leading 1 (a subnormal's shifted up to have one), y taken from x a bit at a time, and the
+rest made a double again with x's sign. `is divisible by` for two whole numbers past 2^52, and any that aren't
+whole, is vm.js's divisible on it, so a module imports 32 functions, not 34: `remainder` (which nothing called)
+and `divisible` are gone. Checked against JavaScript's `%` on 3,000,000 pairs of numbers, any bits at all,
+subnormals, whole numbers, both signs, 0, infinities and NaN, every one the same to the bit, through
+`remainderOf`, which the runtime exports for that, as it does `numberText`.
+
