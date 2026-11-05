@@ -11,6 +11,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   bytes the playground's WebAssembly engine makes. `runWasm` in `moth.js` runs one.
 - **Fixed:** on the WebAssembly engine, a function that used a variable from outside it only in `ask`'s
   question, `wait`'s amount or `play note`'s note or time found it had no value.
+- **A library for C.** `moth build fast.moth --library` makes the program's functions a shared library,
+  `libfast.so` or `fast.dll`, and `fast.h` declares them: each takes and gives `moth_value`s through the
+  system's own C convention, with a value API to make, read and free text, lists, dictionaries, records and
+  bytes. A mistake gives 1 and a record of it, never an end to the program that loaded it; the top level
+  runs once; calls from many threads take turns; and every call has a stack as deep as a program's.
 - **The standard library's reference**, at [samyyy2423.github.io/moth/docs/](https://samyyy2423.github.io/moth/docs/):
   a page for each library, with what it's for and each of its functions, what it takes and an example with
   what it says, and a search of all 807. It's made from the libraries' own comments by `node make-docs.mjs`,
