@@ -2792,7 +2792,7 @@ export function runWasm(bytes, print = console.log, { maxSteps = Infinity, draw,
 // Moth's WebAssembly back end written in Moth (wasm.moth, which reads programs with compiler.moth, and the shared
 // part of its runtime from wasm-runtime.moth): give it the three files' text and get back a function that turns
 // a program, and the files it uses ({ "name.moth": text }), into what compileToWasmModule in wasm.js gives:
-// { bytes, ats, names, messages, kinds }, the same bytes and all.
+// { bytes, ats, names, kinds }, the same bytes and all.
 export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
   const used = { "compiler.moth": compilerSource, "wasm-runtime.moth": runtimeSource };
   const { wasm_compile: compileWasm } = loadProgram(compileToJs(wasmSource, { files: (name) => used[name], file: "wasm.moth" }));
@@ -2801,7 +2801,7 @@ export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
       const made = compileWasm(source, Object.keys(files), Object.values(files));
       // a position as moth.js's tokens have one: the program's own file is no file
       const ats = made.ats.map((at) => ({ type: at.type, line: at.line, col: at.col, file: at.file || undefined }));
-      return { bytes: Uint8Array.from(made.code), ats, names: made.names, messages: made.messages, kinds: made.kinds };
+      return { bytes: Uint8Array.from(made.code), ats, names: made.names, kinds: made.kinds };
     } catch (err) {
       if (err instanceof MothError && isRecord(err.value) && Object.hasOwn(err.value, "reason")) fail(err.value.at, err.value.reason);
       if (err instanceof TooDeep) fail({ line: 1, col: 1 }, "the code is nested too deeply");
@@ -2812,7 +2812,7 @@ export function wasmMothCompiler(wasmSource, compilerSource, runtimeSource) {
 
 // Moth's compiler as WebAssembly (moth.wasm, which make-moth-wasm.mjs makes; DESIGN §144): give it the module's
 // bytes and get back a function that compiles a program, and the files it may use ({ "name.moth": text }), as
-// compileToWasmModule does: { bytes, ats, names, messages, kinds }, and `whole`, the module with what running it
+// compileToWasmModule does: { bytes, ats, names, kinds }, and `whole`, the module with what running it
 // needs in its section "moth", as moth build --target wasm writes it. A mistake in the program is a MothError.
 export function mothWasmCompiler(bytes) {
   const compiler = wasmFile(bytes);

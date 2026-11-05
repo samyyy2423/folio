@@ -70,3 +70,19 @@ test("the module makes, joins and compares text with none of JavaScript's help",
   const imports = WebAssembly.Module.imports(new WebAssembly.Module(compileToWasmBytes("say 1").bytes)).map((i) => i.name);
   for (const gone of ["sameText", "concat", "textNum", "numText", "text"]) assert.ok(!imports.includes(gone), gone);
 });
+
+// Stage 2's second part (DESIGN §146): a mistake the program makes itself is thrown and caught in the module, as a
+// WebAssembly exception of its own. JavaScript only hears that a `try` began, and sees a mistake nothing caught.
+test("a program's own mistakes are thrown and caught in the module, and one nothing catches reaches JavaScript", () => {
+  const module = new WebAssembly.Module(compileToWasmBytes("try\n    fail with 5\nif it fails with why\n    say why\nend\ntry\n    say nope\nif it fails\n    say 2\nend\nfail with 7").bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["fail", "unset", "failWith"]) assert.ok(!imported.includes(gone), gone);
+  assert.deepEqual(WebAssembly.Module.exports(module).filter((e) => e.kind === "tag").map((e) => e.name), ["mistake"]);
+  const said = [];
+  const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: () => said.push("say") };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  const x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  x.restart();
+  assert.throws(() => x.main(), (err) => err instanceof WebAssembly.Exception && err.is(x.mistake) && x.num(err.getArg(x.mistake, 0)) === 7 && err.getArg(x.mistake, 1) === 1);
+  assert.deepEqual(said, ["say", "say"]);
+});

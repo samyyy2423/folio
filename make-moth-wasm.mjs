@@ -15,7 +15,7 @@ export const MOTH_WASM_FILES = ["compiler.moth", "wasm.moth", "wasm-runtime.moth
 
 // a module wasm.js made, with what running it needs in its section "moth", as moth build --target wasm writes it
 function withDetails(made) {
-  const details = JSON.stringify({ ats: made.ats.map((at) => [at.line, at.col, at.file ?? ""]), names: made.names, messages: made.messages, kinds: made.kinds });
+  const details = JSON.stringify({ ats: made.ats.map((at) => [at.line, at.col, at.file ?? ""]), names: made.names, kinds: made.kinds });
   const payload = [...new TextEncoder().encode("moth")];
   const named = [payload.length, ...payload, ...new TextEncoder().encode(details)];
   const size = [];

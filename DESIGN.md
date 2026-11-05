@@ -6224,3 +6224,35 @@ it; and a site, served by a Moth server, makes its pages with the same library (
   runs as `guestbook` is run: its 4 tests (`kitchen.test.moth`) with moth.exe, then the site built and used
   over HTTP. A refused recipe is shown again, 400, with what was wrong and what was written; an added one is
   a 303 to its own page. A browser ends a text area's lines with \r\n; `lines_of()` takes them as they come.
+
+## 146. Mistakes in the WebAssembly module
+
+The second of stage 2's parts (§139): a mistake the program makes itself is thrown and caught in the module,
+not by JavaScript. A module imports 62 functions, not 65: `fail`, `unset` and `failWith` are gone.
+
+- **A tag of the module's own.** A WebAssembly exception tag, `mistake`, is thrown with three things: what `if it
+  fails with` gets (a `fail with`'s value, or the mistake's words as text), 1 if that's a `fail with`'s value, and
+  the mistake's position. `fail with x` throws it; so does a name with no value yet, and a name nothing sets.
+  wasm-binary.js and wasm.moth write tags (section 13), `throw` and `catch`, the same bytes.
+- **Caught in the module.** A `try` catches the tag and gives its value to `if it fails with`, restoring the call
+  depth, with no call out. The checks still in vm.js (an item that isn't there, a sum of text and a list...)
+  throw JavaScript's MothError, which the same `try` catches as before, with `catch_all`, JavaScript saying
+  whether it's one to catch: so `tryStart`, `caught` and `caughtValue` stay until those checks move in too. A
+  worker's mistake is caught the same two ways, and `workerFailed` is given its value.
+- **Seen by JavaScript only when nothing caught it.** The tag is exported, and a mistake that leaves `main`, or an
+  app's handler, uncaught becomes the MothError the other engines make there: its words (or a `fail with`'s value,
+  shown, and kept as WebAssembly holds it), its position, and its trail, read from the module's own record of
+  the calls in progress, which nothing has undone.
+- **Words made when they're needed.** A variable with no value yet says `'x' has no value yet (give it one with
+  'set x to ...')`. Making those words for every variable when a program starts made moth.wasm 13% bigger,
+  and slower to start. So each check keeps only where the variable's name is in the program's data (which every
+  module now has, empty or not) and how long it is, and `noValueYet`, in the shared runtime, makes the name and
+  the words around it (three texts the module is made with: `text` in wasm-runtime.js) only when one is thrown.
+  moth.wasm is 1,606,736 bytes, 3% more than it was; a module for `say 1`, 12,658 bytes, 223 more.
+- **What it gave.** On the WebAssembly engine, catching 100,000 `fail with`s in a loop went from 769 ms to 30, and
+  100,000 names with no value yet from 819 ms to 37: no JavaScript error, with its stack, is made for them.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test when
+  called: it catches a `fail with` and a name with no value yet, and the `fail with` it doesn't catch reaches
+  JavaScript as the module's exception, with its value. Mistakes, their values and trails, on the VM and on
+  WebAssembly, the same; and every program the engines are tested with, made by wasm.js, wasm.moth and
+  moth.wasm byte for byte.

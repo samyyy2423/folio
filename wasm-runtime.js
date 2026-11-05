@@ -7,6 +7,7 @@
 //     memory NAME PAGES              the module's memory, of so many 64 KiB pages, exported under its name
 //     double NAME VALUE              a number for f64.const NAME
 //     global NAME TYPE mut|const ... a global, and the instructions that make its first value
+//     text NAME "WORDS"              a global holding that text, which the module is made with
 //     func NAME a:TYPE ... -> TYPE   a function, its inputs named, then what it gives (none, or one)
 //     export NAME ...                the same, exported under its name for the JavaScript side
 //     local NAME TYPE                a local, named
@@ -16,7 +17,8 @@
 // An instruction names a function as R.NAME, an import as im.NAME, a global as g.NAME, a type by its name, and
 // a local or input by its name. A block, loop or if may be followed by its type: i32, i64, f64, eq or externref.
 //
-// What's here: text, which lives in the module as UTF-16, and numbers as text, to 15 digits as the VM shows them.
+// What's here: text, which lives in the module as UTF-16, numbers as text, to 15 digits as the VM shows them, and
+// the mistake a variable with no value yet is.
 
 export const SOURCE = String.raw`
 ;; where text crosses to JavaScript and back, 32,768 units at a time
@@ -737,6 +739,19 @@ call R.nmade
 export numberText x:f64 -> eq
 local.get x call R.numText
 
+;; ---------- mistakes ----------
+;; A variable with no value yet: the mistake the other engines make, thrown at position k (DESIGN §146). The
+;; variable's name is n units from byte 'at' of the program's data, which every module has, and the mistake's words
+;; are made here, when it happens, so a program doesn't make them for every variable it has.
+text noValue1 "'"
+text noValue2 "' has no value yet (give it one with 'set "
+text noValue3 " to ...')"
+func noValueYet at:i32 n:i32 k:i32 ->
+local name eq
+local.get at local.get n array.new_data chars 0 local.get n call R.newText local.set name
+global.get g.noValue1 local.get name call R.concat global.get g.noValue2 call R.concat local.get name call R.concat
+global.get g.noValue3 call R.concat i32.const 0 local.get k throw 0
+
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so
 ;; text that ends where its buffer's in-use units end can have more added in place, and joining text in a
@@ -976,6 +991,12 @@ export function clean(source) {
     if (word === "double") {
       flush();
       out.push(`double ${rest[0]} ${DOUBLE_BYTES(Number(rest[1])).join(" ")}`);
+    } else if (word === "text") { // a global, made with the module: its units, as a buffer, and a text of them all
+      flush();
+      const words = JSON.parse(line.slice(line.indexOf('"')));
+      const units = Array.from({ length: words.length }, (_, i) => `i32.const ${words.charCodeAt(i)}`).join(" ");
+      const n = words.length;
+      out.push(`global ${rest[0]} ref:text const ${units} array.new_fixed chars ${n} i32.const ${n} struct.new strbuf i32.const ${n} ref.null extern struct.new text`);
     } else if (word === "global" || word === "memory") {
       flush();
       out.push(line);

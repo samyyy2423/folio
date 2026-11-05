@@ -8,8 +8,9 @@
 // of the runtime written once for this and wasm.moth): joining it, comparing it and showing numbers in it
 // happen here, and text that ends where its buffer does grows in place, so joining text in a loop is cheap.
 // The common cases run in WebAssembly: arithmetic on numbers, text, comparisons, list items, fields, calls
-// and loops. Everything else, and every mistake, calls out to the same checks the VM and the JIT use (vm.js),
-// so all three engines say exactly the same things.
+// and loops. A mistake the program makes itself (`fail with`, a name with no value) is thrown and caught in the
+// module, as a WebAssembly exception (DESIGN §146). Everything else calls out to the same checks the VM and the
+// JIT use (vm.js), so all three engines say exactly the same things.
 import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
@@ -45,8 +46,6 @@ const IMPORTS = {
   say: [[EQ], []],
   sayError: [[EQ], []], // a line for the error output
   exit: [[EQ, I32], []], // `stop the program with` this, and a position
-  fail: [[I32, I32], []], // a message the compiler worked out (a name nothing sets), and a position
-  unset: [[I32, I32], []],
   plus: [[EQ, EQ, I32], [EQ]],
   arithmetic: [[I32, EQ, EQ, I32], [EQ]],
   negate: [[EQ, I32], [EQ]],
@@ -82,7 +81,6 @@ const IMPORTS = {
   turtle: [[I32, EQ, I32], []],
   field: [[EQ, I32, I32], []],
   recordFor: [[EQ, I32, I32], []],
-  failWith: [[EQ, I32], []],
   builtin: [[I32, EQ, I32], [EQ]], // which one, its inputs as a list, and a position
   ask: [[EQ, I32], [EQ]],
   read: [[EQ, I32, I32], [EQ]], // the file's name, 1 for bytes or 0 for text, and a position
@@ -108,7 +106,7 @@ const IMPORTS = {
   // what it gave, or the mistake it ended with, copied, the variables put back, and the worker
   workerBegin: [[EQ, EQ, I32, I32], [EQ]],
   workerGave: [[EQ], [EQ]],
-  workerFailed: [[], [EQ]],
+  workerFailed: [[EQ], [EQ]], // what the worker's mistake gave `if it fails with`
   // text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
   jsText: [[EQ], ["externref"]],
   fill: [[EQ], []],
@@ -176,7 +174,7 @@ const SHARED = parseRuntime(RUNTIME);
 
 // how each instruction's immediates are written, as wasm_asm in wasm.moth reads them
 const HOW = {
-  block: "block", loop: "block", if: "block", try: "block", br: "index", br_if: "index", rethrow: "index", call: "index", call_ref: "index",
+  block: "block", loop: "block", if: "block", try: "block", br: "index", br_if: "index", rethrow: "index", throw: "index", catch: "index", call: "index", call_ref: "index",
   "ref.func": "index", "local.get": "local", "local.set": "local", "local.tee": "local", "global.get": "index", "global.set": "index",
   "struct.new": "index", "array.new": "index", "array.new_default": "index", "array.get": "index", "array.get_u": "index", "array.set": "index",
   "struct.get": "two", "struct.set": "two", "array.new_fixed": "two", "array.copy": "two", "array.new_data": "two",
@@ -945,7 +943,7 @@ class WasmCompiler extends Scope {
     if (e.kind === "name") {
       const { value, box } = this.numberSlot(e.name);
       this.e("local.get", box).e("global.get", this.ctx.unset).e("ref.eq");
-      this.e("if").e("i32.const", this.id(e.name)).e("i32.const", this.pos(e.at)).e("call", im.unset).e("unreachable").e("end");
+      this.noValueYet(e.name, this.pos(e.at));
       return void this.e("local.get", value).note(e.name);
     }
     if (e.kind === "math" && this.unboxed(e)) {
@@ -1031,9 +1029,22 @@ class WasmCompiler extends Scope {
     this.e("array.set", this.ctx.T.items).note(`set ${name}`);
   }
 
+  // A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
+  noValueYet(name, k) {
+    const [at, n] = this.ctx.spelled(name);
+    this.e("if").e("i32.const", at).e("i32.const", n).e("i32.const", k).e("call", this.ctx.R.noValueYet).e("end");
+  }
+
+  // text made from the program's data where it's needed, not when the program starts, as a mistake's words are
+  spelled(value) {
+    const [at, n] = this.ctx.spelled(value);
+    this.e("i32.const", at).e("i32.const", n).e("array.new_data", this.ctx.T.chars, this.ctx.data).e("i32.const", n).e("call", this.ctx.R.newText);
+  }
+
   // A name nothing ever sets: fail when this runs, with the same message (and "did you mean") as the other engines.
   undefinedName(name, at, options) {
-    this.e("i32.const", this.ctx.message(this.undefinedMessage(name, options))).e("i32.const", this.pos(at)).e("call", this.ctx.im.fail).e("unreachable");
+    this.spelled(this.undefinedMessage(name, options));
+    this.e("i32.const", 0).e("i32.const", this.pos(at)).e("throw", this.ctx.mistake);
   }
 
   // Each loop counts a step at the end of each round, and each call when it starts, as the other engines do:
@@ -1252,7 +1263,7 @@ class WasmCompiler extends Scope {
       }
       case "fail":
         this.expr(s.value);
-        this.e("i32.const", this.pos(s.at)).e("call", im.failWith).e("unreachable");
+        this.e("i32.const", 1).e("i32.const", this.pos(s.at)).e("throw", this.ctx.mistake);
         return;
       case "stop":
         this.e("br", this.labels - 1 - this.stops.at(-1)).note("stop");
@@ -1295,16 +1306,20 @@ class WasmCompiler extends Scope {
         this.expr(s.cond.right);
         this.e("i32.const", this.pos(s.at)).e("call", im.expect);
         return;
-      case "try": { // what JavaScript throws is caught here; JavaScript says whether it was a mistake to handle
+      case "try": { // the module's own mistake is caught as itself; one JavaScript threw, JavaScript says whether to catch
         const depth = this.temp(I32);
+        const got = this.temp(EQ);
         this.e("global.get", this.ctx.depth).e("local.set", depth).e("call", im.tryStart);
-        this.e("try");
+        this.e("block").e("block", EQ).e("try");
         this.block(s.body);
+        this.e("br", 2); // nothing went wrong: past the handler
+        this.e("catch", this.ctx.mistake).e("drop").e("drop").e("br", 1); // what `if it fails with` gets
         this.e("catch_all");
         this.e("call", im.caught).e("i32.eqz").e("if").e("rethrow", 1).e("end"); // going too deep, say: not ours
-        this.e("local.get", depth).e("global.set", this.ctx.depth);
-        if (s.name) this.store(s.name, () => this.e("call", im.caughtValue));
-        else this.e("call", im.caughtValue).e("drop");
+        this.e("call", im.caughtValue).e("br", 1);
+        this.e("end").e("unreachable").e("end");
+        this.e("local.set", got).e("local.get", depth).e("global.set", this.ctx.depth);
+        if (s.name) this.store(s.name, () => this.e("local.get", got));
         this.block(s.handler);
         this.e("end");
         return;
@@ -1322,7 +1337,7 @@ class WasmCompiler extends Scope {
     else this.expr(s.value);
     this.e("local.set", value);
     this.e("local.get", number.box).e("global.get", this.ctx.unset).e("ref.eq");
-    this.e("if").e("i32.const", this.id(s.name)).e("i32.const", k).e("call", im.unset).e("unreachable").e("end");
+    this.noValueYet(s.name, k);
     if (fast) this.e("local.get", number.value).e("local.get", value).e("f64.add");
     else { // a number added here; any other value gives a number (if it is one) or fails, in the shared check
       isNum(this.c, T, value);
@@ -1430,10 +1445,13 @@ class WasmCompiler extends Scope {
       this.e("call_ref", T.fn(args.length)).note(call.name);
       this.e("global.get", ctx.depth).e("i32.const", 1).e("i32.sub").e("global.set", ctx.depth);
       this.e("call", im.workerGave).e("local.set", made);
+      this.e("catch", ctx.mistake).e("drop").e("drop"); // the value of what it threw
+      this.e("local.get", depth).e("global.set", ctx.depth);
+      this.e("call", im.workerFailed).e("local.set", made);
       this.e("catch_all");
       this.e("call", im.caught).e("i32.eqz").e("if").e("rethrow", 1).e("end"); // going too deep, say: not the worker's
       this.e("local.get", depth).e("global.set", ctx.depth);
-      this.e("call", im.workerFailed).e("local.set", made);
+      this.e("call", im.caughtValue).e("call", im.workerFailed).e("local.set", made);
       this.e("end");
     });
     this.e("local.get", made);
@@ -1454,7 +1472,7 @@ class WasmCompiler extends Scope {
         const value = this.temp();
         this.load(e.name);
         this.e("local.tee", value).e("global.get", this.ctx.unset).e("ref.eq");
-        this.e("if").e("i32.const", this.id(e.name)).e("i32.const", this.pos(e.at)).e("call", im.unset).e("unreachable").e("end");
+        this.noValueYet(e.name, this.pos(e.at));
         this.e("local.get", value);
         return;
       }
@@ -1624,17 +1642,20 @@ export function compileToWasmModule(program) {
   const T = declareTypes(m);
   const im = {};
   for (const [label, [params, results]] of Object.entries(IMPORTS)) im[label] = m.import("moth", label, m.funcType(params, results));
+  // A mistake, thrown and caught in the module (DESIGN §146): what `if it fails with` gets (a `fail with`'s
+  // value, or the mistake's message as text), 1 if that's a `fail with`'s value, and the mistake's position
+  const mistake = m.tag(m.funcType([EQ, I32, I32], []));
   const R = declareRuntime(m, T, im);
   declareExports(m, T, R);
 
   const names = [];
   const nameIds = new Map();
-  const messages = [];
   const numbers = new Map();
   const texts = new Map();
+  const spelled = new Map();
   const named = (name, global) => ((m.globalNames[global] = name), global);
   const ctx = {
-    m, T, R, im, ats: [], names, messages, captured: findCaptured(program),
+    m, T, R, im, mistake, ats: [], names, captured: findCaptured(program),
     kinds: [null], // what the inputs of each function whose inputs say so are (see closure())
     unset: named("unset", m.global(ref(T.unset), false, new Code().emit("struct.new", T.unset))),
     left: named("left", m.global(I32, true, new Code().emit("i32.const", 0))),
@@ -1648,11 +1669,19 @@ export function compileToWasmModule(program) {
       if (!nameIds.has(name)) nameIds.set(name, names.push(name) - 1);
       return nameIds.get(name);
     },
-    message: (text) => messages.push(text) - 1,
     number(value) {
       const key = String(value);
       if (!numbers.has(key)) numbers.set(key, named(`number${numbers.size}`, m.global(ref(T.num), false, new Code().emit("f64.const", value).emit("struct.new", T.num))));
       return numbers.get(key);
+    },
+    // where text's units are in the program's data, as bytes, and how many there are, for text made where it's
+    // needed (see spelled() above)
+    spelled(value) {
+      if (!spelled.has(value)) {
+        spelled.set(value, [ctx.units.length, value.length]);
+        for (let i = 0; i < value.length; i++) ctx.units.push(value.charCodeAt(i) & 255, value.charCodeAt(i) >> 8);
+      }
+      return spelled.get(value);
     },
     text(value) {
       if (!texts.has(value)) {
@@ -1667,6 +1696,7 @@ export function compileToWasmModule(program) {
       return texts.get(value);
     },
   };
+  ctx.data = m.data(ctx.units); // the program's text, as UTF-16 units: in every module, as the runtime reads names from it
   const main = new WasmCompiler(null, "main", [], program, ctx);
   m.export("main", main.f.index);
   // the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
@@ -1695,7 +1725,8 @@ export function compileToWasmModule(program) {
   const restart = m.func("restart", [], []);
   restart.code.emit("call", ctx.im.grant).emit("global.set", ctx.left).emit("i32.const", 0).emit("global.set", ctx.depth);
   m.export("restart", restart.index);
-  return { bytes: m.encode(), listing: m.listing(ctx.init.index), ats: ctx.ats, names, messages, kinds: ctx.kinds };
+  m.export("mistake", mistake, 4); // for JavaScript to know the module's mistakes when one isn't caught
+  return { bytes: m.encode(), listing: m.listing(ctx.init.index), ats: ctx.ats, names, kinds: ctx.kinds };
 }
 
 // Compiles a parsed program: { bytes, listing, run(print, draw, maxSteps) }, like jit() in jit.js.
@@ -1727,7 +1758,7 @@ export function wasmDetails(bytes, module = new WebAssembly.Module(bytes)) {
 }
 
 // The JavaScript side of a run: the imports, and moving values in and out of the module.
-function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
+function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
   // Every mistake made is kept, for a `try`: JavaScript's exceptions cross WebAssembly, but only JavaScript can
   // tell which ones it was. A `fail with` keeps its value as WebAssembly holds it, so catching it keeps it whole.
   let lastError = null;
@@ -1931,8 +1962,7 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
         return workerDone({ failed: toWasm(err.message) });
       }
     },
-    workerFailed: () => {
-      const value = caughtError.wasm !== undefined ? caughtError.wasm : toWasm(caughtValue(caughtError));
+    workerFailed: (value) => {
       try {
         return workerDone({ failed: workerCopy(value) });
       } catch (err) {
@@ -1943,8 +1973,6 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
     say: (parts) => print(toJs(parts).map((p) => show(p)).join("")),
     sayError: (parts) => printError(toJs(parts).map((p) => show(p)).join("")),
     exit: (code, k) => throwing(new Ended(exitCode(toJs(code), errors[k]))), // kept as the last thing thrown, which no `try` catches
-    fail: (message, k) => errors[k](messages[message]),
-    unset: (name, k) => errors[k](noValue(names[name])),
     plus: (a, b, k) => toWasm(plus(toJs(a), toJs(b), errors[k])),
     arithmetic: (op, a, b, k) => toWasm(arithmetic(MATH[op], toJs(a), toJs(b), errors[k])),
     negate: (v, k) => toWasm(negate(toJs(v), errors[k])),
@@ -2010,10 +2038,6 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
     turtle: (action, value, k) => turtle.act(action, toJs(value), errors[k], disk),
     field: (r, name, k) => fieldOf(toJs(r), names[name], errors[k]),
     recordFor: (r, name, k) => recordFor(toJs(r), names[name], errors[k]),
-    failWith: (value, k) => {
-      failing = value;
-      failWith(toJs(value), errors[k]);
-    },
     tryStart: () => {
       lastError = null;
     },
@@ -2065,11 +2089,33 @@ function instantiate(module, { ats, names, messages, kinds }, print, draw, maxSt
   x = new WebAssembly.Instance(module, { moth: imports }).exports;
   units = new Uint16Array(x.memory.buffer);
   count = new Int32Array(x.memory.buffer, 0, 1);
+  // A mistake the module threw and nothing in it caught, as the MothError the other engines make: its message,
+  // or a `fail with`'s value, kept as WebAssembly holds it too, so a `try` around an app's handler keeps it whole.
+  // The calls that led to it are still the module's: nothing has undone them.
+  const mothError = (err) => {
+    if (!(err instanceof WebAssembly.Exception) || !err.is(x.mistake)) return err;
+    const [value, given, k] = [0, 1, 2].map((i) => err.getArg(x.mistake, i));
+    let made;
+    if (given === 1) {
+      const thrown = toJs(value);
+      made = new MothError(ats[k], show(thrown), thrown, trail());
+      made.wasm = value;
+    } else made = new MothError(ats[k], textValue(value), undefined, trail());
+    lastError = made;
+    return made;
+  };
+  const guarded = (run) => {
+    try {
+      return run();
+    } catch (err) {
+      throw mothError(err);
+    }
+  };
   host.call = (handler, inputs) => {
     granted = 0; // each handler's call has steps of its own
     x.restart();
     const [a = null, b = null] = inputs.map(toWasm);
-    x.invoke(handler.closure, a, b);
+    guarded(() => x.invoke(handler.closure, a, b));
   };
-  return x;
+  return { main: (...given) => guarded(() => x.main(...given)) };
 }

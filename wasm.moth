@@ -188,7 +188,7 @@ set wasm_t_big to 15
 
 to wasm_new_module
     return record with types empty list, type_keys empty dictionary, imports empty list, funcs empty list, globals empty list,
-        exports empty list, declared empty list, declared_keys empty dictionary, datas empty list, memories empty list
+        exports empty list, declared empty list, declared_keys empty dictionary, datas empty list, memories empty list, tags empty list
 end
 
 # the index of a composite type, added once
@@ -339,6 +339,8 @@ wasm_op("if", (list of 4), "block")
 wasm_op("br", (list of 12), "index")
 wasm_op("br_if", (list of 13), "index")
 wasm_op("rethrow", (list of 9), "index")
+wasm_op("throw", (list of 8), "index")
+wasm_op("catch", (list of 7), "index")
 wasm_op("call", (list of 16), "index")
 wasm_op("call_ref", (list of 20), "index")
 wasm_op("ref.func", (list of 210), "index")
@@ -686,8 +688,6 @@ to wasm_runtime
     wasm_import(m, "say", (list of eq), none)
     wasm_import(m, "sayError", (list of eq), none)
     wasm_import(m, "exit", (list of eq, i32), none)
-    wasm_import(m, "fail", (list of i32, i32), none)
-    wasm_import(m, "unset", (list of i32, i32), none)
     wasm_import(m, "plus", (list of eq, eq, i32), (list of eq))
     wasm_import(m, "arithmetic", (list of i32, eq, eq, i32), (list of eq))
     wasm_import(m, "negate", (list of eq, i32), (list of eq))
@@ -722,7 +722,6 @@ to wasm_runtime
     wasm_import(m, "turtle", (list of i32, eq, i32), none)
     wasm_import(m, "field", (list of eq, i32, i32), none)
     wasm_import(m, "recordFor", (list of eq, i32, i32), none)
-    wasm_import(m, "failWith", (list of eq, i32), none)
     wasm_import(m, "builtin", (list of i32, eq, i32), (list of eq))
     wasm_import(m, "ask", (list of eq, i32), (list of eq))
     wasm_import(m, "read", (list of eq, i32, i32), (list of eq))
@@ -748,10 +747,14 @@ to wasm_runtime
     # what it gave, or the mistake it ended with, copied, the variables put back, and the worker
     wasm_import(m, "workerBegin", (list of eq, eq, i32, i32), (list of eq))
     wasm_import(m, "workerGave", (list of eq), (list of eq))
-    wasm_import(m, "workerFailed", none, (list of eq))
+    wasm_import(m, "workerFailed", (list of eq), (list of eq)) # what the worker's mistake gave `if it fails with`
     # text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
     wasm_import(m, "jsText", (list of eq), (list of ext))
     wasm_import(m, "fill", (list of eq), none)
+    # A mistake, thrown and caught in the module (DESIGN §146): what `if it fails with` gets (a `fail with`'s
+    # value, or the mistake's message as text), 1 if that's a `fail with`'s value, and the mistake's position
+    set kept_tags to tags of m
+    add wasm_func_type(m, (list of eq, i32, i32), none) to kept_tags
 
     set shared_made to wasm_shared_declare(m)
     wasm_runtime_functions(m)
@@ -1362,12 +1365,6 @@ to wasm_id with fc, wanted
     return length of kept - 1
 end
 
-to wasm_message with fc, text
-    set kept to messages of cx of fc
-    add text to kept
-    return length of kept - 1
-end
-
 # the global holding a number the program wrote, made once for each number
 to wasm_number with fc, eight
     set cx to cx of fc
@@ -1640,7 +1637,7 @@ to wasm_expr_num with fc, e
     if what is "name"
         set numbered to wasm_number_slot(fc, name of e)
         wasm_x(fc, "local.get " + box of numbered + " global.get g.unset ref.eq")
-        wasm_x(fc, "if i32.const " + wasm_id(fc, name of e) + " i32.const " + wasm_pos(fc, at of e) + " call im.unset unreachable end")
+        wasm_no_value_yet(fc, name of e, wasm_pos(fc, at of e))
         wasm_x(fc, "local.get " + value of numbered)
         return nothing
     end
@@ -1732,10 +1729,35 @@ to wasm_store_end with fc, local
     end
 end
 
+# A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
+to wasm_no_value_yet with fc, wanted, k
+    set place to wasm_place(fc, wanted)
+    wasm_x(fc, "if i32.const " + item 1 of place + " i32.const " + item 2 of place + " i32.const " + k + " call R.noValueYet end")
+end
+
+# where text's units are in the program's data, as bytes, and how many there are, for text made where it's needed
+to wasm_place with fc, wanted
+    set cx to cx of fc
+    set known to spelled of cx
+    if not (wanted is in known)
+        set units to units of cx
+        set at to length of units
+        set item wanted of known to list of at, wasm_units(units, wanted)
+    end
+    return item wanted of known
+end
+
+# text made from the program's data where it's needed, not when the program starts, as a mistake's words are
+to wasm_spelled with fc, wanted
+    set place to wasm_place(fc, wanted)
+    set n to item 2 of place
+    wasm_x(fc, "i32.const " + item 1 of place + " i32.const " + n + " array.new_data chars 0 i32.const " + n + " call R.newText")
+end
+
 # A name nothing ever sets: fail when this runs, with the same message (and "did you mean") as the other engines.
 to wasm_undefined with fc, wanted, at, calling, statement
-    set message to wasm_message(fc, front's undefined_message(scope of fc, wanted, calling, statement))
-    wasm_x(fc, "i32.const " + message + " i32.const " + wasm_pos(fc, at) + " call im.fail unreachable")
+    wasm_spelled(fc, front's undefined_message(scope of fc, wanted, calling, statement))
+    wasm_x(fc, "i32.const 0 i32.const " + wasm_pos(fc, at) + " throw 0")
 end
 
 # Each loop counts a step at the end of each round, and each call when it starts, as the other engines do:
@@ -1997,7 +2019,7 @@ to wasm_statement with fc, s
         wasm_x(fc, "local.set " + value + " local.get " + target + " i32.const " + wasm_id(fc, name of s) + " local.get " + value + " call R.setField")
     else if what is "fail"
         wasm_expr(fc, value of s)
-        wasm_x(fc, "i32.const " + wasm_pos(fc, at of s) + " call im.failWith unreachable")
+        wasm_x(fc, "i32.const 1 i32.const " + wasm_pos(fc, at of s) + " throw 0")
     else if what is "stop"
         wasm_x(fc, "br " + (labels of code of f of fc - 1 - wasm_top(stops of fc)))
     else if what is "remove"
@@ -2039,17 +2061,18 @@ to wasm_statement with fc, s
             wasm_expr(fc, right of c)
             wasm_x(fc, "i32.const " + wasm_pos(fc, at of s) + " call im.expect")
         end
-    else if what is "try" # what JavaScript throws is caught here; JavaScript says whether it was a mistake to handle
+    else if what is "try" # the module's own mistake is caught as itself; one JavaScript threw, JavaScript says whether to catch
         set depth to wasm_temp(fc, wasm_i32)
-        wasm_x(fc, "global.get g.depth local.set " + depth + " call im.tryStart try")
+        set got to wasm_temp(fc, wasm_eq)
+        wasm_x(fc, "global.get g.depth local.set " + depth + " call im.tryStart block block eq try")
         wasm_block(fc, body of s)
-        wasm_x(fc, "catch_all call im.caught i32.eqz if rethrow 1 end local.get " + depth + " global.set g.depth") # going too deep, say: not ours
+        wasm_x(fc, "br 2 catch 0 drop drop br 1") # past the handler if nothing went wrong; or what `if it fails with` gets
+        wasm_x(fc, "catch_all call im.caught i32.eqz if rethrow 1 end call im.caughtValue br 1 end unreachable end") # going too deep, say: not ours
+        wasm_x(fc, "local.set " + got + " local.get " + depth + " global.set g.depth")
         if name of s is not nothing
             set local to wasm_store_start(fc, name of s)
-            wasm_x(fc, "call im.caughtValue")
+            wasm_x(fc, "local.get " + got)
             wasm_store_end(fc, local)
-        else
-            wasm_x(fc, "call im.caughtValue drop")
         end
         wasm_block(fc, handler of s)
         wasm_x(fc, "end")
@@ -2070,7 +2093,7 @@ to wasm_add_to_number with fc, s, numbered
         wasm_expr(fc, value of s)
     end
     wasm_x(fc, "local.set " + value + " local.get " + box of numbered + " global.get g.unset ref.eq")
-    wasm_x(fc, "if i32.const " + wasm_id(fc, name of s) + " i32.const " + k + " call im.unset unreachable end")
+    wasm_no_value_yet(fc, name of s, k)
     if fast
         wasm_x(fc, "local.get " + value of numbered + " local.get " + value + " f64.add")
     else # a number added here; any other value gives a number (if it is one) or fails, in the shared check
@@ -2214,8 +2237,9 @@ to wasm_start_worker with fc, e
     wasm_x(fc, get_closure + "0 ref.cast " + wasm_fn_type(m, n))
     wasm_x(fc, "call_ref " + wasm_fn_type(m, n))
     wasm_x(fc, "global.get g.depth i32.const 1 i32.sub global.set g.depth call im.workerGave local.set " + made)
+    wasm_x(fc, "catch 0 drop drop local.get " + depth + " global.set g.depth call im.workerFailed local.set " + made) # the value of what it threw
     wasm_x(fc, "catch_all call im.caught i32.eqz if rethrow 1 end") # going too deep, say: not the worker's
-    wasm_x(fc, "local.get " + depth + " global.set g.depth call im.workerFailed local.set " + made + " end")
+    wasm_x(fc, "local.get " + depth + " global.set g.depth call im.caughtValue call im.workerFailed local.set " + made + " end")
     if counting is not nothing
         wasm_x(fc, "global.get g.left local.set " + counting)
     end
@@ -2250,7 +2274,8 @@ to wasm_expr with fc, e
         set value to wasm_temp(fc, wasm_eq)
         wasm_load(fc, name of e)
         wasm_x(fc, "local.tee " + value + " global.get g.unset ref.eq")
-        wasm_x(fc, "if i32.const " + wasm_id(fc, name of e) + " i32.const " + wasm_pos(fc, at of e) + " call im.unset unreachable end local.get " + value)
+        wasm_no_value_yet(fc, name of e, wasm_pos(fc, at of e))
+        wasm_x(fc, "local.get " + value)
     else if what is "call"
         wasm_call(fc, e, no)
     else if what is "math"
@@ -2439,6 +2464,7 @@ to wasm_copy with base
     wasm_put_all(globals of m, globals of base)
     wasm_put_all(exports of m, exports of base)
     wasm_put_all(datas of m, datas of base)
+    wasm_put_all(tags of m, tags of base)
     wasm_put_all(memories of m, memories of base)
     return m
 end
@@ -2512,6 +2538,15 @@ to wasm_encode with m
         end
         wasm_section(out, 5, payload)
     end
+    if length of tags of m is greater than 0
+        set payload to empty list
+        wasm_uleb(payload, length of tags of m)
+        for each t in tags of m
+            add 0 to payload
+            wasm_uleb(payload, t)
+        end
+        wasm_section(out, 13, payload)
+    end
     set payload to empty list
     wasm_uleb(payload, length of globals of m)
     for each g in globals of m
@@ -2566,12 +2601,14 @@ end
 
 # A parsed program as a module: its bytes (as a list of numbers from 0 to 255), and what the JavaScript that
 # runs it needs to know (wasm.js's instantiate): the tokens its positions point at, the names its records and
-# functions use, its messages, and what the inputs of each function whose inputs say so are.
+# functions use, and what the inputs of each function whose inputs say so are.
 to wasm_module with program
     set m to wasm_copy(wasm_runtime())
     set init to wasm_func(m, "init", empty list, empty list) # makes the text the program holds
-    set cx to record with m m, init init, ats empty list, names empty list, name_ids empty dictionary, messages empty list,
-        numbers empty dictionary, texts empty dictionary, units empty list, kinds (list of nothing)
+    set cx to record with m m, init init, ats empty list, names empty list, name_ids empty dictionary, numbers empty dictionary,
+        texts empty dictionary, spelled empty dictionary, units empty list, kinds (list of nothing)
+    set segments to datas of m
+    add units of cx to segments # the program's text, as UTF-16 units: in every module, as the runtime reads names from it
     set main to wasm_function(cx, nothing, "main", empty list, program, 0)
     wasm_export(m, "main", index of f of main)
     # the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
@@ -2595,7 +2632,9 @@ to wasm_module with program
     wasm_asm(invoke, "ref.null eq")
     wasm_export(m, "invoke", index of invoke)
     wasm_out(m, "restart", empty list, empty list, "call im.grant global.set g.left i32.const 0 global.set g.depth")
-    return record with code wasm_encode(m), ats ats of cx, names names of cx, messages messages of cx, kinds kinds of cx
+    set kept_exports to exports of m
+    add record with field "mistake", index 0, kind 4 to kept_exports # for JavaScript to know the module's mistakes when one isn't caught
+    return record with code wasm_encode(m), ats ats of cx, names names of cx, kinds kinds of cx
 end
 
 # Moth source, and the files it may use, by name and text; out comes its module, as wasm_module gives it. A
@@ -2611,13 +2650,13 @@ end
 
 # What `moth build --target wasm` writes: the module, and after it a custom section called "moth" holding, as
 # JSON, what running it needs (wasmFile in wasm.js reads it): each position as its line, column and file ("" for
-# the program's own), the names, the messages, and what the inputs of functions that say so are.
+# the program's own), the names, and what the inputs of functions that say so are.
 to wasm_with_details with made
     set places to empty list
     for each where in ats of made
         add (list of line of where, col of where, file of where) to places
     end
-    set details to record with ats places, names names of made, messages messages of made, kinds kinds of made
+    set details to record with ats places, names names of made, kinds kinds of made
     set out to empty list
     wasm_put_all(out, code of made)
     set payload to empty list

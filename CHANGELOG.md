@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Mistakes in WebAssembly.** On the WebAssembly engine, `fail with`, a name with no value yet, and `try`
+  catching them happen inside the module, with no JavaScript: catching a mistake in a loop is about 25 times
+  faster. The second part of making Moth's WebAssembly run with no JavaScript at all.
 - **Web pages, made in Moth.** `page.moth` makes a page a part at a time: headings, text, links, pictures,
   lists, tables, boxes, text boxes, checkboxes, dropdowns and buttons, in Moth's look or with CSS of its own.
   The playground shows it, and so does a page `moth build --web` makes, as the whole window. `when the page is
