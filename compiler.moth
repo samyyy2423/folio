@@ -1557,7 +1557,18 @@ to parse with tokens, reading
             if word("gives") # `to area with w, h gives a number`
                 set fn_gives to gives_type()
             end
+            set fn_needs to nothing
+            if word("where") # `to withdraw with amount where amount is greater than 0`
+                set fn_needs to needs_of(fn_name, t)
+            end
             set made to func(fn_name, params of fn_inputs, t)
+            if fn_needs is not nothing
+                set checked_first to list of fn_needs
+                for each fn_s in body of made
+                    add fn_s to checked_first
+                end
+                set body of made to checked_first
+            end
             set kinds of made to kinds of fn_inputs
             set types of made to types of fn_inputs
             set gives of made to fn_gives
@@ -2853,6 +2864,47 @@ to parse with tokens, reading
 
     # `set a, b to pair`: what's after `to` kept in a variable of its own, then each name its item, once there
     # are as many as names. Gives the statements.
+    # tokens as they were written, with a space between each but after ( and before ), a comma and 's
+    to spoken with from_pos, to_pos
+        set said to ""
+        for each sk from from_pos to to_pos - 1
+            set tk to item sk of tokens
+            set piece to value of tk
+            if type of tk is "word"
+                set piece to raw of tk
+            else if type of tk is "string"
+                set piece to "\"" + value of tk + "\""
+            end
+            if sk is greater than from_pos and not (piece is ")" or piece is "," or type of tk is "'s")
+                if type of item (sk - 1) of tokens is not "("
+                    set said to said + " "
+                end
+            end
+            set said to said + piece
+        end
+        return said
+    end
+
+    # `to withdraw with amount where amount is greater than 0` (DESIGN §143): what a function needs, checked at
+    # the start of each call, as an `if` that fails with what the function needs, said as it was written, and,
+    # for a comparison of a name, what that name was
+    to needs_of with needs_fn, t
+        set needs_from to pos
+        set needs_cond to expression()
+        set needs_text to "'" + needs_fn + "' needs " + spoken(needs_from, pos)
+        set needs_why to record with kind "value", type "string", value needs_text, at t
+        if kind of needs_cond is "compare"
+            set needs_left to left of needs_cond
+            if kind of needs_left is "name"
+                set needs_named to name of needs_left
+                set needs_start to record with kind "value", type "string", value needs_text + ", but " + needs_named + " is ", at t
+                set needs_why to record with kind "math", op "+", left needs_start, right (record with kind "name", name needs_named, at t), at t
+            end
+        end
+        set needs_test to record with kind "not", operand needs_cond, at t
+        return record with kind "if", cond needs_test, then (list of (record with kind "fail", value needs_why, at t)), otherwise empty list, at t
+    end
+
     to unpacked with up_names, up_value, t
         set up_kept to hidden_name("the values", t)
         set up_made to list of (record with kind "set", name up_kept, value up_value, at t)

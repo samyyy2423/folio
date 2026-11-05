@@ -214,6 +214,10 @@ export const PROGRAMS = [
   ["kind point with x, y\n    to shown with self\n        return \"(\" + self's x + \", \" + self's y + \")\"\n    end\nend\nset p to point(1, 2)\nsay p\nsay \"p is {p}\" \" and \" p \" and \" 5\nsay point(3, 4)'s x\nset flags to record with shown yes\nsay flags\nsay \"two: {point(5, 6)}\"", "(1, 2)\np is (1, 2) and (1, 2) and 5\n3\n(record with shown yes)\ntwo: (5, 6)"],
   // a text a letter at a time: past one byte, views of one text's bytes, and the collector in between
   ["set words to \"aé😀b, ça va? ✓ plain ascii too\"\nset made to \"\"\nfor each k from 1 to length of words\n    add item k of words to made\nend\nsay made is words\nsay item 3 of words \" \" item 1 of words \" \" item (length of words) of words \" \" item 2 of words\nsay items 2 to 4 of words\nsay items 5 to 9 of words \" \" item 6 of words \" \" items 1 to 2 of words\nset other to \"x😀y\"\nsay item 2 of words \" \" item 2 of other \" \" item 3 of words \" \" item 3 of other\nset ascii to \"hello\"\nsay item 5 of ascii \" \" item 1 of ascii\nset big to \"\"\nrepeat 3000 times\n    add \"é\" to big\nend\nadd \"!\" to big\nsay item (length of big) of big\nset counted to 0\nfor each k from 1 to length of big\n    if item k of big is \"é\"\n        add 1 to counted\n    end\nend\nsay counted\nsay item 1 of big \" \" item 2999 of big", "yes\n😀 a o é\né😀b\n, ça    aé\né 😀 😀 y\no h\n!\n3000\né é"],
+  // what a function needs, after `where` on its first line: checked at each call, said as written, with what the
+  // name a comparison is of was; a mistake a try catches; a name or function called needs is as it was
+  ["to withdraw with amount where amount is greater than 0\n    return 100 - amount\nend\nsay withdraw(30)\ntry\n    say withdraw(-5)\nif it fails with why\n    say why\nend\nto area with w as a number, h or 1 gives a number where (w + h) is less than 1000 and w is at least 0\n    return w * h\nend\nsay area(2, 3)\nsay area(4)\ntry\n    say area(-2, 3)\nif it fails with why\n    say why\nend\nto first with xs where length of xs is greater than 0\n    return item 1 of xs\nend\nsay first(list of \"a\", \"b\")\ntry\n    say first(empty list)\nif it fails with why\n    say why\nend\nset where to 3\nsay where\nto needs with x\n    say \"called \" + x\nend\nneeds \"milk\"\nkind account with balance\n    to take with self, amount where amount is at most self's balance\n        return self's balance - amount\n    end\nend\nsay account(50)'s take(20)\ntry\n    say account(50)'s take(80)\nif it fails with why\n    say why\nend",
+    "70\n'withdraw' needs amount is greater than 0, but amount is -5\n6\n4\n'area' needs (w + h) is less than 1000 and w is at least 0\na\n'first' needs length of xs is greater than 0\n3\ncalled milk\n30\n'take' needs amount is at most self's balance, but amount is 80"],
 ];
 
 // Saving and loading, the clock and waiting, and putting things in order, with files to save to: each program,
@@ -359,6 +363,8 @@ export const ERRORS = [
   ['if yes say "hi"\nend', "line 1: expected a new line but found 'say'"],
   ["end", "line 1: a line can't start with 'end'"],
   ["return 1", "line 1: 'return' only works inside a function (one made with 'to')"],
+  ["to half with n where n is divisible by 2\n    return n / 2\nend\nsay half(4)\nsay half(3)", "line 1: 'half' needs n is divisible by 2, but n is 3"],
+  ["to f with n where\n    return n\nend", "line 2: expected a value but found 'return'"],
   ["to down with n\n    return down(n + 1)\nend\nsay down(0)", "line 2: too much recursion: a function kept calling itself"],
   ['set s to "ab"\nrepeat while yes\n    add s to s\nend', "line 3: a value got too big to fit in memory"],
   ['move forward "a"', "line 1: 'move forward' needs a number, not text"],

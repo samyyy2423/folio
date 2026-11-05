@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **What a function needs.** `to withdraw with amount where amount is greater than 0` checks its condition at
+  the start of each call: if it isn't so, the call is a mistake that says what the function needs, as written,
+  and what the name was: `'withdraw' needs amount is greater than 0, but amount is -5`. `where` goes on the
+  function's first line, after its inputs, so no program that worked before means anything different.
 - **New commands.** `moth new [app|web|package|library] <name>` starts a project: its code, tests that pass
   as made, a README and a GitHub workflow that runs them. `moth explain` says what a mistake means, why it
   happens and how to put it right, for the first mistake in a file or for a mistake's words. `moth upgrade`

@@ -468,7 +468,7 @@ once, with 0, or the number after `with`, a whole number from 0 to 255. Nothing 
 ### 6.8 Functions: to and return
 
 ```text
-to     = "to" name [ "with" input { ("," | "and") input } ] [ "gives" gives ] NL block "end"
+to     = "to" name [ "with" input { ("," | "and") input } ] [ "gives" gives ] [ "where" expression ] NL block "end"
 input  = name [ "as" type ] [ "or" default ]
 type   = kind | ("a" | "an") name | "a list of" holds
 kind   = "a number" | "text" | "yes or no" | "a list" | "a record" | "a dictionary" | "bytes" | "a function"
@@ -481,6 +481,12 @@ return = "return" [ expression ]
 In `("a" | "an") name`, the name is a kind's (section 7.4), as `a dog`; in `holds`, it's what a kind makes,
 more than one, as `dogs`, `boxes` or `puppies`. `gives` is a word only here, after a function's inputs: it
 stays a name everywhere else.
+
+`where` and a condition say what the function needs: `to withdraw with amount where amount is greater than
+0`. It's checked at the start of each call, before anything else the function does, and if it isn't so the
+call is a mistake (one `try` catches) that says what the function needs, as the condition was written:
+`'withdraw' needs amount is greater than 0`, and, when the condition compares a name with something, what the
+name was: `, but amount is -5`.
 
 Section 7 has what they mean. `return` outside a function is a mistake.
 

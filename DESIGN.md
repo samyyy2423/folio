@@ -6102,3 +6102,31 @@ package.
   own, its files checked against what the engine imports, every engine run
   through it, a function loaded and called with lists and dictionaries, and
   its command run, checked, tested and tidied with.
+
+## 143. What a function needs: where
+
+A function could check its inputs only with an `if` and a `fail with` at its
+top, worded each time. `to withdraw with amount where amount is greater than
+0` says it in the function's first line, and the mistake words itself.
+
+- **Where it goes.** At first it was a statement, `needs amount is greater
+  than 0`. But a statement that starts with a name and a value is a call
+  (`greet "Sam"`), so a program with a function called `needs` would have
+  changed meaning, and VERSIONING.md promises Moth never reserves a new word in
+  1.x and that a line that worked before means what it meant. After a
+  function's inputs (and its `gives`) nothing could be written before, and
+  `where` is a word already (`dictionary where`), so editors color it already.
+- **Only the parsers, again** (§66, §95). Both parsers read the condition and
+  put an `if not ...` with a `fail with` at the start of the body, so the VM,
+  the JIT, WebAssembly, machine code, the checker and the formatter have
+  nothing new; compiler.moth makes the JIT's JavaScript exactly, as before.
+  The mistake is the program's own, so a `try` catches it, and its trail says
+  where the call was.
+- **What it says.** The condition as written, made again from its tokens with
+  a space between each (none after `(`, nor before `)`, a comma or `'s`), the
+  same in both parsers; and when the condition compares a name with something,
+  `, but amount is -5`, the name's value as `+` joins it.
+- **Tested** on every engine, compiler.moth and wasm.moth, and in machine code:
+  a check that holds and one that fails, with `and`, brackets, `length of`,
+  inputs with types and `or`, a kind's function and `self's`, a `try`, and a
+  name and a function called `where` and `needs` that are as they were.
