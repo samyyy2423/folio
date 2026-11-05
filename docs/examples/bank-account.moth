@@ -1,0 +1,39 @@
+# A bank account
+# A kind: a record with functions of its own, made by `account(...)`, whose deposit and withdraw keep the
+# balance right, and say no to taking out more than there is.
+
+kind account with owner, balance or 0
+    to deposit with self, amount
+        set balance of self to balance of self + amount
+    end
+    to withdraw with self, amount
+        if amount is greater than balance of self
+            fail with owner of self + " has only " + balance of self + ", not " + amount
+        end
+        set balance of self to balance of self - amount
+    end
+    to shown with self
+        return owner of self + "'s account: " + balance of self
+    end
+end
+
+set sam to account("Sam")
+set ana to account("Ana", 500)
+sam's deposit(120)
+ana's withdraw(75)
+say sam
+say ana
+
+try
+    sam's withdraw(1000)
+if it fails with why
+    say "No: " why
+end
+
+to move_money with from, to_account, amount
+    from's withdraw(amount)
+    to_account's deposit(amount)
+end
+move_money(ana, sam, 200)
+say sam
+say ana

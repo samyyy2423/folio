@@ -16,6 +16,8 @@ Built from scratch, with no dependencies, into programs for Windows and Linux as
 &nbsp;·&nbsp;
 <a href="docs/cookbook/README.md">Cookbook</a>
 &nbsp;·&nbsp;
+<a href="https://samyyy2423.github.io/moth/docs/examples.html">Examples</a>
+&nbsp;·&nbsp;
 <a href="DESIGN.md">How it's built</a>
 &nbsp;·&nbsp;
 <a href="https://github.com/samyyy2423/moth/releases/latest">Download</a>
@@ -100,7 +102,8 @@ the list only has 3 items
 **In your browser:** open the [playground](https://samyyy2423.github.io/moth/),
 write Moth and press Run, or [learn Moth in an afternoon](https://samyyy2423.github.io/moth/learn.html):
 eleven short lessons, each with a program to run and change. There's nothing to
-install.
+install. [The examples](https://samyyy2423.github.io/moth/docs/examples.html) are
+small, whole programs, each one click from running there.
 
 **On your computer:** download Moth from the
 [latest release](https://github.com/samyyy2423/moth/releases/latest), one file
@@ -1421,6 +1424,7 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`tools/`](tools) | Real tools in Moth: a picture maker, a word counter, a JSON reader and its tests, SQLite, Windows' own controls, and a notepad made with them |
 | [`make-docs.mjs`](make-docs.mjs), [`docs/`](docs) | The standard library's reference on the site: a page for each library, made from its own comments; and the cookbook's pages, from its recipes |
 | [`docs/cookbook/`](docs/cookbook), [`cookbook.test.js`](cookbook.test.js) | The cookbook: recipes for real work, each run as it's written by its test |
+| [`docs/examples/`](docs/examples) | The site's examples: small, whole programs, each one click from the playground |
 | [`bootstrap.mjs`](bootstrap.mjs) | Makes the first moth.exe from the source, with Node.js |
 | [`index.html`](index.html), [`worker.js`](worker.js) | The playground |
 
@@ -1458,6 +1462,8 @@ calls that led there.
   ([`cookbook.test.js`](cookbook.test.js)), run as it's written: its files
   written, its programs and commands run (a server asked with curl, a game in a
   window), and what each says compared with what the recipe shows
+- the site's examples ([`docs/examples/`](docs/examples)), each the same on the
+  playground's three engines, and opened by its link
 - the standard library's reference ([`docs.test.js`](docs.test.js)): `docs/` is
   what [`make-docs.mjs`](make-docs.mjs) makes of the libraries, every public
   function has a comment, and each example ran and said what's shown under it

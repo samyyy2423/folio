@@ -1,0 +1,33 @@
+# A trip planner
+# Numbers with units: kilometres and miles, hours and minutes, litres and kilograms, added and changed into
+# each other, and a mistake where they don't go together.
+
+# an amount's number, to one decimal place
+to rounded_off with amount
+    return (number of amount) with 1 decimals
+end
+
+set legs to list of 120 km, 85.5 km, 2 miles + 400 m, 46 km
+set distance to 0 km
+for each leg in legs
+    set distance to distance + leg
+end
+say "The whole trip: " rounded_off(distance) " km, or " rounded_off(distance in miles) " miles"
+
+set hours to number of distance / 80
+say "At 80 km an hour, that's " (hours with 1 decimals) " hours, or " (hours * 60) rounded " minutes"
+
+set breaks to 3 * 20 minutes + 45 minutes
+say "With " breaks " of breaks: " rounded_off((breaks + hours * 1 hour) in hours) " hours"
+
+set fuel to number of distance / 100 * 6.5
+say "Fuel, at 6.5 litres a 100 km: " (fuel with 1 decimals) " litres"
+
+set bags to 2 * 12.5 kg + 800 g
+say "The bags weigh " bags ", or " rounded_off(bags in pounds) " pounds"
+
+try
+    say distance + bags
+if it fails with why
+    say "Can't add those: " why
+end

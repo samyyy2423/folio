@@ -1,0 +1,27 @@
+# The Mandelbrot set
+# Each point, a complex number c: start at 0, square and add c, again and again. Those that stay small are in
+# the set, drawn here in letters, the denser the longer they took to leave.
+
+set shades to split " .:-=+*#%@" by ""
+for each row from 0 to 23
+    set y to 1.2 - row * 0.1
+    set line to ""
+    for each column from 0 to 69
+        set x to -2.1 + column * 0.04
+        set a to 0
+        set b to 0
+        set steps to 0
+        repeat while steps is less than 60 and a * a + b * b is at most 4
+            set next_a to a * a - b * b + x
+            set b to 2 * a * b + y
+            set a to next_a
+            add 1 to steps
+        end
+        if steps is 60
+            add "@" to line
+        else
+            add item (remainder of steps divided by 9 + 1) of shades to line
+        end
+    end
+    say line
+end

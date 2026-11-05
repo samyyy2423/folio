@@ -1,0 +1,63 @@
+# The Game of Life
+# Conway's cells, born and dying by how many neighbours they have, drawn again five times a second.
+
+set size to 24
+set cell to 18
+set alive to empty dictionary # "x,y" for each living cell
+
+to key_of with x, y
+    return x + "," + y
+end
+
+to neighbours with x, y
+    set count to 0
+    for each dx from -1 to 1
+        for each dy from -1 to 1
+            if not (dx is 0 and dy is 0) and key_of(x + dx, y + dy) is in alive
+                add 1 to count
+            end
+        end
+    end
+    return count
+end
+
+to step
+    set next to empty dictionary
+    for each x from 0 to size - 1
+        for each y from 0 to size - 1
+            set n to neighbours(x, y)
+            if n is 3 or (n is 2 and key_of(x, y) is in alive)
+                set item key_of(x, y) of next to yes
+            end
+        end
+    end
+    set alive to next
+end
+
+to show
+    clear
+    pen color "#14100c"
+    draw box at -size * cell / 2, -size * cell / 2 size size * cell by size * cell
+    pen color "#f4b54a"
+    for each x from 0 to size - 1
+        for each y from 0 to size - 1
+            if key_of(x, y) is in alive
+                draw box at (x - size / 2) * cell + 1, (y - size / 2) * cell + 1 size cell - 2 by cell - 2
+            end
+        end
+    end
+end
+
+# a glider, and a row of ten that grows into something else
+for each place in list of (list of 1, 20), (list of 2, 19), (list of 0, 18), (list of 1, 18), (list of 2, 18)
+    set item key_of(item 1 of place, item 2 of place) of alive to yes
+end
+for each x from 7 to 16
+    set item key_of(x, 8) of alive to yes
+end
+show()
+
+every 200 milliseconds
+    step()
+    show()
+end

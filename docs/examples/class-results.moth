@@ -1,0 +1,36 @@
+# A class's results
+# Marks summed up with stats.moth (mean, median, spread, the top and bottom quarter), each student's grade,
+# and a chart of how many got each grade.
+
+use "stats.moth" as stats
+
+set marks to dictionary where "Ada" is 91, "Ben" is 67, "Cai" is 78, "Dee" is 84, "Eli" is 55, "Fay" is 72,
+    "Gus" is 88, "Hal" is 61, "Ivy" is 95, "Jo" is 70, "Kit" is 79, "Lu" is 83
+
+set all to empty list
+for each name in keys of marks
+    add item name of marks to all
+end
+say "Mean " (stats's mean(all) with 1 decimals) ", median " stats's median(all) ", spread " (stats's stdev(all) with 1 decimals)
+say "Quartiles: " stats's quantiles(all, 4)
+
+to grade_of with mark
+    if mark is at least 85
+        return "A"
+    else if mark is at least 75
+        return "B"
+    else if mark is at least 65
+        return "C"
+    end
+    return "D"
+end
+
+set grades to dictionary where "A" is 0, "B" is 0, "C" is 0, "D" is 0
+for each name in keys of marks
+    set grade to grade_of(item name of marks)
+    set item grade of grades to item grade of grades + 1
+    if grade is "A"
+        say name " got an A, with " item name of marks
+    end
+end
+draw chart of grades

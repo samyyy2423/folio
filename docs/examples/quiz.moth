@@ -1,0 +1,19 @@
+# A quiz
+# Questions asked, answers checked whatever their capitals, and a score: in the playground, answer in the box
+# under what it says.
+
+set questions to list of (record with question "What's the capital of France?", answer "paris"),
+    (record with question "How many legs has a spider?", answer "8"),
+    (record with question "Which planet is the largest?", answer "jupiter")
+
+set score to 0
+for each q in questions
+    set given to lowercase of ask question of q
+    if given is answer of q
+        say "Right!"
+        add 1 to score
+    else
+        say "Not quite: it's " answer of q
+    end
+end
+say "You got " score " of " length of questions

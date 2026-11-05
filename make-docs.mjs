@@ -460,6 +460,7 @@ ${body}
       <a href="${root}learn.html">Learn</a>
       <a href="${root}docs/">The standard library</a>
       <a href="${root}docs/cookbook/">The cookbook</a>
+      <a href="${root}docs/examples.html">Examples</a>
       <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
       <a href="https://github.com/samyyy2423/moth">GitHub</a>
     </nav>
@@ -469,7 +470,7 @@ ${script}</body>
 `;
 }
 // the pages the site has, for its navigation: more as they come
-export const SITE_PAGES = ["Playground", "Learn", "Docs", "Cookbook"];
+export const SITE_PAGES = ["Playground", "Learn", "Docs", "Cookbook", "Examples"];
 const GITHUB = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z";
 
 // a block of Moth, coloured, and what it says under it if it's known
@@ -743,6 +744,110 @@ function cookbookIndex(names, read) {
   return page({ title: `${title} · Moth`, description: "Short, tested recipes for Moth: CSV and JSON, web APIs, servers with databases, command-line tools, data and charts, games, every core, and testing.", root: "../../", current: "Cookbook", hero, body });
 }
 
+// ---------- the examples ----------
+
+// The gallery, docs/examples.html: small whole programs, docs/examples/*.moth, each with a link that opens it
+// in the playground (`#code=`, as its Share button makes), and what it says, or a picture of what it draws, in
+// this order, then any others
+export const GALLERY = ["game-of-life", "bouncing-balls", "clock", "mandelbrot", "class-results", "towers-of-hanoi", "quicksort",
+  "roman-numerals", "caesar-cipher", "word-frequency", "bank-account", "trip-planner", "big-numbers", "calendar", "json-data", "quiz"];
+
+const exampleNames = () => {
+  let files = [];
+  try {
+    files = readdirSync(new URL("./docs/examples/", import.meta.url)).filter((f) => f.endsWith(".moth")).map((f) => f.replace(/\.moth$/, ""));
+  } catch {
+    return [];
+  }
+  return [...GALLERY.filter((n) => files.includes(n)), ...files.filter((n) => !GALLERY.includes(n)).sort()];
+};
+
+// What a program drew, from its last `clear`, as an SVG picture, painted as the playground paints its canvas
+// (index.html's render): 500 across, (0, 0) in the middle and y going up, zoomed out to fit what's drawn
+// unless it's an app, whose view never moves; lines, boxes, circles and text
+export function svgOfDrawing(drawn, app) {
+  const shown = drawn.slice(drawn.findLastIndex((d) => d.clear) + 1).filter((d) => !d.clear);
+  const reachOf = (d) => (d.shape === "box" ? Math.max(Math.abs(d.x), Math.abs(d.y), Math.abs(d.x + d.width), Math.abs(d.y + d.height))
+    : d.shape === "circle" ? Math.max(Math.abs(d.x), Math.abs(d.y)) + d.radius : d.shape === "text" ? Math.max(Math.abs(d.x), Math.abs(d.y) + d.size)
+      : d.x1 !== undefined ? Math.max(Math.abs(d.x1), Math.abs(d.y1), Math.abs(d.x2), Math.abs(d.y2)) : 0);
+  const scale = app ? 1 : Math.min(1, 240 / Math.max(1, ...shown.map(reachOf)));
+  const n = (v) => String(Math.round(v * scale * 100) / 100);
+  const marks = shown.map((d) => {
+    const colour = escape(d.color);
+    if (d.x1 !== undefined) return `<line x1="${n(d.x1)}" y1="${n(-d.y1)}" x2="${n(d.x2)}" y2="${n(-d.y2)}" stroke="${colour}" stroke-width="${n(d.width)}" stroke-linecap="round"/>`;
+    if (d.shape === "box") return `<rect x="${n(d.x)}" y="${n(-d.y - d.height)}" width="${n(d.width)}" height="${n(d.height)}" fill="${colour}"/>`;
+    if (d.shape === "circle") return `<circle cx="${n(d.x)}" cy="${n(-d.y)}" r="${n(d.radius)}" fill="${colour}"/>`;
+    if (d.shape === "text") return `<text x="${n(d.x)}" y="${n(-d.y)}" font-size="${n(d.size)}" fill="${colour}">${escape(d.text)}</text>`;
+    return "";
+  }).filter(Boolean);
+  return `<svg class="shot" viewBox="-250 -250 500 500" role="img" aria-label="What it draws"><rect x="-250" y="-250" width="500" height="500" fill="url(#night)"/><g font-family="system-ui, sans-serif">${marks.join("")}</g></svg>`;
+}
+
+// what an example does on the JavaScript engine, as the playground runs it: what it says, how much it draws,
+// what it asks, and whether it waits for keys, clicks or time (an app); a mistake in it stops the making
+export function tryExample(code, read = here) {
+  const said = [];
+  const asked = [];
+  const drawn = [];
+  const files = (name) => {
+    for (const file of [name, `tools/${name}`]) {
+      try {
+        return read(file);
+      } catch {}
+    }
+    return undefined;
+  };
+  const host = run(code, (line) => said.push(line), { maxSteps: 50_000_000, files, draw: (d) => drawn.push(d), printError: (line) => said.push(line),
+    ask: (question) => {
+      asked.push(question);
+      return "";
+    } });
+  return { said, drawn, asked, app: Boolean(host?.handlers?.length || /^(every|when) /m.test(code)) };
+}
+
+function examplesPage(read) {
+  const names = exampleNames();
+  const cards = names.map((name) => {
+    const code = read(`docs/examples/${name}.moth`);
+    const header = [];
+    for (const line of code.split("\n")) {
+      if (!line.startsWith("#")) break;
+      header.push(line.replace(/^#\s?/, ""));
+    }
+    const [title, ...about] = header;
+    const tried = tryExample(code, read);
+    let shows = "";
+    if (tried.drawn.length) shows = svgOfDrawing(tried.drawn, tried.app);
+    else if (tried.asked.length) shows = `<p class="asks">It asks: <i>${escape(tried.asked[0])}</i> Answer in the playground, under what it says.</p>`;
+    else if (tried.said.length) {
+      const lines = tried.said.join("\n").split("\n");
+      shows = `<pre class="says"><code>${escape(lines.slice(0, 14).join("\n"))}${lines.length > 14 ? "\n…" : ""}</code></pre>`;
+    }
+    return `      <article class="example" id="${name}">
+        <h2><a href="#${name}">${escape(title)}</a></h2>
+        <p>${prose(about.join(" ").trim())}</p>
+        ${shows}
+        <div class="actions">
+          <a class="open" href="../#code=${encodeURIComponent(code)}" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/${name}.moth">${name}.moth</a>
+        </div>
+        <details>
+          <summary>The code, ${code.split("\n").filter((l) => l.trim()).length} lines</summary>
+          ${codeBlock(code.replace(/\n$/, ""))}
+        </details>
+      </article>`;
+  });
+  const hero = `      <p class="eyebrow">Examples</p>
+      <h1>Small programs, <em>whole</em>.</h1>
+      <p>${names.length} programs, each short enough to read in a minute and complete enough to run: drawings that move,
+        puzzles, numbers, text and data. Open any of them in the playground, change it, and run it again.</p>`;
+  const body = `  <svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs><radialGradient id="night" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#1d1610"/><stop offset="1" stop-color="#0b0907"/></radialGradient></defs></svg>
+  <main class="wrap gallery">
+${cards.join("\n")}
+  </main>`;
+  return page({ title: "Examples · Moth", description: `${names.length} small, whole Moth programs, each one click from running in the playground.`, root: "../", current: "Examples", hero, body });
+}
+
 // the tests of a library, if it has any
 const testsOf = (file, read) => {
   const name = file.replace(/\.moth$/, ".test.moth");
@@ -761,6 +866,7 @@ export function docs(read = here) {
   const libs = LIBRARIES.map((file) => readLibrary(file, read));
   const pages = { "index.html": indexPage(libs) };
   for (const lib of libs) pages[`${lib.name}.html`] = libraryPage(lib, testsOf(lib.file, read), read);
+  if (exampleNames().length) pages["examples.html"] = examplesPage(read);
   const recipes = recipeNames(read);
   if (recipes.length) {
     pages["cookbook/index.html"] = cookbookIndex(recipes, read);
@@ -774,8 +880,8 @@ export function undocumented(read = here) {
   return LIBRARIES.map((file) => readLibrary(file, read)).flatMap((lib) => lib.functions.filter((fn) => !describe(fn)).map((fn) => `${lib.file}: ${fn.name}`));
 }
 
-// the pages in docs/ that aren't the reference's, which making it leaves alone
-export const KEPT = ["examples.html"];
+// the pages in docs/ that aren't made here, which making them leaves alone
+export const KEPT = [];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const made = docs();

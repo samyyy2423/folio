@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Examples · Moth</title>
+  <meta name="description" content="16 small, whole Moth programs, each one click from running in the playground.">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Moth">
+      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="go" href="../#playground">Playground</a>
+      <a class="go" href="../learn.html">Learn</a>
+      <a class="go" href="../docs/">Docs</a>
+      <a class="go" href="../docs/cookbook/">Cookbook</a>
+      <a class="go" href="../docs/examples.html" aria-current="page">Examples</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow">Examples</p>
+      <h1>Small programs, <em>whole</em>.</h1>
+      <p>16 programs, each short enough to read in a minute and complete enough to run: drawings that move,
+        puzzles, numbers, text and data. Open any of them in the playground, change it, and run it again.</p>
+    </div>
+  </header>
+
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs><radialGradient id="night" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#1d1610"/><stop offset="1" stop-color="#0b0907"/></radialGradient></defs></svg>
+  <main class="wrap gallery">
+      <article class="example" id="game-of-life">
+        <h2><a href="#game-of-life">The Game of Life</a></h2>
+        <p>Conway's cells, born and dying by how many neighbours they have, drawn again five times a second.</p>
+        <svg class="shot" viewBox="-250 -250 500 500" role="img" aria-label="What it draws"><rect x="-250" y="-250" width="500" height="500" fill="url(#night)"/><g font-family="system-ui, sans-serif"><rect x="-216" y="-216" width="432" height="432" fill="#14100c"/><rect x="-215" y="-125" width="16" height="16" fill="#f4b54a"/><rect x="-197" y="-125" width="16" height="16" fill="#f4b54a"/><rect x="-197" y="-161" width="16" height="16" fill="#f4b54a"/><rect x="-179" y="-125" width="16" height="16" fill="#f4b54a"/><rect x="-179" y="-143" width="16" height="16" fill="#f4b54a"/><rect x="-89" y="55" width="16" height="16" fill="#f4b54a"/><rect x="-71" y="55" width="16" height="16" fill="#f4b54a"/><rect x="-53" y="55" width="16" height="16" fill="#f4b54a"/><rect x="-35" y="55" width="16" height="16" fill="#f4b54a"/><rect x="-17" y="55" width="16" height="16" fill="#f4b54a"/><rect x="1" y="55" width="16" height="16" fill="#f4b54a"/><rect x="19" y="55" width="16" height="16" fill="#f4b54a"/><rect x="37" y="55" width="16" height="16" fill="#f4b54a"/><rect x="55" y="55" width="16" height="16" fill="#f4b54a"/><rect x="73" y="55" width="16" height="16" fill="#f4b54a"/></g></svg>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20The%20Game%20of%20Life%0A%23%20Conway's%20cells%2C%20born%20and%20dying%20by%20how%20many%20neighbours%20they%20have%2C%20drawn%20again%20five%20times%20a%20second.%0A%0Aset%20size%20to%2024%0Aset%20cell%20to%2018%0Aset%20alive%20to%20empty%20dictionary%20%23%20%22x%2Cy%22%20for%20each%20living%20cell%0A%0Ato%20key_of%20with%20x%2C%20y%0A%20%20%20%20return%20x%20%2B%20%22%2C%22%20%2B%20y%0Aend%0A%0Ato%20neighbours%20with%20x%2C%20y%0A%20%20%20%20set%20count%20to%200%0A%20%20%20%20for%20each%20dx%20from%20-1%20to%201%0A%20%20%20%20%20%20%20%20for%20each%20dy%20from%20-1%20to%201%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20not%20(dx%20is%200%20and%20dy%20is%200)%20and%20key_of(x%20%2B%20dx%2C%20y%20%2B%20dy)%20is%20in%20alive%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20add%201%20to%20count%0A%20%20%20%20%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0A%20%20%20%20return%20count%0Aend%0A%0Ato%20step%0A%20%20%20%20set%20next%20to%20empty%20dictionary%0A%20%20%20%20for%20each%20x%20from%200%20to%20size%20-%201%0A%20%20%20%20%20%20%20%20for%20each%20y%20from%200%20to%20size%20-%201%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20n%20to%20neighbours(x%2C%20y)%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20n%20is%203%20or%20(n%20is%202%20and%20key_of(x%2C%20y)%20is%20in%20alive)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20set%20item%20key_of(x%2C%20y)%20of%20next%20to%20yes%0A%20%20%20%20%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0A%20%20%20%20set%20alive%20to%20next%0Aend%0A%0Ato%20show%0A%20%20%20%20clear%0A%20%20%20%20pen%20color%20%22%2314100c%22%0A%20%20%20%20draw%20box%20at%20-size%20*%20cell%20%2F%202%2C%20-size%20*%20cell%20%2F%202%20size%20size%20*%20cell%20by%20size%20*%20cell%0A%20%20%20%20pen%20color%20%22%23f4b54a%22%0A%20%20%20%20for%20each%20x%20from%200%20to%20size%20-%201%0A%20%20%20%20%20%20%20%20for%20each%20y%20from%200%20to%20size%20-%201%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20key_of(x%2C%20y)%20is%20in%20alive%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20draw%20box%20at%20(x%20-%20size%20%2F%202)%20*%20cell%20%2B%201%2C%20(y%20-%20size%20%2F%202)%20*%20cell%20%2B%201%20size%20cell%20-%202%20by%20cell%20-%202%0A%20%20%20%20%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0Aend%0A%0A%23%20a%20glider%2C%20and%20a%20row%20of%20ten%20that%20grows%20into%20something%20else%0Afor%20each%20place%20in%20list%20of%20(list%20of%201%2C%2020)%2C%20(list%20of%202%2C%2019)%2C%20(list%20of%200%2C%2018)%2C%20(list%20of%201%2C%2018)%2C%20(list%20of%202%2C%2018)%0A%20%20%20%20set%20item%20key_of(item%201%20of%20place%2C%20item%202%20of%20place)%20of%20alive%20to%20yes%0Aend%0Afor%20each%20x%20from%207%20to%2016%0A%20%20%20%20set%20item%20key_of(x%2C%208)%20of%20alive%20to%20yes%0Aend%0Ashow()%0A%0Aevery%20200%20milliseconds%0A%20%20%20%20step()%0A%20%20%20%20show()%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/game-of-life.moth">game-of-life.moth</a>
+        </div>
+        <details>
+          <summary>The code, 56 lines</summary>
+          <div class="code"><pre><code><span class="c"># The Game of Life</span>
+<span class="c"># Conway's cells, born and dying by how many neighbours they have, drawn again five times a second.</span>
+
+<span class="k">set</span> size <span class="k">to</span> <span class="n">24</span>
+<span class="k">set</span> cell <span class="k">to</span> <span class="n">18</span>
+<span class="k">set</span> alive <span class="k">to</span> <span class="k">empty</span> <span class="k">dictionary</span> <span class="c"># &quot;x,y&quot; for each living cell</span>
+
+<span class="k">to</span> key_of <span class="k">with</span> x, y
+    <span class="k">return</span> x + <span class="s">&quot;,&quot;</span> + y
+<span class="k">end</span>
+
+<span class="k">to</span> neighbours <span class="k">with</span> x, y
+    <span class="k">set</span> count <span class="k">to</span> <span class="n">0</span>
+    <span class="k">for</span> <span class="k">each</span> dx <span class="k">from</span> -<span class="n">1</span> <span class="k">to</span> <span class="n">1</span>
+        <span class="k">for</span> <span class="k">each</span> dy <span class="k">from</span> -<span class="n">1</span> <span class="k">to</span> <span class="n">1</span>
+            <span class="k">if</span> <span class="k">not</span> (dx <span class="k">is</span> <span class="n">0</span> <span class="k">and</span> dy <span class="k">is</span> <span class="n">0</span>) <span class="k">and</span> key_of(x + dx, y + dy) <span class="k">is</span> <span class="k">in</span> alive
+                <span class="k">add</span> <span class="n">1</span> <span class="k">to</span> count
+            <span class="k">end</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">return</span> count
+<span class="k">end</span>
+
+<span class="k">to</span> step
+    <span class="k">set</span> next <span class="k">to</span> <span class="k">empty</span> <span class="k">dictionary</span>
+    <span class="k">for</span> <span class="k">each</span> x <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> size - <span class="n">1</span>
+        <span class="k">for</span> <span class="k">each</span> y <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> size - <span class="n">1</span>
+            <span class="k">set</span> n <span class="k">to</span> neighbours(x, y)
+            <span class="k">if</span> n <span class="k">is</span> <span class="n">3</span> <span class="k">or</span> (n <span class="k">is</span> <span class="n">2</span> <span class="k">and</span> key_of(x, y) <span class="k">is</span> <span class="k">in</span> alive)
+                <span class="k">set</span> <span class="k">item</span> key_of(x, y) <span class="k">of</span> next <span class="k">to</span> <span class="k">yes</span>
+            <span class="k">end</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">set</span> alive <span class="k">to</span> next
+<span class="k">end</span>
+
+<span class="k">to</span> show
+    <span class="k">clear</span>
+    <span class="k">pen</span> <span class="k">color</span> <span class="s">&quot;#14100c&quot;</span>
+    <span class="k">draw</span> <span class="k">box</span> <span class="k">at</span> -size * cell / <span class="n">2</span>, -size * cell / <span class="n">2</span> size size * cell <span class="k">by</span> size * cell
+    <span class="k">pen</span> <span class="k">color</span> <span class="s">&quot;#f4b54a&quot;</span>
+    <span class="k">for</span> <span class="k">each</span> x <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> size - <span class="n">1</span>
+        <span class="k">for</span> <span class="k">each</span> y <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> size - <span class="n">1</span>
+            <span class="k">if</span> key_of(x, y) <span class="k">is</span> <span class="k">in</span> alive
+                <span class="k">draw</span> <span class="k">box</span> <span class="k">at</span> (x - size / <span class="n">2</span>) * cell + <span class="n">1</span>, (y - size / <span class="n">2</span>) * cell + <span class="n">1</span> size cell - <span class="n">2</span> <span class="k">by</span> cell - <span class="n">2</span>
+            <span class="k">end</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c"># a glider, and a row of ten that grows into something else</span>
+<span class="k">for</span> <span class="k">each</span> place <span class="k">in</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">20</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">19</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">18</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">18</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">18</span>)
+    <span class="k">set</span> <span class="k">item</span> key_of(<span class="k">item</span> <span class="n">1</span> <span class="k">of</span> place, <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> place) <span class="k">of</span> alive <span class="k">to</span> <span class="k">yes</span>
+<span class="k">end</span>
+<span class="k">for</span> <span class="k">each</span> x <span class="k">from</span> <span class="n">7</span> <span class="k">to</span> <span class="n">16</span>
+    <span class="k">set</span> <span class="k">item</span> key_of(x, <span class="n">8</span>) <span class="k">of</span> alive <span class="k">to</span> <span class="k">yes</span>
+<span class="k">end</span>
+show()
+
+<span class="k">every</span> <span class="n">200</span> <span class="k">milliseconds</span>
+    step()
+    show()
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="bouncing-balls">
+        <h2><a href="#bouncing-balls">Bouncing balls</a></h2>
+        <p>Balls that fall, bounce off the floor and the walls, and lose a little each bounce, drawn 50 times a second. Click to drop another.</p>
+        <svg class="shot" viewBox="-250 -250 500 500" role="img" aria-label="What it draws"><rect x="-250" y="-250" width="500" height="500" fill="url(#night)"/><g font-family="system-ui, sans-serif"><circle cx="-100" cy="-200" r="20" fill="#f4b54a"/><circle cx="0" cy="-150" r="20" fill="#e87ba4"/><circle cx="120" cy="-220" r="20" fill="#ff7a2f"/><text x="-80" y="-225" font-size="16" fill="#8a7a63">click to drop a ball</text></g></svg>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20Bouncing%20balls%0A%23%20Balls%20that%20fall%2C%20bounce%20off%20the%20floor%20and%20the%20walls%2C%20and%20lose%20a%20little%20each%20bounce%2C%20drawn%2050%20times%20a%20second.%0A%23%20Click%20to%20drop%20another.%0A%0Aset%20balls%20to%20empty%20list%0Aset%20colours%20to%20list%20of%20%22%23f4b54a%22%2C%20%22%23ff7a2f%22%2C%20%22%237fc8d8%22%2C%20%22%23c3d98a%22%2C%20%22%23e87ba4%22%0A%0Ato%20drop%20with%20x%2C%20y%0A%20%20%20%20add%20(record%20with%20x%20x%2C%20y%20y%2C%20dx%20(random%20number%20from%20-150%20to%20150)%2C%20dy%200%2C%20colour%20item%20(random%20number%20from%201%20to%205)%20of%20colours)%20to%20balls%0Aend%0A%0Ato%20fall%20with%20seconds%0A%20%20%20%20for%20each%20ball%20in%20balls%0A%20%20%20%20%20%20%20%20set%20dy%20of%20ball%20to%20dy%20of%20ball%20-%20600%20*%20seconds%20%23%20gravity%2C%20pulling%20down%0A%20%20%20%20%20%20%20%20set%20x%20of%20ball%20to%20x%20of%20ball%20%2B%20dx%20of%20ball%20*%20seconds%0A%20%20%20%20%20%20%20%20set%20y%20of%20ball%20to%20y%20of%20ball%20%2B%20dy%20of%20ball%20*%20seconds%0A%20%20%20%20%20%20%20%20if%20y%20of%20ball%20is%20less%20than%20-230%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20y%20of%20ball%20to%20-230%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20dy%20of%20ball%20to%200%20-%20dy%20of%20ball%20*%200.8%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20if%20x%20of%20ball%20is%20less%20than%20-230%20or%20x%20of%20ball%20is%20greater%20than%20230%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20dx%20of%20ball%20to%200%20-%20dx%20of%20ball%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20x%20of%20ball%20to%20largest%20of%20(list%20of%20-230%2C%20smallest%20of%20(list%20of%20x%20of%20ball%2C%20230))%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0Aend%0A%0Ato%20show%0A%20%20%20%20clear%0A%20%20%20%20for%20each%20ball%20in%20balls%0A%20%20%20%20%20%20%20%20pen%20color%20colour%20of%20ball%0A%20%20%20%20%20%20%20%20draw%20circle%20at%20x%20of%20ball%2C%20y%20of%20ball%20size%2020%0A%20%20%20%20end%0A%20%20%20%20pen%20color%20%22%238a7a63%22%0A%20%20%20%20draw%20%22click%20to%20drop%20a%20ball%22%20at%20-80%2C%20225%0Aend%0A%0Adrop(-100%2C%20200)%0Adrop(0%2C%20150)%0Adrop(120%2C%20220)%0Ashow()%0A%0Aevery%2020%20milliseconds%0A%20%20%20%20fall(0.02)%0A%20%20%20%20show()%0Aend%0A%0Awhen%20the%20mouse%20is%20clicked%20with%20x%20and%20y%0A%20%20%20%20drop(x%2C%20y)%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/bouncing-balls.moth">bouncing-balls.moth</a>
+        </div>
+        <details>
+          <summary>The code, 43 lines</summary>
+          <div class="code"><pre><code><span class="c"># Bouncing balls</span>
+<span class="c"># Balls that fall, bounce off the floor and the walls, and lose a little each bounce, drawn 50 times a second.</span>
+<span class="c"># Click to drop another.</span>
+
+<span class="k">set</span> balls <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">set</span> colours <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;#f4b54a&quot;</span>, <span class="s">&quot;#ff7a2f&quot;</span>, <span class="s">&quot;#7fc8d8&quot;</span>, <span class="s">&quot;#c3d98a&quot;</span>, <span class="s">&quot;#e87ba4&quot;</span>
+
+<span class="k">to</span> drop <span class="k">with</span> x, y
+    <span class="k">add</span> (<span class="k">record</span> <span class="k">with</span> x x, y y, dx (<span class="k">random</span> <span class="k">number</span> <span class="k">from</span> -<span class="n">150</span> <span class="k">to</span> <span class="n">150</span>), dy <span class="n">0</span>, colour <span class="k">item</span> (<span class="k">random</span> <span class="k">number</span> <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">5</span>) <span class="k">of</span> colours) <span class="k">to</span> balls
+<span class="k">end</span>
+
+<span class="k">to</span> fall <span class="k">with</span> <span class="k">seconds</span>
+    <span class="k">for</span> <span class="k">each</span> ball <span class="k">in</span> balls
+        <span class="k">set</span> dy <span class="k">of</span> ball <span class="k">to</span> dy <span class="k">of</span> ball - <span class="n">600</span> * <span class="k">seconds</span> <span class="c"># gravity, pulling down</span>
+        <span class="k">set</span> x <span class="k">of</span> ball <span class="k">to</span> x <span class="k">of</span> ball + dx <span class="k">of</span> ball * <span class="k">seconds</span>
+        <span class="k">set</span> y <span class="k">of</span> ball <span class="k">to</span> y <span class="k">of</span> ball + dy <span class="k">of</span> ball * <span class="k">seconds</span>
+        <span class="k">if</span> y <span class="k">of</span> ball <span class="k">is</span> less <span class="k">than</span> -<span class="n">230</span>
+            <span class="k">set</span> y <span class="k">of</span> ball <span class="k">to</span> -<span class="n">230</span>
+            <span class="k">set</span> dy <span class="k">of</span> ball <span class="k">to</span> <span class="n">0</span> - dy <span class="k">of</span> ball * <span class="n">0.8</span>
+        <span class="k">end</span>
+        <span class="k">if</span> x <span class="k">of</span> ball <span class="k">is</span> less <span class="k">than</span> -<span class="n">230</span> <span class="k">or</span> x <span class="k">of</span> ball <span class="k">is</span> greater <span class="k">than</span> <span class="n">230</span>
+            <span class="k">set</span> dx <span class="k">of</span> ball <span class="k">to</span> <span class="n">0</span> - dx <span class="k">of</span> ball
+            <span class="k">set</span> x <span class="k">of</span> ball <span class="k">to</span> <span class="k">largest</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> -<span class="n">230</span>, <span class="k">smallest</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> x <span class="k">of</span> ball, <span class="n">230</span>))
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">to</span> show
+    <span class="k">clear</span>
+    <span class="k">for</span> <span class="k">each</span> ball <span class="k">in</span> balls
+        <span class="k">pen</span> <span class="k">color</span> colour <span class="k">of</span> ball
+        <span class="k">draw</span> <span class="k">circle</span> <span class="k">at</span> x <span class="k">of</span> ball, y <span class="k">of</span> ball size <span class="n">20</span>
+    <span class="k">end</span>
+    <span class="k">pen</span> <span class="k">color</span> <span class="s">&quot;#8a7a63&quot;</span>
+    <span class="k">draw</span> <span class="s">&quot;click to drop a ball&quot;</span> <span class="k">at</span> -<span class="n">80</span>, <span class="n">225</span>
+<span class="k">end</span>
+
+drop(-<span class="n">100</span>, <span class="n">200</span>)
+drop(<span class="n">0</span>, <span class="n">150</span>)
+drop(<span class="n">120</span>, <span class="n">220</span>)
+show()
+
+<span class="k">every</span> <span class="n">20</span> <span class="k">milliseconds</span>
+    fall(<span class="n">0.02</span>)
+    show()
+<span class="k">end</span>
+
+<span class="k">when</span> the <span class="k">mouse</span> <span class="k">is</span> <span class="k">clicked</span> <span class="k">with</span> x <span class="k">and</span> y
+    drop(x, y)
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="clock">
+        <h2><a href="#clock">A clock</a></h2>
+        <p>The time, drawn as a clock face with its hands, once a second: angles from the hour, minute and second.</p>
+        <svg class="shot" viewBox="-250 -250 500 500" role="img" aria-label="What it draws"><rect x="-250" y="-250" width="500" height="500" fill="url(#night)"/><g font-family="system-ui, sans-serif"><circle cx="0" cy="0" r="200" fill="#221a12"/><text x="77" y="-139.22" font-size="18" fill="#f4b54a">1</text><text x="139.22" y="-77" font-size="18" fill="#f4b54a">2</text><text x="162" y="8" font-size="18" fill="#f4b54a">3</text><text x="139.22" y="93" font-size="18" fill="#f4b54a">4</text><text x="77" y="155.22" font-size="18" fill="#f4b54a">5</text><text x="-8" y="178" font-size="18" fill="#f4b54a">6</text><text x="-93" y="155.22" font-size="18" fill="#f4b54a">7</text><text x="-155.22" y="93" font-size="18" fill="#f4b54a">8</text><text x="-178" y="8" font-size="18" fill="#f4b54a">9</text><text x="-155.22" y="-77" font-size="18" fill="#f4b54a">10</text><text x="-93" y="-139.22" font-size="18" fill="#f4b54a">11</text><text x="-8" y="-162" font-size="18" fill="#f4b54a">12</text><line x1="0" y1="0" x2="99.94" y2="3.56" stroke="#ffe2a8" stroke-width="8" stroke-linecap="round"/><line x1="0" y1="0" x2="62.2" y2="-136.49" stroke="#f4b54a" stroke-width="5" stroke-linecap="round"/><line x1="0" y1="0" x2="80" y2="-138.56" stroke="#ff7a2f" stroke-width="2" stroke-linecap="round"/><text x="-40" y="240" font-size="20" fill="#8a7a63">03:04:05</text></g></svg>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20clock%0A%23%20The%20time%2C%20drawn%20as%20a%20clock%20face%20with%20its%20hands%2C%20once%20a%20second%3A%20angles%20from%20the%20hour%2C%20minute%20and%20second.%0A%0Ato%20hand%20with%20reach%2C%20turns%2C%20thickness%2C%20colour%0A%20%20%20%20pen%20up%0A%20%20%20%20move%20to%200%2C%200%0A%20%20%20%20turn%20right%20turns%20*%20360%0A%20%20%20%20pen%20width%20thickness%0A%20%20%20%20pen%20color%20colour%0A%20%20%20%20pen%20down%0A%20%20%20%20move%20forward%20reach%0A%20%20%20%20turn%20left%20turns%20*%20360%0Aend%0A%0Ato%20show%0A%20%20%20%20clear%0A%20%20%20%20pen%20up%0A%20%20%20%20move%20to%200%2C%200%0A%20%20%20%20pen%20color%20%22%23221a12%22%0A%20%20%20%20draw%20circle%20at%200%2C%200%20size%20200%0A%20%20%20%20pen%20color%20%22%23f4b54a%22%0A%20%20%20%20for%20each%20mark%20from%201%20to%2012%0A%20%20%20%20%20%20%20%20draw%20%22%22%20%2B%20mark%20at%20170%20*%20sine_of(mark%20*%2030)%20-%208%2C%20170%20*%20cosine_of(mark%20*%2030)%20-%208%20size%2018%0A%20%20%20%20end%0A%20%20%20%20set%20seconds%20to%20the%20second%0A%20%20%20%20set%20minutes%20to%20the%20minute%20%2B%20seconds%20%2F%2060%0A%20%20%20%20set%20hours%20to%20remainder%20of%20the%20hour%20divided%20by%2012%20%2B%20minutes%20%2F%2060%0A%20%20%20%20hand(100%2C%20hours%20%2F%2012%2C%208%2C%20%22%23ffe2a8%22)%0A%20%20%20%20hand(150%2C%20minutes%20%2F%2060%2C%205%2C%20%22%23f4b54a%22)%0A%20%20%20%20hand(160%2C%20seconds%20%2F%2060%2C%202%2C%20%22%23ff7a2f%22)%0A%20%20%20%20pen%20color%20%22%238a7a63%22%0A%20%20%20%20draw%20the%20time%20at%20-40%2C%20-240%20size%2020%0Aend%0A%0A%23%20sine%20and%20cosine%20of%20an%20angle%20in%20degrees%2C%20from%20math.moth's%0Ause%20%22math.moth%22%20as%20math%0Ato%20sine_of%20with%20degrees%0A%20%20%20%20return%20math's%20sine(math's%20radians(degrees))%0Aend%0Ato%20cosine_of%20with%20degrees%0A%20%20%20%20return%20math's%20cosine(math's%20radians(degrees))%0Aend%0A%0Ashow()%0Aevery%201%20second%0A%20%20%20%20show()%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/clock.moth">clock.moth</a>
+        </div>
+        <details>
+          <summary>The code, 43 lines</summary>
+          <div class="code"><pre><code><span class="c"># A clock</span>
+<span class="c"># The time, drawn as a clock face with its hands, once a second: angles from the hour, minute and second.</span>
+
+<span class="k">to</span> hand <span class="k">with</span> reach, turns, thickness, colour
+    <span class="k">pen</span> <span class="k">up</span>
+    <span class="k">move</span> <span class="k">to</span> <span class="n">0</span>, <span class="n">0</span>
+    <span class="k">turn</span> <span class="k">right</span> turns * <span class="n">360</span>
+    <span class="k">pen</span> <span class="k">width</span> thickness
+    <span class="k">pen</span> <span class="k">color</span> colour
+    <span class="k">pen</span> <span class="k">down</span>
+    <span class="k">move</span> <span class="k">forward</span> reach
+    <span class="k">turn</span> <span class="k">left</span> turns * <span class="n">360</span>
+<span class="k">end</span>
+
+<span class="k">to</span> show
+    <span class="k">clear</span>
+    <span class="k">pen</span> <span class="k">up</span>
+    <span class="k">move</span> <span class="k">to</span> <span class="n">0</span>, <span class="n">0</span>
+    <span class="k">pen</span> <span class="k">color</span> <span class="s">&quot;#221a12&quot;</span>
+    <span class="k">draw</span> <span class="k">circle</span> <span class="k">at</span> <span class="n">0</span>, <span class="n">0</span> size <span class="n">200</span>
+    <span class="k">pen</span> <span class="k">color</span> <span class="s">&quot;#f4b54a&quot;</span>
+    <span class="k">for</span> <span class="k">each</span> mark <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">12</span>
+        <span class="k">draw</span> <span class="s">&quot;&quot;</span> + mark <span class="k">at</span> <span class="n">170</span> * sine_of(mark * <span class="n">30</span>) - <span class="n">8</span>, <span class="n">170</span> * cosine_of(mark * <span class="n">30</span>) - <span class="n">8</span> size <span class="n">18</span>
+    <span class="k">end</span>
+    <span class="k">set</span> <span class="k">seconds</span> <span class="k">to</span> the second
+    <span class="k">set</span> minutes <span class="k">to</span> the minute + <span class="k">seconds</span> / <span class="n">60</span>
+    <span class="k">set</span> hours <span class="k">to</span> <span class="k">remainder</span> <span class="k">of</span> the hour <span class="k">divided</span> <span class="k">by</span> <span class="n">12</span> + minutes / <span class="n">60</span>
+    hand(<span class="n">100</span>, hours / <span class="n">12</span>, <span class="n">8</span>, <span class="s">&quot;#ffe2a8&quot;</span>)
+    hand(<span class="n">150</span>, minutes / <span class="n">60</span>, <span class="n">5</span>, <span class="s">&quot;#f4b54a&quot;</span>)
+    hand(<span class="n">160</span>, <span class="k">seconds</span> / <span class="n">60</span>, <span class="n">2</span>, <span class="s">&quot;#ff7a2f&quot;</span>)
+    <span class="k">pen</span> <span class="k">color</span> <span class="s">&quot;#8a7a63&quot;</span>
+    <span class="k">draw</span> the time <span class="k">at</span> -<span class="n">40</span>, -<span class="n">240</span> size <span class="n">20</span>
+<span class="k">end</span>
+
+<span class="c"># sine and cosine of an angle in degrees, from math.moth's</span>
+<span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+<span class="k">to</span> sine_of <span class="k">with</span> degrees
+    <span class="k">return</span> math's sine(math's radians(degrees))
+<span class="k">end</span>
+<span class="k">to</span> cosine_of <span class="k">with</span> degrees
+    <span class="k">return</span> math's cosine(math's radians(degrees))
+<span class="k">end</span>
+
+show()
+<span class="k">every</span> <span class="n">1</span> second
+    show()
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="mandelbrot">
+        <h2><a href="#mandelbrot">The Mandelbrot set</a></h2>
+        <p>Each point, a complex number c: start at 0, square and add c, again and again. Those that stay small are in the set, drawn here in letters, the denser the longer they took to leave.</p>
+        <pre class="says"><code>.............:::::::::::---------------------------------:::::::::::::
+...........::::::::---------------------======+# #++=====-----::::::::
+..........::::::--------------------=======+++** * :.*+=====-----:::::
+........:::::--------------------========++++*# .%*=%#*++=====------::
+.......:::--------------------========+++***#%-@@@@@@-#*+++++===------
+......:::------------------=======+++#% %%%  .-.@@@@ :  %#***%*+==----
+.....::-----------------====++++++**#.+@@%@@@@@@@@@@@@@@-#:#*+ %+==---
+.....:--------------==+++++++++****%-:#@@@@@@@@@@@@@@@@@@@@@@#%*++==--
+....:--------=====+*#+%##########%%:#:@@@@@@@@@@@@@@@@@@@@@@@@: .+===-
+....---========++++*# -##-=. ::  .-*@@@@@@@@@@@@@@@@@@@@@@@@@@..#*===-
+...--=======+++++*##%:+=@@@@@@@@-*-@@@@@@@@@@@@@@@@@@@@@@@@@@@:.#+====
+...=======****##%.-=+ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ #*+====
+... @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@-- #*++====
+...=======****##%.-=+ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ #*+====
+…</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20The%20Mandelbrot%20set%0A%23%20Each%20point%2C%20a%20complex%20number%20c%3A%20start%20at%200%2C%20square%20and%20add%20c%2C%20again%20and%20again.%20Those%20that%20stay%20small%20are%20in%0A%23%20the%20set%2C%20drawn%20here%20in%20letters%2C%20the%20denser%20the%20longer%20they%20took%20to%20leave.%0A%0Aset%20shades%20to%20split%20%22%20.%3A-%3D%2B*%23%25%40%22%20by%20%22%22%0Afor%20each%20row%20from%200%20to%2023%0A%20%20%20%20set%20y%20to%201.2%20-%20row%20*%200.1%0A%20%20%20%20set%20line%20to%20%22%22%0A%20%20%20%20for%20each%20column%20from%200%20to%2069%0A%20%20%20%20%20%20%20%20set%20x%20to%20-2.1%20%2B%20column%20*%200.04%0A%20%20%20%20%20%20%20%20set%20a%20to%200%0A%20%20%20%20%20%20%20%20set%20b%20to%200%0A%20%20%20%20%20%20%20%20set%20steps%20to%200%0A%20%20%20%20%20%20%20%20repeat%20while%20steps%20is%20less%20than%2060%20and%20a%20*%20a%20%2B%20b%20*%20b%20is%20at%20most%204%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20next_a%20to%20a%20*%20a%20-%20b%20*%20b%20%2B%20x%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20b%20to%202%20*%20a%20*%20b%20%2B%20y%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20a%20to%20next_a%0A%20%20%20%20%20%20%20%20%20%20%20%20add%201%20to%20steps%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20if%20steps%20is%2060%0A%20%20%20%20%20%20%20%20%20%20%20%20add%20%22%40%22%20to%20line%0A%20%20%20%20%20%20%20%20else%0A%20%20%20%20%20%20%20%20%20%20%20%20add%20item%20(remainder%20of%20steps%20divided%20by%209%20%2B%201)%20of%20shades%20to%20line%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0A%20%20%20%20say%20line%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/mandelbrot.moth">mandelbrot.moth</a>
+        </div>
+        <details>
+          <summary>The code, 26 lines</summary>
+          <div class="code"><pre><code><span class="c"># The Mandelbrot set</span>
+<span class="c"># Each point, a complex number c: start at 0, square and add c, again and again. Those that stay small are in</span>
+<span class="c"># the set, drawn here in letters, the denser the longer they took to leave.</span>
+
+<span class="k">set</span> shades <span class="k">to</span> <span class="k">split</span> <span class="s">&quot; .:-=+*#%@&quot;</span> <span class="k">by</span> <span class="s">&quot;&quot;</span>
+<span class="k">for</span> <span class="k">each</span> row <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> <span class="n">23</span>
+    <span class="k">set</span> y <span class="k">to</span> <span class="n">1.2</span> - row * <span class="n">0.1</span>
+    <span class="k">set</span> line <span class="k">to</span> <span class="s">&quot;&quot;</span>
+    <span class="k">for</span> <span class="k">each</span> column <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> <span class="n">69</span>
+        <span class="k">set</span> x <span class="k">to</span> -<span class="n">2.1</span> + column * <span class="n">0.04</span>
+        <span class="k">set</span> a <span class="k">to</span> <span class="n">0</span>
+        <span class="k">set</span> b <span class="k">to</span> <span class="n">0</span>
+        <span class="k">set</span> steps <span class="k">to</span> <span class="n">0</span>
+        <span class="k">repeat</span> <span class="k">while</span> steps <span class="k">is</span> less <span class="k">than</span> <span class="n">60</span> <span class="k">and</span> a * a + b * b <span class="k">is</span> <span class="k">at</span> <span class="k">most</span> <span class="n">4</span>
+            <span class="k">set</span> next_a <span class="k">to</span> a * a - b * b + x
+            <span class="k">set</span> b <span class="k">to</span> <span class="n">2</span> * a * b + y
+            <span class="k">set</span> a <span class="k">to</span> next_a
+            <span class="k">add</span> <span class="n">1</span> <span class="k">to</span> steps
+        <span class="k">end</span>
+        <span class="k">if</span> steps <span class="k">is</span> <span class="n">60</span>
+            <span class="k">add</span> <span class="s">&quot;@&quot;</span> <span class="k">to</span> line
+        <span class="k">else</span>
+            <span class="k">add</span> <span class="k">item</span> (<span class="k">remainder</span> <span class="k">of</span> steps <span class="k">divided</span> <span class="k">by</span> <span class="n">9</span> + <span class="n">1</span>) <span class="k">of</span> shades <span class="k">to</span> line
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">say</span> line
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="class-results">
+        <h2><a href="#class-results">A class's results</a></h2>
+        <p>Marks summed up with stats.moth (mean, median, spread, the top and bottom quarter), each student's grade, and a chart of how many got each grade.</p>
+        <svg class="shot" viewBox="-250 -250 500 500" role="img" aria-label="What it draws"><rect x="-250" y="-250" width="500" height="500" fill="url(#night)"/><g font-family="system-ui, sans-serif"><rect x="0" y="-150" width="30" height="150" fill="#4f8ff7"/><text x="0" y="-154" font-size="12" fill="#4f8ff7">3</text><text x="0" y="18" font-size="12" fill="#4f8ff7">A</text><rect x="40" y="-200" width="30" height="200" fill="#4f8ff7"/><text x="40" y="-204" font-size="12" fill="#4f8ff7">4</text><text x="40" y="18" font-size="12" fill="#4f8ff7">B</text><rect x="80" y="-150" width="30" height="150" fill="#4f8ff7"/><text x="80" y="-154" font-size="12" fill="#4f8ff7">3</text><text x="80" y="18" font-size="12" fill="#4f8ff7">C</text><rect x="120" y="-100" width="30" height="100" fill="#4f8ff7"/><text x="120" y="-104" font-size="12" fill="#4f8ff7">2</text><text x="120" y="18" font-size="12" fill="#4f8ff7">D</text></g></svg>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20class's%20results%0A%23%20Marks%20summed%20up%20with%20stats.moth%20(mean%2C%20median%2C%20spread%2C%20the%20top%20and%20bottom%20quarter)%2C%20each%20student's%20grade%2C%0A%23%20and%20a%20chart%20of%20how%20many%20got%20each%20grade.%0A%0Ause%20%22stats.moth%22%20as%20stats%0A%0Aset%20marks%20to%20dictionary%20where%20%22Ada%22%20is%2091%2C%20%22Ben%22%20is%2067%2C%20%22Cai%22%20is%2078%2C%20%22Dee%22%20is%2084%2C%20%22Eli%22%20is%2055%2C%20%22Fay%22%20is%2072%2C%0A%20%20%20%20%22Gus%22%20is%2088%2C%20%22Hal%22%20is%2061%2C%20%22Ivy%22%20is%2095%2C%20%22Jo%22%20is%2070%2C%20%22Kit%22%20is%2079%2C%20%22Lu%22%20is%2083%0A%0Aset%20all%20to%20empty%20list%0Afor%20each%20name%20in%20keys%20of%20marks%0A%20%20%20%20add%20item%20name%20of%20marks%20to%20all%0Aend%0Asay%20%22Mean%20%22%20(stats's%20mean(all)%20with%201%20decimals)%20%22%2C%20median%20%22%20stats's%20median(all)%20%22%2C%20spread%20%22%20(stats's%20stdev(all)%20with%201%20decimals)%0Asay%20%22Quartiles%3A%20%22%20stats's%20quantiles(all%2C%204)%0A%0Ato%20grade_of%20with%20mark%0A%20%20%20%20if%20mark%20is%20at%20least%2085%0A%20%20%20%20%20%20%20%20return%20%22A%22%0A%20%20%20%20else%20if%20mark%20is%20at%20least%2075%0A%20%20%20%20%20%20%20%20return%20%22B%22%0A%20%20%20%20else%20if%20mark%20is%20at%20least%2065%0A%20%20%20%20%20%20%20%20return%20%22C%22%0A%20%20%20%20end%0A%20%20%20%20return%20%22D%22%0Aend%0A%0Aset%20grades%20to%20dictionary%20where%20%22A%22%20is%200%2C%20%22B%22%20is%200%2C%20%22C%22%20is%200%2C%20%22D%22%20is%200%0Afor%20each%20name%20in%20keys%20of%20marks%0A%20%20%20%20set%20grade%20to%20grade_of(item%20name%20of%20marks)%0A%20%20%20%20set%20item%20grade%20of%20grades%20to%20item%20grade%20of%20grades%20%2B%201%0A%20%20%20%20if%20grade%20is%20%22A%22%0A%20%20%20%20%20%20%20%20say%20name%20%22%20got%20an%20A%2C%20with%20%22%20item%20name%20of%20marks%0A%20%20%20%20end%0Aend%0Adraw%20chart%20of%20grades%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/class-results.moth">class-results.moth</a>
+        </div>
+        <details>
+          <summary>The code, 31 lines</summary>
+          <div class="code"><pre><code><span class="c"># A class's results</span>
+<span class="c"># Marks summed up with stats.moth (mean, median, spread, the top and bottom quarter), each student's grade,</span>
+<span class="c"># and a chart of how many got each grade.</span>
+
+<span class="k">use</span> <span class="s">&quot;stats.moth&quot;</span> <span class="k">as</span> stats
+
+<span class="k">set</span> marks <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;Ada&quot;</span> <span class="k">is</span> <span class="n">91</span>, <span class="s">&quot;Ben&quot;</span> <span class="k">is</span> <span class="n">67</span>, <span class="s">&quot;Cai&quot;</span> <span class="k">is</span> <span class="n">78</span>, <span class="s">&quot;Dee&quot;</span> <span class="k">is</span> <span class="n">84</span>, <span class="s">&quot;Eli&quot;</span> <span class="k">is</span> <span class="n">55</span>, <span class="s">&quot;Fay&quot;</span> <span class="k">is</span> <span class="n">72</span>,
+    <span class="s">&quot;Gus&quot;</span> <span class="k">is</span> <span class="n">88</span>, <span class="s">&quot;Hal&quot;</span> <span class="k">is</span> <span class="n">61</span>, <span class="s">&quot;Ivy&quot;</span> <span class="k">is</span> <span class="n">95</span>, <span class="s">&quot;Jo&quot;</span> <span class="k">is</span> <span class="n">70</span>, <span class="s">&quot;Kit&quot;</span> <span class="k">is</span> <span class="n">79</span>, <span class="s">&quot;Lu&quot;</span> <span class="k">is</span> <span class="n">83</span>
+
+<span class="k">set</span> all <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">for</span> <span class="k">each</span> name <span class="k">in</span> <span class="k">keys</span> <span class="k">of</span> marks
+    <span class="k">add</span> <span class="k">item</span> name <span class="k">of</span> marks <span class="k">to</span> all
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;Mean &quot;</span> (stats's mean(all) <span class="k">with</span> <span class="n">1</span> decimals) <span class="s">&quot;, median &quot;</span> stats's median(all) <span class="s">&quot;, spread &quot;</span> (stats's stdev(all) <span class="k">with</span> <span class="n">1</span> decimals)
+<span class="k">say</span> <span class="s">&quot;Quartiles: &quot;</span> stats's quantiles(all, <span class="n">4</span>)
+
+<span class="k">to</span> grade_of <span class="k">with</span> mark
+    <span class="k">if</span> mark <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">85</span>
+        <span class="k">return</span> <span class="s">&quot;A&quot;</span>
+    <span class="k">else</span> <span class="k">if</span> mark <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">75</span>
+        <span class="k">return</span> <span class="s">&quot;B&quot;</span>
+    <span class="k">else</span> <span class="k">if</span> mark <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">65</span>
+        <span class="k">return</span> <span class="s">&quot;C&quot;</span>
+    <span class="k">end</span>
+    <span class="k">return</span> <span class="s">&quot;D&quot;</span>
+<span class="k">end</span>
+
+<span class="k">set</span> grades <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;A&quot;</span> <span class="k">is</span> <span class="n">0</span>, <span class="s">&quot;B&quot;</span> <span class="k">is</span> <span class="n">0</span>, <span class="s">&quot;C&quot;</span> <span class="k">is</span> <span class="n">0</span>, <span class="s">&quot;D&quot;</span> <span class="k">is</span> <span class="n">0</span>
+<span class="k">for</span> <span class="k">each</span> name <span class="k">in</span> <span class="k">keys</span> <span class="k">of</span> marks
+    <span class="k">set</span> grade <span class="k">to</span> grade_of(<span class="k">item</span> name <span class="k">of</span> marks)
+    <span class="k">set</span> <span class="k">item</span> grade <span class="k">of</span> grades <span class="k">to</span> <span class="k">item</span> grade <span class="k">of</span> grades + <span class="n">1</span>
+    <span class="k">if</span> grade <span class="k">is</span> <span class="s">&quot;A&quot;</span>
+        <span class="k">say</span> name <span class="s">&quot; got an A, with &quot;</span> <span class="k">item</span> name <span class="k">of</span> marks
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="k">draw</span> <span class="k">chart</span> <span class="k">of</span> grades</code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="towers-of-hanoi">
+        <h2><a href="#towers-of-hanoi">The Towers of Hanoi</a></h2>
+        <p>Move a tower of discs from one peg to another, a disc at a time, never a big one on a small one: a function that calls itself does it in 2^n - 1 moves.</p>
+        <pre class="says"><code>Move disc 1 from left to right
+Move disc 2 from left to middle
+Move disc 1 from right to middle
+Move disc 3 from left to right
+Move disc 1 from middle to left
+Move disc 2 from middle to right
+Move disc 1 from left to right
+7 moves for 3 discs
+1023 moves for 10 discs: 2 to the power of 10, less 1
+65535 moves for 16 discs: 2 to the power of 16, less 1</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20The%20Towers%20of%20Hanoi%0A%23%20Move%20a%20tower%20of%20discs%20from%20one%20peg%20to%20another%2C%20a%20disc%20at%20a%20time%2C%20never%20a%20big%20one%20on%20a%20small%20one%3A%20a%20function%0A%23%20that%20calls%20itself%20does%20it%20in%202%5En%20-%201%20moves.%0A%0Aset%20moves%20to%200%0A%0Ato%20move_tower%20with%20discs%2C%20from%2C%20to_peg%2C%20spare%2C%20telling%0A%20%20%20%20if%20discs%20is%200%0A%20%20%20%20%20%20%20%20return%20nothing%0A%20%20%20%20end%0A%20%20%20%20move_tower(discs%20-%201%2C%20from%2C%20spare%2C%20to_peg%2C%20telling)%0A%20%20%20%20add%201%20to%20moves%0A%20%20%20%20if%20telling%0A%20%20%20%20%20%20%20%20say%20%22Move%20disc%20%22%20discs%20%22%20from%20%22%20from%20%22%20to%20%22%20to_peg%0A%20%20%20%20end%0A%20%20%20%20move_tower(discs%20-%201%2C%20spare%2C%20to_peg%2C%20from%2C%20telling)%0Aend%0A%0Amove_tower(3%2C%20%22left%22%2C%20%22right%22%2C%20%22middle%22%2C%20yes)%0Asay%20moves%20%22%20moves%20for%203%20discs%22%0A%0Afor%20each%20discs%20in%20list%20of%2010%2C%2016%0A%20%20%20%20set%20moves%20to%200%0A%20%20%20%20move_tower(discs%2C%20%22left%22%2C%20%22right%22%2C%20%22middle%22%2C%20no)%0A%20%20%20%20say%20moves%20%22%20moves%20for%20%22%20discs%20%22%20discs%3A%202%20to%20the%20power%20of%20%22%20discs%20%22%2C%20less%201%22%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/towers-of-hanoi.moth">towers-of-hanoi.moth</a>
+        </div>
+        <details>
+          <summary>The code, 22 lines</summary>
+          <div class="code"><pre><code><span class="c"># The Towers of Hanoi</span>
+<span class="c"># Move a tower of discs from one peg to another, a disc at a time, never a big one on a small one: a function</span>
+<span class="c"># that calls itself does it in 2^n - 1 moves.</span>
+
+<span class="k">set</span> moves <span class="k">to</span> <span class="n">0</span>
+
+<span class="k">to</span> move_tower <span class="k">with</span> discs, <span class="k">from</span>, to_peg, spare, telling
+    <span class="k">if</span> discs <span class="k">is</span> <span class="n">0</span>
+        <span class="k">return</span> <span class="k">nothing</span>
+    <span class="k">end</span>
+    move_tower(discs - <span class="n">1</span>, <span class="k">from</span>, spare, to_peg, telling)
+    <span class="k">add</span> <span class="n">1</span> <span class="k">to</span> moves
+    <span class="k">if</span> telling
+        <span class="k">say</span> <span class="s">&quot;Move disc &quot;</span> discs <span class="s">&quot; from &quot;</span> <span class="k">from</span> <span class="s">&quot; to &quot;</span> to_peg
+    <span class="k">end</span>
+    move_tower(discs - <span class="n">1</span>, spare, to_peg, <span class="k">from</span>, telling)
+<span class="k">end</span>
+
+move_tower(<span class="n">3</span>, <span class="s">&quot;left&quot;</span>, <span class="s">&quot;right&quot;</span>, <span class="s">&quot;middle&quot;</span>, <span class="k">yes</span>)
+<span class="k">say</span> moves <span class="s">&quot; moves for 3 discs&quot;</span>
+
+<span class="k">for</span> <span class="k">each</span> discs <span class="k">in</span> <span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">16</span>
+    <span class="k">set</span> moves <span class="k">to</span> <span class="n">0</span>
+    move_tower(discs, <span class="s">&quot;left&quot;</span>, <span class="s">&quot;right&quot;</span>, <span class="s">&quot;middle&quot;</span>, <span class="k">no</span>)
+    <span class="k">say</span> moves <span class="s">&quot; moves for &quot;</span> discs <span class="s">&quot; discs: 2 to the power of &quot;</span> discs <span class="s">&quot;, less 1&quot;</span>
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="quicksort">
+        <h2><a href="#quicksort">Quicksort</a></h2>
+        <p>Sorting by picking a pivot and sorting what's smaller and what's bigger, each the same way: <code>give</code> adds to the list a function gives back.</p>
+        <pre class="says"><code>[3, 9, 10, 27, 38, 43, 82]
+[&quot;brown&quot;, &quot;dog&quot;, &quot;fox&quot;, &quot;jumps&quot;, &quot;lazy&quot;, &quot;over&quot;, &quot;quick&quot;, &quot;the&quot;, &quot;the&quot;]
+2,000 random numbers sorted the same as Moth sorts them: yes</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20Quicksort%0A%23%20Sorting%20by%20picking%20a%20pivot%20and%20sorting%20what's%20smaller%20and%20what's%20bigger%2C%20each%20the%20same%20way%3A%20%60give%60%20adds%20to%0A%23%20the%20list%20a%20function%20gives%20back.%0A%0Ato%20smaller_than%20with%20things%2C%20pivot%0A%20%20%20%20for%20each%20x%20in%20things%0A%20%20%20%20%20%20%20%20if%20x%20is%20less%20than%20pivot%0A%20%20%20%20%20%20%20%20%20%20%20%20give%20x%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0Aend%0A%0Ato%20not_smaller_than%20with%20things%2C%20pivot%0A%20%20%20%20for%20each%20x%20in%20things%0A%20%20%20%20%20%20%20%20if%20x%20is%20at%20least%20pivot%0A%20%20%20%20%20%20%20%20%20%20%20%20give%20x%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0Aend%0A%0Ato%20quicksort%20with%20things%0A%20%20%20%20if%20length%20of%20things%20is%20at%20most%201%0A%20%20%20%20%20%20%20%20return%20things%0A%20%20%20%20end%0A%20%20%20%20set%20pivot%20to%20item%201%20of%20things%0A%20%20%20%20set%20rest%20to%20items%202%20to%20(length%20of%20things)%20of%20things%0A%20%20%20%20set%20sorted%20to%20quicksort(smaller_than(rest%2C%20pivot))%0A%20%20%20%20add%20pivot%20to%20sorted%0A%20%20%20%20for%20each%20x%20in%20quicksort(not_smaller_than(rest%2C%20pivot))%0A%20%20%20%20%20%20%20%20add%20x%20to%20sorted%0A%20%20%20%20end%0A%20%20%20%20return%20sorted%0Aend%0A%0Asay%20quicksort(list%20of%2038%2C%2027%2C%2043%2C%203%2C%209%2C%2082%2C%2010)%0Asay%20quicksort(split%20%22the%20quick%20brown%20fox%20jumps%20over%20the%20lazy%20dog%22%20by%20%22%20%22)%0A%0Aset%20many%20to%20empty%20list%0Arepeat%202000%20times%0A%20%20%20%20add%20random%20number%20from%201%20to%20100000%20to%20many%0Aend%0Asay%20%222%2C000%20random%20numbers%20sorted%20the%20same%20as%20Moth%20sorts%20them%3A%20%22%20quicksort(many)%20is%20many%20in%20order%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/quicksort.moth">quicksort.moth</a>
+        </div>
+        <details>
+          <summary>The code, 37 lines</summary>
+          <div class="code"><pre><code><span class="c"># Quicksort</span>
+<span class="c"># Sorting by picking a pivot and sorting what's smaller and what's bigger, each the same way: `give` adds to</span>
+<span class="c"># the list a function gives back.</span>
+
+<span class="k">to</span> smaller_than <span class="k">with</span> things, pivot
+    <span class="k">for</span> <span class="k">each</span> x <span class="k">in</span> things
+        <span class="k">if</span> x <span class="k">is</span> less <span class="k">than</span> pivot
+            <span class="k">give</span> x
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">to</span> not_smaller_than <span class="k">with</span> things, pivot
+    <span class="k">for</span> <span class="k">each</span> x <span class="k">in</span> things
+        <span class="k">if</span> x <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> pivot
+            <span class="k">give</span> x
+        <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">to</span> quicksort <span class="k">with</span> things
+    <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> things <span class="k">is</span> <span class="k">at</span> <span class="k">most</span> <span class="n">1</span>
+        <span class="k">return</span> things
+    <span class="k">end</span>
+    <span class="k">set</span> pivot <span class="k">to</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> things
+    <span class="k">set</span> rest <span class="k">to</span> <span class="k">items</span> <span class="n">2</span> <span class="k">to</span> (<span class="k">length</span> <span class="k">of</span> things) <span class="k">of</span> things
+    <span class="k">set</span> sorted <span class="k">to</span> quicksort(smaller_than(rest, pivot))
+    <span class="k">add</span> pivot <span class="k">to</span> sorted
+    <span class="k">for</span> <span class="k">each</span> x <span class="k">in</span> quicksort(not_smaller_than(rest, pivot))
+        <span class="k">add</span> x <span class="k">to</span> sorted
+    <span class="k">end</span>
+    <span class="k">return</span> sorted
+<span class="k">end</span>
+
+<span class="k">say</span> quicksort(<span class="k">list</span> <span class="k">of</span> <span class="n">38</span>, <span class="n">27</span>, <span class="n">43</span>, <span class="n">3</span>, <span class="n">9</span>, <span class="n">82</span>, <span class="n">10</span>)
+<span class="k">say</span> quicksort(<span class="k">split</span> <span class="s">&quot;the quick brown fox jumps over the lazy dog&quot;</span> <span class="k">by</span> <span class="s">&quot; &quot;</span>)
+
+<span class="k">set</span> many <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">repeat</span> <span class="n">2000</span> <span class="k">times</span>
+    <span class="k">add</span> <span class="k">random</span> <span class="k">number</span> <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">100000</span> <span class="k">to</span> many
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;2,000 random numbers sorted the same as Moth sorts them: &quot;</span> quicksort(many) <span class="k">is</span> many <span class="k">in</span> order</code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="roman-numerals">
+        <h2><a href="#roman-numerals">Roman numerals</a></h2>
+        <p>A number written as the Romans wrote it, and read back: the biggest symbol that fits, again and again.</p>
+        <pre class="says"><code>1999 is MCMXCIX, and MCMXCIX is 1999
+2026 is MMXXVI, and MMXXVI is 2026
+3888 is MMMDCCCLXXXVIII, and MMMDCCCLXXXVIII is 3888</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20Roman%20numerals%0A%23%20A%20number%20written%20as%20the%20Romans%20wrote%20it%2C%20and%20read%20back%3A%20the%20biggest%20symbol%20that%20fits%2C%20again%20and%20again.%0A%0Aset%20values%20to%20list%20of%201000%2C%20900%2C%20500%2C%20400%2C%20100%2C%2090%2C%2050%2C%2040%2C%2010%2C%209%2C%205%2C%204%2C%201%0Aset%20symbols%20to%20list%20of%20%22M%22%2C%20%22CM%22%2C%20%22D%22%2C%20%22CD%22%2C%20%22C%22%2C%20%22XC%22%2C%20%22L%22%2C%20%22XL%22%2C%20%22X%22%2C%20%22IX%22%2C%20%22V%22%2C%20%22IV%22%2C%20%22I%22%0A%0Ato%20roman%20with%20n%0A%20%20%20%20set%20made%20to%20%22%22%0A%20%20%20%20for%20each%20k%20from%201%20to%20length%20of%20values%0A%20%20%20%20%20%20%20%20repeat%20while%20n%20is%20at%20least%20item%20k%20of%20values%0A%20%20%20%20%20%20%20%20%20%20%20%20add%20item%20k%20of%20symbols%20to%20made%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20n%20to%20n%20-%20item%20k%20of%20values%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0A%20%20%20%20return%20made%0Aend%0A%0Ato%20number_of_roman%20with%20written%0A%20%20%20%20set%20n%20to%200%0A%20%20%20%20set%20rest%20to%20written%0A%20%20%20%20for%20each%20k%20from%201%20to%20length%20of%20values%0A%20%20%20%20%20%20%20%20set%20symbol%20to%20item%20k%20of%20symbols%0A%20%20%20%20%20%20%20%20repeat%20while%20length%20of%20rest%20is%20at%20least%20length%20of%20symbol%20and%20position%20of%20symbol%20in%20rest%20is%201%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20n%20to%20n%20%2B%20item%20k%20of%20values%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20rest%20to%20items%20(length%20of%20symbol%20%2B%201)%20to%20(length%20of%20rest)%20of%20rest%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0A%20%20%20%20return%20n%0Aend%0A%0Afor%20each%20year%20in%20list%20of%201999%2C%202026%2C%203888%0A%20%20%20%20say%20year%20%22%20is%20%22%20roman(year)%20%22%2C%20and%20%22%20roman(year)%20%22%20is%20%22%20number_of_roman(roman(year))%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/roman-numerals.moth">roman-numerals.moth</a>
+        </div>
+        <details>
+          <summary>The code, 29 lines</summary>
+          <div class="code"><pre><code><span class="c"># Roman numerals</span>
+<span class="c"># A number written as the Romans wrote it, and read back: the biggest symbol that fits, again and again.</span>
+
+<span class="k">set</span> values <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1000</span>, <span class="n">900</span>, <span class="n">500</span>, <span class="n">400</span>, <span class="n">100</span>, <span class="n">90</span>, <span class="n">50</span>, <span class="n">40</span>, <span class="n">10</span>, <span class="n">9</span>, <span class="n">5</span>, <span class="n">4</span>, <span class="n">1</span>
+<span class="k">set</span> symbols <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;M&quot;</span>, <span class="s">&quot;CM&quot;</span>, <span class="s">&quot;D&quot;</span>, <span class="s">&quot;CD&quot;</span>, <span class="s">&quot;C&quot;</span>, <span class="s">&quot;XC&quot;</span>, <span class="s">&quot;L&quot;</span>, <span class="s">&quot;XL&quot;</span>, <span class="s">&quot;X&quot;</span>, <span class="s">&quot;IX&quot;</span>, <span class="s">&quot;V&quot;</span>, <span class="s">&quot;IV&quot;</span>, <span class="s">&quot;I&quot;</span>
+
+<span class="k">to</span> roman <span class="k">with</span> n
+    <span class="k">set</span> made <span class="k">to</span> <span class="s">&quot;&quot;</span>
+    <span class="k">for</span> <span class="k">each</span> k <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="k">length</span> <span class="k">of</span> values
+        <span class="k">repeat</span> <span class="k">while</span> n <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="k">item</span> k <span class="k">of</span> values
+            <span class="k">add</span> <span class="k">item</span> k <span class="k">of</span> symbols <span class="k">to</span> made
+            <span class="k">set</span> n <span class="k">to</span> n - <span class="k">item</span> k <span class="k">of</span> values
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">return</span> made
+<span class="k">end</span>
+
+<span class="k">to</span> number_of_roman <span class="k">with</span> written
+    <span class="k">set</span> n <span class="k">to</span> <span class="n">0</span>
+    <span class="k">set</span> rest <span class="k">to</span> written
+    <span class="k">for</span> <span class="k">each</span> k <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="k">length</span> <span class="k">of</span> values
+        <span class="k">set</span> symbol <span class="k">to</span> <span class="k">item</span> k <span class="k">of</span> symbols
+        <span class="k">repeat</span> <span class="k">while</span> <span class="k">length</span> <span class="k">of</span> rest <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="k">length</span> <span class="k">of</span> symbol <span class="k">and</span> <span class="k">position</span> <span class="k">of</span> symbol <span class="k">in</span> rest <span class="k">is</span> <span class="n">1</span>
+            <span class="k">set</span> n <span class="k">to</span> n + <span class="k">item</span> k <span class="k">of</span> values
+            <span class="k">set</span> rest <span class="k">to</span> <span class="k">items</span> (<span class="k">length</span> <span class="k">of</span> symbol + <span class="n">1</span>) <span class="k">to</span> (<span class="k">length</span> <span class="k">of</span> rest) <span class="k">of</span> rest
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">return</span> n
+<span class="k">end</span>
+
+<span class="k">for</span> <span class="k">each</span> year <span class="k">in</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1999</span>, <span class="n">2026</span>, <span class="n">3888</span>
+    <span class="k">say</span> year <span class="s">&quot; is &quot;</span> roman(year) <span class="s">&quot;, and &quot;</span> roman(year) <span class="s">&quot; is &quot;</span> number_of_roman(roman(year))
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="caesar-cipher">
+        <h2><a href="#caesar-cipher">A Caesar cipher</a></h2>
+        <p>Each letter moved along the alphabet, as Julius Caesar hid his letters, and moved back again.</p>
+        <pre class="says"><code>Phhw ph dw wkh rog eulgjh, dw qrrq.
+Meet me at the old bridge, at noon.
+Broken: the shift was 3: Meet me at the old bridge, at noon.</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20Caesar%20cipher%0A%23%20Each%20letter%20moved%20along%20the%20alphabet%2C%20as%20Julius%20Caesar%20hid%20his%20letters%2C%20and%20moved%20back%20again.%0A%0Aset%20alphabet%20to%20%22abcdefghijklmnopqrstuvwxyz%22%0A%0Ato%20shifted%20with%20message%2C%20by%0A%20%20%20%20set%20made%20to%20%22%22%0A%20%20%20%20for%20each%20letter%20in%20split%20message%20by%20%22%22%0A%20%20%20%20%20%20%20%20set%20place%20to%20position%20of%20(lowercase%20of%20letter)%20in%20alphabet%0A%20%20%20%20%20%20%20%20if%20place%20is%200%0A%20%20%20%20%20%20%20%20%20%20%20%20add%20letter%20to%20made%20%23%20not%20a%20letter%3A%20as%20it%20is%0A%20%20%20%20%20%20%20%20else%0A%20%20%20%20%20%20%20%20%20%20%20%20set%20moved%20to%20item%20(remainder%20of%20(place%20-%201%20%2B%20by%20%2B%2026)%20divided%20by%2026%20%2B%201)%20of%20alphabet%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20letter%20is%20not%20lowercase%20of%20letter%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20set%20moved%20to%20uppercase%20of%20moved%0A%20%20%20%20%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20%20%20%20%20add%20moved%20to%20made%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20end%0A%20%20%20%20return%20made%0Aend%0A%0Aset%20secret%20to%20shifted(%22Meet%20me%20at%20the%20old%20bridge%2C%20at%20noon.%22%2C%203)%0Asay%20secret%0Asay%20shifted(secret%2C%20-3)%0A%0A%23%20breaking%20it%3A%20try%20every%20shift%2C%20and%20keep%20the%20one%20with%20the%20most%20common%20English%20letters%0Aset%20best%20to%200%0Aset%20best_score%20to%20-1%0Afor%20each%20guess%20from%200%20to%2025%0A%20%20%20%20set%20tried%20to%20shifted(secret%2C%20-guess)%0A%20%20%20%20set%20score%20to%200%0A%20%20%20%20for%20each%20letter%20in%20split%20%22etaoin%22%20by%20%22%22%0A%20%20%20%20%20%20%20%20set%20score%20to%20score%20%2B%20(length%20of%20(split%20tried%20by%20letter))%20-%201%0A%20%20%20%20end%0A%20%20%20%20if%20score%20is%20greater%20than%20best_score%0A%20%20%20%20%20%20%20%20set%20best%20to%20guess%0A%20%20%20%20%20%20%20%20set%20best_score%20to%20score%0A%20%20%20%20end%0Aend%0Asay%20%22Broken%3A%20the%20shift%20was%20%22%20best%20%22%3A%20%22%20shifted(secret%2C%20-best)%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/caesar-cipher.moth">caesar-cipher.moth</a>
+        </div>
+        <details>
+          <summary>The code, 37 lines</summary>
+          <div class="code"><pre><code><span class="c"># A Caesar cipher</span>
+<span class="c"># Each letter moved along the alphabet, as Julius Caesar hid his letters, and moved back again.</span>
+
+<span class="k">set</span> alphabet <span class="k">to</span> <span class="s">&quot;abcdefghijklmnopqrstuvwxyz&quot;</span>
+
+<span class="k">to</span> shifted <span class="k">with</span> message, <span class="k">by</span>
+    <span class="k">set</span> made <span class="k">to</span> <span class="s">&quot;&quot;</span>
+    <span class="k">for</span> <span class="k">each</span> letter <span class="k">in</span> <span class="k">split</span> message <span class="k">by</span> <span class="s">&quot;&quot;</span>
+        <span class="k">set</span> place <span class="k">to</span> <span class="k">position</span> <span class="k">of</span> (<span class="k">lowercase</span> <span class="k">of</span> letter) <span class="k">in</span> alphabet
+        <span class="k">if</span> place <span class="k">is</span> <span class="n">0</span>
+            <span class="k">add</span> letter <span class="k">to</span> made <span class="c"># not a letter: as it is</span>
+        <span class="k">else</span>
+            <span class="k">set</span> <span class="k">moved</span> <span class="k">to</span> <span class="k">item</span> (<span class="k">remainder</span> <span class="k">of</span> (place - <span class="n">1</span> + <span class="k">by</span> + <span class="n">26</span>) <span class="k">divided</span> <span class="k">by</span> <span class="n">26</span> + <span class="n">1</span>) <span class="k">of</span> alphabet
+            <span class="k">if</span> letter <span class="k">is</span> <span class="k">not</span> <span class="k">lowercase</span> <span class="k">of</span> letter
+                <span class="k">set</span> <span class="k">moved</span> <span class="k">to</span> <span class="k">uppercase</span> <span class="k">of</span> <span class="k">moved</span>
+            <span class="k">end</span>
+            <span class="k">add</span> <span class="k">moved</span> <span class="k">to</span> made
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="k">return</span> made
+<span class="k">end</span>
+
+<span class="k">set</span> secret <span class="k">to</span> shifted(<span class="s">&quot;Meet me at the old bridge, at noon.&quot;</span>, <span class="n">3</span>)
+<span class="k">say</span> secret
+<span class="k">say</span> shifted(secret, -<span class="n">3</span>)
+
+<span class="c"># breaking it: try every shift, and keep the one with the most common English letters</span>
+<span class="k">set</span> best <span class="k">to</span> <span class="n">0</span>
+<span class="k">set</span> best_score <span class="k">to</span> -<span class="n">1</span>
+<span class="k">for</span> <span class="k">each</span> guess <span class="k">from</span> <span class="n">0</span> <span class="k">to</span> <span class="n">25</span>
+    <span class="k">set</span> tried <span class="k">to</span> shifted(secret, -guess)
+    <span class="k">set</span> score <span class="k">to</span> <span class="n">0</span>
+    <span class="k">for</span> <span class="k">each</span> letter <span class="k">in</span> <span class="k">split</span> <span class="s">&quot;etaoin&quot;</span> <span class="k">by</span> <span class="s">&quot;&quot;</span>
+        <span class="k">set</span> score <span class="k">to</span> score + (<span class="k">length</span> <span class="k">of</span> (<span class="k">split</span> tried <span class="k">by</span> letter)) - <span class="n">1</span>
+    <span class="k">end</span>
+    <span class="k">if</span> score <span class="k">is</span> greater <span class="k">than</span> best_score
+        <span class="k">set</span> best <span class="k">to</span> guess
+        <span class="k">set</span> best_score <span class="k">to</span> score
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;Broken: the shift was &quot;</span> best <span class="s">&quot;: &quot;</span> shifted(secret, -best)</code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="word-frequency">
+        <h2><a href="#word-frequency">Counting words</a></h2>
+        <p>Which words a text uses most: its words found with a pattern, counted, and the most common first.</p>
+        <pre class="says"><code>36 words, 13 different
+it     6
+was    6
+the    6
+of     6
+times  2</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20Counting%20words%0A%23%20Which%20words%20a%20text%20uses%20most%3A%20its%20words%20found%20with%20a%20pattern%2C%20counted%2C%20and%20the%20most%20common%20first.%0A%0Ause%20%22text.moth%22%20as%20text%0Ause%20%22collections.moth%22%20as%20collections%0A%0Aset%20opening%20to%20%22It%20was%20the%20best%20of%20times%2C%20it%20was%20the%20worst%20of%20times%2C%20it%20was%20the%20age%20of%20wisdom%2C%20it%20was%20the%20age%20of%20foolishness%2C%20it%20was%20the%20epoch%20of%20belief%2C%20it%20was%20the%20epoch%20of%20incredulity.%22%0A%0Aset%20words%20to%20empty%20list%0Afor%20each%20found%20in%20text's%20find_all(%22%5Ba-z'%5D%2B%22%2C%20lowercase%20of%20opening)%0A%20%20%20%20add%20text%20of%20found%20to%20words%0Aend%0Aset%20counts%20to%20collections's%20counted(words)%0Asay%20length%20of%20words%20%22%20words%2C%20%22%20length%20of%20keys%20of%20counts%20%22%20different%22%0Afor%20each%20common%20in%20collections's%20most_common(counts%2C%205)%0A%20%20%20%20say%20text's%20padded_right(value%20of%20common%2C%206)%20%22%20%22%20count%20of%20common%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/word-frequency.moth">word-frequency.moth</a>
+        </div>
+        <details>
+          <summary>The code, 14 lines</summary>
+          <div class="code"><pre><code><span class="c"># Counting words</span>
+<span class="c"># Which words a text uses most: its words found with a pattern, counted, and the most common first.</span>
+
+<span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+<span class="k">use</span> <span class="s">&quot;collections.moth&quot;</span> <span class="k">as</span> collections
+
+<span class="k">set</span> opening <span class="k">to</span> <span class="s">&quot;It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity.&quot;</span>
+
+<span class="k">set</span> words <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
+<span class="k">for</span> <span class="k">each</span> found <span class="k">in</span> text's find_all(<span class="s">&quot;[a-z']+&quot;</span>, <span class="k">lowercase</span> <span class="k">of</span> opening)
+    <span class="k">add</span> text <span class="k">of</span> found <span class="k">to</span> words
+<span class="k">end</span>
+<span class="k">set</span> counts <span class="k">to</span> collections's counted(words)
+<span class="k">say</span> <span class="k">length</span> <span class="k">of</span> words <span class="s">&quot; words, &quot;</span> <span class="k">length</span> <span class="k">of</span> <span class="k">keys</span> <span class="k">of</span> counts <span class="s">&quot; different&quot;</span>
+<span class="k">for</span> <span class="k">each</span> common <span class="k">in</span> collections's most_common(counts, <span class="n">5</span>)
+    <span class="k">say</span> text's padded_right(value <span class="k">of</span> common, <span class="n">6</span>) <span class="s">&quot; &quot;</span> count <span class="k">of</span> common
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="bank-account">
+        <h2><a href="#bank-account">A bank account</a></h2>
+        <p>A kind: a record with functions of its own, made by <code>account(...)</code>, whose deposit and withdraw keep the balance right, and say no to taking out more than there is.</p>
+        <pre class="says"><code>Sam's account: 120
+Ana's account: 425
+No: Sam has only 120, not 1000
+Sam's account: 320
+Ana's account: 225</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20bank%20account%0A%23%20A%20kind%3A%20a%20record%20with%20functions%20of%20its%20own%2C%20made%20by%20%60account(...)%60%2C%20whose%20deposit%20and%20withdraw%20keep%20the%0A%23%20balance%20right%2C%20and%20say%20no%20to%20taking%20out%20more%20than%20there%20is.%0A%0Akind%20account%20with%20owner%2C%20balance%20or%200%0A%20%20%20%20to%20deposit%20with%20self%2C%20amount%0A%20%20%20%20%20%20%20%20set%20balance%20of%20self%20to%20balance%20of%20self%20%2B%20amount%0A%20%20%20%20end%0A%20%20%20%20to%20withdraw%20with%20self%2C%20amount%0A%20%20%20%20%20%20%20%20if%20amount%20is%20greater%20than%20balance%20of%20self%0A%20%20%20%20%20%20%20%20%20%20%20%20fail%20with%20owner%20of%20self%20%2B%20%22%20has%20only%20%22%20%2B%20balance%20of%20self%20%2B%20%22%2C%20not%20%22%20%2B%20amount%0A%20%20%20%20%20%20%20%20end%0A%20%20%20%20%20%20%20%20set%20balance%20of%20self%20to%20balance%20of%20self%20-%20amount%0A%20%20%20%20end%0A%20%20%20%20to%20shown%20with%20self%0A%20%20%20%20%20%20%20%20return%20owner%20of%20self%20%2B%20%22's%20account%3A%20%22%20%2B%20balance%20of%20self%0A%20%20%20%20end%0Aend%0A%0Aset%20sam%20to%20account(%22Sam%22)%0Aset%20ana%20to%20account(%22Ana%22%2C%20500)%0Asam's%20deposit(120)%0Aana's%20withdraw(75)%0Asay%20sam%0Asay%20ana%0A%0Atry%0A%20%20%20%20sam's%20withdraw(1000)%0Aif%20it%20fails%20with%20why%0A%20%20%20%20say%20%22No%3A%20%22%20why%0Aend%0A%0Ato%20move_money%20with%20from%2C%20to_account%2C%20amount%0A%20%20%20%20from's%20withdraw(amount)%0A%20%20%20%20to_account's%20deposit(amount)%0Aend%0Amove_money(ana%2C%20sam%2C%20200)%0Asay%20sam%0Asay%20ana%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/bank-account.moth">bank-account.moth</a>
+        </div>
+        <details>
+          <summary>The code, 35 lines</summary>
+          <div class="code"><pre><code><span class="c"># A bank account</span>
+<span class="c"># A kind: a record with functions of its own, made by `account(...)`, whose deposit and withdraw keep the</span>
+<span class="c"># balance right, and say no to taking out more than there is.</span>
+
+<span class="k">kind</span> account <span class="k">with</span> owner, balance <span class="k">or</span> <span class="n">0</span>
+    <span class="k">to</span> deposit <span class="k">with</span> self, amount
+        <span class="k">set</span> balance <span class="k">of</span> self <span class="k">to</span> balance <span class="k">of</span> self + amount
+    <span class="k">end</span>
+    <span class="k">to</span> withdraw <span class="k">with</span> self, amount
+        <span class="k">if</span> amount <span class="k">is</span> greater <span class="k">than</span> balance <span class="k">of</span> self
+            <span class="k">fail</span> <span class="k">with</span> owner <span class="k">of</span> self + <span class="s">&quot; has only &quot;</span> + balance <span class="k">of</span> self + <span class="s">&quot;, not &quot;</span> + amount
+        <span class="k">end</span>
+        <span class="k">set</span> balance <span class="k">of</span> self <span class="k">to</span> balance <span class="k">of</span> self - amount
+    <span class="k">end</span>
+    <span class="k">to</span> shown <span class="k">with</span> self
+        <span class="k">return</span> owner <span class="k">of</span> self + <span class="s">&quot;'s account: &quot;</span> + balance <span class="k">of</span> self
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">set</span> sam <span class="k">to</span> account(<span class="s">&quot;Sam&quot;</span>)
+<span class="k">set</span> ana <span class="k">to</span> account(<span class="s">&quot;Ana&quot;</span>, <span class="n">500</span>)
+sam's deposit(<span class="n">120</span>)
+ana's withdraw(<span class="n">75</span>)
+<span class="k">say</span> sam
+<span class="k">say</span> ana
+
+<span class="k">try</span>
+    sam's withdraw(<span class="n">1000</span>)
+<span class="k">if</span> it <span class="k">fails</span> <span class="k">with</span> why
+    <span class="k">say</span> <span class="s">&quot;No: &quot;</span> why
+<span class="k">end</span>
+
+<span class="k">to</span> move_money <span class="k">with</span> <span class="k">from</span>, to_account, amount
+    <span class="k">from</span>'s withdraw(amount)
+    to_account's deposit(amount)
+<span class="k">end</span>
+move_money(ana, sam, <span class="n">200</span>)
+<span class="k">say</span> sam
+<span class="k">say</span> ana</code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="trip-planner">
+        <h2><a href="#trip-planner">A trip planner</a></h2>
+        <p>Numbers with units: kilometres and miles, hours and minutes, litres and kilograms, added and changed into each other, and a mistake where they don't go together.</p>
+        <pre class="says"><code>The whole trip: 255.1 km, or 158.5 miles
+At 80 km an hour, that's 3.2 hours, or 191 minutes
+With 105 minutes of breaks: 4.9 hours
+Fuel, at 6.5 litres a 100 km: 16.6 litres
+The bags weigh 25.8 kg, or 56.9 pounds
+Can't add those: can't use '+' on a distance and a weight</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20trip%20planner%0A%23%20Numbers%20with%20units%3A%20kilometres%20and%20miles%2C%20hours%20and%20minutes%2C%20litres%20and%20kilograms%2C%20added%20and%20changed%20into%0A%23%20each%20other%2C%20and%20a%20mistake%20where%20they%20don't%20go%20together.%0A%0A%23%20an%20amount's%20number%2C%20to%20one%20decimal%20place%0Ato%20rounded_off%20with%20amount%0A%20%20%20%20return%20(number%20of%20amount)%20with%201%20decimals%0Aend%0A%0Aset%20legs%20to%20list%20of%20120%20km%2C%2085.5%20km%2C%202%20miles%20%2B%20400%20m%2C%2046%20km%0Aset%20distance%20to%200%20km%0Afor%20each%20leg%20in%20legs%0A%20%20%20%20set%20distance%20to%20distance%20%2B%20leg%0Aend%0Asay%20%22The%20whole%20trip%3A%20%22%20rounded_off(distance)%20%22%20km%2C%20or%20%22%20rounded_off(distance%20in%20miles)%20%22%20miles%22%0A%0Aset%20hours%20to%20number%20of%20distance%20%2F%2080%0Asay%20%22At%2080%20km%20an%20hour%2C%20that's%20%22%20(hours%20with%201%20decimals)%20%22%20hours%2C%20or%20%22%20(hours%20*%2060)%20rounded%20%22%20minutes%22%0A%0Aset%20breaks%20to%203%20*%2020%20minutes%20%2B%2045%20minutes%0Asay%20%22With%20%22%20breaks%20%22%20of%20breaks%3A%20%22%20rounded_off((breaks%20%2B%20hours%20*%201%20hour)%20in%20hours)%20%22%20hours%22%0A%0Aset%20fuel%20to%20number%20of%20distance%20%2F%20100%20*%206.5%0Asay%20%22Fuel%2C%20at%206.5%20litres%20a%20100%20km%3A%20%22%20(fuel%20with%201%20decimals)%20%22%20litres%22%0A%0Aset%20bags%20to%202%20*%2012.5%20kg%20%2B%20800%20g%0Asay%20%22The%20bags%20weigh%20%22%20bags%20%22%2C%20or%20%22%20rounded_off(bags%20in%20pounds)%20%22%20pounds%22%0A%0Atry%0A%20%20%20%20say%20distance%20%2B%20bags%0Aif%20it%20fails%20with%20why%0A%20%20%20%20say%20%22Can't%20add%20those%3A%20%22%20why%0Aend%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/trip-planner.moth">trip-planner.moth</a>
+        </div>
+        <details>
+          <summary>The code, 26 lines</summary>
+          <div class="code"><pre><code><span class="c"># A trip planner</span>
+<span class="c"># Numbers with units: kilometres and miles, hours and minutes, litres and kilograms, added and changed into</span>
+<span class="c"># each other, and a mistake where they don't go together.</span>
+
+<span class="c"># an amount's number, to one decimal place</span>
+<span class="k">to</span> rounded_off <span class="k">with</span> amount
+    <span class="k">return</span> (<span class="k">number</span> <span class="k">of</span> amount) <span class="k">with</span> <span class="n">1</span> decimals
+<span class="k">end</span>
+
+<span class="k">set</span> legs <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">120</span> km, <span class="n">85.5</span> km, <span class="n">2</span> miles + <span class="n">400</span> m, <span class="n">46</span> km
+<span class="k">set</span> distance <span class="k">to</span> <span class="n">0</span> km
+<span class="k">for</span> <span class="k">each</span> leg <span class="k">in</span> legs
+    <span class="k">set</span> distance <span class="k">to</span> distance + leg
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;The whole trip: &quot;</span> rounded_off(distance) <span class="s">&quot; km, or &quot;</span> rounded_off(distance <span class="k">in</span> miles) <span class="s">&quot; miles&quot;</span>
+
+<span class="k">set</span> hours <span class="k">to</span> <span class="k">number</span> <span class="k">of</span> distance / <span class="n">80</span>
+<span class="k">say</span> <span class="s">&quot;At 80 km an hour, that's &quot;</span> (hours <span class="k">with</span> <span class="n">1</span> decimals) <span class="s">&quot; hours, or &quot;</span> (hours * <span class="n">60</span>) <span class="k">rounded</span> <span class="s">&quot; minutes&quot;</span>
+
+<span class="k">set</span> breaks <span class="k">to</span> <span class="n">3</span> * <span class="n">20</span> minutes + <span class="n">45</span> minutes
+<span class="k">say</span> <span class="s">&quot;With &quot;</span> breaks <span class="s">&quot; of breaks: &quot;</span> rounded_off((breaks + hours * <span class="n">1</span> hour) <span class="k">in</span> hours) <span class="s">&quot; hours&quot;</span>
+
+<span class="k">set</span> fuel <span class="k">to</span> <span class="k">number</span> <span class="k">of</span> distance / <span class="n">100</span> * <span class="n">6.5</span>
+<span class="k">say</span> <span class="s">&quot;Fuel, at 6.5 litres a 100 km: &quot;</span> (fuel <span class="k">with</span> <span class="n">1</span> decimals) <span class="s">&quot; litres&quot;</span>
+
+<span class="k">set</span> bags <span class="k">to</span> <span class="n">2</span> * <span class="n">12.5</span> kg + <span class="n">800</span> g
+<span class="k">say</span> <span class="s">&quot;The bags weigh &quot;</span> bags <span class="s">&quot;, or &quot;</span> rounded_off(bags <span class="k">in</span> pounds) <span class="s">&quot; pounds&quot;</span>
+
+<span class="k">try</span>
+    <span class="k">say</span> distance + bags
+<span class="k">if</span> it <span class="k">fails</span> <span class="k">with</span> why
+    <span class="k">say</span> <span class="s">&quot;Can't add those: &quot;</span> why
+<span class="k">end</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="big-numbers">
+        <h2><a href="#big-numbers">Big numbers</a></h2>
+        <p>Whole numbers of any size, from big.moth: factorials, powers of 2, and Fibonacci numbers far past the 15 digits an ordinary number keeps.</p>
+        <pre class="says"><code>30! is 265252859812191058636308480000000
+2 to the power of 100 is 1267650600228229401496703205376
+The 200th Fibonacci number is 280571172992510140037611932413038677189525, 42 digits
+Ways to choose 6 numbers of 49: 13983816
+Its digits in base 16: cd4a0619fb0907bc00000</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20Big%20numbers%0A%23%20Whole%20numbers%20of%20any%20size%2C%20from%20big.moth%3A%20factorials%2C%20powers%20of%202%2C%20and%20Fibonacci%20numbers%20far%20past%20the%2015%0A%23%20digits%20an%20ordinary%20number%20keeps.%0A%0Ause%20%22big.moth%22%20as%20big%0A%0Asay%20%2230!%20is%20%22%20big's%20factorial(30)%0Asay%20%222%20to%20the%20power%20of%20100%20is%20%22%20big's%20power(2%2C%20100)%0A%0Aset%20a%20to%200%0Aset%20b%20to%201%0Afor%20each%20n%20from%201%20to%20200%0A%20%20%20%20set%20next%20to%20big's%20plus(a%2C%20b)%0A%20%20%20%20set%20a%20to%20b%0A%20%20%20%20set%20b%20to%20next%0Aend%0Asay%20%22The%20200th%20Fibonacci%20number%20is%20%22%20a%20%22%2C%20%22%20length%20of%20a%20%22%20digits%22%0A%0Asay%20%22Ways%20to%20choose%206%20numbers%20of%2049%3A%20%22%20big's%20choices(49%2C%206)%0Asay%20%22Its%20digits%20in%20base%2016%3A%20%22%20big's%20in_base(big's%20factorial(25)%2C%2016)%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/big-numbers.moth">big-numbers.moth</a>
+        </div>
+        <details>
+          <summary>The code, 16 lines</summary>
+          <div class="code"><pre><code><span class="c"># Big numbers</span>
+<span class="c"># Whole numbers of any size, from big.moth: factorials, powers of 2, and Fibonacci numbers far past the 15</span>
+<span class="c"># digits an ordinary number keeps.</span>
+
+<span class="k">use</span> <span class="s">&quot;big.moth&quot;</span> <span class="k">as</span> big
+
+<span class="k">say</span> <span class="s">&quot;30! is &quot;</span> big's factorial(<span class="n">30</span>)
+<span class="k">say</span> <span class="s">&quot;2 to the power of 100 is &quot;</span> big's <span class="k">power</span>(<span class="n">2</span>, <span class="n">100</span>)
+
+<span class="k">set</span> a <span class="k">to</span> <span class="n">0</span>
+<span class="k">set</span> b <span class="k">to</span> <span class="n">1</span>
+<span class="k">for</span> <span class="k">each</span> n <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">200</span>
+    <span class="k">set</span> next <span class="k">to</span> big's plus(a, b)
+    <span class="k">set</span> a <span class="k">to</span> b
+    <span class="k">set</span> b <span class="k">to</span> next
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;The 200th Fibonacci number is &quot;</span> a <span class="s">&quot;, &quot;</span> <span class="k">length</span> <span class="k">of</span> a <span class="s">&quot; digits&quot;</span>
+
+<span class="k">say</span> <span class="s">&quot;Ways to choose 6 numbers of 49: &quot;</span> big's choices(<span class="n">49</span>, <span class="n">6</span>)
+<span class="k">say</span> <span class="s">&quot;Its digits in base 16: &quot;</span> big's in_base(big's factorial(<span class="n">25</span>), <span class="n">16</span>)</code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="calendar">
+        <h2><a href="#calendar">A month's calendar</a></h2>
+        <p>The days of a month in weeks, Monday first, with dates.moth: what day the 1st is, how many days the month has, and a date written as people write it.</p>
+        <pre class="says"><code>      November 2026
+Mo Tu We Th Fr Sa Su
+                   1 
+ 2  3  4  5  6  7  8 
+ 9 10 11 12 13 14 15 
+16 17 18 19 20 21 22 
+23 24 25 26 27 28 29 
+30 
+
+Christmas 2026 is on a Friday, 54 days after 1 November</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20month's%20calendar%0A%23%20The%20days%20of%20a%20month%20in%20weeks%2C%20Monday%20first%2C%20with%20dates.moth%3A%20what%20day%20the%201st%20is%2C%20how%20many%20days%20the%20month%0A%23%20has%2C%20and%20a%20date%20written%20as%20people%20write%20it.%0A%0Ause%20%22dates.moth%22%20as%20dates%0A%0Aset%20year%20to%202026%0Aset%20month%20to%2011%0Aset%20first%20to%20dates's%20date(year%2C%20month%2C%201)%0Asay%20%22%20%20%20%20%20%20%22%20dates's%20format_date(first%2C%20%22MMMM%20YYYY%22)%0Asay%20%22Mo%20Tu%20We%20Th%20Fr%20Sa%20Su%22%0A%0Aset%20line%20to%20%22%22%0Afor%20each%20blank%20from%202%20to%20dates's%20weekday_number(first)%0A%20%20%20%20add%20%22%20%20%20%22%20to%20line%0Aend%0Afor%20each%20day%20from%201%20to%20dates's%20days_in_month(year%2C%20month)%0A%20%20%20%20if%20day%20is%20less%20than%2010%0A%20%20%20%20%20%20%20%20add%20%22%20%22%20to%20line%0A%20%20%20%20end%0A%20%20%20%20add%20day%20%2B%20%22%20%22%20to%20line%0A%20%20%20%20if%20dates's%20weekday_number(dates's%20date(year%2C%20month%2C%20day))%20is%207%0A%20%20%20%20%20%20%20%20say%20line%0A%20%20%20%20%20%20%20%20set%20line%20to%20%22%22%0A%20%20%20%20end%0Aend%0Aif%20line%20is%20not%20%22%22%0A%20%20%20%20say%20line%0Aend%0A%0Aset%20christmas%20to%20dates's%20date(year%2C%2012%2C%2025)%0Asay%20%22%22%0Asay%20%22Christmas%20%22%20year%20%22%20is%20on%20a%20%22%20dates's%20weekday_name(christmas)%20%22%2C%20%22%20dates's%20days_between(first%2C%20christmas)%20%22%20days%20after%20%22%20dates's%20format_date(first%2C%20%22D%20MMMM%22)%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/calendar.moth">calendar.moth</a>
+        </div>
+        <details>
+          <summary>The code, 29 lines</summary>
+          <div class="code"><pre><code><span class="c"># A month's calendar</span>
+<span class="c"># The days of a month in weeks, Monday first, with dates.moth: what day the 1st is, how many days the month</span>
+<span class="c"># has, and a date written as people write it.</span>
+
+<span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+
+<span class="k">set</span> year <span class="k">to</span> <span class="n">2026</span>
+<span class="k">set</span> month <span class="k">to</span> <span class="n">11</span>
+<span class="k">set</span> first <span class="k">to</span> dates's date(year, month, <span class="n">1</span>)
+<span class="k">say</span> <span class="s">&quot;      &quot;</span> dates's format_date(first, <span class="s">&quot;MMMM YYYY&quot;</span>)
+<span class="k">say</span> <span class="s">&quot;Mo Tu We Th Fr Sa Su&quot;</span>
+
+<span class="k">set</span> line <span class="k">to</span> <span class="s">&quot;&quot;</span>
+<span class="k">for</span> <span class="k">each</span> blank <span class="k">from</span> <span class="n">2</span> <span class="k">to</span> dates's weekday_number(first)
+    <span class="k">add</span> <span class="s">&quot;   &quot;</span> <span class="k">to</span> line
+<span class="k">end</span>
+<span class="k">for</span> <span class="k">each</span> day <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> dates's days_in_month(year, month)
+    <span class="k">if</span> day <span class="k">is</span> less <span class="k">than</span> <span class="n">10</span>
+        <span class="k">add</span> <span class="s">&quot; &quot;</span> <span class="k">to</span> line
+    <span class="k">end</span>
+    <span class="k">add</span> day + <span class="s">&quot; &quot;</span> <span class="k">to</span> line
+    <span class="k">if</span> dates's weekday_number(dates's date(year, month, day)) <span class="k">is</span> <span class="n">7</span>
+        <span class="k">say</span> line
+        <span class="k">set</span> line <span class="k">to</span> <span class="s">&quot;&quot;</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="k">if</span> line <span class="k">is</span> <span class="k">not</span> <span class="s">&quot;&quot;</span>
+    <span class="k">say</span> line
+<span class="k">end</span>
+
+<span class="k">set</span> christmas <span class="k">to</span> dates's date(year, <span class="n">12</span>, <span class="n">25</span>)
+<span class="k">say</span> <span class="s">&quot;&quot;</span>
+<span class="k">say</span> <span class="s">&quot;Christmas &quot;</span> year <span class="s">&quot; is on a &quot;</span> dates's weekday_name(christmas) <span class="s">&quot;, &quot;</span> dates's days_between(first, christmas) <span class="s">&quot; days after &quot;</span> dates's format_date(first, <span class="s">&quot;D MMMM&quot;</span>)</code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="json-data">
+        <h2><a href="#json-data">Reading JSON</a></h2>
+        <p>JSON from a web service, read into dictionaries and lists, walked through, and written back.</p>
+        <pre class="says"><code>The weather in Pune
+  Mon: 31.5°C, dry
+  Tue: 29°C, rain
+  Wed: 33.2°C, dry
+Hottest: Wed
+{&quot;city&quot;:&quot;Pune&quot;,&quot;hottest&quot;:&quot;Wed&quot;,&quot;days&quot;:3}</code></pre>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20Reading%20JSON%0A%23%20JSON%20from%20a%20web%20service%2C%20read%20into%20dictionaries%20and%20lists%2C%20walked%20through%2C%20and%20written%20back.%0A%0Aset%20reply%20to%20%22%7B%5C%22city%5C%22%3A%20%5C%22Pune%5C%22%2C%20%5C%22days%5C%22%3A%20%5B%7B%5C%22day%5C%22%3A%20%5C%22Mon%5C%22%2C%20%5C%22high%5C%22%3A%2031.5%2C%20%5C%22rain%5C%22%3A%20false%7D%2C%20%7B%5C%22day%5C%22%3A%20%5C%22Tue%5C%22%2C%20%5C%22high%5C%22%3A%2029%2C%20%5C%22rain%5C%22%3A%20true%7D%2C%20%7B%5C%22day%5C%22%3A%20%5C%22Wed%5C%22%2C%20%5C%22high%5C%22%3A%2033.2%2C%20%5C%22rain%5C%22%3A%20false%7D%5D%7D%22%0A%0Aset%20weather%20to%20json%20from%20reply%0Asay%20%22The%20weather%20in%20%22%20item%20%22city%22%20of%20weather%0Afor%20each%20day%20in%20item%20%22days%22%20of%20weather%0A%20%20%20%20set%20note%20to%20%22dry%22%0A%20%20%20%20if%20item%20%22rain%22%20of%20day%0A%20%20%20%20%20%20%20%20set%20note%20to%20%22rain%22%0A%20%20%20%20end%0A%20%20%20%20say%20%22%20%20%22%20item%20%22day%22%20of%20day%20%22%3A%20%22%20item%20%22high%22%20of%20day%20%22%C2%B0C%2C%20%22%20note%0Aend%0A%0Aset%20hottest%20to%20item%201%20of%20item%20%22days%22%20of%20weather%0Afor%20each%20day%20in%20item%20%22days%22%20of%20weather%0A%20%20%20%20if%20item%20%22high%22%20of%20day%20is%20greater%20than%20item%20%22high%22%20of%20hottest%0A%20%20%20%20%20%20%20%20set%20hottest%20to%20day%0A%20%20%20%20end%0Aend%0Asay%20%22Hottest%3A%20%22%20item%20%22day%22%20of%20hottest%0A%0Aset%20summary%20to%20dictionary%20where%20%22city%22%20is%20item%20%22city%22%20of%20weather%2C%20%22hottest%22%20is%20item%20%22day%22%20of%20hottest%2C%20%22days%22%20is%20length%20of%20item%20%22days%22%20of%20weather%0Asay%20summary%20as%20json%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/json-data.moth">json-data.moth</a>
+        </div>
+        <details>
+          <summary>The code, 21 lines</summary>
+          <div class="code"><pre><code><span class="c"># Reading JSON</span>
+<span class="c"># JSON from a web service, read into dictionaries and lists, walked through, and written back.</span>
+
+<span class="k">set</span> reply <span class="k">to</span> <span class="s">&quot;{\&quot;city\&quot;: \&quot;Pune\&quot;, \&quot;days\&quot;: [{\&quot;day\&quot;: \&quot;Mon\&quot;, \&quot;high\&quot;: 31.5, \&quot;rain\&quot;: false}, {\&quot;day\&quot;: \&quot;Tue\&quot;, \&quot;high\&quot;: 29, \&quot;rain\&quot;: true}, {\&quot;day\&quot;: \&quot;Wed\&quot;, \&quot;high\&quot;: 33.2, \&quot;rain\&quot;: false}]}&quot;</span>
+
+<span class="k">set</span> weather <span class="k">to</span> <span class="k">json</span> <span class="k">from</span> reply
+<span class="k">say</span> <span class="s">&quot;The weather in &quot;</span> <span class="k">item</span> <span class="s">&quot;city&quot;</span> <span class="k">of</span> weather
+<span class="k">for</span> <span class="k">each</span> day <span class="k">in</span> <span class="k">item</span> <span class="s">&quot;days&quot;</span> <span class="k">of</span> weather
+    <span class="k">set</span> <span class="k">note</span> <span class="k">to</span> <span class="s">&quot;dry&quot;</span>
+    <span class="k">if</span> <span class="k">item</span> <span class="s">&quot;rain&quot;</span> <span class="k">of</span> day
+        <span class="k">set</span> <span class="k">note</span> <span class="k">to</span> <span class="s">&quot;rain&quot;</span>
+    <span class="k">end</span>
+    <span class="k">say</span> <span class="s">&quot;  &quot;</span> <span class="k">item</span> <span class="s">&quot;day&quot;</span> <span class="k">of</span> day <span class="s">&quot;: &quot;</span> <span class="k">item</span> <span class="s">&quot;high&quot;</span> <span class="k">of</span> day <span class="s">&quot;°C, &quot;</span> <span class="k">note</span>
+<span class="k">end</span>
+
+<span class="k">set</span> hottest <span class="k">to</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> <span class="k">item</span> <span class="s">&quot;days&quot;</span> <span class="k">of</span> weather
+<span class="k">for</span> <span class="k">each</span> day <span class="k">in</span> <span class="k">item</span> <span class="s">&quot;days&quot;</span> <span class="k">of</span> weather
+    <span class="k">if</span> <span class="k">item</span> <span class="s">&quot;high&quot;</span> <span class="k">of</span> day <span class="k">is</span> greater <span class="k">than</span> <span class="k">item</span> <span class="s">&quot;high&quot;</span> <span class="k">of</span> hottest
+        <span class="k">set</span> hottest <span class="k">to</span> day
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;Hottest: &quot;</span> <span class="k">item</span> <span class="s">&quot;day&quot;</span> <span class="k">of</span> hottest
+
+<span class="k">set</span> summary <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;city&quot;</span> <span class="k">is</span> <span class="k">item</span> <span class="s">&quot;city&quot;</span> <span class="k">of</span> weather, <span class="s">&quot;hottest&quot;</span> <span class="k">is</span> <span class="k">item</span> <span class="s">&quot;day&quot;</span> <span class="k">of</span> hottest, <span class="s">&quot;days&quot;</span> <span class="k">is</span> <span class="k">length</span> <span class="k">of</span> <span class="k">item</span> <span class="s">&quot;days&quot;</span> <span class="k">of</span> weather
+<span class="k">say</span> summary <span class="k">as</span> <span class="k">json</span></code></pre></div>
+        </details>
+      </article>
+      <article class="example" id="quiz">
+        <h2><a href="#quiz">A quiz</a></h2>
+        <p>Questions asked, answers checked whatever their capitals, and a score: in the playground, answer in the box under what it says.</p>
+        <p class="asks">It asks: <i>What's the capital of France?</i> Answer in the playground, under what it says.</p>
+        <div class="actions">
+          <a class="open" href="../#code=%23%20A%20quiz%0A%23%20Questions%20asked%2C%20answers%20checked%20whatever%20their%20capitals%2C%20and%20a%20score%3A%20in%20the%20playground%2C%20answer%20in%20the%20box%0A%23%20under%20what%20it%20says.%0A%0Aset%20questions%20to%20list%20of%20(record%20with%20question%20%22What's%20the%20capital%20of%20France%3F%22%2C%20answer%20%22paris%22)%2C%0A%20%20%20%20(record%20with%20question%20%22How%20many%20legs%20has%20a%20spider%3F%22%2C%20answer%20%228%22)%2C%0A%20%20%20%20(record%20with%20question%20%22Which%20planet%20is%20the%20largest%3F%22%2C%20answer%20%22jupiter%22)%0A%0Aset%20score%20to%200%0Afor%20each%20q%20in%20questions%0A%20%20%20%20set%20given%20to%20lowercase%20of%20ask%20question%20of%20q%0A%20%20%20%20if%20given%20is%20answer%20of%20q%0A%20%20%20%20%20%20%20%20say%20%22Right!%22%0A%20%20%20%20%20%20%20%20add%201%20to%20score%0A%20%20%20%20else%0A%20%20%20%20%20%20%20%20say%20%22Not%20quite%3A%20it's%20%22%20answer%20of%20q%0A%20%20%20%20end%0Aend%0Asay%20%22You%20got%20%22%20score%20%22%20of%20%22%20length%20of%20questions%0A" target="_blank" rel="noopener">Run in the playground ↗</a>
+          <a class="open quiet" href="https://github.com/samyyy2423/moth/blob/main/docs/examples/quiz.moth">quiz.moth</a>
+        </div>
+        <details>
+          <summary>The code, 17 lines</summary>
+          <div class="code"><pre><code><span class="c"># A quiz</span>
+<span class="c"># Questions asked, answers checked whatever their capitals, and a score: in the playground, answer in the box</span>
+<span class="c"># under what it says.</span>
+
+<span class="k">set</span> questions <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">record</span> <span class="k">with</span> question <span class="s">&quot;What's the capital of France?&quot;</span>, answer <span class="s">&quot;paris&quot;</span>),
+    (<span class="k">record</span> <span class="k">with</span> question <span class="s">&quot;How many legs has a spider?&quot;</span>, answer <span class="s">&quot;8&quot;</span>),
+    (<span class="k">record</span> <span class="k">with</span> question <span class="s">&quot;Which planet is the largest?&quot;</span>, answer <span class="s">&quot;jupiter&quot;</span>)
+
+<span class="k">set</span> score <span class="k">to</span> <span class="n">0</span>
+<span class="k">for</span> <span class="k">each</span> q <span class="k">in</span> questions
+    <span class="k">set</span> given <span class="k">to</span> <span class="k">lowercase</span> <span class="k">of</span> <span class="k">ask</span> question <span class="k">of</span> q
+    <span class="k">if</span> given <span class="k">is</span> answer <span class="k">of</span> q
+        <span class="k">say</span> <span class="s">&quot;Right!&quot;</span>
+        <span class="k">add</span> <span class="n">1</span> <span class="k">to</span> score
+    <span class="k">else</span>
+        <span class="k">say</span> <span class="s">&quot;Not quite: it's &quot;</span> answer <span class="k">of</span> q
+    <span class="k">end</span>
+<span class="k">end</span>
+<span class="k">say</span> <span class="s">&quot;You got &quot;</span> score <span class="s">&quot; of &quot;</span> <span class="k">length</span> <span class="k">of</span> questions</code></pre></div>
+        </details>
+      </article>
+  </main>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Moth">
+      <a href="../#playground">Playground</a>
+      <a href="../learn.html">Learn</a>
+      <a href="../docs/">The standard library</a>
+      <a href="../docs/cookbook/">The cookbook</a>
+      <a href="../docs/examples.html">Examples</a>
+      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+    </nav>
+  </footer>
+</body>
+</html>

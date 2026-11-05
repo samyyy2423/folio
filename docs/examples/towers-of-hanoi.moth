@@ -1,0 +1,26 @@
+# The Towers of Hanoi
+# Move a tower of discs from one peg to another, a disc at a time, never a big one on a small one: a function
+# that calls itself does it in 2^n - 1 moves.
+
+set moves to 0
+
+to move_tower with discs, from, to_peg, spare, telling
+    if discs is 0
+        return nothing
+    end
+    move_tower(discs - 1, from, spare, to_peg, telling)
+    add 1 to moves
+    if telling
+        say "Move disc " discs " from " from " to " to_peg
+    end
+    move_tower(discs - 1, spare, to_peg, from, telling)
+end
+
+move_tower(3, "left", "right", "middle", yes)
+say moves " moves for 3 discs"
+
+for each discs in list of 10, 16
+    set moves to 0
+    move_tower(discs, "left", "right", "middle", no)
+    say moves " moves for " discs " discs: 2 to the power of " discs ", less 1"
+end

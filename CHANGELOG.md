@@ -6,6 +6,12 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Examples**, at [samyyy2423.github.io/moth/docs/examples.html](https://samyyy2423.github.io/moth/docs/examples.html):
+  sixteen small, whole programs (the Game of Life, a clock, the Mandelbrot set, a Caesar cipher, a bank
+  account, a trip in kilometres and miles...), each with what it says or draws, and a link that opens it in
+  the playground.
+- **The playground uses the standard library**: `use "big.moth"`, `use "stats.moth"` and the rest of the
+  libraries written in Moth alone now work there, as on the command line.
 - **A cookbook**, in [docs/cookbook/](docs/cookbook/README.md) and on the site: short recipes, each from a task
   to a whole program and what it says: CSV and JSON, calling a web API, a web API with a database, a
   command-line tool with options, a data script with statistics and a chart, a game, work on every core, and

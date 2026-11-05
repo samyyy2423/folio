@@ -1,0 +1,42 @@
+# Quicksort
+# Sorting by picking a pivot and sorting what's smaller and what's bigger, each the same way: `give` adds to
+# the list a function gives back.
+
+to smaller_than with things, pivot
+    for each x in things
+        if x is less than pivot
+            give x
+        end
+    end
+end
+
+to not_smaller_than with things, pivot
+    for each x in things
+        if x is at least pivot
+            give x
+        end
+    end
+end
+
+to quicksort with things
+    if length of things is at most 1
+        return things
+    end
+    set pivot to item 1 of things
+    set rest to items 2 to (length of things) of things
+    set sorted to quicksort(smaller_than(rest, pivot))
+    add pivot to sorted
+    for each x in quicksort(not_smaller_than(rest, pivot))
+        add x to sorted
+    end
+    return sorted
+end
+
+say quicksort(list of 38, 27, 43, 3, 9, 82, 10)
+say quicksort(split "the quick brown fox jumps over the lazy dog" by " ")
+
+set many to empty list
+repeat 2000 times
+    add random number from 1 to 100000 to many
+end
+say "2,000 random numbers sorted the same as Moth sorts them: " quicksort(many) is many in order

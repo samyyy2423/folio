@@ -1,0 +1,33 @@
+# Roman numerals
+# A number written as the Romans wrote it, and read back: the biggest symbol that fits, again and again.
+
+set values to list of 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1
+set symbols to list of "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"
+
+to roman with n
+    set made to ""
+    for each k from 1 to length of values
+        repeat while n is at least item k of values
+            add item k of symbols to made
+            set n to n - item k of values
+        end
+    end
+    return made
+end
+
+to number_of_roman with written
+    set n to 0
+    set rest to written
+    for each k from 1 to length of values
+        set symbol to item k of symbols
+        repeat while length of rest is at least length of symbol and position of symbol in rest is 1
+            set n to n + item k of values
+            set rest to items (length of symbol + 1) to (length of rest) of rest
+        end
+    end
+    return n
+end
+
+for each year in list of 1999, 2026, 3888
+    say year " is " roman(year) ", and " roman(year) " is " number_of_roman(roman(year))
+end

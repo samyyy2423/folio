@@ -1,0 +1,41 @@
+# A Caesar cipher
+# Each letter moved along the alphabet, as Julius Caesar hid his letters, and moved back again.
+
+set alphabet to "abcdefghijklmnopqrstuvwxyz"
+
+to shifted with message, by
+    set made to ""
+    for each letter in split message by ""
+        set place to position of (lowercase of letter) in alphabet
+        if place is 0
+            add letter to made # not a letter: as it is
+        else
+            set moved to item (remainder of (place - 1 + by + 26) divided by 26 + 1) of alphabet
+            if letter is not lowercase of letter
+                set moved to uppercase of moved
+            end
+            add moved to made
+        end
+    end
+    return made
+end
+
+set secret to shifted("Meet me at the old bridge, at noon.", 3)
+say secret
+say shifted(secret, -3)
+
+# breaking it: try every shift, and keep the one with the most common English letters
+set best to 0
+set best_score to -1
+for each guess from 0 to 25
+    set tried to shifted(secret, -guess)
+    set score to 0
+    for each letter in split "etaoin" by ""
+        set score to score + (length of (split tried by letter)) - 1
+    end
+    if score is greater than best_score
+        set best to guess
+        set best_score to score
+    end
+end
+say "Broken: the shift was " best ": " shifted(secret, -best)

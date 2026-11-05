@@ -175,3 +175,17 @@ main h2 { margin: 0 0 var(--space-4); font: 500 var(--h2)/1.2 var(--serif); colo
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }
+
+/* the examples: a card each, with what it draws or says, and its code to open */
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: var(--space-5); padding-top: var(--space-7); padding-bottom: var(--space-8); }
+.example { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius-l); background: #110d09; scroll-margin-top: 24px; }
+.example h2 { margin: 0; font: 500 24px/1.25 var(--serif); }
+.example h2 a { color: var(--gold-hi); text-decoration: none; }
+.example > p { margin: 0; color: var(--dim); font-size: 15px; }
+.example .shot { display: block; width: 100%; height: auto; aspect-ratio: 1; border: 1px solid var(--border); border-radius: 12px; }
+.example pre.says { margin: 0; max-height: 300px; overflow: auto; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-s); background: #0a0806; color: #f1e6cf; font: 12.5px/1.45 var(--mono); white-space: pre; }
+.example .asks { padding: 12px 14px; border: 1px dashed #3d2f20; border-radius: var(--radius-s); color: var(--soft) !important; }
+.example .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: var(--space-2); }
+.example details summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+.example details .code { margin-bottom: 0; }
+.example details .code pre { font-size: 12.5px; max-height: 420px; }

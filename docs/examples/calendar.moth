@@ -1,0 +1,33 @@
+# A month's calendar
+# The days of a month in weeks, Monday first, with dates.moth: what day the 1st is, how many days the month
+# has, and a date written as people write it.
+
+use "dates.moth" as dates
+
+set year to 2026
+set month to 11
+set first to dates's date(year, month, 1)
+say "      " dates's format_date(first, "MMMM YYYY")
+say "Mo Tu We Th Fr Sa Su"
+
+set line to ""
+for each blank from 2 to dates's weekday_number(first)
+    add "   " to line
+end
+for each day from 1 to dates's days_in_month(year, month)
+    if day is less than 10
+        add " " to line
+    end
+    add day + " " to line
+    if dates's weekday_number(dates's date(year, month, day)) is 7
+        say line
+        set line to ""
+    end
+end
+if line is not ""
+    say line
+end
+
+set christmas to dates's date(year, 12, 25)
+say ""
+say "Christmas " year " is on a " dates's weekday_name(christmas) ", " dates's days_between(first, christmas) " days after " dates's format_date(first, "D MMMM")

@@ -4,7 +4,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { docs, pageOf, undocumented, readLibrary, signatureOf, summaryOf, markdownOf, KEPT } from "./make-docs.mjs";
+import { docs, pageOf, undocumented, readLibrary, signatureOf, summaryOf, markdownOf, svgOfDrawing, KEPT } from "./make-docs.mjs";
+import { run } from "./moth.js";
 
 test("docs/ is what make-docs.mjs makes of the standard library as it is", () => {
   const made = docs();
@@ -67,4 +68,38 @@ test("the cookbook's Markdown is made the site's HTML", () => {
   assert.match(made.html, /<span class="k">say<\/span> <span class="n">2<\/span><\/code><\/pre><pre class="says"><code>2<\/code><\/pre><\/div>/);
   assert.match(made.html, /<span class="prompt">\$<\/span> <b>moth run a\.moth<\/b>\n1/);
   assert.match(made.html, /<p class="figure"><img src="sales\.svg" alt="A chart"><\/p>/);
+});
+
+// the site's examples (DESIGN §130): each runs, the same on the playground's three engines, using only files
+// the playground can fetch, and its link opens it, whole
+test("every example runs the same on the playground's three engines, and its link opens it", () => {
+  const folder = new URL("./docs/examples/", import.meta.url);
+  const page = readFileSync(new URL("./docs/examples.html", import.meta.url), "utf8");
+  const names = readdirSync(folder).filter((f) => f.endsWith(".moth"));
+  assert.ok(names.length >= 12, "a gallery of a dozen programs at least");
+  const files = (name) => {
+    for (const where of [`./${name}`, `./tools/${name}`]) {
+      try {
+        return readFileSync(new URL(where, import.meta.url), "utf8");
+      } catch {}
+    }
+    return undefined;
+  };
+  for (const name of names) {
+    const code = readFileSync(new URL(name, folder), "utf8");
+    assert.match(code, /^# .+\n# .+/, `${name} starts with its title and what it shows`);
+    for (const [, used] of code.matchAll(/^use "([^"]+)"/gm)) assert.ok(files(used) !== undefined, `${name} uses ${used}, which the site doesn't have`);
+    const said = {};
+    for (const engine of ["jit", "vm", "wasm"]) {
+      const lines = [];
+      const drawn = [];
+      run(code, (line) => lines.push(line), { engine, files, maxSteps: 50_000_000, draw: (d) => drawn.push(d), ask: () => "paris" });
+      said[engine] = JSON.stringify([lines, drawn]);
+      assert.ok(lines.length || drawn.length, `${name} says or draws something on ${engine}`);
+    }
+    assert.equal(said.vm, said.jit, `${name} on the VM`);
+    assert.equal(said.wasm, said.jit, `${name} on WebAssembly`);
+    assert.ok(page.includes(`href="../#code=${encodeURIComponent(code)}"`), `${name}'s link opens it in the playground`);
+  }
+  assert.equal(svgOfDrawing([{ x1: 0, y1: 0, x2: 10, y2: 20, color: "red", width: 2 }, { clear: true }, { shape: "box", x: 0, y: 0, width: 10, height: 5, color: "#fff" }], true).match(/<rect x="0" y="-5" width="10" height="5" fill="#fff"\/>/)?.length, 1);
 });

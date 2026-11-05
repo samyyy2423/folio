@@ -558,6 +558,7 @@ Did you mean 'total'?</pre></div>
       <a href="learn.html">Learn</a>
       <a href="docs/">Docs</a>
       <a href="docs/cookbook/">Cookbook</a>
+      <a href="docs/examples.html">Examples</a>
       <a href="https://github.com/samyyy2423/moth">GitHub ↗</a>
     </nav>
   </div>
@@ -648,6 +649,7 @@ Did you mean 'total'?</pre></div>
         <a href="learn.html">Learn</a>
         <a href="docs/">The standard library</a>
         <a href="docs/cookbook/">The cookbook</a>
+        <a href="docs/examples.html">Examples</a>
         <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
         <a href="https://github.com/samyyy2423/moth/blob/main/DESIGN.md">How it's built</a>
         <a href="https://github.com/samyyy2423/moth/blob/main/CONTRIBUTING.md">Help with Moth</a>
@@ -750,7 +752,8 @@ Did you mean 'total'?</pre></div>
     async function fetchUses(text) {
       for (const name of usesIn(text)) {
         if (usedFiles.has(name)) continue;
-        usedFiles.set(name, await fetchText(name).catch(() => undefined));
+        // beside the page, else one of the standard library's, which the site has in tools/, as moth carries them
+        usedFiles.set(name, await fetchText(name).catch(() => fetchText(`tools/${name}`)).catch(() => undefined));
         await fetchUses(usedFiles.get(name) ?? "");
       }
     }

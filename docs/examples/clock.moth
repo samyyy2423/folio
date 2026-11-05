@@ -1,0 +1,47 @@
+# A clock
+# The time, drawn as a clock face with its hands, once a second: angles from the hour, minute and second.
+
+to hand with reach, turns, thickness, colour
+    pen up
+    move to 0, 0
+    turn right turns * 360
+    pen width thickness
+    pen color colour
+    pen down
+    move forward reach
+    turn left turns * 360
+end
+
+to show
+    clear
+    pen up
+    move to 0, 0
+    pen color "#221a12"
+    draw circle at 0, 0 size 200
+    pen color "#f4b54a"
+    for each mark from 1 to 12
+        draw "" + mark at 170 * sine_of(mark * 30) - 8, 170 * cosine_of(mark * 30) - 8 size 18
+    end
+    set seconds to the second
+    set minutes to the minute + seconds / 60
+    set hours to remainder of the hour divided by 12 + minutes / 60
+    hand(100, hours / 12, 8, "#ffe2a8")
+    hand(150, minutes / 60, 5, "#f4b54a")
+    hand(160, seconds / 60, 2, "#ff7a2f")
+    pen color "#8a7a63"
+    draw the time at -40, -240 size 20
+end
+
+# sine and cosine of an angle in degrees, from math.moth's
+use "math.moth" as math
+to sine_of with degrees
+    return math's sine(math's radians(degrees))
+end
+to cosine_of with degrees
+    return math's cosine(math's radians(degrees))
+end
+
+show()
+every 1 second
+    show()
+end

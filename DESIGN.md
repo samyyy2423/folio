@@ -5263,3 +5263,30 @@ engines stay: as the fallback, and as what the tests compare against.
   a folder of its own; the game in a window under CI's Xvfb, where GTK is. It also tests how a recipe is read:
   a file, a program and its output, a console; words in quotes; `...`. docs.test.js has the cookbook's pages
   as part of docs/, and how its Markdown is made HTML.
+
+## 130. The examples
+
+- **Why.** The playground has a dozen examples in its menu, chosen to show the language a feature at a
+  time. People also learn by reading small programs that do something: a game, a puzzle, a picture, a tool.
+  A page of them, each one click from running, is what Go's and Rust's "by example" sites are for.
+- **What it is.** docs/examples/ has sixteen programs, each under 60 lines and whole: the Game of Life,
+  bouncing balls and a clock that draw and move; the Mandelbrot set in letters; the Towers of Hanoi,
+  quicksort with `give`, Roman numerals and a Caesar cipher that breaks itself; counting words, a bank
+  account `kind`, a trip planned in kilometres and miles, numbers of any size, a month's calendar, a class's
+  results with a chart, JSON, and a quiz that asks. Each opens with its title and what it shows.
+- **The page.** make-docs.mjs makes docs/examples.html: a card for each, with what it says, or a picture of
+  what it draws, and its code to open. The picture is made from what the program drew on the JavaScript
+  engine, as SVG, painted as the playground paints its canvas (500 across, y going up, zoomed out to fit
+  unless it's an app), so it's part of the page the tests check. Each card's "Run in the playground" is the
+  playground's own share link, `#code=` and the program, which the playground has opened since the Share
+  button (it runs it at once).
+- **The standard library in the playground.** A program that used `use "big.moth"` couldn't run in the
+  playground: it fetched the file beside the page, and the site has big.moth in tools/, as moth carries it.
+  Now a file that isn't beside the page is looked for in tools/, so every library written in Moth alone
+  (big, dates, stats, text, collections, json and the rest) works there, as it does on the command line. It's
+  one line in index.html.
+- **Tested.** docs.test.js: each example says or draws the same on the playground's three engines (the JIT,
+  the VM and WebAssembly), uses only files the site has beside the page or in tools/, starts with its title,
+  and its link on the page is the program, whole. The page is part of docs/, which must be what
+  make-docs.mjs makes. A gallery link opening big-numbers in the playground, fetching big.moth from tools/,
+  was checked in Chromium.

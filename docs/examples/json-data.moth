@@ -1,0 +1,25 @@
+# Reading JSON
+# JSON from a web service, read into dictionaries and lists, walked through, and written back.
+
+set reply to "{\"city\": \"Pune\", \"days\": [{\"day\": \"Mon\", \"high\": 31.5, \"rain\": false}, {\"day\": \"Tue\", \"high\": 29, \"rain\": true}, {\"day\": \"Wed\", \"high\": 33.2, \"rain\": false}]}"
+
+set weather to json from reply
+say "The weather in " item "city" of weather
+for each day in item "days" of weather
+    set note to "dry"
+    if item "rain" of day
+        set note to "rain"
+    end
+    say "  " item "day" of day ": " item "high" of day "°C, " note
+end
+
+set hottest to item 1 of item "days" of weather
+for each day in item "days" of weather
+    if item "high" of day is greater than item "high" of hottest
+        set hottest to day
+    end
+end
+say "Hottest: " item "day" of hottest
+
+set summary to dictionary where "city" is item "city" of weather, "hottest" is item "day" of hottest, "days" is length of item "days" of weather
+say summary as json

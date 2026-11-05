@@ -1,0 +1,17 @@
+# Counting words
+# Which words a text uses most: its words found with a pattern, counted, and the most common first.
+
+use "text.moth" as text
+use "collections.moth" as collections
+
+set opening to "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity."
+
+set words to empty list
+for each found in text's find_all("[a-z']+", lowercase of opening)
+    add text of found to words
+end
+set counts to collections's counted(words)
+say length of words " words, " length of keys of counts " different"
+for each common in collections's most_common(counts, 5)
+    say text's padded_right(value of common, 6) " " count of common
+end

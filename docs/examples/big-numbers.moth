@@ -1,0 +1,20 @@
+# Big numbers
+# Whole numbers of any size, from big.moth: factorials, powers of 2, and Fibonacci numbers far past the 15
+# digits an ordinary number keeps.
+
+use "big.moth" as big
+
+say "30! is " big's factorial(30)
+say "2 to the power of 100 is " big's power(2, 100)
+
+set a to 0
+set b to 1
+for each n from 1 to 200
+    set next to big's plus(a, b)
+    set a to b
+    set b to next
+end
+say "The 200th Fibonacci number is " a ", " length of a " digits"
+
+say "Ways to choose 6 numbers of 49: " big's choices(49, 6)
+say "Its digits in base 16: " big's in_base(big's factorial(25), 16)

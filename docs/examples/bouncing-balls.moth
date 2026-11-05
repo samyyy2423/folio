@@ -1,0 +1,50 @@
+# Bouncing balls
+# Balls that fall, bounce off the floor and the walls, and lose a little each bounce, drawn 50 times a second.
+# Click to drop another.
+
+set balls to empty list
+set colours to list of "#f4b54a", "#ff7a2f", "#7fc8d8", "#c3d98a", "#e87ba4"
+
+to drop with x, y
+    add (record with x x, y y, dx (random number from -150 to 150), dy 0, colour item (random number from 1 to 5) of colours) to balls
+end
+
+to fall with seconds
+    for each ball in balls
+        set dy of ball to dy of ball - 600 * seconds # gravity, pulling down
+        set x of ball to x of ball + dx of ball * seconds
+        set y of ball to y of ball + dy of ball * seconds
+        if y of ball is less than -230
+            set y of ball to -230
+            set dy of ball to 0 - dy of ball * 0.8
+        end
+        if x of ball is less than -230 or x of ball is greater than 230
+            set dx of ball to 0 - dx of ball
+            set x of ball to largest of (list of -230, smallest of (list of x of ball, 230))
+        end
+    end
+end
+
+to show
+    clear
+    for each ball in balls
+        pen color colour of ball
+        draw circle at x of ball, y of ball size 20
+    end
+    pen color "#8a7a63"
+    draw "click to drop a ball" at -80, 225
+end
+
+drop(-100, 200)
+drop(0, 150)
+drop(120, 220)
+show()
+
+every 20 milliseconds
+    fall(0.02)
+    show()
+end
+
+when the mouse is clicked with x and y
+    drop(x, y)
+end
