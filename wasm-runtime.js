@@ -1836,6 +1836,132 @@ end
 global.get g.moreNames global.get g.moreN local.get t array.set items
 global.get g.moreN i32.const 1 i32.add global.set g.moreN
 
+;; ---------- a record's "did you mean", and inputs that say what they are (DESIGN §154) ----------
+
+text noField1 "this record has no '"
+text guessField "'. Did you mean '"
+text guessEnd "'?"
+text toBe " to be "
+text notComma ", not "
+text kindYesOrNo "yes or no"
+;; each function whose inputs say what they are, from the program's data: for function j, where its inputs start;
+;; there, how many it has, then each one's name and its kind plus 1 (0 for any)
+global kindsData null:ids mut ref.null ids
+
+;; of record r's fields, the name most likely meant, or null: as vm.js's closest picks, within 1 edit for 3 units
+;; or fewer and 2 for more, the first of the nearest
+func closestField name:eq r:eq -> eq
+local rr null:record
+local best eq
+local most i32
+local i i32
+local c eq
+local e i32
+local.get name ref.cast text struct.get text 1 i32.const 3 i32.le_u if i32
+  i32.const 2
+else
+  i32.const 3
+end
+local.set most
+local.get r ref.cast record local.set rr
+block loop
+  local.get i local.get rr struct.get record 2 i32.ge_u br_if 1
+  local.get rr struct.get record 0 local.get i array.get ids call R.nameText local.set c
+  local.get name local.get c call R.distance local.tee e local.get most i32.lt_u if
+    local.get c local.set best
+    local.get e local.set most
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get best
+
+;; 'name of r', r a record without that field: "this record has no 'nmae'. Did you mean 'name'?"
+func fieldRest r:eq name:i32 k:i32 ->
+local words eq
+local field eq
+local guess eq
+local.get name call R.nameText local.set field
+global.get g.noField1 local.get field call R.concat local.set words
+local.get field local.get r call R.closestField local.tee guess ref.is_null if
+  local.get words global.get g.quoted call R.concat local.set words
+else
+  local.get words global.get g.guessField call R.concat local.get guess call R.concat global.get g.guessEnd call R.concat local.set words
+end
+local.get words i32.const 0 local.get k throw 0
+
+;; KINDS[w] in vm.js: what an input that says what it is says it is
+func kindName w:i32 -> eq
+local.get w i32.eqz if
+  global.get g.kindNumber return
+end
+local.get w i32.const 1 i32.eq if
+  global.get g.kindText return
+end
+local.get w i32.const 2 i32.eq if
+  global.get g.kindYesOrNo return
+end
+local.get w i32.const 3 i32.eq if
+  global.get g.kindList return
+end
+local.get w i32.const 4 i32.eq if
+  global.get g.kindRecord return
+end
+local.get w i32.const 5 i32.eq if
+  global.get g.kindDictionary return
+end
+local.get w i32.const 6 i32.eq if
+  global.get g.kindBytes return
+end
+global.get g.kindFunction
+
+;; 1 if v is kind w, as vm.js's fitsKind has it
+func fitsKind v:eq w:i32 -> i32
+local.get w i32.eqz if
+  local.get v call R.isNumber return
+end
+local.get w i32.const 1 i32.eq if
+  local.get v ref.test text return
+end
+local.get w i32.const 2 i32.eq if
+  local.get v ref.test i31 if i32
+    local.get v ref.cast i31 i31.get_u i32.const 2 i32.lt_u
+  else
+    i32.const 0
+  end
+  return
+end
+local.get w i32.const 3 i32.eq if
+  local.get v ref.test list return
+end
+local.get w i32.const 4 i32.eq if
+  local.get v ref.test record return
+end
+local.get w i32.const 5 i32.eq if
+  local.get v ref.test dict return
+end
+local.get w i32.const 6 i32.eq if
+  local.get v ref.test bytes return
+end
+local.get v ref.test closure
+
+;; input i, v, of a call at position k of function name, whose inputs say what they are (entry id in g.kindsData):
+;; the mistake if v isn't the kind it says, as vm.js's checkKinds words it
+func checkKind id:i32 i:i32 v:eq name:i32 k:i32 ->
+local at i32
+local wanted i32
+global.get g.kindsData local.get id array.get ids local.set at
+global.get g.kindsData local.get at i32.const 2 i32.add local.get i i32.const 1 i32.shl i32.add array.get ids i32.const 1 i32.sub local.tee wanted i32.const 0 i32.lt_s if
+  return
+end
+local.get v local.get wanted call R.fitsKind if
+  return
+end
+global.get g.quoted local.get name call R.nameText call R.concat global.get g.needs call R.concat
+global.get g.kindsData local.get at i32.const 1 i32.add local.get i i32.const 1 i32.shl i32.add array.get ids call R.nameText call R.concat
+global.get g.toBe call R.concat local.get wanted call R.kindName call R.concat global.get g.notComma call R.concat
+local.get v call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so
 ;; text that ends where its buffer's in-use units end can have more added in place, and joining text in a

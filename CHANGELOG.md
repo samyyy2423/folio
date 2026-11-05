@@ -10,6 +10,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   text and amounts, showing any value, and every mistake these make, "did you mean" and all, are the module's own:
   it imports 42 functions, not 51. An item given past 15 digits, as in `set item 2.0000000000000004 of xs to 9`,
   now changes the list on the WebAssembly engine, as on the others (DESIGN §153).
+- **Inputs that say what they are, checked in WebAssembly.** A function's typed inputs and a record's "did you
+  mean" are the module's own too (40 imports). An amount given to an input that wants a number now says "not a
+  distance" on the WebAssembly engine, as on the others, not "not undefined" (DESIGN §154).
 - **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
   `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
   `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,

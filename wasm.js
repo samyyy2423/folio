@@ -16,7 +16,7 @@ import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
 import { TooDeep } from "./jit.js";
 import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, compare, plus, arithmetic,
-  negate, KINDS, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, fieldOf, failWith, BUILTINS, askFor, readFile, writeFile,
+  negate, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, failWith, BUILTINS, askFor, readFile, writeFile,
   trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, everyInterval, Quantity, isQuantity, isRecord, Ended, exitCode, removeFile, fakeClock,
   nowValue, waitFor, readFolder, soundOf, BEEP, CantCopy, DEEPEST_COPY, madeInside, tooDeepToCopy, workerEnded, workerResult, workerRoom,
   workerTaken, enterWorker, leaveWorker } from "./vm.js";
@@ -37,9 +37,6 @@ const ORDER_TESTS = {
   "at least": (c) => c.emit("i32.const", 1).emit("i32.le_u"), // 0 or 1
   "at most": (c) => c.emit("i32.const", 1).emit("i32.add").emit("i32.const", 1).emit("i32.le_u"), // -1 or 0
 };
-// each tag as kindOf in vm.js says it, and each of vm.js's KINDS as kindOf says it
-const TAG_KINDS = { 1: "a number", 2: "text", 3: "a list", 4: "a record", 5: "a function", 7: "a dictionary", 8: "bytes" };
-const KIND_TAGS = ["a number", "text", "yes/no", "a list", "a record", "a dictionary", "bytes", "a function"];
 
 // What the module imports: the checks and actions it leaves to JavaScript. Most only ever throw.
 const IMPORTS = {
@@ -54,13 +51,11 @@ const IMPORTS = {
   numberOrder: [[F64, F64], [I32]],
   divisible: [[F64, F64], [I32]],
   equal: [[EQ, EQ], [I32]],
-  checkKind: [[I32, I32, EQ, I32, I32], []],
   stopped: [[I32], []],
   refill: [[I32], [I32]], // more steps, as a step count's last ran out: how many are left after this one
   grant: [[], [I32]], // the steps a run (or an app's handler) starts with
   tooDeep: [[], []],
   turtle: [[I32, EQ, I32], []],
-  field: [[EQ, I32, I32], []],
   builtin: [[I32, EQ, I32], [EQ]], // which one, its inputs as a list, and a position
   ask: [[EQ, I32], [EQ]],
   read: [[EQ, I32, I32], [EQ]], // the file's name, 1 for bytes or 0 for text, and a position
@@ -685,7 +680,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.cast", T.record).emit("struct.get", T.record, 1).emit("local.get", at).emit("array.get", T.items).emit("return");
     c.emit("end").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.record).emit("i32.eqz").emit("if").emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.notRecord).emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.field).emit("unreachable"); // a record without it: JavaScript guesses what was meant
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.fieldRest).emit("unreachable"); // a record without it: what was meant, guessed
   });
 
   shared.finish(im);
@@ -1343,7 +1338,7 @@ class WasmCompiler extends Scope {
       this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 4).e("if");
       args.forEach((a, i) => {
         this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 4).e("i32.const", i).e("local.get", a);
-        this.e("i32.const", this.id(e.name)).e("i32.const", k).e("call", im.checkKind);
+        this.e("i32.const", this.id(e.name)).e("i32.const", k).e("call", this.ctx.R.checkKind);
       });
       this.e("end");
     }
@@ -1385,7 +1380,7 @@ class WasmCompiler extends Scope {
       this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 4).e("if");
       args.forEach((a, i) => {
         this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 4).e("i32.const", i).e("local.get", a);
-        this.e("i32.const", this.id(call.name)).e("i32.const", k).e("call", im.checkKind);
+        this.e("i32.const", this.id(call.name)).e("i32.const", k).e("call", this.ctx.R.checkKind);
       });
       this.e("end");
     }
@@ -1662,6 +1657,9 @@ export function compileToWasmModule(program) {
   ctx.data = m.data(ctx.units); // the program's text, as UTF-16 units: in every module, as the runtime reads names from it
   const main = new WasmCompiler(null, "main", [], program, ctx);
   m.export("main", main.f.index);
+  // each function whose inputs say what they are (R.checkKind): how many inputs it has, then each one's name and
+  // its kind plus 1 (0 for any); their names are given ids here, before the names' table is written
+  const kindEntries = ctx.kinds.slice(1).map(({ params, kinds }) => [params.length, ...params.flatMap((p, i) => [ctx.id(p), kinds[i] + 1])]);
   // the program's names, for the words of a mistake (R.nameText): each one's units in the data, then where each
   // starts and how many units it has, which init makes the names global of
   const table = [];
@@ -1673,6 +1671,18 @@ export function compileToWasmModule(program) {
   for (const v of table) ctx.units.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255);
   ctx.init.code.emit("i32.const", tableAt).emit("i32.const", table.length).emit("array.new_data", T.ids, ctx.data)
     .emit("global.set", SHARED.globals.findIndex((g) => g.name === "names"));
+  // and after it, the kinds' table: for function j, where its entry is, then the entries
+  const kindsTable = [0];
+  let kindsPlace = ctx.kinds.length;
+  for (const entry of kindEntries) {
+    kindsTable.push(kindsPlace);
+    kindsPlace += entry.length;
+  }
+  for (const entry of kindEntries) kindsTable.push(...entry);
+  const kindsAt = ctx.units.length;
+  for (const v of kindsTable) ctx.units.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255);
+  ctx.init.code.emit("i32.const", kindsAt).emit("i32.const", kindsTable.length).emit("array.new_data", T.ids, ctx.data)
+    .emit("global.set", SHARED.globals.findIndex((g) => g.name === "kindsData"));
   // the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
   // and the name of its function
   for (const [label, params, write] of [
@@ -1970,12 +1980,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     },
     divisible: (a, b) => (divisible(a, b) ? 1 : 0),
     equal: (a, b) => (equal(toJs(a), toJs(b)) ? 1 : 0),
-    // input i of a function whose inputs say what they are: its kind from its tag, so a big list isn't copied
-    checkKind: (id, i, v, name, k) => {
-      const wanted = kinds[id].kinds[i];
-      const kind = v === null ? "nothing" : typeof v === "number" ? (v === 0 || v === 1 ? "yes/no" : "a number") : TAG_KINDS[x.tag(v)];
-      if (wanted >= 0 && kind !== KIND_TAGS[wanted]) errors[k](`'${names[name]}' needs ${kinds[id].params[i]} to be ${KINDS[wanted]}, not ${kind}`);
-    },
     stopped: (k) => {
       const err = new FolioError(ats[k], stoppedMessage(maxSteps), undefined, trail());
       err.final = true; // no try catches it
@@ -1996,7 +2000,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       throw new TooDeep();
     },
     turtle: (action, value, k) => turtle.act(action, toJs(value), errors[k], disk),
-    field: (r, name, k) => fieldOf(toJs(r), names[name], errors[k]),
     tryStart: () => {
       lastError = null;
     },

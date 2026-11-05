@@ -692,13 +692,11 @@ to wasm_runtime
     wasm_import(m, "numberOrder", (list of f64, f64), (list of i32))
     wasm_import(m, "divisible", (list of f64, f64), (list of i32))
     wasm_import(m, "equal", (list of eq, eq), (list of i32))
-    wasm_import(m, "checkKind", (list of i32, i32, eq, i32, i32), none)
     wasm_import(m, "stopped", (list of i32), none)
     wasm_import(m, "refill", (list of i32), (list of i32))
     wasm_import(m, "grant", none, (list of i32))
     wasm_import(m, "tooDeep", none, none)
     wasm_import(m, "turtle", (list of i32, eq, i32), none)
-    wasm_import(m, "field", (list of eq, i32, i32), none)
     wasm_import(m, "builtin", (list of i32, eq, i32), (list of eq))
     wasm_import(m, "ask", (list of eq, i32), (list of eq))
     wasm_import(m, "read", (list of eq, i32, i32), (list of eq))
@@ -1085,7 +1083,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 ref.test record if local.get 0 local.get 1 call R.find local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, "local.get 0 ref.cast record struct.get record 1 local.get at array.get items return end end")
     wasm_asm(f, "local.get 0 ref.test record i32.eqz if local.get 0 local.get 1 local.get 2 call R.notRecord end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.field unreachable") # a record without it: JavaScript guesses what was meant
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call R.fieldRest unreachable") # a record without it: what was meant, guessed
 end
 
 # What JavaScript calls to look inside Folio's values, and to make them, when a check or `say` needs them.
@@ -2136,7 +2134,7 @@ to wasm_call with fc, e, statement
     if n is greater than 0 # a function whose inputs say what they are: each one checked
         wasm_x(fc, get_closure + "4 if")
         for each i from 1 to n
-            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.checkKind")
+            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.checkKind")
         end
         wasm_x(fc, "end")
     end
@@ -2185,7 +2183,7 @@ to wasm_start_worker with fc, e
     if n is greater than 0
         wasm_x(fc, get_closure + "4 if")
         for each i from 1 to n
-            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.checkKind")
+            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.checkKind")
         end
         wasm_x(fc, "end")
     end
@@ -2584,6 +2582,23 @@ to wasm_module with program
     add units of cx to segments # the program's text, as UTF-16 units: in every module, as the runtime reads names from it
     set main to wasm_function(cx, nothing, "main", empty list, program, 0)
     wasm_export(m, "main", index of f of main)
+    # each function whose inputs say what they are (R.checkKind): how many inputs it has, then each one's name and
+    # its kind plus 1 (0 for any); their names are given ids here, before the names' table is written
+    set kind_entries to empty list
+    set kinds_of to kinds of cx
+    set named to record with cx cx
+    set j to 2
+    repeat while j is at most length of kinds_of
+        set one to item j of kinds_of
+        set entry to empty list
+        add length of params of one to entry
+        for each i from 1 to length of params of one
+            add wasm_id(named, item i of params of one) to entry
+            add (item i of kinds of one) + 1 to entry
+        end
+        add entry to kind_entries
+        add 1 to j
+    end
     # the program's names, for the words of a mistake (R.nameText): each one's units in the data, then where each
     # starts and how many units it has, which init makes the names global of
     set units to units of cx
@@ -2600,6 +2615,26 @@ to wasm_module with program
         add (shift v right by 24) bit and 255 to units
     end
     wasm_asm(init, "i32.const " + table_at + " i32.const " + length of table + " array.new_data ids 0 global.set g.names")
+    # and after it, the kinds' table: for function j, where its entry is, then the entries
+    set kinds_table to list of 0
+    set kinds_place to length of kinds_of
+    for each entry in kind_entries
+        add kinds_place to kinds_table
+        set kinds_place to kinds_place + length of entry
+    end
+    for each entry in kind_entries
+        for each v in entry
+            add v to kinds_table
+        end
+    end
+    set kinds_at to length of units
+    for each v in kinds_table
+        add v bit and 255 to units
+        add (shift v right by 8) bit and 255 to units
+        add (shift v right by 16) bit and 255 to units
+        add (shift v right by 24) bit and 255 to units
+    end
+    wasm_asm(init, "i32.const " + kinds_at + " i32.const " + length of kinds_table + " array.new_data ids 0 global.set g.kindsData")
     # the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
     # and the name of its function
     wasm_out(m, "callDepth", empty list, (list of wasm_i32), "global.get g.depth")

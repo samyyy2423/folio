@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { run, compileToWasmBytes } from "./folio.js";
+import { run, compileToWasmBytes, memoryDisk } from "./folio.js";
 import { show } from "./vm.js";
 import { wasmRuntimeFolio } from "./make-wasm-runtime.mjs";
 
@@ -141,6 +141,59 @@ test("the module words the mistakes of calls, ranges and fields itself, with the
     "can't take 'size' of a list",
   ]);
   assert.deepEqual(both(source), said);
+});
+
+// DESIGN §154: a function's inputs that say what they are, checked against a table of them in the module's data,
+// and a record's "did you mean", in the module too; an amount given to one said "not undefined" before
+test("the module checks inputs that say what they are, and guesses a record's field, itself", () => {
+  const tries = (...lines) => lines.map((line) => `try\n    ${line}\nif it fails with why\n    say why\nend`).join("\n");
+  const source = [
+    "to f with a as a number, b as text",
+    "    return a",
+    "end",
+    "to g with xs as a list, any",
+    "    return xs",
+    "end",
+    'set r to record with name "Sam", age 30',
+    tries('say f(1, 2)', 'say f(yes, "x")', "say g(5, 1)", "say r's nmae", "say r's height", "say r's ag"),
+  ].join("\n");
+  const module = new WebAssembly.Module(compileToWasmBytes(source).bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["checkKind", "field"]) assert.ok(!imported.includes(gone), gone);
+  let x = null;
+  const said = [];
+  const text = (t) => String.fromCharCode(...Array.from({ length: x.textLength(t) }, (_, i) => x.textUnit(t, i)));
+  const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: (parts) => said.push(Array.from({ length: x.listLength(parts) }, (_, i) => text(x.listItem(parts, i))).join("")) };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  x = new WebAssembly.Instance(module, { folio: imports }).exports;
+  x.restart();
+  x.main();
+  assert.deepEqual(said, [
+    "'f' needs b to be text, not a number",
+    "'f' needs a to be a number, not yes/no",
+    "'g' needs xs to be a list, not a number",
+    "this record has no 'nmae'. Did you mean 'name'?",
+    "this record has no 'height'",
+    "this record has no 'ag'. Did you mean 'age'?",
+  ]);
+  assert.deepEqual(both(source), said);
+  // an amount, which a built-in makes, given to an input that says it's a number
+  assert.deepEqual(both("to f with a as a number\n    return a\nend\ntry\n    say f(5 km)\nif it fails with why\n    say why\nend"),
+    ["'f' needs a to be a number, not a distance"]);
+});
+
+// A table's rows are records JavaScript makes, with fields the program may never name: the module is given their
+// names, so it shows a row and guesses its fields as the VM does
+test("a table's row, made in JavaScript, is shown and its fields guessed in the module", () => {
+  const source = ['set rows to read table "t.csv"', "set r to item 1 of rows", 'set s to ""', "add r to s", "say s",
+    "try\n    say r's color\nif it fails with why\n    say why\nend"].join("\n");
+  const said = (engine) => {
+    const lines = [];
+    run(source, (line) => lines.push(line), { engine, maxSteps: 1_000_000, disk: memoryDisk({ "t.csv": "colour,size\nred,3\n" }) });
+    return lines;
+  };
+  assert.deepEqual(said("wasm"), ['(record with colour "red", size 3)', "this record has no 'color'. Did you mean 'colour'?"]);
+  assert.deepEqual(said("wasm"), said("vm"));
 });
 
 // Amounts, which a built-in still makes, shown and added to in the module as the VM shows and adds them: 0 of a

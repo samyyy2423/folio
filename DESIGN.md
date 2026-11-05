@@ -6553,3 +6553,27 @@ inputs that say what they are (`checkKind`) and a record's "did you mean" (`fiel
   the VM says them; amounts shown and added on both engines; and every program the engines are tested with, made
   by wasm.js, wasm.folio and folio.wasm byte for byte, the 8,000 broken ones too.
 
+## 154. Inputs that say what they are, and a record's "did you mean", in the module
+
+The last of stage 2's fourth part (§151, §153). A module imports 40 functions, not 42: `checkKind` and `field`
+are gone, and every value check, and every mistake one makes, is the module's own.
+
+- **A table of each function's inputs** that say what they are, in the module's data after its names: for each
+  such function, where its entry is; there, how many inputs it has, then each one's name and its kind plus 1 (0
+  for any, so no number in it is below 0, which wasm.folio's `bit and` would want to be). The names are given ids
+  as the program's other names are, before those are written, in wasm.js and wasm.folio alike. `init` makes the
+  `kindsData` global of it; a call checks each input, at the call's own place, as vm.js's checkKinds does.
+- **A bug it fixed.** wasm.js said what a value was from its own table of tags, which had none for an amount:
+  `f(5 km)` for `to f with a as a number` said "'f' needs a to be a number, not undefined". The module says what
+  the VM and the JIT say, "not a distance", from `kindWords` (§151).
+- **"Did you mean"** for a record's field: vm.js's closest over the record's own fields' names, from the names
+  table, and from the names JavaScript gives the module (§153), so a table's row is guessed about too.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test:
+  three inputs of the wrong kind and three fields, with a guess and without; an amount given to a number; a
+  table's row read from a file, shown and guessed about as the VM does; and every program the engines are tested
+  with, made by wasm.js, wasm.folio and folio.wasm byte for byte.
+- **What's next.** Part 5 is the built-ins, which still call JavaScript (`builtin`, `plus`, `arithmetic`,
+  `compare`, `equal` and the rest); then the host interface (part 6), where WASI plugs in, and deep calls (part 7).
+  A module for `say 1` is 27,149 bytes; leaving out the runtime a program doesn't call is worth more as part 5
+  adds to it.
+
