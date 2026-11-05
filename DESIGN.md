@@ -6324,3 +6324,81 @@ its motion. It takes everything it shows from the rest of the repository, so not
   site, engine and fonts together, 13 MB, most of it the Moth files and moth.wasm the playground uses.
 - **Publishing.** `.github/workflows/site.yml` builds it on each push to main and deploys it to GitHub Pages,
   which serves it once the repository's Pages source is GitHub Actions.
+## 149. Faster on the VM, the JIT and in machine code, measured
+
+- **Why.** The playground runs programs on the VM and the JIT as well as WebAssembly, and machine code is what
+  `moth build` makes. Each was measured first, on one set of programs, and changed where the time went.
+  §128 found 12% of moth building compiler.moth in `is` between texts; that is where machine code starts here.
+  (A third stage after §138's bits, said to be worth 27%, isn't on any branch, so nothing here is from it.)
+- **How it was measured.** Sixteen programs: loops, sums with fractions, primes, fib(30), calls of four
+  inputs, joining text, comparing letters, adding to text, lists, dictionaries and records. Before and after
+  run in turns, each in a process of its own, so whatever else the machine is doing falls on both alike;
+  the median of 15 runs of each (VM and JIT: after one run to warm up; machine code: the whole program, less
+  an empty program's time). Windows 11, an AMD Ryzen 5 4600H, Node 24. Machine code was also counted with
+  callgrind on Linux (§128), which gives the same number every time.
+- **The VM's switch.** Its cases were opcodes read from OP, which V8 can't make a table of, so it compared
+  each opcode with the cases in turn, up to 63 of them. Each case is now its number, `case 23 /* ADD_TO */:`,
+  and a test checks every number against OP. 10,000,000 rounds of `add i to total` took 650 ms, now 380.
+- **The VM's operations.** `-`, `*` and `/` of two numbers, an item of a list or a text key of a dictionary
+  (read or set), a record's field, a record made, `add` to a number and `is` with text are done right where
+  they are; anything else, and every mistake, goes to the same functions as before. A call's scope is made
+  as an array with no holes, by pushing, which V8 reads and writes without checking for one.
+- **Text and numbers shown.** `show()` made a Set for each value it showed, for lists that hold themselves,
+  so `"x" + i` made two. It makes one only for a list, record or dictionary. `+` of two texts joins them
+  without showing either. This is in vm.js, so the VM, the JIT and WebAssembly's text all have it.
+- **The JIT's helpers.** With no limit on steps (the playground and run() set none unless asked), a loop's
+  round and a call count nothing. A call with as many inputs as the function has, none saying what it is,
+  only notes itself for a mistake's trail; anything else goes through the checks as before. `is` with text is
+  `===`; `in` and `item` of a dictionary look the key up straight away; `less than` and the rest are each
+  written out, where one function made all four and V8 couldn't put them in line.
+- **Records in the JIT.** `record with x 1, y 2` was `record(["x", "y"], [1, 2])`, a call that set each field
+  by a name in a variable. It is now `($t1 = new Record(), $t1["x"] = 1, $t1["y"] = 2, $t1)`, each field set
+  by its own name. compiler.moth writes the same, byte for byte, and moth.wasm is made again from it.
+- **Machine code: `is` with text the program wrote.** `kind of node is "call"` went to rt_cmp_is and
+  rt_equal, about 80 instructions and `repe cmpsb`. For a text of up to 32 bytes it's now done in line:
+  whether the value is text, how many bytes it has, and its bytes, four at a time against the text's, written
+  in the instructions. A number is never the same as text, so a value known to be one jumps straight on.
+- **Machine code: texts compared.** rt_text_same compares two texts eight bytes at a time, then one at a
+  time, where `repe cmpsb` took longer to start than most texts take to compare. rt_equal goes to it first
+  when both are text, before saving any register, and so does a dictionary finding a text key.
+- **Machine code: dictionary keys.** A text key was hashed a byte at a time, 75 instructions for five letters.
+  It's now eight bytes at a time, each xored in, multiplied by an odd number and its high bits brought down,
+  then the last one to seven bytes as one piece, read as two that may overlap, with the count of bytes mixed
+  in first; murmur3's last mix after, as before. Only the index uses the hash, so nothing a program sees
+  changes: a dictionary keeps its keys in the order they came.
+- **Tried, and not kept.** `is divisible by` with two whole numbers below 2^32 dividing as 32 bits, which
+  §128 found slower as 64 on a Xeon: on this Ryzen the primes took 25.4 ms either way.
+- **What it gave.** Milliseconds, the median of 15, before and after:
+
+  | | VM | | JIT | | Machine code | |
+  |:--|--:|--:|--:|--:|--:|--:|
+  | loop: add 1 to 10,000,000 | 746 | 417 | 88 | 72 | 3.0 | 3.1 |
+  | loop: repeat while, 3,000,000 | 508 | 306 | 53 | 45 | 4.6 | 4.2 |
+  | numbers: pi by 5,000,000 fractions | 1,155 | 646 | 96 | 88 | 24.1 | 23.4 |
+  | numbers: primes below 150,000 | 820 | 462 | 94 | 82 | 25.8 | 25.7 |
+  | recursion: fib(30) | 776 | 390 | 100 | 86 | 6.4 | 7.3 |
+  | calls: 4 inputs, 1,000,000 | 727 | 463 | 90 | 88 | 8.0 | 8.1 |
+  | text: join 300,000 pieces | 125 | 67 | 96 | 65 | 31.6 | 32.3 |
+  | text: 1,000,000 letters compared | 266 | 179 | 79 | 59 | 100.6 | 29.7 |
+  | text: 2 letters added 1,000,000 times | 257 | 72 | 179 | 28 | 34.9 | 34.8 |
+  | lists: 1,000,000 adds, summed by item | 214 | 120 | 40 | 36 | 10.4 | 10.7 |
+  | lists: for each over 1,000,000 | 195 | 122 | 58 | 53 | 9.7 | 10.5 |
+  | lists: set item 2,000,000 times | 647 | 248 | 117 | 91 | 11.0 | 11.1 |
+  | dictionary: 1,000,000 counts | 564 | 264 | 140 | 92 | 49.9 | 42.3 |
+  | dictionary: 200,000 keys made, set, read | 276 | 184 | 207 | 158 | 89.7 | 80.1 |
+  | records: 1,000,000 made and read | 556 | 326 | 89 | 23 | 48.1 | 47.6 |
+  | records: made by calls, 500,000 | 697 | 383 | 119 | 76 | 45.2 | 45.1 |
+
+  Machine code, counted on Linux: the letters compared, 479.7 million instructions to 150.0 million; the
+  1,000,000 counts, 539.6 million to 472.7 million; the keys made, 282.3 million to 246.9 million; the other
+  13 programs ran exactly as many instructions as before, so their differences above (fib's 6.4 and 7.3 ms
+  among them) are the machine's own. moth building compiler.moth: 3,287 million instructions to 2,910
+  million, and 572 ms to 532 timed on Windows (the median of 11, in turns). On Linux in WSL, timed the same
+  way, the letters compared took 109 ms, now 39; the counts 50, now 42; the keys 108, now 99.
+- **Tested.** All of `node --test` passes, machine.test.js too. compiler.moth writes the JIT's JavaScript
+  byte for byte on every case, and compiles itself to the same. Machine code against the VM and the JIT on
+  Windows and Linux: `is` and `is not` with texts of 0 to 33 bytes (é, emoji, ÿ, a text one byte longer or
+  shorter, or differing in its last byte) against texts, numbers, -0, nothing, yes, no, a list and a record,
+  in `if`, `or`, `and`, `not` and `repeat while`, after a call; texts of every length compared with copies of
+  themselves, slices of a longer text, and inside lists, records and `is in`; and dictionaries with text keys
+  of 0 to 17 bytes and number keys, 3,000 more made as text, read, removed and gone through.

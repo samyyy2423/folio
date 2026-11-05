@@ -117,8 +117,7 @@ export const COMPARISONS = {
   "divisible by": (a, b) => divisible(a, b),
   "in": (a, b) => isIn(a, b),
 };
-export const COMPARE_OPS = Object.keys(COMPARISONS);
-const COMPARE_FNS = Object.values(COMPARISONS);
+export const COMPARE_OPS = Object.keys(COMPARISONS); // in this order, which the VM's COMPARE counts on
 const DIVISIBLE = COMPARE_OPS.indexOf("divisible by");
 
 // ---------- bytecode ----------
@@ -268,15 +267,18 @@ export function kindOf(v) {
 }
 
 // `showing` holds the values being shown further up: a list that holds itself shows as [...] where it
-// comes round again, and a record or dictionary as (...).
-export function show(v, nested = false, showing = new Set()) {
+// comes round again, and a record or dictionary as (...). It's made only for those: text and numbers, shown
+// most often, as in `"x" + i`, need none.
+export function show(v, nested = false, showing) {
+  if (typeof v === "string") return nested ? JSON.stringify(v) : v;
+  if (typeof v === "number") return String(canon(v)); // to 15 digits
   if (v === null) return "nothing";
   if (typeof v === "boolean") return v ? "yes" : "no";
-  if (typeof v === "string") return nested ? JSON.stringify(v) : v;
   if (v instanceof Closure) return `<function ${v.fn.name}>`;
   if (isBytes(v)) return `(${plural(v.length, "byte")}${v.length ? `: ${v.join(", ")}` : ""})`;
   if (isQuantity(v)) return `${show(v.amount)} ${UNITS[v.unit][Math.abs(canon(v.amount)) === 1 ? 0 : 1]}`; // 1 mile, 2 miles
   if (!isList(v) && !isRecord(v) && !isDictionary(v)) return String(canon(v)); // a number, to 15 digits
+  showing ??= new Set();
   if (showing.has(v)) return isList(v) ? "[...]" : "(...)";
   showing.add(v);
   const inner = (x) => show(x, true, showing);
@@ -392,7 +394,8 @@ export function compare(op, a, b, error = oops) {
 
 // `+` when a and b aren't both numbers
 export function plus(a, b, error) {
-  if (typeof a === "string" || typeof b === "string") return show(a) + show(b);
+  if (typeof a === "string") return typeof b === "string" ? a + b : a + show(b);
+  if (typeof b === "string") return show(a) + b;
   if (sameMeasure(a, b)) return new Quantity(a.amount + amountIn(b, a.unit), a.unit); // 5 km + 300 m is 5.3 km
   error(`can't use '+' on ${kindOf(a)} and ${kindOf(b)}`);
 }
@@ -2127,9 +2130,11 @@ const topOf = (env) => {
   return env;
 };
 
+// Slot 0 links to the scope the function was made in. Made by pushing, not as `new Array(n)`, so V8 keeps it
+// an array with no holes, whose slots it reads and writes without checking for one.
 export function newEnv(fn, parent) {
-  const env = new Array(fn.nslots + 1).fill(UNSET);
-  env[0] = parent; // slot 0 links to the scope the function was made in
+  const env = [parent];
+  for (let slot = fn.nslots; slot > 0; slot--) env.push(UNSET);
   return env;
 }
 
@@ -2164,8 +2169,12 @@ export class Machine {
     try {
       loop: for (;;) {
         pc = ip;
+        // Each case is its opcode's number, its place in OPCODES (a test checks they agree): V8 makes a table
+        // of a switch whose cases are all numbers written out, and goes straight to the case. With names read
+        // from OP, it compared the opcode with each case in turn: 10,000,000 rounds of `add i to total` took
+        // 650 ms that way, and take 380 this way.
         switch (code[ip++]) {
-          case GET: {
+          case 0 /* GET */: {
             let e = env;
             for (let d = code[ip]; d > 0; d--) e = e[0];
             const v = e[code[ip + 1]];
@@ -2174,71 +2183,86 @@ export class Machine {
             stack.push(v);
             break;
           }
-          case SET: {
+          case 1 /* SET */: {
             let e = env;
             for (let d = code[ip]; d > 0; d--) e = e[0];
             e[code[ip + 1]] = stack.pop();
             ip += 2;
             break;
           }
-          case CONST:
+          case 2 /* CONST */:
             stack.push(consts[code[ip++]]);
             break;
-          case JUMP: {
+          case 3 /* JUMP */: {
             const to = code[ip];
             if (to < ip && ++steps > maxSteps) stopped(maxSteps); // jumping back means another loop round
             ip = to;
             break;
           }
-          case JUMP_IF_FALSE: {
+          case 4 /* JUMP_IF_FALSE */: {
             const to = code[ip++];
             if (!truthy(stack.pop())) ip = to;
             break;
           }
-          case COMPARE: {
+          case 5 /* COMPARE */: {
             const op = code[ip++];
             const b = stack.pop();
-            const a = stack.pop();
-            // two numbers is the common case; compare() handles the rest, divisible by and in (the ops after
-            // the ones two numbers can't fail), and the error messages
-            if (typeof a === "number" && typeof b === "number" && op < DIVISIBLE) stack.push(COMPARE_FNS[op](a, b)); // to 15 digits (see numberOrder)
-            else stack.push(compare(COMPARE_OPS[op], a, b));
+            const a = stack[stack.length - 1];
+            // two numbers is the common case, compared to 15 digits as COMPARISONS does (see numberOrder), and
+            // `is` with text, which is only ever the same text; compare() handles the rest, divisible by and in
+            // (the ops after the ones two numbers can't fail), and the error messages
+            if (typeof a === "number" && typeof b === "number" && op < DIVISIBLE) {
+              const order = numberOrder(a, b);
+              stack[stack.length - 1] = op === 0 ? order === 0 : op === 1 ? order === -1 : op === 2 ? order === 1 : op === 3 ? order >= 0 : order <= 0;
+            } else if (op === 0 && (typeof a === "string" || typeof b === "string")) stack[stack.length - 1] = a === b;
+            else stack[stack.length - 1] = compare(COMPARE_OPS[op], a, b);
             break;
           }
-          case ADD: {
+          case 6 /* ADD */: {
             const b = stack.pop();
             const a = stack.pop();
             stack.push(typeof a === "number" && typeof b === "number" ? a + b : plus(a, b, oops));
             break;
           }
-          case SUB:
-          case MUL:
-          case DIV: {
-            const op = code[pc];
+          case 7 /* SUB */: { // two numbers right here, as ADD does; anything else, and dividing by 0, by arithmetic()
             const b = stack.pop();
-            const a = stack.pop();
-            stack.push(arithmetic(op === SUB ? "-" : op === MUL ? "*" : "/", a, b, oops));
+            const a = stack[stack.length - 1];
+            stack[stack.length - 1] = typeof a === "number" && typeof b === "number" ? a - b : arithmetic("-", a, b, oops);
             break;
           }
-          case GET_FN: {
+          case 8 /* MUL */: {
+            const b = stack.pop();
+            const a = stack[stack.length - 1];
+            stack[stack.length - 1] = typeof a === "number" && typeof b === "number" ? a * b : arithmetic("*", a, b, oops);
+            break;
+          }
+          case 9 /* DIV */: {
+            const b = stack.pop();
+            const a = stack[stack.length - 1];
+            stack[stack.length - 1] = typeof a === "number" && typeof b === "number" && b !== 0 ? a / b : arithmetic("/", a, b, oops);
+            break;
+          }
+          case 11 /* GET_FN */: {
             let e = env;
             for (let d = code[ip]; d > 0; d--) e = e[0];
             stack.push(callable(e[code[ip + 1]], consts[code[ip + 2]], oops));
             ip += 3;
             break;
           }
-          case CALL: {
+          case 10 /* CALL */: {
             const argc = code[ip];
             const name = consts[code[ip + 1]];
             ip += 2;
             const first = stack.length - argc;
             const callee = stack[first - 1];
-            checkInputs(callee, argc, name, oops);
-            if (callee.fn.kinds) checkKinds(callee, stack, name, oops, first);
+            const called = callee.fn;
+            if (called.params.length !== argc) checkInputs(callee, argc, name, oops);
+            if (called.kinds) checkKinds(callee, stack, name, oops, first);
             if (frames.length >= MAX_DEPTH) oops("too much recursion: a function kept calling itself");
             if (++steps > maxSteps) stopped(maxSteps);
-            const inner = newEnv(callee.fn, callee.env);
-            for (let i = 0; i < argc; i++) inner[i + 1] = stack[first + i]; // inputs take the first slots
+            const inner = [callee.env]; // as newEnv makes it, with the inputs in the first slots
+            for (let i = 0; i < argc; i++) inner.push(stack[first + i]);
+            for (let slot = called.nslots; slot > argc; slot--) inner.push(UNSET);
             for (let i = argc; i >= 0; i--) stack.pop();
             frames.push({ fn, ip, env, base });
             fn = callee.fn;
@@ -2249,7 +2273,7 @@ export class Machine {
             base = stack.length;
             break;
           }
-          case RETURN: {
+          case 12 /* RETURN */: {
             while (this.handlers.length && this.handlers.at(-1).frames === frames.length) this.handlers.pop(); // its tries end with it
             if (!frames.length) { // the function this machine was made to run (see callFunction) is done
               this.done = true;
@@ -2272,7 +2296,7 @@ export class Machine {
             } else stack.push(value);
             break;
           }
-          case WORKER: { // as CALL, on copies: see workerCopy
+          case 62 /* WORKER */: { // as CALL, on copies: see workerCopy
             const argc = code[ip];
             const name = consts[code[ip + 1]];
             ip += 2;
@@ -2301,90 +2325,107 @@ export class Machine {
             base = stack.length;
             break;
           }
-          case POP:
+          case 13 /* POP */:
             stack.pop();
             break;
-          case AND: {
+          case 14 /* AND */: {
             const to = code[ip++];
             if (truthy(stack[stack.length - 1])) stack.pop();
             else ip = to;
             break;
           }
-          case OR: {
+          case 15 /* OR */: {
             const to = code[ip++];
             if (truthy(stack[stack.length - 1])) ip = to;
             else stack.pop();
             break;
           }
-          case NEG:
+          case 16 /* NEG */:
             stack.push(negate(stack.pop(), oops));
             break;
-          case NOT:
+          case 17 /* NOT */:
             stack.push(!truthy(stack.pop()));
             break;
-          case LIST: {
+          case 18 /* LIST */: {
             const n = code[ip++];
             stack.push(stack.splice(stack.length - n, n));
             break;
           }
-          case LENGTH:
+          case 19 /* LENGTH */:
             stack.push(lengthOf(stack.pop(), oops));
             break;
-          case ITEM: {
+          case 20 /* ITEM */: { // an item of a list that's there, and a text key a dictionary has, right here; item() the rest
             const n = stack.pop();
-            const [seq, i] = item(stack.pop(), n, false);
-            stack.push(itemAt(seq, i));
+            const target = stack[stack.length - 1];
+            if (isList(target) && Number.isInteger(n) && n >= 1 && n <= target.length) stack[stack.length - 1] = target[n - 1];
+            else {
+              const found = isDictionary(target) && typeof n === "string" ? target.get(n) : undefined; // no Moth value is undefined
+              if (found !== undefined) stack[stack.length - 1] = found;
+              else {
+                const [seq, i] = item(target, n, false);
+                stack[stack.length - 1] = itemAt(seq, i);
+              }
+            }
             break;
           }
-          case ITEM_REF: {
+          case 21 /* ITEM_REF */: { // leaves the list (or dictionary) and the place for SET_ITEM
             const n = stack.pop();
-            stack.push(...item(stack.pop(), n, true)); // leaves the list (or dictionary) and the place for SET_ITEM
+            const target = stack[stack.length - 1];
+            if (isList(target) && Number.isInteger(n) && n >= 1 && n <= target.length) stack.push(n - 1);
+            else if (isDictionary(target) && typeof n === "string") stack.push(n);
+            else {
+              const [seq, i] = item(stack.pop(), n, true);
+              stack.push(seq, i);
+            }
             break;
           }
-          case SET_ITEM: {
+          case 22 /* SET_ITEM */: {
             const v = stack.pop();
             const i = stack.pop();
-            putItem(stack.pop(), i, v, oops);
+            const seq = stack.pop();
+            if (isList(seq)) seq[i] = v;
+            else putItem(seq, i, v, oops);
             break;
           }
-          case DICT: {
+          case 46 /* DICT */: {
             const n = code[ip++];
             stack.push(makeDictionary(stack.splice(stack.length - n, n), oops));
             break;
           }
-          case REMOVE: {
+          case 47 /* REMOVE */: {
             const dictionary = stack.pop();
             removeKey(stack.pop(), dictionary, oops);
             break;
           }
-          case ADD_TO: {
+          case 23 /* ADD_TO */: {
             const value = stack.pop();
             let e = env;
             for (let d = code[ip]; d > 0; d--) e = e[0];
             const slot = code[ip + 1];
-            e[slot] = addInto(e[slot], value, consts[code[ip + 2]], oops);
+            const current = e[slot];
+            e[slot] = typeof current === "number" && typeof value === "number" ? current + value : addInto(current, value, consts[code[ip + 2]], oops);
             ip += 3;
             break;
           }
-          case SAY: {
+          case 24 /* SAY */: {
             const n = code[ip++];
             print(stack.splice(stack.length - n, n).map((v) => show(v)).join(""));
             break;
           }
-          case SAY_ERROR: {
+          case 55 /* SAY_ERROR */: {
             const n = code[ip++];
             this.printError(stack.splice(stack.length - n, n).map((v) => show(v)).join(""));
             break;
           }
-          case EXIT: // not a Failure, so no `try` catches it, and it isn't a mistake
+          case 56 /* EXIT */: // not a Failure, so no `try` catches it, and it isn't a mistake
             throw new Ended(exitCode(stack.pop(), oops));
-          case REMOVE_FILE:
+          case 57 /* REMOVE_FILE */:
             removeFile(stack.pop(), this.disk, oops);
             break;
-          case READ_FOLDER:
+          case 60 /* READ_FOLDER */:
             stack.push(readFolder(stack.pop(), this.disk, oops));
             break;
-          case PLAY: {
+          case 61 /* PLAY */: {
             const unit = code[ip++];
             if (unit === 0) this.play({ ...BEEP });
             else {
@@ -2393,10 +2434,10 @@ export class Machine {
             }
             break;
           }
-          case CHECK_REPEAT:
+          case 25 /* CHECK_REPEAT */:
             stack[stack.length - 1] = checkRepeat(stack[stack.length - 1], oops); // to 15 digits: 0.1 * 30 is 3 times
             break;
-          case REPEAT_NEXT: { // stack: [... times left]
+          case 26 /* REPEAT_NEXT */: { // stack: [... times left]
             const exit = code[ip++];
             const left = stack[stack.length - 1];
             if (left > 0) stack[stack.length - 1] = left - 1;
@@ -2406,10 +2447,10 @@ export class Machine {
             }
             break;
           }
-          case CHECK_RANGE:
+          case 27 /* CHECK_RANGE */:
             checkRange(stack[stack.length - 2], stack[stack.length - 1], oops);
             break;
-          case RANGE_NEXT: { // stack: [... next, last]; pushes the loop variable's value
+          case 28 /* RANGE_NEXT */: { // stack: [... next, last]; pushes the loop variable's value
             const exit = code[ip++];
             const top = stack.length;
             const next = stack[top - 2];
@@ -2422,10 +2463,10 @@ export class Machine {
             }
             break;
           }
-          case ITER:
+          case 29 /* ITER */:
             stack.push({ items: itemsOf(stack.pop(), oops), i: 0 });
             break;
-          case ITER_NEXT: { // stack: [... iterator]; pushes the loop variable's value
+          case 30 /* ITER_NEXT */: { // stack: [... iterator]; pushes the loop variable's value
             const exit = code[ip++];
             const it = stack[stack.length - 1];
             if (it.i < it.items.length) stack.push(it.items[it.i++]);
@@ -2435,66 +2476,74 @@ export class Machine {
             }
             break;
           }
-          case MAKE_FN:
+          case 31 /* MAKE_FN */:
             stack.push(new Closure(consts[code[ip++]], env));
             break;
-          case UNDEFINED: // a name nothing ever sets; the compiler wrote the message, with any "did you mean"
+          case 32 /* UNDEFINED */: // a name nothing ever sets; the compiler wrote the message, with any "did you mean"
             oops(consts[code[ip]]);
             break;
-          case RECORD: {
+          case 36 /* RECORD */: { // as makeRecord, straight from the stack
             const fields = consts[code[ip++]];
-            stack.push(makeRecord(fields, stack.splice(stack.length - fields.length, fields.length)));
+            const from = stack.length - fields.length;
+            const record = new Record();
+            for (let i = 0; i < fields.length; i++) record[fields[i]] = stack[from + i];
+            for (let i = fields.length; i > 0; i--) stack.pop(); // which V8 does faster than setting the length
+            stack.push(record);
             break;
           }
-          case FIELD:
-            stack.push(fieldOf(stack.pop(), consts[code[ip++]], oops));
+          case 37 /* FIELD */: { // a field the record has, right here; fieldOf() says what's wrong with anything else
+            const name = consts[code[ip++]];
+            const r = stack[stack.length - 1];
+            const value = r instanceof Record ? r[name] : undefined; // no Moth value is undefined, and a record's prototype is empty
+            stack[stack.length - 1] = value !== undefined ? value : fieldOf(r, name, oops);
             break;
-          case RECORD_REF: // checks the record in `set name of r to ...` before the value is worked out
+          }
+          case 38 /* RECORD_REF */: // checks the record in `set name of r to ...` before the value is worked out
             recordFor(stack[stack.length - 1], consts[code[ip++]], oops);
             break;
-          case SET_FIELD: {
+          case 39 /* SET_FIELD */: {
             const value = stack.pop();
             stack.pop()[consts[code[ip++]]] = value;
             break;
           }
-          case ASK:
+          case 42 /* ASK */:
             stack.push(askFor(stack.pop(), this.ask, oops));
             break;
-          case READ:
+          case 48 /* READ */:
             stack.push(readFile(stack.pop(), code[ip++] === 1, this.disk, oops));
             break;
-          case WRITE: {
+          case 49 /* WRITE */: {
             const name = stack.pop();
             writeFile(stack.pop(), name, this.disk, oops);
             break;
           }
-          case HANDLE: {
+          case 53 /* HANDLE */: {
             const event = code[ip++];
             const closure = stack.pop();
             if (LABELLED.has(event)) this.listeners.push({ event: EVENTS[event], label: show(stack.pop()), closure }); // the label under it
             else this.listeners.push({ event: EVENTS[event], closure });
             break;
           }
-          case EVERY: {
+          case 54 /* EVERY */: {
             const closure = stack.pop();
             this.listeners.push({ event: "every", interval: everyInterval(stack.pop(), code[ip++], oops), closure });
             break;
           }
-          case RANDOM: {
+          case 52 /* RANDOM */: {
             const high = stack.pop();
             stack.push(randomWhole(stack.pop(), high, this.random, oops));
             break;
           }
-          case NOW:
+          case 58 /* NOW */:
             stack.push(nowValue(code[ip++], this.clock));
             break;
-          case WAIT:
+          case 59 /* WAIT */:
             waitFor(stack.pop(), code[ip++], this.clock, oops);
             break;
-          case ARGUMENTS:
+          case 50 /* ARGUMENTS */:
             stack.push([...this.args]); // a new list each time, so changing one can't change the next
             break;
-          case EXPECT: {
+          case 51 /* EXPECT */: {
             const op = code[ip];
             if (op < 0) expectYes(stack.pop(), oops);
             else {
@@ -2504,36 +2553,36 @@ export class Machine {
             ip += 2;
             break;
           }
-          case TRY:
+          case 43 /* TRY */:
             this.handlers.push({ ip: code[ip++], frames: frames.length, stack: stack.length, fn, env, base });
             break;
-          case END_TRY:
+          case 44 /* END_TRY */:
             this.handlers.pop();
             break;
-          case CAUGHT:
+          case 45 /* CAUGHT */:
             stack.push(this.caught);
             break;
-          case BUILTIN: {
+          case 41 /* BUILTIN */: {
             const builtin = BUILTINS[code[ip++]];
             stack.push(builtin.run(stack.splice(stack.length - builtin.needs.length), oops, this.turtle, this.disk));
             break;
           }
-          case FAIL:
+          case 40 /* FAIL */:
             failWith(stack.pop(), oops);
             break;
-          case TURTLE: {
+          case 35 /* TURTLE */: {
             const action = code[ip++];
             this.turtle.act(action, TURTLE_BARE.has(action) ? null : stack.pop(), oops, this.disk);
             break;
           }
-          case LINE:
+          case 34 /* LINE */:
             this.line = code[ip++];
             if (pauseAtLines) {
               why = "line";
               break loop;
             }
             break;
-          case HALT:
+          case 33 /* HALT */:
             this.done = true;
             why = "done";
             break loop;

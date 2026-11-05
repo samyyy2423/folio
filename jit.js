@@ -2,7 +2,7 @@
 // to machine code. The VM (vm.js) stays the reference: both engines call the same checks, and the tests
 // run thousands of random programs through both and require the same output, drawings and errors.
 import { Scope } from "./scope.js";
-import { UNSET, Closure, Turtle, TURTLE_ACTIONS, fail, catchable, caughtValue, truthy, equal, show, item, compare, plus, arithmetic, negate, lengthOf,
+import { UNSET, canon, Closure, Turtle, TURTLE_ACTIONS, fail, catchable, caughtValue, truthy, equal, show, item, compare, plus, arithmetic, negate, lengthOf,
   addInto, checkRepeat, checkRange, itemsOf, callable, checkInputs, checkKinds, numberOrder, atMost, divisible, noValue, stoppedMessage, Record, makeRecord, fieldOf, recordFor,
   failWith, BUILTINS, askFor, itemAt, putItem, makeDictionary, removeKey, readFile, writeFile, trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, LABELLED, everyInterval,
   Ended, exitCode, removeFile, fakeClock, nowValue, waitFor, readFolder, soundOf, BEEP, startWorker } from "./vm.js";
@@ -196,8 +196,11 @@ class JsCompiler extends Scope {
         return `lengthOf(${this.expr(e.of)}, ${this.pos(e.at)})`;
       case "item":
         return `item(${this.expr(e.of)}, ${this.expr(e.index)}, ${this.pos(e.at)})`;
-      case "record":
-        return `record(${q(e.fields)}, [${e.values.map((v) => this.expr(v)).join(", ")}])`;
+      case "record": { // made right here, each field set by its name, which V8 does far faster than by a name in a variable
+        if (!e.fields.length) return "new Record()";
+        const t = this.temp();
+        return `(${t} = new Record(), ${e.fields.map((f, i) => `${t}[${q(f)}] = ${this.expr(e.values[i])}`).join(", ")}, ${t})`;
+      }
       case "dictionary":
         return `dict([${e.items.map((x) => this.expr(x)).join(", ")}], ${this.pos(e.at)})`;
       case "field":
@@ -262,9 +265,12 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     depth = 0;
     fail(ats[k], stoppedMessage(maxSteps), undefined, true, calls); // final: no try catches it
   };
-  const tick = (k) => {
+  // With no limit (the playground and Node.js's run() set none unless asked), nothing needs counting, so a
+  // loop's round and a call take no step for it (DESIGN §149).
+  const counting = maxSteps !== Infinity;
+  const tick = counting ? (k) => {
     if (++steps > maxSteps) tooMany(k);
-  };
+  } : (k) => {};
   // A call begins: its inputs counted (and checked, for a function whose inputs say what they are), a step
   // taken, and the call noted for a mistake's trail. Each check is done here first, as it's so on every call,
   // and the functions that say what went wrong are only called when it did.
@@ -272,7 +278,7 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     const fn = f.fn;
     if (fn.params.length !== argc) checkInputs(f, argc, name, errors[k]);
     if (args) checkKinds(f, args, name, errors[k]); // only a function whose inputs say what they are gets them
-    if (++steps > maxSteps) tooMany(k);
+    if (counting && ++steps > maxSteps) tooMany(k);
     if (depth >= MAX_DEPTH) {
       depth = 0;
       throw new TooDeep();
@@ -286,7 +292,6 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     [steps, depth] = [0, 0];
     handler.closure.fn.run(...inputs.slice(0, handler.closure.fn.params.length));
   };
-  const ordered = (op, test) => (a, b, k) => (typeof a === "number" && typeof b === "number" ? test(a, b) : compare(op, a, b, errors[k]));
   return {
     UNSET,
     truthy,
@@ -296,10 +301,40 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     fn: (name, params, run, kinds) => new Closure(kinds ? { name, params, run, kinds } : { name, params, run }, null),
     fnIn: (name, params, run, kinds) => new Closure(kinds ? { name, params, run, kinds } : { name, params, run }, INSIDE),
     callable: (f, name, k) => callable(f, name, errors[k]),
-    call0: (f, name, k) => (enter(f, 0, name, k), leave(f.fn.run())),
-    call1: (f, a, name, k) => (enter(f, 1, name, k, f.fn.kinds && [a]), leave(f.fn.run(a))),
-    call2: (f, a, b, name, k) => (enter(f, 2, name, k, f.fn.kinds && [a, b]), leave(f.fn.run(a, b))),
-    call3: (f, a, b, c, name, k) => (enter(f, 3, name, k, f.fn.kinds && [a, b, c]), leave(f.fn.run(a, b, c))),
+    // A call with as many inputs as the function has, none of them saying what it is, and no limit on steps,
+    // which is nearly every call, only notes itself here; anything else goes through enter(), which checks.
+    call0: (f, name, k) => {
+      const fn = f.fn;
+      if (fn.params.length === 0 && fn.kinds === undefined && depth < MAX_DEPTH && !counting) {
+        running[depth] = f;
+        from[depth++] = k;
+      } else enter(f, 0, name, k);
+      return leave(fn.run());
+    },
+    call1: (f, a, name, k) => {
+      const fn = f.fn;
+      if (fn.params.length === 1 && fn.kinds === undefined && depth < MAX_DEPTH && !counting) {
+        running[depth] = f;
+        from[depth++] = k;
+      } else enter(f, 1, name, k, fn.kinds && [a]);
+      return leave(fn.run(a));
+    },
+    call2: (f, a, b, name, k) => {
+      const fn = f.fn;
+      if (fn.params.length === 2 && fn.kinds === undefined && depth < MAX_DEPTH && !counting) {
+        running[depth] = f;
+        from[depth++] = k;
+      } else enter(f, 2, name, k, fn.kinds && [a, b]);
+      return leave(fn.run(a, b));
+    },
+    call3: (f, a, b, c, name, k) => {
+      const fn = f.fn;
+      if (fn.params.length === 3 && fn.kinds === undefined && depth < MAX_DEPTH && !counting) {
+        running[depth] = f;
+        from[depth++] = k;
+      } else enter(f, 3, name, k, fn.kinds && [a, b, c]);
+      return leave(fn.run(a, b, c));
+    },
     callN: callAny,
     // `start f(x) on another core`: see startWorker in vm.js
     worker: (f, inputs, name, k, globals) => {
@@ -320,22 +355,28 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     mul: (a, b, k) => (typeof a === "number" && typeof b === "number" ? a * b : arithmetic("*", a, b, errors[k])),
     div: (a, b, k) => (typeof a === "number" && typeof b === "number" && b !== 0 ? a / b : arithmetic("/", a, b, errors[k])),
     neg: (v, k) => (typeof v === "number" ? -v : negate(v, errors[k])),
-    eq: (a, b) => equal(a, b),
-    lt: ordered("less than", (a, b) => numberOrder(a, b) === -1), // numbers to 15 digits, as in vm.js
-    gt: ordered("greater than", (a, b) => numberOrder(a, b) === 1),
-    ge: ordered("at least", (a, b) => numberOrder(a, b) >= 0),
-    le: ordered("at most", (a, b) => numberOrder(a, b) <= 0),
+    eq: (a, b) => a === b || (typeof a !== "string" && typeof b !== "string" && equal(a, b)), // text is only ever the same text
+    // numbers to 15 digits, as in vm.js; each written out, so V8 puts numberOrder in line in each
+    lt: (a, b, k) => (typeof a === "number" && typeof b === "number" ? numberOrder(a, b) === -1 : compare("less than", a, b, errors[k])),
+    gt: (a, b, k) => (typeof a === "number" && typeof b === "number" ? numberOrder(a, b) === 1 : compare("greater than", a, b, errors[k])),
+    ge: (a, b, k) => (typeof a === "number" && typeof b === "number" ? numberOrder(a, b) >= 0 : compare("at least", a, b, errors[k])),
+    le: (a, b, k) => (typeof a === "number" && typeof b === "number" ? numberOrder(a, b) <= 0 : compare("at most", a, b, errors[k])),
     dv: (a, b, k) => (typeof a === "number" && typeof b === "number" && b !== 0 ? divisible(a, b) : compare("divisible by", a, b, errors[k])),
     atMost,
-    isIn: (a, b, k) => compare("in", a, b, errors[k]),
+    isIn: (a, b, k) => (b instanceof Map ? b.has(typeof a === "number" ? canon(a) : a) : compare("in", a, b, errors[k])), // a key, as isIn in vm.js has it
     lengthOf: (v, k) => lengthOf(v, errors[k]),
     item: (target, n, k) => {
       if (Array.isArray(target) && Number.isInteger(n) && n >= 1 && n <= target.length) return target[n - 1];
+      const found = target instanceof Map && typeof n === "string" ? target.get(n) : undefined; // no Moth value is undefined
+      if (found !== undefined) return found;
       const [seq, i] = item(target, n, false, errors[k]);
       return itemAt(seq, i);
     },
     itemRef: (target, n, k) => item(target, n, true, errors[k]),
-    put: (ref, value, k) => putItem(ref[0], ref[1], value, errors[k]),
+    put: (ref, value, k) => {
+      if (Array.isArray(ref[0])) ref[0][ref[1]] = value;
+      else putItem(ref[0], ref[1], value, errors[k]);
+    },
     dict: (items, k) => makeDictionary(items, errors[k]),
     removeKey: (key, target, k) => removeKey(key, target, errors[k]),
     addInto: (current, value, name, k) => (typeof current === "number" && typeof value === "number" ? current + value : addInto(current, value, name, errors[k])),
@@ -352,6 +393,7 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     itemsOf: (v, k) => itemsOf(v, errors[k]),
     turtle: (action, value, k) => turtle.act(action, value, errors[k], disk),
     record: makeRecord,
+    Record,
     field: (r, name, k) => {
       const value = r instanceof Record ? r[name] : undefined; // no Moth value is undefined, and a record's prototype is empty
       return value !== undefined ? value : fieldOf(r, name, errors[k]);
