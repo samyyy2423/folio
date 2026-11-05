@@ -86,3 +86,21 @@ test("a program's own mistakes are thrown and caught in the module, and one noth
   assert.throws(() => x.main(), (err) => err instanceof WebAssembly.Exception && err.is(x.mistake) && x.num(err.getArg(x.mistake, 0)) === 7 && err.getArg(x.mistake, 1) === 1);
   assert.deepEqual(said, ["say", "say"]);
 });
+
+// Stage 2's third part (DESIGN §147): a dictionary lives in the module, keys and values in the order the keys were
+// first set, found by their hash; making one, setting, getting, finding and taking out keys never call JavaScript
+test("dictionaries are made, changed and read in the module, with none of JavaScript's help", () => {
+  const source = 'set d to dictionary where "a" is 1, 2.5 is "b"\nfor each i from 1 to 300\n    set item "k" + i of d to i\nend\nfor each i from 1 to 290\n    remove "k" + i from d\nend\n' +
+    'set item 0.1 + 0.2 of d to "c"\nset item -0 of d to "z"\nsay item "k" + 295 of d\nsay item 0.3 of d\nsay item 0 of d\nsay "a" is in d\nsay 7 is in d\nsay length of d';
+  const module = new WebAssembly.Module(compileToWasmBytes(source).bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["dictGetText", "dictGetNum", "dictSetText", "dictSetNum", "dictHasText", "dictHasNum", "jsText"]) assert.ok(!imported.includes(gone), gone);
+  let said = 0;
+  const allowed = { grant: () => 2 ** 30, refill: () => 2 ** 30, say: () => said++ };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  const x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  x.restart();
+  x.main();
+  assert.equal(said, 6);
+  assert.deepEqual(both(source), ["295", "c", "z", "yes", "no", "14"]);
+});

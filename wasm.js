@@ -4,7 +4,7 @@
 // Moth's values live inside the module, as WebAssembly GC values: a number is a struct holding an f64, or,
 // if it's whole and fits in 31 bits, an i31 value, so a list of them is no boxes for the GC to keep; yes and
 // no are the i31 values 1 and 0 (so the numbers 1 and 0 are boxes, made once), nothing is null, and lists,
-// records and functions are structs. Text lives in the module too, as UTF-16 (see wasm-runtime.js, the part
+// records, dictionaries and functions are structs. Text lives in the module too, as UTF-16 (see wasm-runtime.js, the part
 // of the runtime written once for this and wasm.moth): joining it, comparing it and showing numbers in it
 // happen here, and text that ends where its buffer does grows in place, so joining text in a loop is cheap.
 // The common cases run in WebAssembly: arithmetic on numbers, text, comparisons, list items, fields, calls
@@ -58,15 +58,8 @@ const IMPORTS = {
   item: [[EQ, EQ, I32], [EQ]],
   itemRef: [[EQ, EQ, I32], []],
   put: [[EQ, EQ, EQ, I32], []], // what `set item` does that WebAssembly doesn't: where, the key, the value, and a position
-  dict: [[EQ, I32], [EQ]], // a new dictionary, from a list of each key and then its value
+  dict: [[EQ, I32], []], // only ever throws: the mistake in a dictionary's keys (a list of each key, then its value)
   remove: [[EQ, EQ, I32], []],
-  // a dictionary's Map and a key as JavaScript holds it (text, or a number): fast, as nothing needs converting
-  dictGetText: [["externref", "externref", I32], [EQ]],
-  dictGetNum: [["externref", F64, I32], [EQ]],
-  dictSetText: [["externref", "externref", EQ], []],
-  dictSetNum: [["externref", F64, EQ], []],
-  dictHasText: [["externref", "externref"], [I32]],
-  dictHasNum: [["externref", F64], [I32]],
   addInto: [[EQ, EQ, I32, I32], [EQ]],
   checkRepeat: [[EQ, I32], [F64]],
   checkRange: [[EQ, EQ, I32], []],
@@ -107,14 +100,13 @@ const IMPORTS = {
   workerBegin: [[EQ, EQ, I32, I32], [EQ]],
   workerGave: [[EQ], [EQ]],
   workerFailed: [[EQ], [EQ]], // what the worker's mistake gave `if it fails with`
-  // text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
-  jsText: [[EQ], ["externref"]],
+  // the units of text JavaScript made, filled in
   fill: [[EQ], []],
 };
 
 // ---------- the module's types and runtime ----------
 
-const TYPE_NAMES = ["num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty", "chars", "strbuf", "big"];
+const TYPE_NAMES = ["num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "dict", "u8", "bytes", "qty", "chars", "strbuf", "big"];
 
 function declareTypes(m) {
   const T = {};
@@ -130,9 +122,10 @@ function declareTypes(m) {
   m.type({ kind: "struct", fields: [{ type: refNull(T.env) }, { type: ref(T.items) }] });
   T.closure = m.type({ kind: "struct", fields: [{ type: "funcref" }, { type: refNull(T.env) }, { type: I32 }, { type: I32 }, { type: I32 }] });
   T.unset = m.type({ kind: "struct", fields: [] });
-  // A value JavaScript keeps, and its tag: a dictionary, which is a Map from keys as JavaScript values to the
-  // module's own values.
-  T.host = m.type({ kind: "struct", fields: [{ type: "externref" }, { type: I32 }] });
+  // A dictionary: its keys and its values, in the order the keys were first set, how many places of them are
+  // used, how many keys it has, and the slots its keys are found by (see wasm-runtime.js)
+  T.dict = m.type({ kind: "struct", fields: [{ type: ref(T.items), mutable: true }, { type: ref(T.items), mutable: true }, { type: I32, mutable: true },
+    { type: I32, mutable: true }, { type: ref(T.ids), mutable: true }] });
   // Bytes live here, as an array of 8-bit numbers, so reading and changing one never leaves WebAssembly.
   T.u8 = m.type({ kind: "array", element: { type: "i8", mutable: true } });
   T.bytes = m.type({ kind: "struct", fields: [{ type: ref(T.u8) }] });
@@ -159,8 +152,6 @@ const numOf = (c, T, local) => c.emit("local.get", local).emit("ref.test", "i31"
   .emit("local.get", local).emit("ref.cast", "i31").emit("i31.get_s").emit("f64.convert_i32_s")
   .emit("else").emit("local.get", local).emit("ref.cast", T.num).emit("struct.get", T.num, 0).emit("end");
 const bothNums = (c, T, a, b) => (isNum(c, T, a), isNum(c, T, b), c.emit("i32.and"));
-const mapOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.host).emit("struct.get", T.host, 0); // a dictionary's Map
-const textOf = (c, R, local) => c.emit("local.get", local).emit("call", R.jsOf); // text's JavaScript string
 const bytesOf = (c, T, local) => c.emit("local.get", local).emit("ref.cast", T.bytes).emit("struct.get", T.bytes, 0);
 // leaves 1 if the f64 in `local` is a whole number from `low` to `high`
 const wholeIn = (c, local, low, high) => c.emit("local.get", local).emit("local.get", local).emit("f64.trunc").emit("f64.eq")
@@ -384,7 +375,7 @@ function declareRuntime(m, T, im) {
     both(T.list);
     both(T.record);
     c.emit("i32.or");
-    both(T.host);
+    both(T.dict);
     c.emit("i32.or");
     both(T.bytes);
     c.emit("i32.or");
@@ -440,7 +431,9 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 1).emit("f64.convert_i32_s");
     c.emit("else").emit("local.get", 0).emit("ref.test", T.bytes).emit("if", F64);
     bytesOf(c, T, 0).emit("array.len").emit("f64.convert_i32_s");
-    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.lengthOf).emit("end").emit("end").emit("call", R.box);
+    c.emit("else").emit("local.get", 0).emit("ref.test", T.dict).emit("if", F64);
+    c.emit("local.get", 0).emit("ref.cast", T.dict).emit("struct.get", T.dict, 3).emit("f64.convert_i32_s");
+    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.lengthOf).emit("end").emit("end").emit("end").emit("call", R.box);
   });
 
   // The 0-based place of item n in a list, if n is a whole number from 1 to its length, or -1.
@@ -466,22 +459,17 @@ function declareRuntime(m, T, im) {
     c.emit("if", I32).emit("local.get", x).emit("i32.trunc_f64_s").emit("i32.const", 1).emit("i32.sub").emit("else").emit("i32.const", -1).emit("end");
   });
 
-  // `item n of x`: a list's item, or a byte, here; a dictionary's value straight from its Map; the rest, and
-  // every mistake, in the shared code
+  // `item n of x`: a list's item, a byte, or a dictionary's value, here; the rest, and every mistake, in the
+  // shared code
   fn("item", [EQ, EQ, I32], [EQ], (c, f) => {
     const at = f.local(I32);
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.place).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if");
     c.emit("local.get", 0).emit("ref.cast", T.list).emit("struct.get", T.list, 0).emit("local.get", at).emit("array.get", T.items).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.bytePlace).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if");
     bytesOf(c, T, 0).emit("local.get", at).emit("array.get_u", T.u8).emit("f64.convert_i32_u").emit("call", R.box).emit("return").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("if");
-    c.emit("local.get", 1).emit("ref.test", T.text).emit("if");
-    mapOf(c, T, 0);
-    textOf(c, R, 1).emit("local.get", 2).emit("call", im.dictGetText).emit("return").emit("end");
-    isNum(c, T, 1).emit("if");
-    mapOf(c, T, 0);
-    numOf(c, T, 1).emit("local.get", 2).emit("call", im.dictGetNum).emit("return").emit("end");
-    c.emit("end");
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
+    isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if");
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.dictItem).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.item);
   });
 
@@ -491,12 +479,12 @@ function declareRuntime(m, T, im) {
     const at = f.local(I32);
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.place).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if").emit("local.get", at).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.bytePlace).emit("i32.const", 0).emit("i32.ge_s").emit("if").emit("i32.const", -1).emit("return").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("local.get", 1).emit("ref.test", T.text);
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
     isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if").emit("i32.const", -1).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.itemRef).emit("i32.const", -1);
   });
 
-  // a value into a byte (a whole number from 0 to 255), or into a dictionary's Map, where itemRef said to;
+  // a value into a byte (a whole number from 0 to 255), or into a dictionary, where itemRef said to;
   // anything else is a mistake, which the shared code words
   fn("put", [EQ, EQ, EQ, I32], [], (c, f) => {
     const [at, v] = [f.local(I32), f.local(F64)];
@@ -506,27 +494,17 @@ function declareRuntime(m, T, im) {
     wholeIn(c, v, 0, 255).emit("if");
     bytesOf(c, T, 0).emit("local.get", at).emit("local.get", v).emit("i32.trunc_f64_s").emit("array.set", T.u8).emit("return");
     c.emit("end").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("if");
-    c.emit("local.get", 1).emit("ref.test", T.text).emit("if");
-    mapOf(c, T, 0);
-    textOf(c, R, 1).emit("local.get", 2).emit("call", im.dictSetText).emit("return").emit("end");
-    isNum(c, T, 1).emit("if");
-    mapOf(c, T, 0);
-    numOf(c, T, 1).emit("local.get", 2).emit("call", im.dictSetNum).emit("return").emit("end");
-    c.emit("end");
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
+    isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if");
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.dictPut).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("local.get", 3).emit("call", im.put);
   });
 
-  // `x is in d` for a dictionary, straight from its Map; anything else in the shared code
+  // `x is in d` for a dictionary, here; anything else in the shared code
   fn("isIn", [EQ, EQ, I32], [I32], (c) => {
-    c.emit("local.get", 1).emit("ref.test", T.host).emit("if");
-    c.emit("local.get", 0).emit("ref.test", T.text).emit("if");
-    mapOf(c, T, 1);
-    textOf(c, R, 0).emit("call", im.dictHasText).emit("return").emit("end");
-    isNum(c, T, 0).emit("if");
-    mapOf(c, T, 1);
-    numOf(c, T, 0).emit("call", im.dictHasNum).emit("return").emit("end");
-    c.emit("end");
+    c.emit("local.get", 1).emit("ref.test", T.dict).emit("local.get", 0).emit("ref.test", T.text);
+    isNum(c, T, 0).emit("i32.or").emit("i32.and").emit("if");
+    c.emit("local.get", 1).emit("local.get", 0).emit("call", R.dictHas).emit("return").emit("end");
     c.emit("i32.const", COMPARE_OPS.indexOf("in")).emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.compare);
   });
 
@@ -738,7 +716,7 @@ function declareExports(m, T, R) {
     isNum(c, T, 0).emit("if").emit("i32.const", TAGS.number).emit("return").emit("end");
     for (const [type, tag] of [[T.text, TAGS.text], [T.list, TAGS.list], [T.record, TAGS.record], [T.closure, TAGS.function]])
       c.emit("local.get", 0).emit("ref.test", type).emit("if").emit("i32.const", tag).emit("return").emit("end");
-    c.emit("local.get", 0).emit("ref.test", T.host).emit("if").emit("local.get", 0).emit("ref.cast", T.host).emit("struct.get", T.host, 1).emit("return").emit("end");
+    c.emit("local.get", 0).emit("ref.test", T.dict).emit("if").emit("i32.const", TAGS.dictionary).emit("return").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.bytes).emit("if").emit("i32.const", TAGS.bytes).emit("return").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.qty).emit("if").emit("i32.const", TAGS.quantity).emit("return").emit("end");
     c.emit("i32.const", TAGS.unset);
@@ -768,8 +746,6 @@ function declareExports(m, T, R) {
   fn("makeNum", [F64], [EQ], (c) => c.emit("local.get", 0).emit("call", R.box));
   fn("newList", [], [EQ], (c) => c.emit("i32.const", 0).emit("array.new_default", T.items).emit("i32.const", 0).emit("struct.new", T.list));
   fn("listPush", [EQ, EQ], [], (c) => c.emit("local.get", 0).emit("local.get", 1).emit("call", R.push));
-  fn("hostValue", [EQ], ["externref"], (c) => c.emit("local.get", 0).emit("ref.cast", T.host).emit("struct.get", T.host, 0));
-  fn("makeHost", ["externref", I32], [EQ], (c) => c.emit("local.get", 0).emit("local.get", 1).emit("struct.new", T.host));
   fn("bytesLength", [EQ], [I32], (c) => bytesOf(c, T, 0).emit("array.len"));
   fn("byteAt", [EQ, I32], [I32], (c) => bytesOf(c, T, 0).emit("local.get", 1).emit("array.get_u", T.u8));
   fn("makeBytes", [I32], [EQ], (c) => c.emit("local.get", 0).emit("array.new_default", T.u8).emit("struct.new", T.bytes));
@@ -1271,7 +1247,7 @@ class WasmCompiler extends Scope {
       case "remove":
         this.expr(s.key);
         this.expr(s.target);
-        this.e("i32.const", this.pos(s.at)).e("call", im.remove);
+        this.e("i32.const", this.pos(s.at)).e("call", this.ctx.R.remove);
         return;
       case "write":
         this.expr(s.value);
@@ -1571,7 +1547,7 @@ class WasmCompiler extends Scope {
       case "dictionary":
         for (const x of e.items) this.expr(x);
         this.e("array.new_fixed", T.items, e.items.length).e("i32.const", e.items.length).e("struct.new", T.list);
-        this.e("i32.const", this.pos(e.at)).e("call", im.dict);
+        this.e("i32.const", this.pos(e.at)).e("call", R.dictOf);
         return;
       case "field":
         this.expr(e.of);
@@ -1843,7 +1819,10 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       case TAGS.dictionary: {
         const dictionary = new Map();
         seen.set(v, dictionary);
-        for (const [key, value] of x.hostValue(v)) dictionary.set(key, toJs(value, seen));
+        for (let i = 0, n = x.dictUsed(v); i < n; i++) {
+          const key = x.dictKeyAt(v, i);
+          if (key !== null) dictionary.set(toJs(key), toJs(x.dictValueAt(v, i), seen)); // nothing: a key taken out
+        }
         return dictionary;
       }
       case TAGS.quantity:
@@ -1857,10 +1836,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
         return UNSET;
     }
   }
-
-  // A dictionary's own Map, whose values stay the module's, so changing it changes the dictionary; any other
-  // value as JavaScript (bytes as a copy). For checks that only need to see the dictionary, not what is in it.
-  const rawOf = (v) => (v !== null && typeof v !== "number" && x.tag(v) === TAGS.dictionary ? x.hostValue(v) : toJs(v));
 
   // only new values come back from JavaScript (text, and the letters of a text), never a list it changed
   function toWasm(v) {
@@ -1878,7 +1853,11 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       }
       return record;
     }
-    if (v instanceof Map) return x.makeHost(new Map([...v].map(([key, value]) => [key, toWasm(value)])), TAGS.dictionary);
+    if (v instanceof Map) {
+      const dictionary = x.makeDict();
+      for (const [key, value] of v) x.dictPut(dictionary, toWasm(key), toWasm(value));
+      return dictionary;
+    }
     if (v instanceof Uint8Array) {
       const bytes = x.makeBytes(v.length); // all 0 to start with
       for (let i = 0; i < v.length; i++) if (v[i]) x.setByte(bytes, i, v[i]);
@@ -1911,8 +1890,14 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       case TAGS.function:
         if (!x.functionAtTop(v)) throw new CantCopy(madeInside(names[x.functionName(v)]));
         return v;
-      case TAGS.dictionary:
-        return x.makeHost(new Map([...x.hostValue(v)].map(([key, value]) => [key, workerCopy(value, depth + 1)])), TAGS.dictionary);
+      case TAGS.dictionary: {
+        const dictionary = x.makeDict();
+        for (let i = 0, n = x.dictUsed(v); i < n; i++) {
+          const key = x.dictKeyAt(v, i);
+          if (key !== null) x.dictPut(dictionary, key, workerCopy(x.dictValueAt(v, i), depth + 1));
+        }
+        return dictionary;
+      }
       default: {
         const bytes = x.makeBytes(x.bytesLength(v));
         for (let i = 0, n = x.bytesLength(v); i < n; i++) x.setByte(bytes, i, x.byteAt(v, i));
@@ -1976,7 +1961,7 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     plus: (a, b, k) => toWasm(plus(toJs(a), toJs(b), errors[k])),
     arithmetic: (op, a, b, k) => toWasm(arithmetic(MATH[op], toJs(a), toJs(b), errors[k])),
     negate: (v, k) => toWasm(negate(toJs(v), errors[k])),
-    compare: (op, a, b, k) => (compare(COMPARE_OPS[op], toJs(a), COMPARE_OPS[op] === "in" ? rawOf(b) : toJs(b), errors[k]) ? 1 : 0),
+    compare: (op, a, b, k) => (compare(COMPARE_OPS[op], toJs(a), toJs(b), errors[k]) ? 1 : 0),
     remainder: (a, b) => a % b,
     numberOrder: (a, b) => {
       const order = numberOrder(a, b);
@@ -1984,30 +1969,26 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     },
     divisible: (a, b) => (divisible(a, b) ? 1 : 0),
     equal: (a, b) => (equal(toJs(a), toJs(b)) ? 1 : 0),
-    lengthOf: (v, k) => lengthOf(rawOf(v), errors[k]),
-    item: (target, n, k) => { // a list's items are found in WebAssembly, so a list here is a mistake
-      const [seq, i] = item(rawOf(target), toJs(n), false, errors[k]);
-      return seq instanceof Map ? seq.get(i) : toWasm(seq[i]);
+    lengthOf: (v, k) => lengthOf(toJs(v), errors[k]),
+    // Lists, bytes and dictionaries are worked on in WebAssembly, so these are only ever mistakes (or a
+    // dictionary's key that isn't one), which the shared code words; a copy of what's there is all it needs.
+    item: (target, n, k) => {
+      const [seq, i] = item(toJs(target), toJs(n), false, errors[k]);
+      return toWasm(seq instanceof Map ? seq.get(i) : seq[i]);
     },
     itemRef: (target, n, k) => {
-      item(rawOf(target), toJs(n), true, errors[k]);
+      item(toJs(target), toJs(n), true, errors[k]);
     },
-    put: (target, n, value, k) => { // only for a mistake: R.put does the rest
-      const [seq, i] = item(rawOf(target), toJs(n), true, errors[k]);
-      putItem(seq, i, seq instanceof Map ? value : toJs(value), errors[k]);
+    put: (target, n, value, k) => {
+      const [seq, i] = item(toJs(target), toJs(n), true, errors[k]);
+      putItem(seq, i, toJs(value), errors[k]);
     },
-    dictGetText: (map, key, k) => (map.has(key) ? map.get(key) : item(map, key, false, errors[k])),
-    dictGetNum: (map, key, k) => (map.has(canon(key)) ? map.get(canon(key)) : item(map, key, false, errors[k])), // keys to 15 digits
-    dictSetText: (map, key, value) => void map.set(key, value),
-    dictSetNum: (map, key, value) => void map.set(canon(key), value),
-    dictHasText: (map, key) => (map.has(key) ? 1 : 0),
-    dictHasNum: (map, key) => (map.has(canon(key)) ? 1 : 0),
-    dict: (list, k) => x.makeHost(makeDictionary(Array.from({ length: x.listLength(list) }, (_, i) => x.listItem(list, i)), errors[k], toJs), TAGS.dictionary),
-    remove: (key, target, k) => removeKey(toJs(key), rawOf(target), errors[k]),
+    dict: (list, k) => void makeDictionary(Array.from({ length: x.listLength(list) }, (_, i) => x.listItem(list, i)), errors[k], toJs),
+    remove: (key, target, k) => removeKey(toJs(key), toJs(target), errors[k]),
     addInto: (current, value, name, k) => toWasm(addInto(toJs(current), toJs(value), names[name], errors[k])),
     checkRepeat: (n, k) => checkRepeat(toJs(n), errors[k]), // a count that's whole to 15 digits comes back whole
     checkRange: (from, to, k) => checkRange(toJs(from), toJs(to), errors[k]),
-    itemsOf: (v, k) => toWasm(itemsOf(rawOf(v), errors[k])),
+    itemsOf: (v, k) => toWasm(itemsOf(toJs(v), errors[k])),
     callable: (f, name, k) => callable(toJs(f), names[name], errors[k]),
     checkInputs: (f, argc, name, k) => checkInputs(toJs(f), argc, names[name], errors[k]),
     // input i of a function whose inputs say what they are: its kind from its tag, so a big list isn't copied
@@ -2075,7 +2056,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     expectYes: (value, k) => expectYes(toJs(value), errors[k]),
     play: (note, time, unit, k) => play(soundOf(toJs(note), toJs(time), unit, errors[k])),
     beep: () => play({ ...BEEP }),
-    jsText: (t) => textValue(t),
     fill: (t) => { // the units of text JavaScript made, for the module to work on, through its memory
       const s = x.textJs(t);
       x.textBegin(t);

@@ -176,7 +176,7 @@ set wasm_t_record to 5
 set wasm_t_env to 6
 set wasm_t_closure to 7
 set wasm_t_unset to 8
-set wasm_t_host to 9
+set wasm_t_dict to 9
 set wasm_t_u8 to 10
 set wasm_t_bytes to 11
 set wasm_t_qty to 12
@@ -504,14 +504,6 @@ to wasm_both_nums with a, b
     return wasm_is_num(a) + wasm_is_num(b) + " i32.and "
 end
 
-to wasm_map_of with x
-    return " local.get " + x + " ref.cast host struct.get host 0 "
-end
-
-to wasm_text_of with x
-    return " local.get " + x + " call R.jsOf "
-end
-
 to wasm_bytes_of with x
     return " local.get " + x + " ref.cast bytes struct.get bytes 0 "
 end
@@ -667,14 +659,18 @@ to wasm_runtime
     add wasm_struct_type(m, (list of (list of wasm_ref_null(wasm_t_env), no), (list of wasm_ref(wasm_t_items), no))) to made
     add wasm_struct_type(m, (list of (list of wasm_funcref, no), (list of wasm_ref_null(wasm_t_env), no), (list of i32, no), (list of i32, no), (list of i32, no))) to made
     add wasm_struct_type(m, empty list) to made
-    add wasm_struct_type(m, (list of (list of ext, no), (list of i32, no))) to made
+    # a dictionary: its keys and its values, in the order the keys were first set, how many places of them are
+    # used, how many keys it has, and the slots its keys are found by (see wasm-runtime.js)
+    set dict_fields to list of (list of wasm_ref(wasm_t_items), yes), (list of wasm_ref(wasm_t_items), yes), (list of i32, yes), (list of i32, yes)
+    add (list of wasm_ref(wasm_t_ids), yes) to dict_fields
+    add wasm_struct_type(m, dict_fields) to made
     add wasm_array_type(m, wasm_i8, yes) to made
     add wasm_struct_type(m, (list of (list of wasm_ref(wasm_t_u8), no))) to made
     add wasm_struct_type(m, (list of (list of f64, no), (list of i32, no))) to made
     add wasm_array_type(m, wasm_i16, yes) to made
     add wasm_struct_type(m, (list of (list of wasm_ref_null(wasm_t_chars), yes), (list of i32, yes))) to made
     add wasm_struct_type(m, (list of (list of wasm_ref_null(wasm_t_ids), yes), (list of i32, yes))) to made
-    set type_names to list of "num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "host", "u8", "bytes", "qty",
+    set type_names to list of "num", "text", "items", "list", "ids", "record", "env", "closure", "unset", "dict", "u8", "bytes", "qty",
         "chars", "strbuf", "big"
     for each n from 1 to length of made
         if item n of made is not n - 1
@@ -700,14 +696,8 @@ to wasm_runtime
     wasm_import(m, "item", (list of eq, eq, i32), (list of eq))
     wasm_import(m, "itemRef", (list of eq, eq, i32), none)
     wasm_import(m, "put", (list of eq, eq, eq, i32), none)
-    wasm_import(m, "dict", (list of eq, i32), (list of eq))
+    wasm_import(m, "dict", (list of eq, i32), none) # only ever throws: the mistake in a dictionary's keys
     wasm_import(m, "remove", (list of eq, eq, i32), none)
-    wasm_import(m, "dictGetText", (list of ext, ext, i32), (list of eq))
-    wasm_import(m, "dictGetNum", (list of ext, f64, i32), (list of eq))
-    wasm_import(m, "dictSetText", (list of ext, ext, eq), none)
-    wasm_import(m, "dictSetNum", (list of ext, f64, eq), none)
-    wasm_import(m, "dictHasText", (list of ext, ext), (list of i32))
-    wasm_import(m, "dictHasNum", (list of ext, f64), (list of i32))
     wasm_import(m, "addInto", (list of eq, eq, i32, i32), (list of eq))
     wasm_import(m, "checkRepeat", (list of eq, i32), (list of f64))
     wasm_import(m, "checkRange", (list of eq, eq, i32), none)
@@ -748,8 +738,7 @@ to wasm_runtime
     wasm_import(m, "workerBegin", (list of eq, eq, i32, i32), (list of eq))
     wasm_import(m, "workerGave", (list of eq), (list of eq))
     wasm_import(m, "workerFailed", (list of eq), (list of eq)) # what the worker's mistake gave `if it fails with`
-    # text's JavaScript string, for a dictionary's Map; and the units of text JavaScript made, filled in
-    wasm_import(m, "jsText", (list of eq), (list of ext))
+    # the units of text JavaScript made, filled in
     wasm_import(m, "fill", (list of eq), none)
     # A mistake, thrown and caught in the module (DESIGN §146): what `if it fails with` gets (a `fail with`'s
     # value, or the mistake's message as text), 1 if that's a `fail with`'s value, and the mistake's position
@@ -871,7 +860,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 ref.test text local.get 1 ref.test text i32.and if")
     wasm_asm(f, "local.get 0 local.get 1 call R.sameText return end")
     wasm_asm(f, "local.get 0 ref.test list local.get 1 ref.test list i32.and local.get 0 ref.test record local.get 1 ref.test record i32.and i32.or")
-    wasm_asm(f, "local.get 0 ref.test host local.get 1 ref.test host i32.and i32.or local.get 0 ref.test bytes local.get 1 ref.test bytes i32.and i32.or")
+    wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test dict i32.and i32.or local.get 0 ref.test bytes local.get 1 ref.test bytes i32.and i32.or")
     wasm_asm(f, "local.get 0 ref.test qty local.get 1 ref.test qty i32.or") # 1 km is 1000 m, and not 1000
     wasm_asm(f, "i32.or if local.get 0 local.get 1 call im.equal return end i32.const 0")
 
@@ -904,7 +893,8 @@ to wasm_runtime_functions with m
     set f to wasm_rt(m, "lengthOf", (list of eq, i32), (list of eq))
     wasm_asm(f, "local.get 0 ref.test list if f64 local.get 0 ref.cast list struct.get list 1 f64.convert_i32_s")
     wasm_asm(f, "else local.get 0 ref.test bytes if f64 " + wasm_bytes_of(0) + " array.len f64.convert_i32_s")
-    wasm_asm(f, "else local.get 0 local.get 1 call im.lengthOf end end call R.box")
+    wasm_asm(f, "else local.get 0 ref.test dict if f64 local.get 0 ref.cast dict struct.get dict 3 f64.convert_i32_s")
+    wasm_asm(f, "else local.get 0 local.get 1 call im.lengthOf end end end call R.box")
 
     # The 0-based place of item n in a list, if n is a whole number from 1 to its length, or -1.
     set f to wasm_rt(m, "place", (list of eq, eq), (list of i32))
@@ -922,16 +912,15 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get x " + wasm_bytes_of(0) + " array.len f64.convert_i32_s f64.le i32.and")
     wasm_asm(f, "if i32 local.get x i32.trunc_f64_s i32.const 1 i32.sub else i32.const -1 end")
 
-    # `item n of x`: a list's item, or a byte, here; a dictionary's value straight from its Map; the rest, and
-    # every mistake, in the shared code
+    # `item n of x`: a list's item, a byte, or a dictionary's value, here; the rest, and every mistake, in the
+    # shared code
     set f to wasm_rt(m, "item", (list of eq, eq, i32), (list of eq))
     wasm_named(f, "at", i32)
     wasm_asm(f, "local.get 0 local.get 1 call R.place local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, "local.get 0 ref.cast list struct.get list 0 local.get at array.get items return end")
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, wasm_bytes_of(0) + " local.get at array.get_u u8 f64.convert_i32_u call R.box return end")
-    wasm_asm(f, "local.get 0 ref.test host if local.get 1 ref.test text if " + wasm_map_of(0) + wasm_text_of(1) + " local.get 2 call im.dictGetText return end")
-    wasm_asm(f, wasm_is_num(1) + " if " + wasm_map_of(0) + wasm_num_of(1) + " local.get 2 call im.dictGetNum return end end")
+    wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if local.get 0 local.get 1 local.get 2 call R.dictItem return end")
     wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.item")
 
     # where `set item n of x to ...` goes: the place in a list, or -1 for a byte or a dictionary's key (see
@@ -940,10 +929,10 @@ to wasm_runtime_functions with m
     wasm_named(f, "at", i32)
     wasm_asm(f, "local.get 0 local.get 1 call R.place local.tee at i32.const 0 i32.ge_s if local.get at return end")
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace i32.const 0 i32.ge_s if i32.const -1 return end")
-    wasm_asm(f, "local.get 0 ref.test host local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if i32.const -1 return end")
+    wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if i32.const -1 return end")
     wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.itemRef i32.const -1")
 
-    # a value into a byte (a whole number from 0 to 255), or into a dictionary's Map, where itemRef said to;
+    # a value into a byte (a whole number from 0 to 255), or into a dictionary, where itemRef said to;
     # anything else is a mistake, which the shared code words
     set f to wasm_rt(m, "put", (list of eq, eq, eq, i32), empty list)
     wasm_named(f, "at", i32)
@@ -951,14 +940,12 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace local.tee at i32.const 0 i32.ge_s " + wasm_is_num(2) + " i32.and if")
     wasm_asm(f, wasm_num_of(2) + " local.set v " + wasm_whole_in("v", "0", "255") + " if")
     wasm_asm(f, wasm_bytes_of(0) + " local.get at local.get v i32.trunc_f64_s array.set u8 return end end")
-    wasm_asm(f, "local.get 0 ref.test host if local.get 1 ref.test text if " + wasm_map_of(0) + wasm_text_of(1) + " local.get 2 call im.dictSetText return end")
-    wasm_asm(f, wasm_is_num(1) + " if " + wasm_map_of(0) + wasm_num_of(1) + " local.get 2 call im.dictSetNum return end end")
+    wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if local.get 0 local.get 1 local.get 2 call R.dictPut return end")
     wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call im.put")
 
-    # `x is in d` for a dictionary, straight from its Map; anything else in the shared code
+    # `x is in d` for a dictionary, here; anything else in the shared code
     set f to wasm_rt(m, "isIn", (list of eq, eq, i32), (list of i32))
-    wasm_asm(f, "local.get 1 ref.test host if local.get 0 ref.test text if " + wasm_map_of(1) + wasm_text_of(0) + " call im.dictHasText return end")
-    wasm_asm(f, wasm_is_num(0) + " if " + wasm_map_of(1) + wasm_num_of(0) + " call im.dictHasNum return end end")
+    wasm_asm(f, "local.get 1 ref.test dict local.get 0 ref.test text " + wasm_is_num(0) + " i32.or i32.and if local.get 1 local.get 0 call R.dictHas return end")
     wasm_asm(f, "i32.const " + (front's slot_of(front's comparisons, "in") - 1) + " local.get 0 local.get 1 local.get 2 call im.compare")
 
     # `remainder of a divided by b` (vm.js's remainder): of two whole numbers that fit in 32 bits, b not 0, here,
@@ -1131,7 +1118,7 @@ to wasm_runtime_exports with m
     for each k from 1 to 4
         set tag_code to tag_code + " local.get 0 ref.test " + item k of tagged + " if i32.const " + (k + 1) + " return end"
     end
-    set tag_code to tag_code + " local.get 0 ref.test host if local.get 0 ref.cast host struct.get host 1 return end"
+    set tag_code to tag_code + " local.get 0 ref.test dict if i32.const 7 return end"
     set tag_code to tag_code + " local.get 0 ref.test bytes if i32.const 8 return end local.get 0 ref.test qty if i32.const 9 return end i32.const 6"
     wasm_out(m, "tag", (list of eq), (list of i32), tag_code)
     wasm_out(m, "num", (list of eq), (list of f64), wasm_num_of(0))
@@ -1157,8 +1144,6 @@ to wasm_runtime_exports with m
     wasm_out(m, "makeNum", (list of f64), (list of eq), "local.get 0 call R.box")
     wasm_out(m, "newList", empty list, (list of eq), "i32.const 0 array.new_default items i32.const 0 struct.new list")
     wasm_out(m, "listPush", (list of eq, eq), empty list, "local.get 0 local.get 1 call R.push")
-    wasm_out(m, "hostValue", (list of eq), (list of ext), "local.get 0 ref.cast host struct.get host 0")
-    wasm_out(m, "makeHost", (list of ext, i32), (list of eq), "local.get 0 local.get 1 struct.new host")
     wasm_out(m, "bytesLength", (list of eq), (list of i32), wasm_bytes_of(0) + " array.len")
     wasm_out(m, "byteAt", (list of eq, i32), (list of i32), wasm_bytes_of(0) + " local.get 1 array.get_u u8")
     wasm_out(m, "makeBytes", (list of i32), (list of eq), "local.get 0 array.new_default u8 struct.new bytes")
@@ -2025,7 +2010,7 @@ to wasm_statement with fc, s
     else if what is "remove"
         wasm_expr(fc, key of s)
         wasm_expr(fc, target of s)
-        wasm_x(fc, "i32.const " + wasm_pos(fc, at of s) + " call im.remove")
+        wasm_x(fc, "i32.const " + wasm_pos(fc, at of s) + " call R.remove")
     else if what is "write"
         wasm_expr(fc, value of s)
         wasm_expr(fc, target of s)
@@ -2382,7 +2367,7 @@ to wasm_expr with fc, e
             wasm_expr(fc, x)
         end
         set n to length of items of e
-        wasm_x(fc, "array.new_fixed items " + n + " i32.const " + n + " struct.new list i32.const " + wasm_pos(fc, at of e) + " call im.dict")
+        wasm_x(fc, "array.new_fixed items " + n + " i32.const " + n + " struct.new list i32.const " + wasm_pos(fc, at of e) + " call R.dictOf")
     else if what is "field"
         wasm_expr(fc, subject of e)
         wasm_x(fc, "i32.const " + wasm_id(fc, name of e) + " i32.const " + wasm_pos(fc, at of e) + " call R.field")

@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Dictionaries in WebAssembly.** On the WebAssembly engine, dictionaries live inside the module, with no
+  JavaScript: number and text keys are about twice as fast to set and read. The third part of making Moth's
+  WebAssembly run with no JavaScript at all.
 - **Mistakes in WebAssembly.** On the WebAssembly engine, `fail with`, a name with no value yet, and `try`
   catching them happen inside the module, with no JavaScript: catching a mistake in a loop is about 25 times
   faster. The second part of making Moth's WebAssembly run with no JavaScript at all.

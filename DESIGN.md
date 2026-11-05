@@ -6256,3 +6256,35 @@ not by JavaScript. A module imports 62 functions, not 65: `fail`, `unset` and `f
   JavaScript as the module's exception, with its value. Mistakes, their values and trails, on the VM and on
   WebAssembly, the same; and every program the engines are tested with, made by wasm.js, wasm.moth and
   moth.wasm byte for byte.
+
+## 147. Dictionaries in the WebAssembly module
+
+The third of stage 2's parts (§139): a dictionary lives in the module, not in a JavaScript Map. A module imports
+55 functions, not 62: the six that read, changed and searched a Map are gone, and so is `jsText`, which made a
+key's JavaScript string.
+
+- **What one is.** Its keys and its values in two lists, in the order the keys were first set (the order a Map
+  keeps, which `say`, `keys of` and JSON show), how many places of the lists are used, how many keys it has,
+  and its slots: for each, the place of a key plus 1, or 0, as many as a power of 2 at least twice the places
+  used, found from the key's hash and the slots after it. A key taken out leaves nothing in its place, which
+  finding passes over and which no key matches, so taking one out and putting it back puts it last, as a Map
+  does; when the places run out, the dictionary is made again without them. It's type 9, which was the
+  struct that held a Map, so no other type's number moved.
+- **Keys as a Map has them.** Text, by its units; or a number, as vm.js's canon has it: a whole number, or one
+  that isn't finite, as it is, any other to 15 digits, so `item 0.3 of d` finds what `set item 0.1 + 0.2 of d`
+  put; -0 is 0, and NaN is NaN. A whole number an i31 holds is always kept as one, so it hashes by its value
+  and two such keys are the same key exactly when they're the same i31; other numbers hash by their bits, and
+  text by its units (FNV-1a). Written once, in wasm-runtime.js, for both back ends.
+- **Mistakes still worded by JavaScript.** A key that isn't there, a key that isn't text or a number, `remove`
+  from something that isn't a dictionary: the module does the work and calls out only to fail, giving
+  JavaScript a copy of the dictionary to word the mistake from (`did you mean` and all). So does `is`
+  between two dictionaries, and the built-ins, which see a dictionary as a Map made from it, as they saw
+  a copy before; a Map they give back is made into a dictionary of the module's.
+- **What it gave, and cost.** On the WebAssembly engine, setting and reading 100,000 number keys went from
+  35.7 ms to 18.6, and 50,000 text keys from 74.7 ms to 33.9; counting 200,000 words, each one found three
+  times, from 41.2 ms to 43.0. moth.wasm is 1,624,784 bytes, 1% more; a module for `say 1`, 13,695 bytes,
+  as every module now has the dictionary's code.
+- **Checked.** A module run with every import but `say`, `grant` and `refill` failing the test: it makes a
+  dictionary, sets 300 text keys, takes 290 out (making it again on the way), sets a number key that canon
+  rounds and -0, and finds them. Every program the engines are tested with, made by wasm.js, wasm.moth and
+  moth.wasm byte for byte, and saying what the VM says.

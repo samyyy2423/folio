@@ -17,8 +17,8 @@
 // An instruction names a function as R.NAME, an import as im.NAME, a global as g.NAME, a type by its name, and
 // a local or input by its name. A block, loop or if may be followed by its type: i32, i64, f64, eq or externref.
 //
-// What's here: text, which lives in the module as UTF-16, numbers as text, to 15 digits as the VM shows them, and
-// the mistake a variable with no value yet is.
+// What's here: text, which lives in the module as UTF-16, numbers as text, to 15 digits as the VM shows them,
+// the mistake a variable with no value yet is, and dictionaries.
 
 export const SOURCE = String.raw`
 ;; where text crosses to JavaScript and back, 32,768 units at a time
@@ -752,6 +752,261 @@ local.get at local.get n array.new_data chars 0 local.get n call R.newText local
 global.get g.noValue1 local.get name call R.concat global.get g.noValue2 call R.concat local.get name call R.concat
 global.get g.noValue3 call R.concat i32.const 0 local.get k throw 0
 
+;; ---------- dictionaries ----------
+;; A dictionary keeps its keys and values in two lists, in the order the keys were first set, and finds a key
+;; by its hash in slots: each the place of an entry plus 1, or 0 for none, as many as a power of 2 at least
+;; twice the places used. A key taken out leaves nothing in its place, which finding passes over, until the
+;; dictionary is made again without them. Keys are text, or numbers to 15 digits (vm.js's canon) with -0 as 0,
+;; as a JavaScript Map of them has them (DESIGN §147).
+
+;; a new dictionary, with nothing in it
+func dictNew -> ref:dict
+i32.const 8 array.new_default items i32.const 8 array.new_default items i32.const 0 i32.const 0
+i32.const 16 array.new_default ids struct.new dict
+
+;; 1 if v is a number: an i31 that isn't 0 or 1 (no and yes), or a box
+func isNumber v:eq -> i32
+local.get v ref.test i31 if i32
+  local.get v ref.cast i31 i31.get_u i32.const 2 i32.ge_u
+else
+  local.get v ref.test num
+end
+
+;; v's number
+func numberOf v:eq -> f64
+local.get v ref.test i31 if f64
+  local.get v ref.cast i31 i31.get_s f64.convert_i32_s
+else
+  local.get v ref.cast num struct.get num 0
+end
+
+;; key k as a dictionary keeps it: text as it is, a number as vm.js's canon has it (a whole number, or one that
+;; isn't finite, as it is; any other to 15 digits), -0 as 0 (k is text or a number)
+func dictKey k:eq -> eq
+local x f64
+local.get k ref.test i31 if
+  local.get k return
+end
+local.get k ref.test num if
+  local.get k ref.cast num struct.get num 0 local.tee x local.get x f64.trunc f64.eq
+  local.get x local.get x f64.sub local.get x local.get x f64.sub f64.ne i32.or if
+    local.get x f64.const d0 f64.add call R.box return
+  end
+  local.get x f64.abs call R.canon local.get x f64.copysign call R.box return
+end
+local.get k
+
+;; a key's hash (k as dictKey keeps it): text by its units (FNV-1a), a number by its value's bits, every NaN the
+;; same. A whole number an i31 holds is kept as one, never as a box, so it can be hashed by its value.
+func keyHash k:eq -> i32
+local h i32
+local u null:chars
+local n i32
+local i i32
+local x f64
+local b i64
+local.get k ref.test i31 if
+  local.get k ref.cast i31 i31.get_s i32.const -1640531535 i32.mul return
+end
+local.get k ref.test text if
+  local.get k call R.units local.set u
+  local.get k ref.cast text struct.get text 1 local.set n
+  i32.const -2128831035 local.set h
+  block loop
+    local.get i local.get n i32.ge_u br_if 1
+    local.get h local.get u local.get i array.get_u chars i32.xor i32.const 16777619 i32.mul local.set h
+    local.get i i32.const 1 i32.add local.set i
+    br 0
+  end end
+  local.get h return
+end
+local.get k call R.numberOf local.tee x local.get x f64.ne if
+  i32.const 7 return
+end
+local.get x i64.reinterpret_f64 local.tee b local.get b i64.const 32 i64.shr_u i64.xor i32.wrap_i64 i32.const -1640531535 i32.mul
+
+;; 1 if two keys are the same: text by its units, numbers by their value, NaN as NaN; nothing (a key taken out) is no key's
+func keySame a:eq b:eq -> i32
+local x f64
+local y f64
+local.get a local.get b ref.eq if
+  local.get a ref.is_null i32.eqz return
+end
+local.get a ref.test i31 local.get b ref.test i31 i32.and if
+  i32.const 0 return
+end
+local.get a ref.test text local.get b ref.test text i32.and if
+  local.get a local.get b call R.sameText return
+end
+local.get a call R.isNumber local.get b call R.isNumber i32.and if
+  local.get a call R.numberOf local.tee x local.get b call R.numberOf local.tee y f64.eq
+  local.get x local.get x f64.ne local.get y local.get y f64.ne i32.and i32.or return
+end
+i32.const 0
+
+;; the place of key k (as dictKey keeps it, with hash h) in d, or -1
+func dictFind d:null:dict k:eq h:i32 -> i32
+local slots null:ids
+local mask i32
+local s i32
+local e i32
+local.get d struct.get dict 4 local.tee slots array.len i32.const 1 i32.sub local.set mask
+local.get h local.get mask i32.and local.set s
+block loop
+  local.get slots local.get s array.get ids local.tee e i32.eqz br_if 1
+  local.get d struct.get dict 0 local.get e i32.const 1 i32.sub array.get items local.get k call R.keySame if
+    local.get e i32.const 1 i32.sub return
+  end
+  local.get s i32.const 1 i32.add local.get mask i32.and local.set s
+  br 0
+end end
+i32.const -1
+
+;; entry e (its place plus 1) in d's first empty slot from hash h on
+func dictSlot d:null:dict h:i32 e:i32 ->
+local slots null:ids
+local mask i32
+local s i32
+local.get d struct.get dict 4 local.tee slots array.len i32.const 1 i32.sub local.set mask
+local.get h local.get mask i32.and local.set s
+block loop
+  local.get slots local.get s array.get ids i32.eqz br_if 1
+  local.get s i32.const 1 i32.add local.get mask i32.and local.set s
+  br 0
+end end
+local.get slots local.get s local.get e array.set ids
+
+;; d made again, with room for twice the keys it has (8 at least), and no places of keys taken out
+func dictRemake d:null:dict ->
+local keys null:items
+local values null:items
+local nk null:items
+local nv null:items
+local cap i32
+local size i32
+local used i32
+local i i32
+local n i32
+local k eq
+local.get d struct.get dict 0 local.set keys
+local.get d struct.get dict 1 local.set values
+local.get d struct.get dict 2 local.set used
+local.get d struct.get dict 3 i32.const 1 i32.shl local.tee cap i32.const 8 i32.lt_u if
+  i32.const 8 local.set cap
+end
+i32.const 16 local.set size
+block loop
+  local.get size local.get cap i32.const 1 i32.shl i32.ge_u br_if 1
+  local.get size i32.const 1 i32.shl local.set size
+  br 0
+end end
+local.get cap array.new_default items local.set nk
+local.get cap array.new_default items local.set nv
+local.get d local.get nk ref.as_non_null struct.set dict 0
+local.get d local.get nv ref.as_non_null struct.set dict 1
+local.get d local.get size array.new_default ids struct.set dict 4
+block loop
+  local.get i local.get used i32.ge_u br_if 1
+  local.get keys local.get i array.get items local.tee k ref.is_null i32.eqz if
+    local.get nk local.get n local.get k array.set items
+    local.get nv local.get n local.get values local.get i array.get items array.set items
+    local.get n i32.const 1 i32.add local.set n
+    local.get d local.get k call R.keyHash local.get n call R.dictSlot
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get d local.get n struct.set dict 2
+
+;; value v for key k (as dictKey keeps it) in d: in its place if it's there, after the rest if not
+func dictSet d:null:dict k:eq v:eq ->
+local h i32
+local e i32
+local n i32
+local.get k call R.keyHash local.set h
+local.get d local.get k local.get h call R.dictFind local.tee e i32.const 0 i32.ge_s if
+  local.get d struct.get dict 1 local.get e local.get v array.set items return
+end
+local.get d struct.get dict 2 local.tee n local.get d struct.get dict 0 array.len i32.eq
+local.get n i32.const 1 i32.add i32.const 1 i32.shl local.get d struct.get dict 4 array.len i32.gt_u i32.or if
+  local.get d call R.dictRemake
+  local.get d struct.get dict 2 local.set n
+end
+local.get d struct.get dict 0 local.get n local.get k array.set items
+local.get d struct.get dict 1 local.get n local.get v array.set items
+local.get d local.get n i32.const 1 i32.add struct.set dict 2
+local.get d local.get d struct.get dict 3 i32.const 1 i32.add struct.set dict 3
+local.get d local.get h local.get n i32.const 1 i32.add call R.dictSlot
+
+;; 'item key of d', key text or a number: its value, or the mistake, which JavaScript words
+func dictItem d:eq key:eq k:i32 -> eq
+local dd null:dict
+local kk eq
+local e i32
+local.get d ref.cast dict local.tee dd local.get key call R.dictKey local.tee kk local.get kk call R.keyHash call R.dictFind local.tee e i32.const 0 i32.ge_s if
+  local.get dd struct.get dict 1 local.get e array.get items return
+end
+local.get d local.get key local.get k call im.item
+
+;; 1 if key, text or a number, is in d
+func dictHas d:eq key:eq -> i32
+local kk eq
+local.get d ref.cast dict local.get key call R.dictKey local.tee kk local.get kk call R.keyHash call R.dictFind i32.const 0 i32.ge_s
+
+;; 'remove key from target': a key of a dictionary taken out here; anything else, and every mistake, in JavaScript
+func remove key:eq target:eq k:i32 ->
+local dd null:dict
+local kk eq
+local e i32
+local.get target ref.test dict local.get key ref.test text local.get key call R.isNumber i32.or i32.and if
+  local.get target ref.cast dict local.tee dd local.get key call R.dictKey local.tee kk local.get kk call R.keyHash call R.dictFind local.tee e i32.const 0 i32.ge_s if
+    local.get dd struct.get dict 0 local.get e ref.null eq array.set items
+    local.get dd struct.get dict 1 local.get e ref.null eq array.set items
+    local.get dd local.get dd struct.get dict 3 i32.const 1 i32.sub struct.set dict 3
+    return
+  end
+end
+local.get key local.get target local.get k call im.remove
+
+;; 'dictionary where ...': from a list of each key and then its value; a key that isn't text or a number is a
+;; mistake, which JavaScript words
+func dictOf l:eq k:i32 -> eq
+local d null:dict
+local items null:items
+local n i32
+local i i32
+local key eq
+local.get l ref.cast list struct.get list 0 local.set items
+local.get l ref.cast list struct.get list 1 local.set n
+call R.dictNew local.set d
+block loop
+  local.get i local.get n i32.ge_u br_if 1
+  local.get items local.get i array.get items local.tee key ref.test text local.get key call R.isNumber i32.or i32.eqz if
+    local.get l local.get k call im.dict
+  end
+  local.get d local.get key call R.dictKey local.get items local.get i i32.const 1 i32.add array.get items call R.dictSet
+  local.get i i32.const 2 i32.add local.set i
+  br 0
+end end
+local.get d
+
+;; for JavaScript: a new dictionary; a key (text or a number) and its value put in one; how many places it has
+;; used, and the key and value in each (nothing for a key taken out)
+export makeDict -> eq
+call R.dictNew
+
+export dictPut d:eq key:eq v:eq ->
+local.get d ref.cast dict local.get key call R.dictKey local.get v call R.dictSet
+
+export dictUsed d:eq -> i32
+local.get d ref.cast dict struct.get dict 2
+
+export dictKeyAt d:eq i:i32 -> eq
+local.get d ref.cast dict struct.get dict 0 local.get i array.get items
+
+export dictValueAt d:eq i:i32 -> eq
+local.get d ref.cast dict struct.get dict 1 local.get i array.get items
+
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so
 ;; text that ends where its buffer's in-use units end can have more added in place, and joining text in a
@@ -769,17 +1024,6 @@ local.get t ref.cast text local.tee x struct.get text 0 ref.is_null if
   local.get t call im.fill
 end
 local.get x struct.get text 0 struct.get strbuf 0
-
-;; t's JavaScript string, made once
-func jsOf t:eq -> extern
-local x null:text
-local s extern
-local.get t ref.cast text local.tee x struct.get text 2 local.tee s ref.is_null if externref
-  local.get x local.get t call im.jsText local.tee s struct.set text 2
-  local.get s
-else
-  local.get s
-end
 
 ;; how many units a buffer for n of them has, with room to grow
 func roomFor n:i32 -> i32
