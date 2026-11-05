@@ -1523,6 +1523,46 @@ test("moth explain's examples put right are Moth that reads without a mistake", 
   }
 });
 
+// moth upgrade (DESIGN §142): a release from a place of its own (MOTH_RELEASES), laid out as GitHub's are, put in
+// place of the moth on PATH only once its SHA-256 is the one SHA256SUMS.txt says
+test("moth.exe upgrade puts a newer release in place of the moth on PATH, only once its sum checks out", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "upgrade");
+  const bin = join(sub, "bin");
+  const releases = join(sub, "releases");
+  mkdirSync(bin, { recursive: true });
+  mkdirSync(releases);
+  const windows = process.platform === "win32";
+  const asset = windows ? "moth-windows.exe" : "moth-linux";
+  const installed = join(bin, windows ? "moth.exe" : "moth");
+  copyFileSync(exe, installed);
+  const release = (tag, bytes, sum = createHash("sha256").update(bytes).digest("hex")) => {
+    writeFileSync(join(releases, "latest.json"), JSON.stringify({ tag_name: tag }));
+    writeFileSync(join(releases, asset), bytes);
+    writeFileSync(join(releases, "SHA256SUMS.txt"), `${sum}  ${asset}\n`);
+  };
+  const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === "PATH") ?? "PATH";
+  const env = { ...process.env, MOTH_RELEASES: releases, [pathKey]: `${bin}${windows ? ";" : ":"}${process.env[pathKey]}` };
+  const upgrade = (...args) => spawnSync(installed, ["upgrade", ...args], { cwd: sub, encoding: "utf8", env });
+  const version = JSON.parse(here("package.json")).version;
+  const same = () => readFileSync(installed).equals(readFileSync(exe));
+
+  release("v1.0.0", "an old moth");
+  assert.deepEqual([upgrade().stdout, upgrade("--check").stdout], [`moth ${version} is the latest\n`, `moth ${version} is the latest\n`]);
+  release("v99.0.0", "a moth changed on the way", "0".repeat(64));
+  const tampered = upgrade();
+  assert.equal(tampered.status, 1);
+  assert.match(tampered.stderr, /isn't what SHA256SUMS\.txt says it is, so moth is as it was/);
+  assert.ok(same());
+  release("v99.0.0", "the new moth");
+  assert.equal(upgrade("--check").stdout, `moth 99.0.0 is out (this is ${version}): moth upgrade gets it\n`);
+  assert.ok(same());
+  const done = upgrade();
+  assert.deepEqual([done.status, done.stderr], [0, ""]);
+  assert.match(done.stdout, new RegExp(`^moth ${version.replace(/\./g, "\\.")} -> 99\\.0\\.0, at .*${windows ? "moth\\.exe" : "moth"}\\n$`));
+  assert.equal(readFileSync(installed, "utf8"), "the new moth");
+});
+
 // `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
 // here is tidy already, so --check must say so; then messy and randomly broken programs, each tidied to
 // exactly the bytes format() makes of it.

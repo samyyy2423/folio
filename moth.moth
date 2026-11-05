@@ -33,6 +33,7 @@ set cli_usage to "usage: moth build <file.moth> [--target windows|linux|wasm] [-
 set cli_usage to cli_usage + "\n  moth --version | moth version: say which Moth this is (the release version)."
 set cli_usage to cli_usage + "\n  moth new [app|web|package|library] <name>: start a project, in a folder of its own: its code, tests, a\n    README and a GitHub workflow that runs them. An app unless it says, a web server, a package or a library."
 set cli_usage to cli_usage + "\n  moth explain <file.moth> | moth explain <a mistake's words>: what a mistake means, why it happens and how\n    to put it right, with code that makes it and the same code put right: the first mistake moth check finds in\n    a file, or the one a message is from."
+set cli_usage to cli_usage + "\n  moth upgrade [--check]: the newest release in place of the moth on PATH, checked against its SHA256SUMS.txt\n    first (or, for a moth a package manager put there, what to run instead); --check only says if there is one."
 
 # the folder a file is in, with its last / or \, or "" for the folder moth runs in
 to cli_folder_of with cli_path
@@ -6624,6 +6625,261 @@ to cli_explanations
 end
 
 
+# ---------- moth upgrade ----------
+# moth upgrade [--check] (DESIGN §140): the newest release of moth in place of the moth on PATH, its download
+# checked against the release's SHA256SUMS.txt first; or, for a moth a package manager put there, what to run
+# instead. --check only says whether there's a newer one. MOTH_RELEASES names another place to find releases, a
+# folder or an address, holding latest.json (as GitHub's API says what the latest release is) and its files.
+
+set cli_releases_api to "https://api.github.com/repos/samyyy2423/moth/releases/latest"
+set cli_releases_download to "https://github.com/samyyy2423/moth/releases/download/"
+
+# whether text is an address on the web
+to cli_is_address with cli_text
+    return cli_first(cli_text + "        ", 8) is "https://" or cli_first(cli_text + "       ", 7) is "http://"
+end
+
+# an environment variable's value, by the system's own shell, or "" if it has none
+to cli_env with cli_name
+    try
+        if cli_host() is "windows"
+            set cli_got to run program "cmd" with (list of "/c", "echo %" + cli_name + "%") keeping its output
+            set cli_value to cli_trimmed(output of cli_got)
+            if cli_value is "%" + cli_name + "%" # none: cmd says the name as it was written
+                return ""
+            end
+            return cli_value
+        end
+        set cli_got to run program "sh" with (list of "-c", "printf '%s' \"$" + cli_name + "\"") keeping its output
+        return output of cli_got
+    if it fails
+        return ""
+    end
+end
+
+# the moth on PATH, as the system finds it, or nothing
+to cli_moth_on_path
+    try
+        if cli_host() is "windows"
+            set cli_got to run program "cmd" with (list of "/c", "where", "moth") keeping its output
+        else
+            set cli_got to run program "sh" with (list of "-c", "command -v moth") keeping its output
+        end
+        if code of cli_got is not 0
+            return nothing
+        end
+        set cli_first_line to item 1 of split cli_trimmed(output of cli_got) by "\n"
+        return cli_trimmed(cli_first_line)
+    if it fails
+        return nothing
+    end
+end
+
+# a version's numbers: "v1.12.0" or "1.12.0" is 1, 12, 0
+to cli_version_numbers with cli_version
+    set cli_text to cli_version
+    if length of cli_text is greater than 0 and item 1 of cli_text is "v"
+        set cli_rest to ""
+        for each cli_k from 2 to length of cli_text
+            add item cli_k of cli_text to cli_rest
+        end
+        set cli_text to cli_rest
+    end
+    set cli_numbers to empty list
+    for each cli_part in split cli_text by "."
+        try
+            add number of cli_part to cli_numbers
+        if it fails
+            add 0 to cli_numbers
+        end
+    end
+    return cli_numbers
+end
+
+# whether version a comes after version b
+to cli_newer with cli_a, cli_b
+    set cli_x to cli_version_numbers(cli_a)
+    set cli_y to cli_version_numbers(cli_b)
+    for each cli_k from 1 to 3
+        set cli_p to 0
+        set cli_q to 0
+        if cli_k is at most length of cli_x
+            set cli_p to item cli_k of cli_x
+        end
+        if cli_k is at most length of cli_y
+            set cli_q to item cli_k of cli_y
+        end
+        if cli_p is not cli_q
+            return cli_p is greater than cli_q
+        end
+    end
+    return no
+end
+
+# a file of a release, from an address (by curl) or a folder, into `cli_into`: whether it came
+to cli_fetch_file with cli_from, cli_into
+    try
+        if cli_is_address(cli_from)
+            set cli_got to run program "curl" with (list of "-fsSL", "-o", cli_into, cli_from) keeping its output
+            if code of cli_got is not 0
+                say "moth: can't download " + cli_from + ": " + cli_trimmed(mistakes of cli_got) to the error output
+                return no
+            end
+            return yes
+        end
+        write (read bytes cli_from) as bytes to cli_into
+        return yes
+    if it fails with cli_why
+        say "moth: can't get " + cli_from + ": " + cli_why to the error output
+        return no
+    end
+end
+
+# a file's SHA-256, by the system's own tool (as fast as it gets, for a program of 30 MB), or nothing
+to cli_file_sha256 with cli_path
+    try
+        if cli_host() is "windows"
+            set cli_got to run program "certutil" with (list of "-hashfile", cli_path, "SHA256") keeping its output
+            set cli_line to item 2 of split output of cli_got by "\n"
+        else
+            set cli_got to run program "sha256sum" with (list of cli_path) keeping its output
+            set cli_line to item 1 of split output of cli_got by " "
+        end
+        set cli_hex to ""
+        for each cli_c in lowercase of cli_line
+            if cli_c is in "0123456789abcdef"
+                add cli_c to cli_hex
+            end
+        end
+        return cli_hex
+    if it fails
+        return nothing
+    end
+end
+
+# how to upgrade a moth some package manager put at this path, or nothing if moth upgrade can do it itself
+to cli_managed with cli_path
+    set cli_where to lowercase of cli_path
+    if "scoop" is in cli_where
+        return "scoop update moth"
+    else if "winget" is in cli_where
+        return "winget upgrade samyyy2423.Moth"
+    else if "site-packages" is in cli_where or "python" is in cli_where
+        return "pip install --upgrade mothlang"
+    else if cli_where is "/usr/bin/moth"
+        return "download the release's .deb, then: sudo apt install ./moth_<version>_amd64.deb"
+    end
+    return nothing
+end
+
+to cli_upgrade with cli_only_check
+    set cli_current to item "version" of (json from read "package.json")
+    set cli_place to cli_env("MOTH_RELEASES")
+    set cli_latest_from to cli_releases_api
+    if cli_place is not ""
+        set cli_latest_from to cli_place + "/latest.json"
+    end
+    set cli_latest to nothing
+    try
+        if cli_is_address(cli_latest_from)
+            set cli_got to run program "curl" with (list of "-fsSL", cli_latest_from) keeping its output
+            if code of cli_got is not 0
+                say "moth: can't find the latest release at " + cli_latest_from + ": " + cli_trimmed(mistakes of cli_got) to the error output
+                return 1
+            end
+            set cli_latest to json from output of cli_got
+        else
+            set cli_latest to json from read cli_latest_from
+        end
+    if it fails with cli_why
+        say "moth: can't find the latest release at " + cli_latest_from + ": " + cli_why to the error output
+        return 1
+    end
+    set cli_tag to item "tag_name" of cli_latest
+    set cli_newest to cli_tag
+    if length of cli_tag is greater than 0 and item 1 of cli_tag is "v"
+        set cli_newest to ""
+        for each cli_k from 2 to length of cli_tag
+            add item cli_k of cli_tag to cli_newest
+        end
+    end
+    if not cli_newer(cli_newest, cli_current)
+        say "moth " + cli_current + " is the latest"
+        return 0
+    end
+    if cli_only_check
+        say "moth " + cli_newest + " is out (this is " + cli_current + "): moth upgrade gets it"
+        return 0
+    end
+    set cli_target to cli_moth_on_path()
+    if cli_target is nothing
+        say "moth: there's no moth on PATH to put moth " + cli_newest + " in place of: the installer puts it there (see https://github.com/samyyy2423/moth#install)" to the error output
+        return 1
+    end
+    set cli_instead to cli_managed(cli_target)
+    if cli_instead is not nothing
+        say "moth " + cli_newest + " is out (this is " + cli_current + "), and " + cli_target + " came from a package manager: " + cli_instead
+        return 1
+    end
+    set cli_asset to "moth-linux"
+    if cli_host() is "windows"
+        set cli_asset to "moth-windows.exe"
+    end
+    set cli_from to cli_releases_download + cli_tag + "/"
+    if cli_place is not ""
+        set cli_from to cli_place + "/"
+    end
+    set cli_download to cli_target + ".new"
+    set cli_sums_file to cli_target + ".sums"
+    if not cli_fetch_file(cli_from + cli_asset, cli_download) or not cli_fetch_file(cli_from + "SHA256SUMS.txt", cli_sums_file)
+        return 1
+    end
+    set cli_wanted to nothing
+    for each cli_line in split (read cli_sums_file) by "\n"
+        set cli_words to split cli_trimmed(cli_line) by " "
+        if length of cli_words is at least 2
+            set cli_named to cli_trimmed(item (length of cli_words) of cli_words)
+            if cli_named is cli_asset or cli_named is "*" + cli_asset # * marks a file read as bytes
+                set cli_wanted to lowercase of item 1 of cli_words
+            end
+        end
+    end
+    remove the file cli_sums_file
+    set cli_got_sum to cli_file_sha256(cli_download)
+    if cli_wanted is nothing or cli_got_sum is not cli_wanted
+        remove the file cli_download
+        say "moth: the download of " + cli_asset + " isn't what SHA256SUMS.txt says it is, so moth is as it was" to the error output
+        return 1
+    end
+    # in its place: on Windows a running program can't be written over, but it can be moved aside
+    try
+        if cli_host() is "windows"
+            set cli_old to cli_target + ".old"
+            if cli_is_file(cli_old)
+                set cli_gone to run program "cmd" with (list of "/c", "del", "/f", "/q", cli_old) keeping its output
+            end
+            set cli_moved to run program "cmd" with (list of "/c", "move", "/y", cli_target, cli_old) keeping its output
+            set cli_placed to run program "cmd" with (list of "/c", "move", "/y", cli_download, cli_target) keeping its output
+            if code of cli_moved is not 0 or code of cli_placed is not 0
+                say "moth: can't put the new moth in place of " + cli_target + ": " + cli_trimmed(output of cli_placed) to the error output
+                return 1
+            end
+        else
+            set cli_mode to run program "chmod" with (list of "755", cli_download)
+            set cli_placed to run program "mv" with (list of "-f", cli_download, cli_target) keeping its output
+            if code of cli_placed is not 0
+                say "moth: can't put the new moth in place of " + cli_target + ": " + cli_trimmed(mistakes of cli_placed) to the error output
+                return 1
+            end
+        end
+    if it fails with cli_why
+        say "moth: can't put the new moth in place of " + cli_target + ": " + cli_why to the error output
+        return 1
+    end
+    say "moth " + cli_current + " -> " + cli_newest + ", at " + cli_target
+    return 0
+end
+
 to cli_main
     set cli_given to arguments
     set cli_target to nothing
@@ -6677,6 +6933,9 @@ to cli_main
             add item cli_k of cli_given to cli_rest
         end
         stop the program with cli_explain(cli_rest)
+    end
+    if cli_command is "upgrade" and (length of cli_given is 1 or (length of cli_given is 2 and item 2 of cli_given is "--check"))
+        stop the program with cli_upgrade(length of cli_given is 2)
     end
     if cli_command is "lsp" and length of cli_given is 1 # the language server, for an editor
         stop the program with cli_lsp()
