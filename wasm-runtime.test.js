@@ -3,21 +3,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { run, compileToWasmBytes } from "./moth.js";
+import { run, compileToWasmBytes } from "./folio.js";
 import { show } from "./vm.js";
-import { wasmRuntimeMoth } from "./make-wasm-runtime.mjs";
+import { wasmRuntimeFolio } from "./make-wasm-runtime.mjs";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 
-test("wasm-runtime.moth is what make-wasm-runtime.mjs makes of wasm-runtime.js as it is", () => {
-  assert.equal(here("wasm-runtime.moth"), wasmRuntimeMoth());
+test("wasm-runtime.folio is what make-wasm-runtime.mjs makes of wasm-runtime.js as it is", () => {
+  assert.equal(here("wasm-runtime.folio"), wasmRuntimeFolio());
 });
 
 // a module's exports, run with no imports at all: showing a number, and joining text, never need JavaScript
 function exportsOf() {
   const module = new WebAssembly.Module(compileToWasmBytes("say 1").bytes);
   const imports = new Proxy({}, { get: (_, name) => () => assert.fail(`the module called ${String(name)}`) });
-  return new WebAssembly.Instance(module, { moth: imports }).exports;
+  return new WebAssembly.Instance(module, { folio: imports }).exports;
 }
 
 test("a number in text is what the VM shows: to 15 digits, laid out as JavaScript lays numbers out", () => {
@@ -81,7 +81,7 @@ test("a program's own mistakes are thrown and caught in the module, and one noth
   const said = [];
   const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: () => said.push("say") };
   const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
-  const x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  const x = new WebAssembly.Instance(module, { folio: imports }).exports;
   x.restart();
   assert.throws(() => x.main(), (err) => err instanceof WebAssembly.Exception && err.is(x.mistake) && x.num(err.getArg(x.mistake, 0)) === 7 && err.getArg(x.mistake, 1) === 1);
   assert.deepEqual(said, ["say", "say"]);
@@ -98,7 +98,7 @@ test("dictionaries are made, changed and read in the module, with none of JavaSc
   let said = 0;
   const allowed = { grant: () => 2 ** 30, refill: () => 2 ** 30, say: () => said++ };
   const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
-  const x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  const x = new WebAssembly.Instance(module, { folio: imports }).exports;
   x.restart();
   x.main();
   assert.equal(said, 6);

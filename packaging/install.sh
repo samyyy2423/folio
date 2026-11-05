@@ -1,20 +1,20 @@
 #!/bin/sh
-# Installs moth on Linux (x86-64) from a release on GitHub: it downloads moth-linux and the release's
-# SHA256SUMS.txt, checks the one against the other, and puts moth on your PATH. It needs no root.
+# Installs folio on Linux (x86-64) from a release on GitHub: it downloads folio-linux and the release's
+# SHA256SUMS.txt, checks the one against the other, and puts folio on your PATH. It needs no root.
 #
-#     curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh
-#     curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh -s -- --version 1.11.0
+#     curl -fsSL https://raw.githubusercontent.com/samyyy2423/folio/main/packaging/install.sh | sh
+#     curl -fsSL https://raw.githubusercontent.com/samyyy2423/folio/main/packaging/install.sh | sh -s -- --version 1.11.0
 #
-#   --version 1.11.0     that release (else the latest); or MOTH_VERSION
-#   --dir <folder>       put moth there (else ~/.local/bin, or /usr/local/bin as root); or MOTH_INSTALL_DIR
-#   --no-modify-path     leave the shell's startup files alone; or MOTH_NO_MODIFY_PATH=1
+#   --version 1.11.0     that release (else the latest); or FOLIO_VERSION
+#   --dir <folder>       put folio there (else ~/.local/bin, or /usr/local/bin as root); or FOLIO_INSTALL_DIR
+#   --no-modify-path     leave the shell's startup files alone; or FOLIO_NO_MODIFY_PATH=1
 #
-# MOTH_RELEASES_URL says where the releases are, for a mirror or a test; else GitHub's. To check who made the
+# FOLIO_RELEASES_URL says where the releases are, for a mirror or a test; else GitHub's. To check who made the
 # download, not only that it arrived whole, see docs/verifying-releases.md.
 set -eu
 
 say() { printf '%s\n' "$*"; }
-fail() { printf 'moth install: %s\n' "$*" >&2; exit 1; }
+fail() { printf 'folio install: %s\n' "$*" >&2; exit 1; }
 
 # a file from the web (or file://, for a test) into a file
 fetch() {
@@ -27,7 +27,7 @@ fetch() {
     elif command -v wget > /dev/null 2>&1; then
         wget -q -O "$2" "$1"
     else
-        fail "this needs curl or wget to download moth"
+        fail "this needs curl or wget to download folio"
     fi
 }
 
@@ -51,16 +51,16 @@ add_to_path() {
     if [ -f "$file" ] && grep -qxF "$line" "$file"; then
         return 1
     fi
-    printf '\n# moth, put on PATH by its installer\n%s\n' "$line" >> "$file"
-    say "added moth's folder to PATH in $file"
+    printf '\n# folio, put on PATH by its installer\n%s\n' "$line" >> "$file"
+    say "added folio's folder to PATH in $file"
 }
 
 main() {
-    version=${MOTH_VERSION:-}
-    dir=${MOTH_INSTALL_DIR:-}
+    version=${FOLIO_VERSION:-}
+    dir=${FOLIO_INSTALL_DIR:-}
     modify_path=yes
-    if [ "${MOTH_NO_MODIFY_PATH:-}" = 1 ]; then modify_path=no; fi
-    releases=${MOTH_RELEASES_URL:-https://github.com/samyyy2423/moth/releases}
+    if [ "${FOLIO_NO_MODIFY_PATH:-}" = 1 ]; then modify_path=no; fi
+    releases=${FOLIO_RELEASES_URL:-https://github.com/samyyy2423/folio/releases}
 
     while [ $# -gt 0 ]; do
         case $1 in
@@ -76,11 +76,11 @@ main() {
 
     case $(uname -s) in
         Linux) ;;
-        *) fail "this installs moth on Linux; on Windows use install.ps1 (docs/installers.md), and elsewhere build moth from the source with node bootstrap.mjs" ;;
+        *) fail "this installs folio on Linux; on Windows use install.ps1 (docs/installers.md), and elsewhere build folio from the source with node bootstrap.mjs" ;;
     esac
     case $(uname -m) in
         x86_64 | amd64) ;;
-        *) fail "moth's Linux releases are for x86-64, and this is $(uname -m); build moth from the source with node bootstrap.mjs" ;;
+        *) fail "folio's Linux releases are for x86-64, and this is $(uname -m); build folio from the source with node bootstrap.mjs" ;;
     esac
 
     version=${version#v}
@@ -89,10 +89,10 @@ main() {
             *[!0-9A-Za-z.-]* | .* | -*) fail "'$version' isn't a version like 1.11.0" ;;
         esac
         from="$releases/download/v$version"
-        which="moth $version"
+        which="folio $version"
     else
         from="$releases/latest/download"
-        which="the latest moth"
+        which="the latest folio"
     fi
 
     home=${HOME:-}
@@ -102,7 +102,7 @@ main() {
         elif [ -n "$home" ]; then
             dir="$home/.local/bin"
         else
-            fail "HOME is not set, so say where to put moth with --dir"
+            fail "HOME is not set, so say where to put folio with --dir"
         fi
     fi
     case $dir in
@@ -114,32 +114,32 @@ main() {
     trap 'rm -rf "$work"' EXIT
     trap 'exit 1' INT TERM
     say "downloading $which from $from"
-    fetch "$from/moth-linux" "$work/moth-linux" || fail "couldn't download $from/moth-linux"
+    fetch "$from/folio-linux" "$work/folio-linux" || fail "couldn't download $from/folio-linux"
     fetch "$from/SHA256SUMS.txt" "$work/SHA256SUMS.txt" || fail "couldn't download $from/SHA256SUMS.txt"
 
-    expected=$(awk '$2 == "moth-linux" || $2 == "*moth-linux" { print tolower($1) }' "$work/SHA256SUMS.txt" | head -n 1)
+    expected=$(awk '$2 == "folio-linux" || $2 == "*folio-linux" { print tolower($1) }' "$work/SHA256SUMS.txt" | head -n 1)
     case $expected in
-        [0-9a-f]*) [ ${#expected} -eq 64 ] || fail "SHA256SUMS.txt's sum for moth-linux isn't a SHA-256" ;;
-        *) fail "SHA256SUMS.txt has no sum for moth-linux" ;;
+        [0-9a-f]*) [ ${#expected} -eq 64 ] || fail "SHA256SUMS.txt's sum for folio-linux isn't a SHA-256" ;;
+        *) fail "SHA256SUMS.txt has no sum for folio-linux" ;;
     esac
-    actual=$(sha256 "$work/moth-linux")
+    actual=$(sha256 "$work/folio-linux")
     if [ "$actual" != "$expected" ]; then
-        fail "moth-linux's SHA-256 is $actual, but SHA256SUMS.txt says $expected: the download isn't the release's, so nothing was installed"
+        fail "folio-linux's SHA-256 is $actual, but SHA256SUMS.txt says $expected: the download isn't the release's, so nothing was installed"
     fi
     say "checked: its SHA-256 is $actual, as SHA256SUMS.txt says"
 
     mkdir -p "$dir" || fail "couldn't make $dir"
-    # in beside the old one, then renamed over it, so a moth that's running carries on
-    cp "$work/moth-linux" "$dir/.moth-new.$$" || fail "couldn't write to $dir: choose another folder with --dir"
-    chmod 0755 "$dir/.moth-new.$$"
-    mv -f "$dir/.moth-new.$$" "$dir/moth"
-    say "installed $which as $dir/moth"
+    # in beside the old one, then renamed over it, so a folio that's running carries on
+    cp "$work/folio-linux" "$dir/.folio-new.$$" || fail "couldn't write to $dir: choose another folder with --dir"
+    chmod 0755 "$dir/.folio-new.$$"
+    mv -f "$dir/.folio-new.$$" "$dir/folio"
+    say "installed $which as $dir/folio"
 
     case ":${PATH:-}:" in
-        *":$dir:"*) say "run: moth run hello.moth"; return 0 ;;
+        *":$dir:"*) say "run: folio run hello.folio"; return 0 ;;
     esac
     if [ "$modify_path" = no ] || [ -z "$home" ]; then
-        say "$dir isn't on your PATH: add it, or run $dir/moth"
+        say "$dir isn't on your PATH: add it, or run $dir/folio"
         return 0
     fi
     shown=$dir
@@ -153,7 +153,7 @@ main() {
     if [ -f "$home/.zshrc" ] || [ "$shell" = zsh ]; then add_to_path "$home/.zshrc" "$line" || true; fi
     if [ -d "$home/.config/fish" ] || [ "$shell" = fish ]; then
         mkdir -p "$home/.config/fish/conf.d"
-        add_to_path "$home/.config/fish/conf.d/moth.fish" "fish_add_path -g '$dir'" || true
+        add_to_path "$home/.config/fish/conf.d/folio.fish" "fish_add_path -g '$dir'" || true
     fi
     say "open a new terminal for PATH to have it, or run: $line"
 }

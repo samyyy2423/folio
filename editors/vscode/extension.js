@@ -1,11 +1,11 @@
-// Moth in VS Code. The colours are syntaxes/moth.tmLanguage.json's. This adds problems as you type, from Moth's
-// own checker, with a fix where it has one, and Format Document, as moth tidy writes code: both from Moth's
-// engine, built into the extension, so they need nothing else. Where moth is installed, Moth's language server
-// (`moth lsp`, client.js starts it) gives the outline, Go to Definition, in the file or one it uses, what a name
+// Folio in VS Code. The colours are syntaxes/folio.tmLanguage.json's. This adds problems as you type, from Folio's
+// own checker, with a fix where it has one, and Format Document, as folio tidy writes code: both from Folio's
+// engine, built into the extension, so they need nothing else. Where folio is installed, Folio's language server
+// (`folio lsp`, client.js starts it) gives the outline, Go to Definition, in the file or one it uses, what a name
 // is when the pointer is on it, and what can come next as you type; without it, the outline and Go to Definition
-// find the file's functions by their lines. Run and Build start moth on the file, and Debug a debugging session,
-// through debug-adapter.js, which says `moth debug`'s commands for VS Code's breakpoints, stepping and variables.
-// Each of those starts the moth that find-moth.js finds: moth.path's, or the PATH's; where there's none, the
+// find the file's functions by their lines. Run and Build start folio on the file, and Debug a debugging session,
+// through debug-adapter.js, which says `folio debug`'s commands for VS Code's breakpoints, stepping and variables.
+// Each of those starts the folio that find-folio.js finds: folio.path's, or the PATH's; where there's none, the
 // extension says so once, with a button to the releases, and the colours, snippets, problems and Format
 // Document go on without it.
 const vscode = require("vscode");
@@ -13,21 +13,21 @@ const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const { startServer } = require("./client.js");
-const { findMoth, missingMessage, RELEASES } = require("./find-moth.js");
-const { MothDebugSession } = require("./debug-adapter.js");
+const { findFolio, missingMessage, RELEASES } = require("./find-folio.js");
+const { FolioDebugSession } = require("./debug-adapter.js");
 
-// Moth's engine, the one the playground runs: copied into engine/ when the extension is packaged (see
+// Folio's engine, the one the playground runs: copied into engine/ when the extension is packaged (see
 // make-vsix.mjs), or the repository's own while it's worked on there
 let engine = null;
 function loadEngine() {
-  const packaged = path.join(__dirname, "engine", "moth.js");
-  const file = fs.existsSync(packaged) ? packaged : path.join(__dirname, "..", "..", "moth.js");
+  const packaged = path.join(__dirname, "engine", "folio.js");
+  const file = fs.existsSync(packaged) ? packaged : path.join(__dirname, "..", "..", "folio.js");
   engine ??= import(pathToFileURL(file).href);
   return engine;
 }
 
 // what a file the program uses holds: the editor's copy if it's open there, or else the file on the disk,
-// from the folder of the file that uses it, as moth reads them
+// from the folder of the file that uses it, as folio reads them
 function filesFor(document) {
   if (document.uri.scheme !== "file") return () => undefined;
   const folder = path.dirname(document.uri.fsPath);
@@ -43,7 +43,7 @@ function filesFor(document) {
   };
 }
 
-const SEVERE = new Set(["error", "fails", "doesn't fit"]); // red: what makes moth check end with 1; the others are warnings
+const SEVERE = new Set(["error", "fails", "doesn't fit"]); // red: what makes folio check end with 1; the others are warnings
 
 // where a problem is: the word at its column, or the one character there
 function rangeAt(document, line, col) {
@@ -52,13 +52,13 @@ function rangeAt(document, line, col) {
   return word && word.start.isEqual(at) ? word : new vscode.Range(at, at.translate(0, 1));
 }
 
-// The problems Moth's checker finds in a document. One in a file it uses that stops it running is shown
+// The problems Folio's checker finds in a document. One in a file it uses that stops it running is shown
 // on the line that uses that file; the file's other problems show when it's opened itself.
 async function problemsOf(document) {
-  const moth = await loadEngine();
+  const folio = await loadEngine();
   const text = document.getText();
   const made = [];
-  for (const problem of moth.check(text, { files: filesFor(document) })) {
+  for (const problem of folio.check(text, { files: filesFor(document) })) {
     let range = null;
     let message = problem.message;
     if (!problem.file) range = rangeAt(document, problem.line, problem.col);
@@ -69,7 +69,7 @@ async function problemsOf(document) {
     }
     if (!range) continue;
     const diagnostic = new vscode.Diagnostic(range, message, SEVERE.has(problem.kind) ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning);
-    diagnostic.source = "moth";
+    diagnostic.source = "folio";
     if (problem.kind === "unused" || problem.kind === "never runs") diagnostic.tags = [vscode.DiagnosticTag.Unnecessary];
     made.push(diagnostic);
   }
@@ -132,50 +132,50 @@ function completionsOf(found) {
   });
 }
 
-// ---------- finding moth ----------
+// ---------- finding folio ----------
 
-// moth, as moth.path says or from the PATH, looked for afresh each time, so one installed since is found:
-// { file } or { file: null, why, tried } (see find-moth.js). A moth.path that doesn't start at the top is from
+// folio, as folio.path says or from the PATH, looked for afresh each time, so one installed since is found:
+// { file } or { file: null, why, tried } (see find-folio.js). A folio.path that doesn't start at the top is from
 // the workspace's folder, if it's one the person trusts.
-function whereIsMoth() {
+function whereIsFolio() {
   const trusted = vscode.workspace.isTrusted !== false;
   const folder = trusted ? vscode.workspace.workspaceFolders?.find((f) => f.uri.scheme === "file")?.uri.fsPath : undefined;
-  return findMoth(vscode.workspace.getConfiguration("moth").get("path"), { folder });
+  return findFolio(vscode.workspace.getConfiguration("folio").get("path"), { folder });
 }
 
-// Tells the person moth isn't there, with a button to the releases: when they ask for something that needs
+// Tells the person folio isn't there, with a button to the releases: when they ask for something that needs
 // it (Run, Build, Debug), and once a session as the extension starts, unless they've said not to again. Its
 // promise is done once they've answered, or closed the message, which nothing waits for but the tests.
-const QUIET = "moth.missing.quiet";
+const QUIET = "folio.missing.quiet";
 let told = false;
 async function tellMissing(found, { context, output, asked = false }) {
   const message = missingMessage(found);
   output?.appendLine(message);
   if (!asked && (told || context?.globalState?.get(QUIET))) return;
   told = true;
-  const buttons = asked ? ["Get Moth"] : ["Get Moth", "Don't Show Again"];
+  const buttons = asked ? ["Get Folio"] : ["Get Folio", "Don't Show Again"];
   const chosen = await vscode.window.showWarningMessage(message, ...buttons);
-  if (chosen === "Get Moth") await vscode.env.openExternal(vscode.Uri.parse(RELEASES));
+  if (chosen === "Get Folio") await vscode.env.openExternal(vscode.Uri.parse(RELEASES));
   else if (chosen === "Don't Show Again") await context?.globalState?.update(QUIET, true);
 }
 
 // ---------- the language server ----------
 
-// Moth's language server for the documents VS Code has open: started with the extension, told of each Moth
+// Folio's language server for the documents VS Code has open: started with the extension, told of each Folio
 // document as it's opened, changed and closed, and asked what it knows. It finds the problems too, but the
 // extension asks it not to say them: the engine's checker finds those, and the ones that rest on a value
-// written out (1 / 0) as well, which moth check leaves to it. `server` is nothing until it has started, and
+// written out (1 / 0) as well, which folio check leaves to it. `server` is nothing until it has started, and
 // again if it can't or once it ends; the providers then do without it.
 function languageServer(output, context) {
   const state = { server: null, sent: new Map() }; // each document's version as the server has it, by its address
-  const document = (d) => ({ uri: d.uri.toString(), languageId: "moth", version: d.version ?? 0, text: d.getText() });
+  const document = (d) => ({ uri: d.uri.toString(), languageId: "folio", version: d.version ?? 0, text: d.getText() });
   const opened = (d) => {
-    if (!state.server || d.languageId !== "moth" || state.sent.has(d.uri.toString())) return;
+    if (!state.server || d.languageId !== "folio" || state.sent.has(d.uri.toString())) return;
     state.sent.set(d.uri.toString(), d.version ?? 0);
     state.server.notify("textDocument/didOpen", { textDocument: document(d) });
   };
   const changed = (d) => {
-    if (!state.server || d.languageId !== "moth") return;
+    if (!state.server || d.languageId !== "folio") return;
     if (!state.sent.has(d.uri.toString())) return opened(d);
     state.sent.set(d.uri.toString(), d.version ?? 0);
     state.server.notify("textDocument/didChange", { textDocument: { uri: d.uri.toString(), version: d.version ?? 0 }, contentChanges: [{ text: d.getText() }] });
@@ -192,7 +192,7 @@ function languageServer(output, context) {
     try {
       return await state.server.request(method, { textDocument: { uri: d.uri.toString() }, ...more });
     } catch (err) {
-      output.appendLine(`moth lsp: ${method}: ${err.message}`);
+      output.appendLine(`folio lsp: ${method}: ${err.message}`);
       return undefined;
     }
   };
@@ -200,10 +200,10 @@ function languageServer(output, context) {
   let starting = null;
   const start = () => (starting ??= begin().finally(() => (starting = null)));
   const begin = async () => {
-    if (state.server || vscode.workspace.getConfiguration("moth").get("languageServer") === false) return;
-    const found = whereIsMoth();
+    if (state.server || vscode.workspace.getConfiguration("folio").get("languageServer") === false) return;
+    const found = whereIsFolio();
     if (!found.file) {
-      output.appendLine("The outline and Go to Definition find the file's functions by their lines instead of with moth lsp.");
+      output.appendLine("The outline and Go to Definition find the file's functions by their lines instead of with folio lsp.");
       tellMissing(found, { context, output }); // not waited for: the message waits for the person
       return;
     }
@@ -213,16 +213,16 @@ function languageServer(output, context) {
       server.on("window/showMessage", (m) => vscode.window.showWarningMessage(m.message));
       server.on("window/logMessage", (m) => output.appendLine(m.message));
       server.onExit((why) => {
-        output.appendLine(`moth lsp ended: ${why}`);
+        output.appendLine(`folio lsp ended: ${why}`);
         if (state.server !== server) return; // one stopped to start another
         state.server = null;
         state.sent.clear();
       });
       state.server = server;
-      output.appendLine(`moth lsp started (${command})`);
+      output.appendLine(`folio lsp started (${command})`);
       vscode.workspace.textDocuments.forEach(opened);
     } catch (err) {
-      output.appendLine(`${err.message}. The outline and Go to Definition find the file's functions by their lines instead; hovers, completion and definitions in other files need a moth with moth lsp in it, one newer than 1.11.`);
+      output.appendLine(`${err.message}. The outline and Go to Definition find the file's functions by their lines instead; hovers, completion and definitions in other files need a folio with folio lsp in it, one newer than 1.11.`);
     }
   };
   const stop = async () => {
@@ -231,7 +231,7 @@ function languageServer(output, context) {
     state.sent.clear();
     await server?.stop();
   };
-  // moth.path or moth.languageServer changed: the server stopped, and started again as they now say
+  // folio.path or folio.languageServer changed: the server stopped, and started again as they now say
   const restart = async () => {
     await starting;
     await stop();
@@ -240,13 +240,13 @@ function languageServer(output, context) {
   return { state, start, stop, restart, opened, changed, closed, ask };
 }
 
-// `moth run` or `build` on a file, as a task: moth is the task's program, not a command typed into a shell, so a
+// `folio run` or `build` on a file, as a task: folio is the task's program, not a command typed into a shell, so a
 // path with spaces in it needs no quotes; the program's input is the terminal's, for its questions; and what it
 // said stays there once it has ended, as a terminal of its own wouldn't (it closes as its program ends)
-function mothTask(command, file, moth, scope = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file)) ?? vscode.TaskScope.Workspace) {
+function folioTask(command, file, folio, scope = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file)) ?? vscode.TaskScope.Workspace) {
   const name = `${command} ${path.basename(file)}`;
-  const task = new vscode.Task({ type: "moth", command, file }, scope, name, "moth",
-    new vscode.ProcessExecution(moth, [command, path.basename(file)], { cwd: path.dirname(file) }), []);
+  const task = new vscode.Task({ type: "folio", command, file }, scope, name, "folio",
+    new vscode.ProcessExecution(folio, [command, path.basename(file)], { cwd: path.dirname(file) }), []);
   task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, focus: true, panel: vscode.TaskPanelKind.Dedicated, clear: true };
   return task;
 }
@@ -254,23 +254,23 @@ function mothTask(command, file, moth, scope = vscode.workspace.getWorkspaceFold
 // Run or Build: the file in front, saved first
 async function start(command, context, output) {
   const document = vscode.window.activeTextEditor?.document;
-  if (!document || document.languageId !== "moth") return vscode.window.showInformationMessage("Open a Moth file first.");
-  if (document.isUntitled) return vscode.window.showInformationMessage("Save the file first, so moth can find it.");
-  const found = whereIsMoth();
+  if (!document || document.languageId !== "folio") return vscode.window.showInformationMessage("Open a Folio file first.");
+  if (document.isUntitled) return vscode.window.showInformationMessage("Save the file first, so folio can find it.");
+  const found = whereIsFolio();
   if (!found.file) {
     tellMissing(found, { context, output, asked: true });
     return undefined;
   }
   if (document.isDirty) await document.save();
-  return vscode.tasks.executeTask(mothTask(command, document.uri.fsPath, found.file));
+  return vscode.tasks.executeTask(folioTask(command, document.uri.fsPath, found.file));
 }
 
-// `moth debug`, for VS Code's debugger: the debug adapter, inside the extension
+// `folio debug`, for VS Code's debugger: the debug adapter, inside the extension
 class InlineAdapter {
   constructor() {
     this.emitter = new vscode.EventEmitter();
     this.onDidSendMessage = this.emitter.event;
-    this.session = new MothDebugSession((message) => this.emitter.fire(message));
+    this.session = new FolioDebugSession((message) => this.emitter.fire(message));
   }
   handleMessage(message) {
     this.session.handle(message);
@@ -282,47 +282,47 @@ class InlineAdapter {
 }
 
 // A debugging session's configuration, filled in: with none (F5 with no launch.json), the file in front; and
-// moth, the launch configuration's mothPath if it says, or else the one moth.path or the PATH has. Gives
-// null for no file, and { missing } where there's no moth.
+// folio, the launch configuration's folioPath if it says, or else the one folio.path or the PATH has. Gives
+// null for no file, and { missing } where there's no folio.
 function debugConfiguration(config) {
   if (!config.type && !config.request && !config.name) {
     const document = vscode.window.activeTextEditor?.document;
-    if (document?.languageId !== "moth") return null;
-    config = { type: "moth", request: "launch", name: "Debug this file", program: document.uri.fsPath };
+    if (document?.languageId !== "folio") return null;
+    config = { type: "folio", request: "launch", name: "Debug this file", program: document.uri.fsPath };
   }
   if (!config.program) return null;
-  if (config.mothPath) return config;
-  const found = whereIsMoth();
-  return found.file ? { ...config, mothPath: found.file } : { missing: found };
+  if (config.folioPath) return config;
+  const found = whereIsFolio();
+  return found.file ? { ...config, folioPath: found.file } : { missing: found };
 }
 
 // Debug: the file in front, saved first, in a debugging session
 async function debugFile() {
   const document = vscode.window.activeTextEditor?.document;
-  if (!document || document.languageId !== "moth") return vscode.window.showInformationMessage("Open a Moth file first.");
-  if (document.isUntitled) return vscode.window.showInformationMessage("Save the file first, so moth can find it.");
+  if (!document || document.languageId !== "folio") return vscode.window.showInformationMessage("Open a Folio file first.");
+  if (document.isUntitled) return vscode.window.showInformationMessage("Save the file first, so folio can find it.");
   if (document.isDirty) await document.save();
-  return vscode.debug.startDebugging(undefined, { type: "moth", request: "launch", name: `Debug ${path.basename(document.uri.fsPath)}`, program: document.uri.fsPath });
+  return vscode.debug.startDebugging(undefined, { type: "folio", request: "launch", name: `Debug ${path.basename(document.uri.fsPath)}`, program: document.uri.fsPath });
 }
 
 let running = null; // the language server, for deactivate
 
 function activate(context) {
-  const diagnostics = vscode.languages.createDiagnosticCollection("moth");
-  const output = vscode.window.createOutputChannel("Moth");
+  const diagnostics = vscode.languages.createDiagnosticCollection("folio");
+  const output = vscode.window.createOutputChannel("Folio");
   const lsp = languageServer(output, context);
   running = lsp;
   const waiting = new Map(); // a document's next check, a moment after the last change
   const check = async (document) => {
-    if (document.languageId !== "moth") return;
+    if (document.languageId !== "folio") return;
     diagnostics.set(document.uri, await problemsOf(document));
   };
   const soon = (document) => {
-    if (document.languageId !== "moth") return;
+    if (document.languageId !== "folio") return;
     clearTimeout(waiting.get(document.uri.toString()));
     waiting.set(document.uri.toString(), setTimeout(() => check(document), 250));
   };
-  const selector = { language: "moth" };
+  const selector = { language: "folio" };
   context.subscriptions.push(
     diagnostics,
     output,
@@ -339,16 +339,16 @@ function activate(context) {
       lsp.closed(document);
       diagnostics.delete(document.uri);
     }),
-    vscode.workspace.onDidChangeConfiguration((e) => (e.affectsConfiguration("moth.path") || e.affectsConfiguration("moth.languageServer") ? lsp.restart() : undefined)),
+    vscode.workspace.onDidChangeConfiguration((e) => (e.affectsConfiguration("folio.path") || e.affectsConfiguration("folio.languageServer") ? lsp.restart() : undefined)),
     vscode.languages.registerDocumentFormattingEditProvider(selector, {
       async provideDocumentFormattingEdits(document) {
-        const moth = await loadEngine();
+        const folio = await loadEngine();
         const text = document.getText();
         let tidy;
         try {
-          tidy = moth.format(text);
+          tidy = folio.format(text);
         } catch (err) {
-          vscode.window.showWarningMessage(`Moth can't tidy this until its mistake is put right: ${err.message}`);
+          vscode.window.showWarningMessage(`Folio can't tidy this until its mistake is put right: ${err.message}`);
           return [];
         }
         if (tidy === text) return [];
@@ -357,12 +357,12 @@ function activate(context) {
     }),
     vscode.languages.registerCodeActionsProvider(selector, {
       async provideCodeActions(document, range, context) {
-        const moth = await loadEngine();
+        const folio = await loadEngine();
         const actions = [];
         for (const diagnostic of context.diagnostics) {
-          if (diagnostic.source !== "moth") continue;
+          if (diagnostic.source !== "folio") continue;
           const at = diagnostic.range.start;
-          const fix = moth.suggestedFix(document.getText(), { line: at.line + 1, col: at.character + 1, reason: diagnostic.message });
+          const fix = folio.suggestedFix(document.getText(), { line: at.line + 1, col: at.character + 1, reason: diagnostic.message });
           if (!fix) continue;
           const action = new vscode.CodeAction(`Change to '${fix.text}'`, vscode.CodeActionKind.QuickFix);
           action.edit = new vscode.WorkspaceEdit();
@@ -387,7 +387,7 @@ function activate(context) {
         if (found !== undefined) return locationsOf(found)?.[0] ?? null;
         const word = document.getWordRangeAtPosition(position); // without the server: a function this file makes
         if (!word) return null;
-        const name = document.getText(word).toLowerCase(); // Moth's names don't care about case
+        const name = document.getText(word).toLowerCase(); // Folio's names don't care about case
         const made = allOf(functionsIn(document)).find((s) => s.name.toLowerCase() === name);
         return made ? new vscode.Location(document.uri, made.selectionRange) : null;
       },
@@ -403,15 +403,15 @@ function activate(context) {
         return found ? completionsOf(found) : undefined;
       },
     }, "'"),
-    vscode.commands.registerCommand("moth.run", () => start("run", context, output)),
-    vscode.commands.registerCommand("moth.debug", debugFile),
-    vscode.debug.registerDebugAdapterDescriptorFactory("moth", {
+    vscode.commands.registerCommand("folio.run", () => start("run", context, output)),
+    vscode.commands.registerCommand("folio.debug", debugFile),
+    vscode.debug.registerDebugAdapterDescriptorFactory("folio", {
       createDebugAdapterDescriptor: () => new vscode.DebugAdapterInlineImplementation(new InlineAdapter()),
     }),
-    vscode.debug.registerDebugConfigurationProvider("moth", {
+    vscode.debug.registerDebugConfigurationProvider("folio", {
       resolveDebugConfiguration(folder, config) {
         const made = debugConfiguration(config);
-        if (!made) vscode.window.showInformationMessage("Open a Moth file first, or say which with \"program\".");
+        if (!made) vscode.window.showInformationMessage("Open a Folio file first, or say which with \"program\".");
         if (made?.missing) {
           tellMissing(made.missing, { context, output, asked: true });
           return undefined;
@@ -419,29 +419,29 @@ function activate(context) {
         return made ?? undefined;
       },
     }),
-    vscode.commands.registerCommand("moth.build", () => start("build", context, output)),
-    // a moth task in tasks.json, { "type": "moth", "command": "build", "file": "app.moth" }, made into moth's
-    vscode.tasks.registerTaskProvider("moth", {
+    vscode.commands.registerCommand("folio.build", () => start("build", context, output)),
+    // a folio task in tasks.json, { "type": "folio", "command": "build", "file": "app.folio" }, made into folio's
+    vscode.tasks.registerTaskProvider("folio", {
       provideTasks: () => [],
       resolveTask(task) {
         const { command, file } = task.definition;
         if (!["run", "build"].includes(command) || !file) return undefined;
-        const found = whereIsMoth();
+        const found = whereIsFolio();
         if (!found.file) {
           tellMissing(found, { context, output }); // VS Code asks for this just to list the tasks, too
           return undefined;
         }
         const folder = typeof task.scope === "object" ? task.scope.uri.fsPath : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const made = mothTask(command, path.resolve(folder ?? "", file), found.file, task.scope);
-        return new vscode.Task(task.definition, task.scope, task.name, "moth", made.execution, []);
+        const made = folioTask(command, path.resolve(folder ?? "", file), found.file, task.scope);
+        return new vscode.Task(task.definition, task.scope, task.name, "folio", made.execution, []);
       },
     }),
   );
   vscode.workspace.textDocuments.forEach(check);
-  // what the extension gives other extensions, and its tests: where moth is, and whether moth lsp is running
+  // what the extension gives other extensions, and its tests: where folio is, and whether folio lsp is running
   const api = {
-    get moth() {
-      return whereIsMoth().file;
+    get folio() {
+      return whereIsFolio().file;
     },
     get languageServer() {
       return Boolean(lsp.state.server);

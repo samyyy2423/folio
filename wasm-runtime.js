@@ -1,5 +1,5 @@
 // The part of the WebAssembly engine's runtime written once, as text that both back ends assemble: wasm.js here,
-// and wasm.moth through wasm-runtime.moth, which make-wasm-runtime.mjs writes from this file. So the two can't
+// and wasm.folio through wasm-runtime.folio, which make-wasm-runtime.mjs writes from this file. So the two can't
 // drift apart, and the module each makes stays the same, byte for byte.
 //
 // It is WebAssembly's own instructions, a function at a time:
@@ -12,7 +12,7 @@
 //     export NAME ...                the same, exported under its name for the JavaScript side
 //     local NAME TYPE                a local, named
 //
-// and then the function's instructions, with `;;` starting a comment. A type is i32, i64, f64, eq (any Moth
+// and then the function's instructions, with `;;` starting a comment. A type is i32, i64, f64, eq (any Folio
 // value), extern (a JavaScript value), ref:T or null:T (a reference to the module's type T: chars, text...).
 // An instruction names a function as R.NAME, an import as im.NAME, a global as g.NAME, a type by its name, and
 // a local or input by its name. A block, loop or if may be followed by its type: i32, i64, f64, eq or externref.
@@ -33,7 +33,7 @@ double d2p53 9007199254740992
 
 ;; ---------- big whole numbers ----------
 ;; A big number is 32-bit limbs, lowest first, and how many are in use: at least 1, the top one not 0 unless
-;; it's the only one. Six are made once, for working out a number's digits exactly (as machine.moth's are).
+;; it's the only one. Six are made once, for working out a number's digits exactly (as machine.folio's are).
 global bigR ref:big const i32.const 44 array.new_default ids i32.const 1 struct.new big
 global bigS ref:big const i32.const 44 array.new_default ids i32.const 1 struct.new big
 global bigMp ref:big const i32.const 44 array.new_default ids i32.const 1 struct.new big
@@ -506,7 +506,7 @@ global.get g.bigT global.get g.bigS call R.bigCmp
 
 ;; x, a number above 0: dbuf gets the fewest digits that read back as it, dn how many, dp where the point
 ;; goes. The number is R / S, and M+ and M- are how far each way a number can be and still read back as it,
-;; all doubled so they're whole (Steele and White's way, as machine.moth's rt_shortest).
+;; all doubled so they're whole (Steele and White's way, as machine.folio's rt_shortest).
 func shortest x:f64 ->
 local bits i64
 local frac i64

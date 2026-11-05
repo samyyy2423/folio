@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ui.moth · Moth's standard library</title>
+  <title>ui.folio · Folio's standard library</title>
   <meta name="description" content="The system's own windows and controls, on Windows or Linux.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>ui</em>.moth</h1>
+      <h1><em>ui</em>.folio</h1>
       <p>The system's own windows and controls, on Windows or Linux.</p>
-      <p class="use"><code>use "ui.moth" as ui</code></p>
+      <p class="use"><code>use "ui.folio" as ui</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="ui.moth's functions">
+    <nav class="toc" aria-label="ui.folio's functions">
       <h2>64 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#window">window</a></li><li><a href="#button">button</a></li><li><a href="#label">label</a></li><li><a href="#text_box">text_box</a></li><li><a href="#text_area">text_area</a></li><li><a href="#on_change">on_change</a></li><li><a href="#checkbox">checkbox</a></li><li><a href="#list_box">list_box</a></li><li><a href="#dropdown">dropdown</a></li><li><a href="#text_of">text_of</a></li><li><a href="#set_text">set_text</a></li><li><a href="#ticked">ticked</a></li><li><a href="#set_ticked">set_ticked</a></li><li><a href="#add_item">add_item</a></li><li><a href="#clear_items">clear_items</a></li><li><a href="#remove_item">remove_item</a></li><li><a href="#count_of">count_of</a></li><li><a href="#chosen_place">chosen_place</a></li><li><a href="#choose">choose</a></li><li><a href="#chosen">chosen</a></li><li><a href="#enable">enable</a></li><li><a href="#focus">focus</a></li><li><a href="#place">place</a></li><li><a href="#on_resize">on_resize</a></li><li><a href="#on_close">on_close</a></li><li><a href="#menu_item">menu_item</a></li><li><a href="#timer">timer</a></li><li><a href="#message">message</a></li><li><a href="#ask_yes_no">ask_yes_no</a></li><li><a href="#choose_file_to_open">choose_file_to_open</a></li><li><a href="#choose_file_to_save">choose_file_to_save</a></li><li><a href="#close">close</a></li><li><a href="#run">run</a></li><li><a href="#progress">progress</a></li><li><a href="#set_progress">set_progress</a></li><li><a href="#picture">picture</a></li><li><a href="#set_picture">set_picture</a></li><li><a href="#tabs">tabs</a></li><li><a href="#tab">tab</a></li><li><a href="#chosen_tab">chosen_tab</a></li><li><a href="#choose_tab">choose_tab</a></li><li><a href="#table">table</a></li><li><a href="#add_row">add_row</a></li><li><a href="#clear_rows">clear_rows</a></li><li><a href="#chosen_row">chosen_row</a></li><li><a href="#choose_row">choose_row</a></li><li><a href="#drawing">drawing</a></li><li><a href="#on_click">on_click</a></li><li><a href="#redraw">redraw</a></li><li><a href="#colour">colour</a></li><li><a href="#rectangle">rectangle</a></li><li><a href="#circle">circle</a></li><li><a href="#line">line</a></li><li><a href="#words">words</a></li><li><a href="#set_icon">set_icon</a></li><li><a href="#key_down">key_down</a></li><li><a href="#mouse_x">mouse_x</a></li><li><a href="#mouse_y">mouse_y</a></li><li><a href="#mouse_down">mouse_down</a></li><li><a href="#on_key">on_key</a></li><li><a href="#load_image">load_image</a></li><li><a href="#draw_image">draw_image</a></li><li><a href="#draw_image_sized">draw_image_sized</a></li><li><a href="#play_sound">play_sound</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>The system's own windows and controls, on Windows or Linux: windows.moth's on Windows and linux.moth's (GTK) on Linux, which have the same functions, so a program that uses this one works on both. It needs both files beside it, and is built with --allow-libraries.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <p>The system's own windows and controls, on Windows or Linux: windows.folio's on Windows and linux.folio's (GTK) on Linux, which have the same functions, so a program that uses this one works on both. It needs both files beside it, and is built with --allow-libraries.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> say_hello
     ui's message(w, <span class="s">&quot;Hello, &quot;</span> + ui's text_of(name))
 <span class="k">end</span>
@@ -139,9 +139,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>title</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to window with title, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L100">ui.moth line 100</a></p>
+          <p class="written">Written <code>to window with title, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L100">ui.folio line 100</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Hello&quot;</span>, <span class="n">360</span>, <span class="n">140</span>)</code></pre></div>
         </section>
         <section class="fn" id="button">
@@ -151,9 +151,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>text</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to button with parent, text, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L109">ui.moth line 109</a></p>
+          <p class="written">Written <code>to button with parent, text, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L109">ui.folio line 109</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> say_hello
     ui's message(w, <span class="s">&quot;Hello, &quot;</span> + ui's text_of(name))
 <span class="k">end</span>
@@ -167,9 +167,9 @@ ui's <span class="k">button</span>(w, <span class="s">&quot;Greet&quot;</span>, 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>text</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to label with parent, text, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L117">ui.moth line 117</a></p>
+          <p class="written">Written <code>to label with parent, text, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L117">ui.folio line 117</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's label(w, <span class="s">&quot;Name&quot;</span>, <span class="n">20</span>, <span class="n">20</span>, <span class="n">60</span>, <span class="n">24</span>)</code></pre></div>
         </section>
@@ -180,9 +180,9 @@ ui's label(w, <span class="s">&quot;Name&quot;</span>, <span class="n">20</span>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_box with parent, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L125">ui.moth line 125</a></p>
+          <p class="written">Written <code>to text_box with parent, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L125">ui.folio line 125</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Hello&quot;</span>, <span class="n">360</span>, <span class="n">140</span>)
 <span class="k">set</span> name <span class="k">to</span> ui's text_box(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">200</span>, <span class="n">26</span>)</code></pre></div>
         </section>
@@ -193,9 +193,9 @@ ui's label(w, <span class="s">&quot;Name&quot;</span>, <span class="n">20</span>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_area with parent, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L133">ui.moth line 133</a></p>
+          <p class="written">Written <code>to text_area with parent, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L133">ui.folio line 133</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> notes <span class="k">to</span> ui's text_area(w, <span class="n">20</span>, <span class="n">56</span>, <span class="n">260</span>, <span class="n">80</span>)</code></pre></div>
         </section>
@@ -206,9 +206,9 @@ ui's label(w, <span class="s">&quot;Name&quot;</span>, <span class="n">20</span>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to on_change with control, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L141">ui.moth line 141</a></p>
+          <p class="written">Written <code>to on_change with control, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L141">ui.folio line 141</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> name <span class="k">to</span> ui's text_box(w, <span class="n">80</span>, <span class="n">20</span>, <span class="n">200</span>, <span class="n">26</span>)
 ui's on_change(name, name_changed)                 <span class="c"># name_changed(text), as it's typed</span></code></pre></div>
@@ -220,9 +220,9 @@ ui's on_change(name, name_changed)                 <span class="c"># name_change
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>text</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to checkbox with parent, text, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L149">ui.moth line 149</a></p>
+          <p class="written">Written <code>to checkbox with parent, text, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L149">ui.folio line 149</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> gift <span class="k">to</span> ui's <span class="k">checkbox</span>(w, <span class="s">&quot;A gift&quot;</span>, <span class="n">300</span>, <span class="n">56</span>, <span class="n">120</span>, <span class="n">24</span>, gift_ticked)    <span class="c"># gift_ticked(yes or no)</span></code></pre></div>
         </section>
@@ -233,9 +233,9 @@ ui's on_change(name, name_changed)                 <span class="c"># name_change
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to list_box with parent, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L158">ui.moth line 158</a></p>
+          <p class="written">Written <code>to list_box with parent, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L158">ui.folio line 158</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span></code></pre></div>
         </section>
@@ -246,9 +246,9 @@ ui's on_change(name, name_changed)                 <span class="c"># name_change
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to dropdown with parent, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L167">ui.moth line 167</a></p>
+          <p class="written">Written <code>to dropdown with parent, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L167">ui.folio line 167</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> sizes <span class="k">to</span> ui's <span class="k">dropdown</span>(w, <span class="n">160</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">28</span>, size_chosen)      <span class="c"># size_chosen(item), as a list box's</span></code></pre></div>
         </section>
@@ -259,9 +259,9 @@ ui's on_change(name, name_changed)                 <span class="c"># name_change
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_of with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L175">ui.moth line 175</a></p>
+          <p class="written">Written <code>to text_of with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L175">ui.folio line 175</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> say_hello
     ui's message(w, <span class="s">&quot;Hello, &quot;</span> + ui's text_of(name))
 <span class="k">end</span>
@@ -277,9 +277,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>text</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_text with control, text</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L183">ui.moth line 183</a></p>
+          <p class="written">Written <code>to set_text with control, text</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L183">ui.folio line 183</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> name <span class="k">to</span> ui's text_box(w, <span class="n">80</span>, <span class="n">20</span>, <span class="n">200</span>, <span class="n">26</span>)
 ui's set_text(name, <span class="s">&quot;Sam&quot;</span>)</code></pre></div>
@@ -291,9 +291,9 @@ ui's set_text(name, <span class="s">&quot;Sam&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ticked with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L191">ui.moth line 191</a></p>
+          <p class="written">Written <code>to ticked with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L191">ui.folio line 191</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> gift <span class="k">to</span> ui's <span class="k">checkbox</span>(w, <span class="s">&quot;A gift&quot;</span>, <span class="n">300</span>, <span class="n">56</span>, <span class="n">120</span>, <span class="n">24</span>, gift_ticked)    <span class="c"># gift_ticked(yes or no)</span>
 <span class="k">say</span> ui's <span class="k">ticked</span>(gift)                              <span class="c"># yes</span></code></pre></div>
@@ -305,9 +305,9 @@ ui's set_text(name, <span class="s">&quot;Sam&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>tick</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_ticked with control, tick</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L199">ui.moth line 199</a></p>
+          <p class="written">Written <code>to set_ticked with control, tick</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L199">ui.folio line 199</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> gift <span class="k">to</span> ui's <span class="k">checkbox</span>(w, <span class="s">&quot;A gift&quot;</span>, <span class="n">300</span>, <span class="n">56</span>, <span class="n">120</span>, <span class="n">24</span>, gift_ticked)    <span class="c"># gift_ticked(yes or no)</span>
 ui's set_ticked(gift, <span class="k">yes</span>)</code></pre></div>
@@ -319,9 +319,9 @@ ui's set_ticked(gift, <span class="k">yes</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>text</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_item with control, text</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L207">ui.moth line 207</a></p>
+          <p class="written">Written <code>to add_item with control, text</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L207">ui.folio line 207</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 ui's add_item(fruits, <span class="s">&quot;apple&quot;</span>)</code></pre></div>
@@ -333,9 +333,9 @@ ui's add_item(fruits, <span class="s">&quot;apple&quot;</span>)</code></pre></di
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to clear_items with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L215">ui.moth line 215</a></p>
+          <p class="written">Written <code>to clear_items with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L215">ui.folio line 215</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 ui's clear_items(fruits)</code></pre></div>
@@ -347,9 +347,9 @@ ui's clear_items(fruits)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>place</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to remove_item with control, place</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L223">ui.moth line 223</a></p>
+          <p class="written">Written <code>to remove_item with control, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L223">ui.folio line 223</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 ui's remove_item(fruits, <span class="n">1</span>)</code></pre></div>
@@ -361,9 +361,9 @@ ui's remove_item(fruits, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to count_of with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L231">ui.moth line 231</a></p>
+          <p class="written">Written <code>to count_of with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L231">ui.folio line 231</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 <span class="k">say</span> ui's chosen(fruits) <span class="s">&quot; &quot;</span> ui's chosen_place(fruits) <span class="s">&quot; of &quot;</span> ui's count_of(fruits)    <span class="c"># pear 2 of 2</span></code></pre></div>
@@ -375,9 +375,9 @@ ui's remove_item(fruits, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to chosen_place with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L239">ui.moth line 239</a></p>
+          <p class="written">Written <code>to chosen_place with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L239">ui.folio line 239</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 <span class="k">say</span> ui's chosen(fruits) <span class="s">&quot; &quot;</span> ui's chosen_place(fruits) <span class="s">&quot; of &quot;</span> ui's count_of(fruits)    <span class="c"># pear 2 of 2</span></code></pre></div>
@@ -389,9 +389,9 @@ ui's remove_item(fruits, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>place</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to choose with control, place</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L247">ui.moth line 247</a></p>
+          <p class="written">Written <code>to choose with control, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L247">ui.folio line 247</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 ui's <span class="k">choose</span>(fruits, <span class="n">2</span>)</code></pre></div>
@@ -403,9 +403,9 @@ ui's <span class="k">choose</span>(fruits, <span class="n">2</span>)</code></pre
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to chosen with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L255">ui.moth line 255</a></p>
+          <p class="written">Written <code>to chosen with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L255">ui.folio line 255</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> fruits <span class="k">to</span> ui's list_box(w, <span class="n">20</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">100</span>, fruit_chosen)    <span class="c"># fruit_chosen(item)</span>
 <span class="k">say</span> ui's chosen(fruits) <span class="s">&quot; &quot;</span> ui's chosen_place(fruits) <span class="s">&quot; of &quot;</span> ui's count_of(fruits)    <span class="c"># pear 2 of 2</span></code></pre></div>
@@ -417,9 +417,9 @@ ui's <span class="k">choose</span>(fruits, <span class="n">2</span>)</code></pre
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to enable with control, on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L263">ui.moth line 263</a></p>
+          <p class="written">Written <code>to enable with control, on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L263">ui.folio line 263</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> buy <span class="k">to</span> ui's <span class="k">button</span>(w, <span class="s">&quot;Buy&quot;</span>, <span class="n">300</span>, <span class="n">20</span>, <span class="n">80</span>, <span class="n">28</span>, bought)    <span class="c"># bought(), when it's pressed</span>
 ui's enable(buy, <span class="k">no</span>)                               <span class="c"># greyed out, until enable(buy, yes)</span></code></pre></div>
@@ -431,9 +431,9 @@ ui's enable(buy, <span class="k">no</span>)                               <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to focus with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L271">ui.moth line 271</a></p>
+          <p class="written">Written <code>to focus with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L271">ui.folio line 271</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> name <span class="k">to</span> ui's text_box(w, <span class="n">80</span>, <span class="n">20</span>, <span class="n">200</span>, <span class="n">26</span>)
 ui's focus(name)                                   <span class="c"># what's typed goes into it</span></code></pre></div>
@@ -445,9 +445,9 @@ ui's focus(name)                                   <span class="c"># what's type
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to place with control, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L279">ui.moth line 279</a></p>
+          <p class="written">Written <code>to place with control, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L279">ui.folio line 279</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> sizes <span class="k">to</span> ui's <span class="k">dropdown</span>(w, <span class="n">160</span>, <span class="n">150</span>, <span class="n">120</span>, <span class="n">28</span>, size_chosen)      <span class="c"># size_chosen(item), as a list box's</span>
 ui's place(sizes, <span class="n">160</span>, <span class="n">190</span>, <span class="n">140</span>, <span class="n">28</span>)               <span class="c"># moved, or made another size</span></code></pre></div>
@@ -459,9 +459,9 @@ ui's place(sizes, <span class="n">160</span>, <span class="n">190</span>, <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to on_resize with parent, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L287">ui.moth line 287</a></p>
+          <p class="written">Written <code>to on_resize with parent, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L287">ui.folio line 287</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's on_resize(w, resized)                         <span class="c"># resized(width, height)</span></code></pre></div>
         </section>
@@ -472,9 +472,9 @@ ui's on_resize(w, resized)                         <span class="c"># resized(wid
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to on_close with parent, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L295">ui.moth line 295</a></p>
+          <p class="written">Written <code>to on_close with parent, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L295">ui.folio line 295</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's on_close(w, may_close)                        <span class="c"># may_close() gives yes to let it close</span></code></pre></div>
         </section>
@@ -485,9 +485,9 @@ ui's on_close(w, may_close)                        <span class="c"># may_close()
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>title</code></li><li><code>text</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to menu_item with parent, title, text, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L305">ui.moth line 305</a></p>
+          <p class="written">Written <code>to menu_item with parent, title, text, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L305">ui.folio line 305</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's menu_item(w, <span class="s">&quot;File&quot;</span>, <span class="s">&quot;Save\tCtrl+S&quot;</span>, saved)  <span class="c"># saved(), when it's chosen or its keys pressed</span></code></pre></div>
         </section>
@@ -498,9 +498,9 @@ ui's menu_item(w, <span class="s">&quot;File&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>milliseconds</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to timer with parent, milliseconds, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L313">ui.moth line 313</a></p>
+          <p class="written">Written <code>to timer with parent, milliseconds, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L313">ui.folio line 313</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's timer(w, <span class="n">1000</span>, every_second)                  <span class="c"># every_second(), each second</span></code></pre></div>
         </section>
@@ -511,9 +511,9 @@ ui's timer(w, <span class="n">1000</span>, every_second)                  <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>text</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to message with parent, text</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L321">ui.moth line 321</a></p>
+          <p class="written">Written <code>to message with parent, text</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L321">ui.folio line 321</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> say_hello
     ui's message(w, <span class="s">&quot;Hello, &quot;</span> + ui's text_of(name))
 <span class="k">end</span>
@@ -529,9 +529,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>question</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ask_yes_no with parent, question</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L329">ui.moth line 329</a></p>
+          <p class="written">Written <code>to ask_yes_no with parent, question</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L329">ui.folio line 329</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">say</span> ui's ask_yes_no(w, <span class="s">&quot;Buy it?&quot;</span>)                  <span class="c"># yes or no</span></code></pre></div>
         </section>
@@ -542,9 +542,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to choose_file_to_open with parent</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L337">ui.moth line 337</a></p>
+          <p class="written">Written <code>to choose_file_to_open with parent</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L337">ui.folio line 337</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">say</span> ui's choose_file_to_open(w)                    <span class="c"># a file's name, or nothing</span></code></pre></div>
         </section>
@@ -555,9 +555,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to choose_file_to_save with parent</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L345">ui.moth line 345</a></p>
+          <p class="written">Written <code>to choose_file_to_save with parent</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L345">ui.folio line 345</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">say</span> ui's choose_file_to_save(w)</code></pre></div>
         </section>
@@ -568,9 +568,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to close with parent</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L353">ui.moth line 353</a></p>
+          <p class="written">Written <code>to close with parent</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L353">ui.folio line 353</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's close(w)</code></pre></div>
         </section>
@@ -581,9 +581,9 @@ ui's close(w)</code></pre></div>
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to run</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L361">ui.moth line 361</a></p>
+          <p class="written">Written <code>to run</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L361">ui.folio line 361</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 ui's run()</code></pre></div>
         </section>
         <section class="fn" id="progress">
@@ -593,9 +593,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to progress with parent, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L371">ui.moth line 371</a></p>
+          <p class="written">Written <code>to progress with parent, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L371">ui.folio line 371</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> bar <span class="k">to</span> ui's progress(w, <span class="n">20</span>, <span class="n">270</span>, <span class="n">260</span>, <span class="n">16</span>)</code></pre></div>
         </section>
@@ -606,9 +606,9 @@ ui's run()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>percent</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_progress with control, percent</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L379">ui.moth line 379</a></p>
+          <p class="written">Written <code>to set_progress with control, percent</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L379">ui.folio line 379</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> bar <span class="k">to</span> ui's progress(w, <span class="n">20</span>, <span class="n">270</span>, <span class="n">260</span>, <span class="n">16</span>)
 ui's set_progress(bar, <span class="n">40</span>)</code></pre></div>
@@ -620,9 +620,9 @@ ui's set_progress(bar, <span class="n">40</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>file</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to picture with parent, file, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L387">ui.moth line 387</a></p>
+          <p class="written">Written <code>to picture with parent, file, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L387">ui.folio line 387</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> photo <span class="k">to</span> ui's <span class="k">picture</span>(w, <span class="s">&quot;apple.png&quot;</span>, <span class="n">300</span>, <span class="n">150</span>, <span class="n">100</span>, <span class="n">100</span>)</code></pre></div>
         </section>
@@ -633,9 +633,9 @@ ui's set_progress(bar, <span class="n">40</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_picture with control, file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L395">ui.moth line 395</a></p>
+          <p class="written">Written <code>to set_picture with control, file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L395">ui.folio line 395</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> photo <span class="k">to</span> ui's <span class="k">picture</span>(w, <span class="s">&quot;apple.png&quot;</span>, <span class="n">300</span>, <span class="n">150</span>, <span class="n">100</span>, <span class="n">100</span>)
 ui's set_picture(photo, <span class="s">&quot;pear.png&quot;</span>)</code></pre></div>
@@ -647,9 +647,9 @@ ui's set_picture(photo, <span class="s">&quot;pear.png&quot;</span>)</code></pre
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to tabs with parent, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L404">ui.moth line 404</a></p>
+          <p class="written">Written <code>to tabs with parent, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L404">ui.folio line 404</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> pages <span class="k">to</span> ui's tabs(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">480</span>, <span class="n">360</span>, tab_chosen)      <span class="c"># tab_chosen(title)</span></code></pre></div>
         </section>
@@ -660,9 +660,9 @@ ui's set_picture(photo, <span class="s">&quot;pear.png&quot;</span>)</code></pre
             <div><h4>Inputs</h4><ul class="inputs"><li><code>tabs_control</code></li><li><code>title</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to tab with tabs_control, title</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L412">ui.moth line 412</a></p>
+          <p class="written">Written <code>to tab with tabs_control, title</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L412">ui.folio line 412</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> pages <span class="k">to</span> ui's tabs(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">480</span>, <span class="n">360</span>, tab_chosen)      <span class="c"># tab_chosen(title)</span>
 <span class="k">set</span> first_page <span class="k">to</span> ui's tab(pages, <span class="s">&quot;First&quot;</span>)         <span class="c"># a page, to put controls on as on a window</span></code></pre></div>
@@ -674,9 +674,9 @@ ui's set_picture(photo, <span class="s">&quot;pear.png&quot;</span>)</code></pre
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to chosen_tab with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L420">ui.moth line 420</a></p>
+          <p class="written">Written <code>to chosen_tab with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L420">ui.folio line 420</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> pages <span class="k">to</span> ui's tabs(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">480</span>, <span class="n">360</span>, tab_chosen)      <span class="c"># tab_chosen(title)</span>
 <span class="k">say</span> ui's chosen_tab(pages)                         <span class="c"># 1</span></code></pre></div>
@@ -688,9 +688,9 @@ ui's set_picture(photo, <span class="s">&quot;pear.png&quot;</span>)</code></pre
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>place</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to choose_tab with control, place</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L428">ui.moth line 428</a></p>
+          <p class="written">Written <code>to choose_tab with control, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L428">ui.folio line 428</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> pages <span class="k">to</span> ui's tabs(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">480</span>, <span class="n">360</span>, tab_chosen)      <span class="c"># tab_chosen(title)</span>
 ui's choose_tab(pages, <span class="n">1</span>)</code></pre></div>
@@ -702,9 +702,9 @@ ui's choose_tab(pages, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>columns</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to table with parent, columns, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L437">ui.moth line 437</a></p>
+          <p class="written">Written <code>to table with parent, columns, x, y, width, height, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L437">ui.folio line 437</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> orders <span class="k">to</span> ui's <span class="k">table</span>(w, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Item&quot;</span>, <span class="s">&quot;Price&quot;</span>), <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, row_chosen)    <span class="c"># row_chosen(values)</span></code></pre></div>
         </section>
@@ -715,9 +715,9 @@ ui's choose_tab(pages, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>values</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_row with control, values</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L445">ui.moth line 445</a></p>
+          <p class="written">Written <code>to add_row with control, values</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L445">ui.folio line 445</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> orders <span class="k">to</span> ui's <span class="k">table</span>(w, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Item&quot;</span>, <span class="s">&quot;Price&quot;</span>), <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, row_chosen)    <span class="c"># row_chosen(values)</span>
 ui's add_row(orders, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;apple&quot;</span>, <span class="n">0.5</span>)</code></pre></div>
@@ -729,9 +729,9 @@ ui's add_row(orders, <span class="k">list</span> <span class="k">of</span> <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to clear_rows with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L453">ui.moth line 453</a></p>
+          <p class="written">Written <code>to clear_rows with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L453">ui.folio line 453</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> orders <span class="k">to</span> ui's <span class="k">table</span>(w, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Item&quot;</span>, <span class="s">&quot;Price&quot;</span>), <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, row_chosen)    <span class="c"># row_chosen(values)</span>
 ui's clear_rows(orders)</code></pre></div>
@@ -743,9 +743,9 @@ ui's clear_rows(orders)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to chosen_row with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L461">ui.moth line 461</a></p>
+          <p class="written">Written <code>to chosen_row with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L461">ui.folio line 461</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> orders <span class="k">to</span> ui's <span class="k">table</span>(w, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Item&quot;</span>, <span class="s">&quot;Price&quot;</span>), <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, row_chosen)    <span class="c"># row_chosen(values)</span>
 <span class="k">say</span> ui's chosen_row(orders)                        <span class="c"># [&quot;apple&quot;, 0.5]</span></code></pre></div>
@@ -757,9 +757,9 @@ ui's clear_rows(orders)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>place</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to choose_row with control, place</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L469">ui.moth line 469</a></p>
+          <p class="written">Written <code>to choose_row with control, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L469">ui.folio line 469</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> orders <span class="k">to</span> ui's <span class="k">table</span>(w, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Item&quot;</span>, <span class="s">&quot;Price&quot;</span>), <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, row_chosen)    <span class="c"># row_chosen(values)</span>
 ui's choose_row(orders, <span class="n">1</span>)</code></pre></div>
@@ -771,9 +771,9 @@ ui's choose_row(orders, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li><li><code>painter</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to drawing with parent, x, y, width, height, painter</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L478">ui.moth line 478</a></p>
+          <p class="written">Written <code>to drawing with parent, x, y, width, height, painter</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L478">ui.folio line 478</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span></code></pre></div>
         </section>
@@ -784,9 +784,9 @@ ui's choose_row(orders, <span class="n">1</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to on_click with control, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L486">ui.moth line 486</a></p>
+          <p class="written">Written <code>to on_click with control, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L486">ui.folio line 486</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 ui's on_click(board, <span class="k">clicked</span>)                      <span class="c"># clicked(x, y)</span></code></pre></div>
@@ -798,9 +798,9 @@ ui's on_click(board, <span class="k">clicked</span>)                      <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to redraw with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L494">ui.moth line 494</a></p>
+          <p class="written">Written <code>to redraw with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L494">ui.folio line 494</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 ui's redraw(board)                                 <span class="c"># paint is called again</span></code></pre></div>
@@ -812,9 +812,9 @@ ui's redraw(board)                                 <span class="c"># paint is ca
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>red</code></li><li><code>green</code></li><li><code>blue</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to colour with canvas, red, green, blue</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L502">ui.moth line 502</a></p>
+          <p class="written">Written <code>to colour with canvas, red, green, blue</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L502">ui.folio line 502</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -833,9 +833,9 @@ ui's redraw(board)                                 <span class="c"># paint is ca
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to rectangle with canvas, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L510">ui.moth line 510</a></p>
+          <p class="written">Written <code>to rectangle with canvas, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L510">ui.folio line 510</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -854,9 +854,9 @@ ui's redraw(board)                                 <span class="c"># paint is ca
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>x</code></li><li><code>y</code></li><li><code>radius</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to circle with canvas, x, y, radius</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L519">ui.moth line 519</a></p>
+          <p class="written">Written <code>to circle with canvas, x, y, radius</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L519">ui.folio line 519</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -875,9 +875,9 @@ ui's redraw(board)                                 <span class="c"># paint is ca
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>x1</code></li><li><code>y1</code></li><li><code>x2</code></li><li><code>y2</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to line with canvas, x1, y1, x2, y2</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L527">ui.moth line 527</a></p>
+          <p class="written">Written <code>to line with canvas, x1, y1, x2, y2</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L527">ui.folio line 527</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -896,9 +896,9 @@ ui's redraw(board)                                 <span class="c"># paint is ca
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>text</code></li><li><code>x</code></li><li><code>y</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to words with canvas, text, x, y</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L535">ui.moth line 535</a></p>
+          <p class="written">Written <code>to words with canvas, text, x, y</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L535">ui.folio line 535</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -917,9 +917,9 @@ ui's redraw(board)                                 <span class="c"># paint is ca
             <div><h4>Inputs</h4><ul class="inputs"><li><code>parent</code></li><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_icon with parent, file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L543">ui.moth line 543</a></p>
+          <p class="written">Written <code>to set_icon with parent, file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L543">ui.folio line 543</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 ui's set_icon(w, <span class="s">&quot;shop.png&quot;</span>)</code></pre></div>
         </section>
@@ -930,9 +930,9 @@ ui's set_icon(w, <span class="s">&quot;shop.png&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to key_down with control, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L554">ui.moth line 554</a></p>
+          <p class="written">Written <code>to key_down with control, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L554">ui.folio line 554</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 <span class="k">say</span> ui's key_down(board, <span class="s">&quot;Left&quot;</span>)                   <span class="c"># whether it's held down</span></code></pre></div>
@@ -944,9 +944,9 @@ ui's set_icon(w, <span class="s">&quot;shop.png&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to mouse_x with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L562">ui.moth line 562</a></p>
+          <p class="written">Written <code>to mouse_x with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L562">ui.folio line 562</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 <span class="k">say</span> ui's mouse_x(board) <span class="s">&quot;, &quot;</span> ui's mouse_y(board) <span class="s">&quot; &quot;</span> ui's mouse_down(board)</code></pre></div>
@@ -958,9 +958,9 @@ ui's set_icon(w, <span class="s">&quot;shop.png&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to mouse_y with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L570">ui.moth line 570</a></p>
+          <p class="written">Written <code>to mouse_y with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L570">ui.folio line 570</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 <span class="k">say</span> ui's mouse_x(board) <span class="s">&quot;, &quot;</span> ui's mouse_y(board) <span class="s">&quot; &quot;</span> ui's mouse_down(board)</code></pre></div>
@@ -972,9 +972,9 @@ ui's set_icon(w, <span class="s">&quot;shop.png&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to mouse_down with control</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L578">ui.moth line 578</a></p>
+          <p class="written">Written <code>to mouse_down with control</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L578">ui.folio line 578</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 <span class="k">say</span> ui's mouse_x(board) <span class="s">&quot;, &quot;</span> ui's mouse_y(board) <span class="s">&quot; &quot;</span> ui's mouse_down(board)</code></pre></div>
@@ -986,9 +986,9 @@ ui's set_icon(w, <span class="s">&quot;shop.png&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>control</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to on_key with control, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L586">ui.moth line 586</a></p>
+          <p class="written">Written <code>to on_key with control, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L586">ui.folio line 586</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> w <span class="k">to</span> ui's window(<span class="s">&quot;Shop&quot;</span>, <span class="n">520</span>, <span class="n">400</span>)
 <span class="k">set</span> board <span class="k">to</span> ui's drawing(w, <span class="n">20</span>, <span class="n">20</span>, <span class="n">300</span>, <span class="n">200</span>, paint)        <span class="c"># paint(canvas), as below</span>
 ui's on_key(board, key_pressed)                    <span class="c"># key_pressed(name)</span></code></pre></div>
@@ -1000,9 +1000,9 @@ ui's on_key(board, key_pressed)                    <span class="c"># key_pressed
             <div><h4>Inputs</h4><ul class="inputs"><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to load_image with file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L594">ui.moth line 594</a></p>
+          <p class="written">Written <code>to load_image with file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L594">ui.folio line 594</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">set</span> ship <span class="k">to</span> ui's load_image(<span class="s">&quot;ship.png&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="draw_image">
@@ -1012,9 +1012,9 @@ ui's on_key(board, key_pressed)                    <span class="c"># key_pressed
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>image</code></li><li><code>x</code></li><li><code>y</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to draw_image with canvas, image, x, y</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L602">ui.moth line 602</a></p>
+          <p class="written">Written <code>to draw_image with canvas, image, x, y</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L602">ui.folio line 602</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -1033,9 +1033,9 @@ ui's on_key(board, key_pressed)                    <span class="c"># key_pressed
             <div><h4>Inputs</h4><ul class="inputs"><li><code>canvas</code></li><li><code>image</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to draw_image_sized with canvas, image, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L610">ui.moth line 610</a></p>
+          <p class="written">Written <code>to draw_image_sized with canvas, image, x, y, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L610">ui.folio line 610</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 <span class="k">to</span> paint <span class="k">with</span> canvas
     ui's colour(canvas, <span class="n">20</span>, <span class="n">20</span>, <span class="n">40</span>)                <span class="c"># red, green and blue, for what's drawn next</span>
     ui's rectangle(canvas, <span class="n">0</span>, <span class="n">0</span>, <span class="n">300</span>, <span class="n">200</span>)
@@ -1054,9 +1054,9 @@ ui's on_key(board, key_pressed)                    <span class="c"># key_pressed
             <div><h4>Inputs</h4><ul class="inputs"><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to play_sound with file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/ui.moth#L618">ui.moth line 618</a></p>
+          <p class="written">Written <code>to play_sound with file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/ui.folio#L618">ui.folio line 618</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.moth&quot;</span> <span class="k">as</span> ui
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;ui.folio&quot;</span> <span class="k">as</span> ui
 ui's play_sound(<span class="s">&quot;ping.wav&quot;</span>)</code></pre></div>
         </section>
       </section>
@@ -1064,14 +1064,14 @@ ui's play_sound(<span class="s">&quot;ping.wav&quot;</span>)</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

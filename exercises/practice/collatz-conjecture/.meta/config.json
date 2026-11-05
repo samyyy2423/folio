@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "collatz_conjecture.moth"
+      "collatz_conjecture.folio"
     ],
     "test": [
-      "collatz_conjecture.test.moth"
+      "collatz_conjecture.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Count the steps the Collatz rule takes to reach 1."

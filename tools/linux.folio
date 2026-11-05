@@ -1,0 +1,1170 @@
+# Linux's own windows, buttons, text boxes, lists, menus and file boxes, through GTK 3, as a program `folio
+# build` makes can use them: the same functions as windows.folio, so the same program works with either, and
+# real ones, which look and behave as every other GTK program's, in the desktop's own theme.
+#
+#   use "linux.folio" as ui
+#   to say_hello
+#       ui's message(w, "Hello, " + ui's text_of(name))
+#   end
+#   set w to ui's window("Hello", 360, 140)
+#   set name to ui's text_box(w, 20, 20, 200, 26)
+#   ui's button(w, "Greet", 230, 20, 100, 28, say_hello)
+#   ui's run()
+#
+# Places and sizes are in pixels as at 100% on the screen, which GTK makes bigger for a screen set larger. A
+# control is put where it's asked, but GTK won't make one smaller than it can be drawn. What happens calls the
+# function given for it, a function of the program's, as in windows.folio. GTK 3 (libgtk-3.so.0) comes with
+# nearly every Linux desktop; a program that uses it is built with --allow-libraries, and needs a display.
+
+use the library "gtk-3"
+    gtk_init_check(a pointer, a pointer) gives yes or no
+    gtk_window_new(a whole number) gives a pointer
+    gtk_window_set_title(a pointer, text)
+    gtk_window_set_icon_from_file(a pointer, text, a pointer) gives yes or no
+    gtk_window_set_default_size(a pointer, a whole number, a whole number)
+    gtk_window_resize(a pointer, a whole number, a whole number)
+    gtk_window_close(a pointer)
+    gtk_window_add_accel_group(a pointer, a pointer)
+    gtk_widget_show_all(a pointer)
+    gtk_widget_destroy(a pointer)
+    gtk_widget_set_size_request(a pointer, a whole number, a whole number)
+    gtk_widget_set_sensitive(a pointer, yes or no)
+    gtk_widget_grab_focus(a pointer)
+    gtk_widget_get_allocated_width(a pointer) gives a whole number
+    gtk_widget_get_allocated_height(a pointer) gives a whole number
+    gtk_widget_add_accelerator(a pointer, text, a pointer, a whole number, a whole number, a whole number)
+    gtk_container_add(a pointer, a pointer)
+    gtk_box_new(a whole number, a whole number) gives a pointer
+    gtk_box_pack_start(a pointer, a pointer, yes or no, yes or no, a whole number)
+    gtk_box_reorder_child(a pointer, a pointer, a whole number)
+    gtk_fixed_new() gives a pointer
+    gtk_fixed_put(a pointer, a pointer, a whole number, a whole number)
+    gtk_fixed_move(a pointer, a pointer, a whole number, a whole number)
+    gtk_button_new_with_label(text) gives a pointer
+    gtk_button_get_label(a pointer) gives text
+    gtk_button_set_label(a pointer, text)
+    gtk_button_clicked(a pointer)
+    gtk_label_new(text) gives a pointer
+    gtk_label_get_text(a pointer) gives text
+    gtk_label_set_text(a pointer, text)
+    gtk_label_set_xalign(a pointer, a float)
+    gtk_entry_new() gives a pointer
+    gtk_entry_get_text(a pointer) gives text
+    gtk_entry_set_text(a pointer, text)
+    gtk_text_view_new() gives a pointer
+    gtk_text_view_get_buffer(a pointer) gives a pointer
+    gtk_text_view_set_wrap_mode(a pointer, a whole number)
+    gtk_text_buffer_set_text(a pointer, text, a whole number)
+    gtk_text_buffer_get_bounds(a pointer, bytes, bytes)
+    gtk_text_buffer_get_text(a pointer, bytes, bytes, yes or no) gives a pointer
+    gtk_scrolled_window_new(a pointer, a pointer) gives a pointer
+    gtk_scrolled_window_set_shadow_type(a pointer, a whole number)
+    gtk_check_button_new_with_label(text) gives a pointer
+    gtk_toggle_button_get_active(a pointer) gives yes or no
+    gtk_toggle_button_set_active(a pointer, yes or no)
+    gtk_list_box_new() gives a pointer
+    gtk_list_box_insert(a pointer, a pointer, a whole number)
+    gtk_list_box_get_selected_row(a pointer) gives a pointer
+    gtk_list_box_get_row_at_index(a pointer, a whole number) gives a pointer
+    gtk_list_box_select_row(a pointer, a pointer)
+    gtk_list_box_row_get_index(a pointer) gives a whole number
+    gtk_combo_box_text_new() gives a pointer
+    gtk_combo_box_text_append_text(a pointer, text)
+    gtk_combo_box_text_remove(a pointer, a whole number)
+    gtk_combo_box_text_remove_all(a pointer)
+    gtk_combo_box_get_active(a pointer) gives a whole number
+    gtk_combo_box_set_active(a pointer, a whole number)
+    gtk_menu_bar_new() gives a pointer
+    gtk_menu_new() gives a pointer
+    gtk_menu_item_new_with_label(text) gives a pointer
+    gtk_menu_item_set_submenu(a pointer, a pointer)
+    gtk_menu_item_activate(a pointer)
+    gtk_separator_menu_item_new() gives a pointer
+    gtk_menu_shell_append(a pointer, a pointer)
+    gtk_accel_group_new() gives a pointer
+    gtk_accel_groups_activate(a pointer, a whole number, a whole number) gives yes or no
+    gtk_message_dialog_new(a pointer, a whole number, a whole number, a whole number, text, text) gives a pointer
+    gtk_dialog_run(a pointer) gives a whole number
+    gtk_file_chooser_native_new(text, a pointer, a whole number, text, text) gives a pointer
+    gtk_file_chooser_set_do_overwrite_confirmation(a pointer, yes or no)
+    gtk_native_dialog_run(a pointer) gives a whole number
+    gtk_file_chooser_get_filename(a pointer) gives a pointer
+    gtk_main()
+    gtk_main_quit()
+    gtk_progress_bar_new() gives a pointer
+    gtk_progress_bar_set_fraction(a pointer, a number)
+    gtk_image_new_from_pixbuf(a pointer) gives a pointer
+    gtk_image_set_from_pixbuf(a pointer, a pointer)
+    gtk_notebook_new() gives a pointer
+    gtk_notebook_append_page(a pointer, a pointer, a pointer) gives a whole number
+    gtk_notebook_get_current_page(a pointer) gives a whole number
+    gtk_notebook_set_current_page(a pointer, a whole number)
+    gtk_list_store_newv(a whole number, bytes) gives a pointer
+    gtk_list_store_append(a pointer, bytes)
+    gtk_list_store_set(a pointer, bytes, a whole number, text, a whole number)
+    gtk_list_store_clear(a pointer)
+    gtk_tree_view_new_with_model(a pointer) gives a pointer
+    gtk_tree_view_set_grid_lines(a pointer, a whole number)
+    gtk_tree_view_append_column(a pointer, a pointer) gives a whole number
+    gtk_tree_view_get_selection(a pointer) gives a pointer
+    gtk_tree_view_column_new_with_attributes(text, a pointer, text, a whole number, a pointer) gives a pointer
+    gtk_tree_view_column_set_expand(a pointer, yes or no)
+    gtk_tree_view_column_set_resizable(a pointer, yes or no)
+    gtk_cell_renderer_text_new() gives a pointer
+    gtk_tree_selection_get_selected(a pointer, a pointer, bytes) gives yes or no
+    gtk_tree_selection_select_path(a pointer, a pointer)
+    gtk_tree_model_get_path(a pointer, bytes) gives a pointer
+    gtk_tree_path_to_string(a pointer) gives a pointer
+    gtk_tree_path_new_from_string(text) gives a pointer
+    gtk_tree_path_free(a pointer)
+    gtk_drawing_area_new() gives a pointer
+    gtk_widget_queue_draw(a pointer)
+    gtk_widget_add_events(a pointer, a whole number)
+    gdk_cairo_set_source_pixbuf(a pointer, a pointer, a number, a number)
+    gtk_test_widget_send_key(a pointer, a whole number, a whole number) gives yes or no
+end
+use the library "gdk_pixbuf-2.0"
+    gdk_pixbuf_new_from_file_at_scale(text, a whole number, a whole number, yes or no, a pointer) gives a pointer
+    gdk_pixbuf_loader_new() gives a pointer
+    gdk_pixbuf_loader_write(a pointer, bytes, a long whole number, a pointer) gives yes or no
+    gdk_pixbuf_loader_close(a pointer, a pointer) gives yes or no
+    gdk_pixbuf_loader_get_pixbuf(a pointer) gives a pointer
+    gdk_pixbuf_get_width(a pointer) gives a whole number
+    gdk_pixbuf_get_height(a pointer) gives a whole number
+end
+use the library "cairo"
+    cairo_set_source_rgb(a pointer, a number, a number, a number)
+    cairo_paint(a pointer)
+    "cairo_rectangle" as cairo_box(a pointer, a number, a number, a number, a number)
+    cairo_fill(a pointer)
+    cairo_arc(a pointer, a number, a number, a number, a number, a number)
+    cairo_move_to(a pointer, a number, a number)
+    cairo_line_to(a pointer, a number, a number)
+    cairo_set_line_width(a pointer, a number)
+    cairo_stroke(a pointer)
+    cairo_select_font_face(a pointer, text, a whole number, a whole number)
+    cairo_set_font_size(a pointer, a number)
+    cairo_show_text(a pointer, text)
+    cairo_save(a pointer)
+    cairo_restore(a pointer)
+    cairo_translate(a pointer, a number, a number)
+    cairo_scale(a pointer, a number, a number)
+end
+use the library "gobject-2.0"
+    callback gsignal(a pointer, a pointer)
+    callback gsignal3(a pointer, a pointer, a pointer)
+    callback gdecide(a pointer, a pointer, a pointer) gives yes or no
+    callback gsignal4(a pointer, a pointer, a whole number, a pointer)
+    "g_signal_connect_data" as connect4(a pointer, text, a gsignal4, a pointer, a pointer, a whole number) gives a long whole number
+    "g_signal_connect_data" as connect(a pointer, text, a gsignal, a pointer, a pointer, a whole number) gives a long whole number
+    "g_signal_connect_data" as connect3(a pointer, text, a gsignal3, a pointer, a pointer, a whole number) gives a long whole number
+    "g_signal_connect_data" as connect_decide(a pointer, text, a gdecide, a pointer, a pointer, a whole number) gives a long whole number
+    g_object_unref(a pointer)
+end
+use the library "glib-2.0"
+    callback gtick(a pointer) gives yes or no
+    g_timeout_add(a whole number, a gtick, a pointer) gives a whole number
+    g_free(a pointer)
+end
+use the library "c"
+    "strstr" as text_at(a pointer, text) gives text # a C string GTK made, as text: where "" is in it is its start
+    structure button_event with kind as a whole number, surface as a pointer, sent as a whole number,
+        time as a whole number, x as a number, y as a number
+    "memcpy" as read_event(a button_event, a pointer, a long whole number) gives a pointer
+    structure key_event with kind as a whole number, surface as a pointer, sent as a whole number,
+        time as a whole number, state as a whole number, keyval as a whole number
+    "memcpy" as read_key(a key_event, a pointer, a long whole number) gives a pointer
+    "fork" as unix_fork() gives a whole number
+    "execvp" as unix_exec(text, bytes) gives a whole number
+    "_exit" as unix_exit(a whole number)
+    "strdup" as unix_copy(text) gives a pointer
+    "getpid" as unix_pid() gives a whole number
+    "open" as unix_open(text, a whole number, a whole number) gives a whole number
+    "write" as unix_write(a whole number, bytes, a long whole number) gives a long whole number
+    "close" as unix_close(a whole number) gives a whole number
+end
+
+set ui_ready to no
+set ui_main to nothing # the first window: closing it ends run()
+set ui_controls to empty dictionary # each window, control and menu item, by its number
+set ui_timers to empty dictionary
+set ui_next to 100
+set ui_quiet to no # yes while the program changes a control, which isn't the one using it changing it
+set ui_key_names to dictionary where "DELETE" is 65535, "INSERT" is 65379, "HOME" is 65360, "END" is 65367,
+    "PAGEUP" is 65365, "PAGEDOWN" is 65366, "SPACE" is 32
+
+# a pointer, as a number: 0 for nothing
+to ui_number with p
+    if p is nothing
+        return 0
+    end
+    return p
+end
+
+# once, before the first window
+to ui_start
+    if ui_ready
+        return nothing
+    end
+    if not gtk_init_check(nothing, nothing)
+        fail with "there's no display to open a window on: GTK couldn't start"
+    end
+    set ui_ready to yes
+end
+
+# What GTK says happened, to a control or window with this number: a click, a tick, a change of text or of
+# what's chosen, a menu item chosen, a window gone
+to ui_signal with widget, data
+    set id to ui_number(data)
+    if not (id is in ui_controls)
+        return nothing
+    end
+    set control to item id of ui_controls
+    set kind to kind of control
+    if kind is "window"
+        if ui_main is not nothing and id is id of ui_main
+            gtk_main_quit()
+        end
+        return nothing
+    end
+    set handler to on of control
+    if handler is nothing or ui_quiet
+        return nothing
+    end
+    if kind is "button" or kind is "menu item"
+        handler()
+    else if kind is "checkbox"
+        handler(ticked(control))
+    else if kind is "dropdown"
+        handler(chosen(control))
+    else if kind is "text"
+        handler(text_of(control))
+    else if kind is "table"
+        set at to chosen_place(control)
+        if at is not last of control
+            set last of control to at
+            if at is greater than 0
+                handler(item at of rows of control)
+            end
+        end
+    end
+end
+
+# a list's choice, or a window's new size
+to ui_signal3 with widget, extra, data
+    set id to ui_number(data)
+    if not (id is in ui_controls)
+        return nothing
+    end
+    set control to item id of ui_controls
+    if kind of control is "window"
+        set width to gtk_widget_get_allocated_width(fixed of control)
+        set height to gtk_widget_get_allocated_height(fixed of control)
+        if resized of control is not nothing and (width is not width of control or height is not height of control)
+            set width of control to width
+            set height of control to height
+            set handler to resized of control
+            handler(width, height)
+        end
+    else if on of control is not nothing and not ui_quiet and extra is not nothing
+        set handler to on of control
+        handler(chosen(control))
+    end
+end
+
+# whether a window that's being closed stays open: if its handler says it may not close
+to ui_decide with widget, event, data
+    set id to ui_number(data)
+    set drawn to nothing
+    if id is in ui_controls
+        set drawn to item id of ui_controls
+    end
+    if drawn is not nothing and kind of drawn is "drawing" # it's drawn: `event` is its cairo_t
+        cairo_set_source_rgb(event, 1, 1, 1)
+        cairo_paint(event)
+        set canvas to record with cr event
+        colour(canvas, 0, 0, 0)
+        set painter to painter of drawn
+        painter(canvas)
+        return yes
+    end
+    if id is in ui_controls
+        set made to item id of ui_controls
+        if closing of made is not nothing
+            set handler to closing of made
+            if handler() is no
+                return yes
+            end
+        end
+    end
+    return no
+end
+
+# a drawing clicked: where, from GdkEventButton
+to ui_pressed with widget, event, data
+    set id to ui_number(data)
+    if not (id is in ui_controls)
+        return yes
+    end
+    set drawn to item id of ui_controls
+    set where to record with kind 0, surface nothing, sent 0, time 0, x 0, y 0
+    read_event(where, event, 40)
+    set mouse_x of drawn to x of where
+    set mouse_y of drawn to y of where
+    set pressed of drawn to yes
+    if clicked of drawn is not nothing
+        set handler to clicked of drawn
+        handler(x of where, y of where)
+    end
+    return yes
+end
+
+# a tab chosen: the page's place, from 0
+to ui_switched with notebook, page, place, data
+    set id to ui_number(data)
+    if id is in ui_controls and not ui_quiet
+        set control to item id of ui_controls
+        if on of control is not nothing
+            set handler to on of control
+            handler(title of item (place + 1) of pages of control)
+        end
+    end
+end
+
+to ui_tick with data
+    set id to ui_number(data)
+    if id is in ui_timers
+        set handler to item id of ui_timers
+        handler()
+    end
+    return yes
+end
+
+to ui_new_id
+    set id to ui_next
+    set ui_next to ui_next + 1
+    return id
+end
+
+# a new window, `width` by `height` inside, shown, with `title` at its top
+to window with title, width, height
+    ui_start()
+    set id to ui_new_id()
+    set handle to gtk_window_new(0)
+    gtk_window_set_title(handle, title)
+    gtk_window_set_default_size(handle, width, height)
+    set column to gtk_box_new(1, 0)
+    gtk_container_add(handle, column)
+    set fixed to gtk_fixed_new()
+    gtk_box_pack_start(column, fixed, yes, yes, 0)
+    set made to record with handle handle, id id, title title, kind "window", resized nothing, closing nothing,
+        menus empty dictionary, bar nothing, column column, fixed fixed, accels nothing, width -1, height -1
+    set item id of ui_controls to made
+    connect_decide(handle, "delete-event", ui_decide, id, nothing, 0)
+    connect(handle, "destroy", ui_signal, id, nothing, 0)
+    connect3(fixed, "size-allocate", ui_signal3, id, nothing, 0)
+    if ui_main is nothing
+        set ui_main to made
+    end
+    gtk_widget_show_all(handle)
+    return made
+end
+
+# a control of GTK's in a window: `widget` is it, `outer` what's put in the window (a scrolled window around
+# it, or itself)
+to ui_control with parent, widget, outer, x, y, width, height, kind, handler
+    set id to ui_new_id()
+    if outer is nothing
+        set outer to widget
+    end
+    gtk_widget_set_size_request(outer, width, height)
+    gtk_fixed_put(fixed of parent, outer, x, y)
+    gtk_widget_show_all(outer)
+    set host to parent
+    if kind of parent is "page"
+        set host to window of parent
+    end
+    set made to record with handle widget, outer outer, id id, kind kind, on handler, window host,
+        holder fixed of parent, items empty list, buffer nothing
+    set item id of ui_controls to made
+    return made
+end
+
+# a button that says `text`, at x, y in its window, `width` by `height`, which calls `handler` (with nothing)
+# when it's pressed
+to button with parent, text, x, y, width, height, handler
+    set widget to gtk_button_new_with_label(text)
+    set made to ui_control(parent, widget, widget, x, y, width, height, "button", handler)
+    connect(widget, "clicked", ui_signal, id of made, nothing, 0)
+    return made
+end
+
+# words that say `text`, at x, y in a window, `width` by `height`, which set_text can change
+to label with parent, text, x, y, width, height
+    set widget to gtk_label_new(text)
+    gtk_label_set_xalign(widget, 0)
+    return ui_control(parent, widget, widget, x, y, width, height, "label", nothing)
+end
+
+# a box for a line of text; `text_area` for many, with a scroll bar; `on_change` gives either a handler, for
+# what's typed into it (not what set_text puts there)
+to text_box with parent, x, y, width, height
+    set widget to gtk_entry_new()
+    set made to ui_control(parent, widget, widget, x, y, width, height, "text", nothing)
+    connect(widget, "changed", ui_signal, id of made, nothing, 0)
+    return made
+end
+
+# a box for many lines of text, with a scroll bar
+to text_area with parent, x, y, width, height
+    set widget to gtk_text_view_new()
+    gtk_text_view_set_wrap_mode(widget, 3) # by words, or characters where a word is too long
+    set outer to ui_scroller(widget)
+    set made to ui_control(parent, widget, outer, x, y, width, height, "text", nothing)
+    set buffer of made to gtk_text_view_get_buffer(widget)
+    connect(buffer of made, "changed", ui_signal, id of made, nothing, 0)
+    return made
+end
+
+# a scrolled window with a border, around a widget
+to ui_scroller with widget
+    set outer to gtk_scrolled_window_new(nothing, nothing)
+    gtk_scrolled_window_set_shadow_type(outer, 1)
+    gtk_container_add(outer, widget)
+    return outer
+end
+
+# a text box's or text area's handler for what's typed into it, given its text each time it changes
+to on_change with control, handler
+    set on of control to handler
+end
+
+# a box to tick, which says `text` beside it; `handler` is given yes or no each time it's ticked or unticked
+to checkbox with parent, text, x, y, width, height, handler
+    set widget to gtk_check_button_new_with_label(text)
+    set made to ui_control(parent, widget, widget, x, y, width, height, "checkbox", handler)
+    connect(widget, "toggled", ui_signal, id of made, nothing, 0)
+    return made
+end
+
+# a list of items (add_item) of which one can be chosen; `handler` is given the chosen item each time the
+# choice changes
+to list_box with parent, x, y, width, height, handler
+    set widget to gtk_list_box_new()
+    set made to ui_control(parent, widget, ui_scroller(widget), x, y, width, height, "list", handler)
+    connect3(widget, "row-selected", ui_signal3, id of made, nothing, 0)
+    return made
+end
+
+# a list that drops down, of which one is chosen; `height` includes the list when it's open in windows.folio,
+# and GTK opens it as tall as it needs, so it's only how tall it is closed, if it's room for it
+to dropdown with parent, x, y, width, height, handler
+    set widget to gtk_combo_box_text_new()
+    set shut to height
+    if shut is greater than 30
+        set shut to 30
+    end
+    set made to ui_control(parent, widget, widget, x, y, width, shut, "dropdown", handler)
+    connect(widget, "changed", ui_signal, id of made, nothing, 0)
+    return made
+end
+
+# what a control says: a text box's text, a button's label, a window's title
+to text_of with control
+    set kind to kind of control
+    if kind is "text" and buffer of control is not nothing
+        set start to 128 bytes
+        set finish to 128 bytes
+        gtk_text_buffer_get_bounds(buffer of control, start, finish)
+        set made to gtk_text_buffer_get_text(buffer of control, start, finish, yes)
+        set got to text_at(made, "")
+        g_free(made)
+        return got
+    else if kind is "text"
+        return gtk_entry_get_text(handle of control)
+    else if kind is "label"
+        return gtk_label_get_text(handle of control)
+    else if kind is "window"
+        return title of control
+    end
+    return gtk_button_get_label(handle of control)
+end
+
+# what a control says changed: a text box's text, a label's or button's words, a window's title
+to set_text with control, text
+    set kind to kind of control
+    set ui_quiet to yes
+    if kind is "text" and buffer of control is not nothing
+        gtk_text_buffer_set_text(buffer of control, text, -1)
+    else if kind is "text"
+        gtk_entry_set_text(handle of control, text)
+    else if kind is "label"
+        gtk_label_set_text(handle of control, text)
+    else if kind is "window"
+        set title of control to text
+        gtk_window_set_title(handle of control, text)
+    else
+        gtk_button_set_label(handle of control, text)
+    end
+    set ui_quiet to no
+end
+
+# whether a checkbox is ticked
+to ticked with control
+    return gtk_toggle_button_get_active(handle of control)
+end
+
+# a checkbox ticked (yes) or unticked (no), without calling its handler
+to set_ticked with control, tick
+    set ui_quiet to yes
+    gtk_toggle_button_set_active(handle of control, tick)
+    set ui_quiet to no
+end
+
+# an item at the end of a list box or a dropdown
+to add_item with control, text
+    set ui_quiet to yes
+    set items to items of control
+    add text to items
+    if kind of control is "dropdown"
+        gtk_combo_box_text_append_text(handle of control, text)
+    else
+        set row to gtk_label_new(text)
+        gtk_label_set_xalign(row, 0)
+        gtk_list_box_insert(handle of control, row, -1)
+        gtk_widget_show_all(handle of control)
+    end
+    set ui_quiet to no
+end
+
+# every item of a list box or a dropdown taken away
+to clear_items with control
+    set ui_quiet to yes
+    if kind of control is "dropdown"
+        gtk_combo_box_text_remove_all(handle of control)
+    else
+        repeat length of items of control times
+            gtk_widget_destroy(gtk_list_box_get_row_at_index(handle of control, 0))
+        end
+    end
+    set items of control to empty list
+    set ui_quiet to no
+end
+
+# the item at a place, from 1, taken out of a list box or a dropdown
+to remove_item with control, place
+    set ui_quiet to yes
+    if kind of control is "dropdown"
+        gtk_combo_box_text_remove(handle of control, place - 1)
+    else
+        gtk_widget_destroy(gtk_list_box_get_row_at_index(handle of control, place - 1))
+    end
+    set kept to empty list
+    set at to 0
+    for each one in items of control
+        add 1 to at
+        if at is not place
+            add one to kept
+        end
+    end
+    set items of control to kept
+    set ui_quiet to no
+end
+
+# how many items a list box or a dropdown has
+to count_of with control
+    if kind of control is "table"
+        return length of rows of control
+    end
+    return length of items of control
+end
+
+# where the chosen item is, from 1, or 0 for none
+to chosen_place with control
+    if kind of control is "dropdown"
+        return gtk_combo_box_get_active(handle of control) + 1
+    end
+    if kind of control is "table"
+        set at to 32 bytes
+        if not gtk_tree_selection_get_selected(chosen_rows of control, nothing, at)
+            return 0
+        end
+        set path to gtk_tree_model_get_path(store of control, at)
+        set named to gtk_tree_path_to_string(path)
+        set place to number of text_at(named, "") + 1
+        g_free(named)
+        gtk_tree_path_free(path)
+        return place
+    end
+    set row to gtk_list_box_get_selected_row(handle of control)
+    if row is nothing
+        return 0
+    end
+    return gtk_list_box_row_get_index(row) + 1
+end
+
+# the item at a place, from 1, chosen in a list box or a dropdown, without calling its handler; 0 for none
+to choose with control, place
+    set ui_quiet to yes
+    if kind of control is "dropdown"
+        gtk_combo_box_set_active(handle of control, place - 1)
+    else
+        gtk_list_box_select_row(handle of control, gtk_list_box_get_row_at_index(handle of control, place - 1))
+    end
+    set ui_quiet to no
+end
+
+# the chosen item, or nothing for none
+to chosen with control
+    set place to chosen_place(control)
+    if place is 0
+        return nothing
+    end
+    return item place of items of control
+end
+
+# a control made to work (yes), or greyed out so it doesn't (no)
+to enable with control, on
+    gtk_widget_set_sensitive(handle of control, on)
+end
+
+# the keys sent to a control: what's typed goes into it
+to focus with control
+    gtk_widget_grab_focus(handle of control)
+end
+
+# a control put somewhere else, or made another size, as when its window is resized
+to place with control, x, y, width, height
+    gtk_fixed_move(holder of control, outer of control, x, y)
+    gtk_widget_set_size_request(outer of control, width, height)
+end
+
+# a window's handler for a new size, given its width and height inside, as when the person drags its edge
+to on_resize with parent, handler
+    set resized of parent to handler
+end
+
+# a function that says whether the window may close, asked when someone closes it
+to on_close with parent, handler
+    set closing of parent to handler
+end
+
+# an item at the end of the menu called `title` on the window's bar, made if it isn't there; "-" is a line.
+# Keys after a tab, as in "Save\tCtrl+S", are shown beside it and choose it too: Ctrl, Shift and Alt, then a
+# letter, a digit, F1 to F12, Space, Delete, Insert, Home, End, PageUp or PageDown.
+to menu_item with parent, title, text, handler
+    set parts to split text by "\t"
+    set pressed to nothing
+    if length of parts is 2
+        set pressed to ui_named_keys(item 2 of parts)
+    end
+    if bar of parent is nothing
+        set bar of parent to gtk_menu_bar_new()
+        gtk_box_pack_start(column of parent, bar of parent, no, no, 0)
+        gtk_box_reorder_child(column of parent, bar of parent, 0)
+    end
+    set menus to menus of parent
+    if not (title is in menus)
+        set top to gtk_menu_item_new_with_label(title)
+        set item title of menus to gtk_menu_new()
+        gtk_menu_item_set_submenu(top, item title of menus)
+        gtk_menu_shell_append(bar of parent, top)
+    end
+    set made to record with handle nothing, id ui_new_id(), kind "menu item", on handler, window parent
+    if text is "-"
+        set handle of made to gtk_separator_menu_item_new()
+    else
+        set handle of made to gtk_menu_item_new_with_label(item 1 of parts)
+        set item (id of made) of ui_controls to made
+        connect(handle of made, "activate", ui_signal, id of made, nothing, 0)
+        if pressed is not nothing
+            if accels of parent is nothing
+                set accels of parent to gtk_accel_group_new()
+                gtk_window_add_accel_group(handle of parent, accels of parent)
+            end
+            gtk_widget_add_accelerator(handle of made, "activate", accels of parent, item 1 of pressed,
+                item 2 of pressed, 1)
+        end
+    end
+    gtk_menu_shell_append(item title of menus, handle of made)
+    gtk_widget_show_all(bar of parent)
+    return made
+end
+
+# "Ctrl+Shift+S" as GTK has it: the key's number, and what's held with it
+to ui_named_keys with named
+    set held to 0
+    set key to nothing
+    for each written in split named by "+"
+        set part to uppercase of written
+        set codes to part as bytes
+        if part is "CTRL"
+            set held to held bit or 4
+        else if part is "SHIFT"
+            set held to held bit or 1
+        else if part is "ALT"
+            set held to held bit or 8
+        else if part is in ui_key_names
+            set key to item part of ui_key_names
+        else if length of codes is 1 and (byte 1 of codes) is at least 65 and (byte 1 of codes) is at most 90
+            set key to (byte 1 of codes) + 32 # a letter's key is its small letter
+        else if length of codes is 1 and (byte 1 of codes) is at least 48 and (byte 1 of codes) is at most 57
+            set key to byte 1 of codes
+        else if length of codes is 2 and (byte 1 of codes) is 70 and (byte 2 of codes) is greater than 48
+            and (byte 2 of codes) is less than 58 # F1 to F9
+            set key to 65470 + (byte 2 of codes) - 49
+        else if part is "F10" or part is "F11" or part is "F12"
+            set key to 65470 + 9 + (byte 3 of codes) - 48
+        else
+            fail with "linux.folio doesn't know the key '" + written + "' in '" + named + "'"
+        end
+    end
+    if key is nothing
+        fail with "'" + named + "' has no key to press, only ones to hold"
+    end
+    return list of key, held
+end
+
+# a handler called every so many milliseconds, while run() runs
+to timer with parent, milliseconds, handler
+    set id to ui_new_id()
+    set item id of ui_timers to handler
+    g_timeout_add(milliseconds, ui_tick, id)
+end
+
+# a box with a message in it, over the window, and an OK button: it waits until it's pressed
+to message with parent, text
+    set box to gtk_message_dialog_new(handle of parent, 1, 0, 1, "%s", text)
+    gtk_window_set_title(box, title of parent)
+    gtk_dialog_run(box)
+    gtk_widget_destroy(box)
+end
+
+# a box asking a question, over the window, with Yes and No: whether Yes was pressed
+to ask_yes_no with parent, question
+    set box to gtk_message_dialog_new(handle of parent, 1, 2, 4, "%s", question)
+    gtk_window_set_title(box, title of parent)
+    set answer to gtk_dialog_run(box)
+    gtk_widget_destroy(box)
+    return answer is -8
+end
+
+# the desktop's own box for choosing a file: its name, or nothing if none was chosen
+to choose_file_to_open with parent
+    return ui_choose_file(parent, yes)
+end
+
+# the system's own box for choosing where to save a file: its name, or nothing if none was chosen
+to choose_file_to_save with parent
+    return ui_choose_file(parent, no)
+end
+
+to ui_choose_file with parent, opening
+    set asking to nothing
+    if opening
+        set asking to gtk_file_chooser_native_new("Open", handle of parent, 0, "_Open", "_Cancel")
+    else
+        set asking to gtk_file_chooser_native_new("Save", handle of parent, 1, "_Save", "_Cancel")
+        gtk_file_chooser_set_do_overwrite_confirmation(asking, yes)
+    end
+    set name to nothing
+    if gtk_native_dialog_run(asking) is -3
+        set made to gtk_file_chooser_get_filename(asking)
+        if made is not nothing
+            set name to text_at(made, "")
+            g_free(made)
+        end
+    end
+    g_object_unref(asking)
+    return name
+end
+
+# a window closed; closing the first window run() runs for ends run()
+to close with parent
+    gtk_window_close(handle of parent)
+end
+
+# what happens to the windows, to their handlers, until the first window is closed
+to run
+    if ui_main is not nothing
+        gtk_main()
+    end
+end
+
+# ---------- progress bars, pictures, tabs, tables and drawings ----------
+
+# a bar that fills up as something gets done: set_progress says how far, from 0 to 100
+to progress with parent, x, y, width, height
+    return ui_control(parent, gtk_progress_bar_new(), nothing, x, y, width, height, "progress", nothing)
+end
+
+# how far a progress bar is, from 0 to 100
+to set_progress with control, percent
+    set part to percent / 100
+    if part is less than 0
+        set part to 0
+    else if part is greater than 1
+        set part to 1
+    end
+    gtk_progress_bar_set_fraction(handle of control, part)
+end
+
+# a picture from a file, a PNG, JPEG, GIF or BMP, made the size it's put at
+to picture with parent, file, x, y, width, height
+    set made to ui_control(parent, gtk_image_new_from_pixbuf(ui_pixbuf(file, width, height)), nothing, x, y, width,
+        height, "picture", nothing)
+    set width of made to width
+    set height of made to height
+    return made
+end
+
+# a picture control shows another file's picture
+to set_picture with control, file
+    gtk_image_set_from_pixbuf(handle of control, ui_pixbuf(file, width of control, height of control))
+end
+
+to ui_pixbuf with file, width, height
+    set made to gdk_pixbuf_new_from_file_at_scale(file, width, height, no, nothing)
+    if made is nothing
+        fail with "can't show '" + file + "': it isn't there, or isn't a picture"
+    end
+    return made
+end
+
+# tabs, each with a page of its own (see tab) for controls; `handler` is given a tab's title when the person
+# chooses it
+to tabs with parent, x, y, width, height, handler
+    set notebook to gtk_notebook_new()
+    set made to ui_control(parent, notebook, nothing, x, y, width, height, "tabs", handler)
+    set pages of made to empty list
+    connect4(notebook, "switch-page", ui_switched, id of made, nothing, 0)
+    return made
+end
+
+# a page of the tabs, with `title` on its tab: what's put on it, as on a window, shows while its tab is chosen
+to tab with tabs_control, title
+    set pages to pages of tabs_control
+    set fixed to gtk_fixed_new()
+    set made to record with kind "page", title title, tabs tabs_control, window window of tabs_control,
+        fixed fixed, nth length of pages + 1
+    add made to pages
+    set ui_quiet to yes
+    gtk_notebook_append_page(handle of tabs_control, fixed, gtk_label_new(title))
+    gtk_widget_show_all(handle of tabs_control)
+    set ui_quiet to no
+    return made
+end
+
+# which tab is chosen, from 1
+to chosen_tab with control
+    return gtk_notebook_get_current_page(handle of control) + 1
+end
+
+# the tab at a place, from 1, chosen, as if the person had clicked it
+to choose_tab with control, place
+    set ui_quiet to yes
+    gtk_notebook_set_current_page(handle of control, place - 1)
+    set ui_quiet to no
+end
+
+# a table, with a column for each title in `columns`, and rows of values (add_row); `handler` is given a row's
+# values when the person chooses it
+to table with parent, columns, x, y, width, height, handler
+    set kinds to (8 * length of columns) bytes # each column's GType: G_TYPE_STRING, 64
+    for each k from 1 to length of columns
+        set byte (8 * k - 7) of kinds to 64
+    end
+    set store to gtk_list_store_newv(length of columns, kinds)
+    set view to gtk_tree_view_new_with_model(store)
+    gtk_tree_view_set_grid_lines(view, 3)
+    set k to 0
+    for each title in columns
+        set column to gtk_tree_view_column_new_with_attributes(title, gtk_cell_renderer_text_new(), "text", k, nothing)
+        gtk_tree_view_column_set_expand(column, yes)
+        gtk_tree_view_column_set_resizable(column, yes)
+        gtk_tree_view_append_column(view, column)
+        add 1 to k
+    end
+    set made to ui_control(parent, view, ui_scroller(view), x, y, width, height, "table", handler)
+    set store of made to store
+    set chosen_rows of made to gtk_tree_view_get_selection(view)
+    set rows of made to empty list
+    set last of made to 0
+    connect(chosen_rows of made, "changed", ui_signal, id of made, nothing, 0)
+    return made
+end
+
+# a row at the end of the table: its values, each shown as `say` shows it
+to add_row with control, values
+    set ui_quiet to yes
+    set held to rows of control
+    add values to held
+    set at to 32 bytes
+    gtk_list_store_append(store of control, at)
+    set k to 0
+    for each v in values
+        gtk_list_store_set(store of control, at, k, "" + v, -1)
+        add 1 to k
+    end
+    set ui_quiet to no
+end
+
+# every row of a table taken away
+to clear_rows with control
+    set ui_quiet to yes
+    gtk_list_store_clear(store of control)
+    set rows of control to empty list
+    set last of control to 0
+    set ui_quiet to no
+end
+
+# the chosen row's values, or nothing for none
+to chosen_row with control
+    set at to chosen_place(control)
+    if at is 0
+        return nothing
+    end
+    return item at of rows of control
+end
+
+# the row at a place, from 1, chosen in a table; 0 for none
+to choose_row with control, place
+    set path to gtk_tree_path_new_from_string("" + (place - 1))
+    set ui_quiet to yes
+    gtk_tree_selection_select_path(chosen_rows of control, path)
+    set ui_quiet to no
+    gtk_tree_path_free(path)
+    set last of control to place
+end
+
+# A drawing: `painter` draws it whenever it must be drawn, and after redraw, given a canvas to draw on with
+# colour, rectangle, circle, line and words, in pixels as at 100% from the drawing's top left
+to drawing with parent, x, y, width, height, painter
+    set area to gtk_drawing_area_new()
+    gtk_widget_add_events(area, 256 + 512 + 4) # GDK_BUTTON_PRESS_MASK, GDK_BUTTON_RELEASE_MASK, GDK_POINTER_MOTION_MASK
+    set made to ui_control(parent, area, nothing, x, y, width, height, "drawing", nothing)
+    set painter of made to painter
+    set clicked of made to nothing
+    set held of made to empty dictionary
+    set mouse_x of made to 0
+    set mouse_y of made to 0
+    set pressed of made to no
+    set typed of made to nothing
+    connect_decide(area, "draw", ui_decide, id of made, nothing, 0)
+    connect_decide(area, "button-press-event", ui_pressed, id of made, nothing, 0)
+    connect_decide(area, "button-release-event", ui_let_go, id of made, nothing, 0)
+    connect_decide(area, "motion-notify-event", ui_moved, id of made, nothing, 0)
+    connect_decide(handle of window of made, "key-press-event", ui_key_pressed, id of made, nothing, 0)
+    connect_decide(handle of window of made, "key-release-event", ui_key_released, id of made, nothing, 0)
+    return made
+end
+
+# a drawing's handler for a click on it, given where: x and y
+to on_click with control, handler
+    set clicked of control to handler
+end
+
+# a drawing drawn again, by its painter, as soon as the program has a moment
+to redraw with control
+    gtk_widget_queue_draw(handle of control)
+end
+
+# what's drawn next is this colour: red, green and blue, each from 0 to 255
+to colour with canvas, red, green, blue
+    cairo_set_source_rgb(cr of canvas, red / 255, green / 255, blue / 255)
+end
+
+# a filled rectangle, its top left at x, y, `width` by `height`, in the colour chosen last
+to rectangle with canvas, x, y, width, height
+    cairo_box(cr of canvas, x, y, width, height)
+    cairo_fill(cr of canvas)
+end
+
+# a filled circle, its middle at x, y, so many pixels across from the middle to the edge, in the colour chosen
+# last
+to circle with canvas, x, y, radius
+    cairo_arc(cr of canvas, x, y, radius, 0, 6.283185307179586)
+    cairo_fill(cr of canvas)
+end
+
+# a line from x1, y1 to x2, y2, in the colour chosen last
+to line with canvas, x1, y1, x2, y2
+    cairo_set_line_width(cr of canvas, 1)
+    cairo_move_to(cr of canvas, x1 + 0.5, y1 + 0.5)
+    cairo_line_to(cr of canvas, x2 + 0.5, y2 + 0.5)
+    cairo_stroke(cr of canvas)
+end
+
+# words with their top left at x, y, in the desktop's own sans-serif
+to words with canvas, text, x, y
+    cairo_select_font_face(cr of canvas, "Sans", 0, 0)
+    cairo_set_font_size(cr of canvas, 13)
+    cairo_move_to(cr of canvas, x, y + 12)
+    cairo_show_text(cr of canvas, text)
+end
+
+# the window's icon, from a picture's file (a PNG, JPEG, GIF or BMP)
+to set_icon with parent, file
+    if not gtk_window_set_icon_from_file(handle of parent, file, nothing)
+        fail with "can't show '" + file + "': it isn't there, or isn't a picture"
+    end
+end
+
+# ---------- games: keys held, the mouse, pictures and sounds ----------
+
+# each key's name, from GTK's number for it; a letter's and a digit's is itself, and F1 to F12 theirs
+set ui_keyval_names to dictionary where 65361 is "Left", 65362 is "Up", 65363 is "Right", 65364 is "Down", 32 is "Space",
+    65293 is "Enter", 65421 is "Enter", 65307 is "Escape", 65505 is "Shift", 65506 is "Shift", 65507 is "Ctrl",
+    65508 is "Ctrl", 65513 is "Alt", 65514 is "Alt", 65289 is "Tab", 65288 is "Backspace", 65535 is "Delete"
+set ui_sound_count to 0
+
+to ui_keyval_name with code
+    if code is in ui_keyval_names
+        return item code of ui_keyval_names
+    end
+    if (code is at least 97 and code is at most 122) or (code is at least 65 and code is at most 90) or (code is at least 48 and code is at most 57)
+        return uppercase of ((list of code) as bytes as text)
+    end
+    if code is at least 65470 and code is at most 65481
+        return "F" + (code - 65469)
+    end
+    return "key " + code
+end
+
+to ui_key_pressed with widget, event, data
+    ui_key_changed(event, data, yes)
+    return no # on to the window's own: its menus' keys
+end
+
+to ui_key_released with widget, event, data
+    ui_key_changed(event, data, no)
+    return no
+end
+
+to ui_key_changed with event, data, down
+    set id to ui_number(data)
+    if not (id is in ui_controls)
+        return nothing
+    end
+    set drawn to item id of ui_controls
+    set pressed_key to record with kind 0, surface nothing, sent 0, time 0, state 0, keyval 0
+    read_key(pressed_key, event, 32)
+    set named to lowercase of ui_keyval_name(keyval of pressed_key)
+    set held to held of drawn
+    if down
+        set item named of held to yes
+        if typed of drawn is not nothing
+            set handler to typed of drawn
+            handler(ui_keyval_name(keyval of pressed_key))
+        end
+    else if named is in held
+        remove named from held
+    end
+end
+
+to ui_moved with widget, event, data
+    set id to ui_number(data)
+    if id is in ui_controls
+        set drawn to item id of ui_controls
+        set where to record with kind 0, surface nothing, sent 0, time 0, x 0, y 0
+        read_event(where, event, 40)
+        set mouse_x of drawn to x of where
+        set mouse_y of drawn to y of where
+    end
+    return yes
+end
+
+to ui_let_go with widget, event, data
+    set id to ui_number(data)
+    if id is in ui_controls
+        set pressed of item id of ui_controls to no
+    end
+    return yes
+end
+
+# whether a key is held down in the drawing's window: "Left", "Right", "Up", "Down", "Space", "Enter",
+# "Escape", "Shift", "Ctrl", "Alt", "Tab", "Backspace", "Delete", a letter, a digit, or F1 to F12, small
+# letters or capitals
+to key_down with control, name
+    return lowercase of name is in held of control
+end
+
+# where the mouse was last on the drawing, and whether its button is down
+to mouse_x with control
+    return mouse_x of control
+end
+
+# how far down the drawing the mouse was last, as mouse_x says how far across
+to mouse_y with control
+    return mouse_y of control
+end
+
+# whether the mouse's button is down on the drawing
+to mouse_down with control
+    return pressed of control
+end
+
+# a picture from a file, or one built into the program (a PNG, JPEG, GIF or BMP), to draw with draw_image
+to load_image with file
+    set data to read bytes file
+    set loader to gdk_pixbuf_loader_new()
+    set read_it to gdk_pixbuf_loader_write(loader, data, length of data, nothing)
+    set closed to gdk_pixbuf_loader_close(loader, nothing)
+    set picture to nothing
+    if read_it and closed
+        set picture to gdk_pixbuf_loader_get_pixbuf(loader)
+    end
+    if picture is nothing
+        fail with "can't show '" + file + "': it isn't a picture"
+    end
+    return record with kind "image", image picture, loader loader, width gdk_pixbuf_get_width(picture),
+        height gdk_pixbuf_get_height(picture)
+end
+
+# a picture drawn with its top left at x, y, at its own size (draw_image) or made `width` by `height`
+to draw_image with canvas, image, x, y
+    draw_image_sized(canvas, image, x, y, width of image, height of image)
+end
+
+# a picture drawn with its top left at x, y, made `width` by `height`
+to draw_image_sized with canvas, image, x, y, width, height
+    cairo_save(cr of canvas)
+    cairo_translate(cr of canvas, x, y)
+    cairo_scale(cr of canvas, width / width of image, height / height of image)
+    gdk_cairo_set_source_pixbuf(cr of canvas, image of image, 0, 0)
+    cairo_paint(cr of canvas)
+    cairo_restore(cr of canvas)
+end
+
+# a WAV file, or one built into the program, played while the program goes on: by paplay, PulseAudio's and
+# PipeWire's, or ALSA's aplay, whichever is there
+to play_sound with file
+    set data to read bytes file
+    set ui_sound_count to ui_sound_count + 1
+    set sound_file to "/tmp/folio-sound-" + unix_pid() + "-" + ui_sound_count + ".wav"
+    set made to unix_open(sound_file, 577, 384) # O_WRONLY, O_CREAT, O_TRUNC; for this user alone
+    if made is less than 0
+        fail with "can't play '" + file + "': there's no room for it in /tmp"
+    end
+    unix_write(made, data, length of data)
+    unix_close(made)
+    set all to list of "sh", "-c", "paplay \"$1\" 2>/dev/null || aplay -q \"$1\" 2>/dev/null; rm -f \"$1\"", "sh", sound_file
+    set pointers to (8 * length of all + 8) bytes # argv: each as C has it, then NULL
+    set at to 0
+    for each one in all
+        set copied to unix_copy(one)
+        for each k from 1 to 6
+            set byte (at + k) of pointers to (shift copied right by (8 * (k - 1))) bit and 255
+        end
+        set at to at + 8
+    end
+    if unix_fork() is 0 # the player, until it becomes sh
+        unix_exec("sh", pointers)
+        unix_exit(127)
+    end
+end
+
+# a drawing's handler for each key pressed in its window, given the key's name, as key_down knows them
+to on_key with control, handler
+    set typed of control to handler
+end

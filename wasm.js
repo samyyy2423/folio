@@ -1,11 +1,11 @@
-// The WebAssembly engine: Moth's third back end. It compiles a program to a WebAssembly module, byte by
+// The WebAssembly engine: Folio's third back end. It compiles a program to a WebAssembly module, byte by
 // byte (wasm-binary.js), which the browser or node compiles to machine code.
 //
-// Moth's values live inside the module, as WebAssembly GC values: a number is a struct holding an f64, or,
+// Folio's values live inside the module, as WebAssembly GC values: a number is a struct holding an f64, or,
 // if it's whole and fits in 31 bits, an i31 value, so a list of them is no boxes for the GC to keep; yes and
 // no are the i31 values 1 and 0 (so the numbers 1 and 0 are boxes, made once), nothing is null, and lists,
 // records, dictionaries and functions are structs. Text lives in the module too, as UTF-16 (see wasm-runtime.js, the part
-// of the runtime written once for this and wasm.moth): joining it, comparing it and showing numbers in it
+// of the runtime written once for this and wasm.folio): joining it, comparing it and showing numbers in it
 // happen here, and text that ends where its buffer does grows in place, so joining text in a loop is cheap.
 // The common cases run in WebAssembly: arithmetic on numbers, text, comparisons, list items, fields, calls
 // and loops. A mistake the program makes itself (`fail with`, a name with no value) is thrown and caught in the
@@ -15,13 +15,13 @@ import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
 import { TooDeep } from "./jit.js";
-import { MothError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, item, compare, plus, arithmetic, negate,
+import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, item, compare, plus, arithmetic, negate,
   lengthOf, addInto, checkRepeat, checkRange, itemsOf, callable, checkInputs, KINDS, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, fieldOf,
   recordFor, failWith, BUILTINS, askFor, putItem, makeDictionary, removeKey, readFile, writeFile, trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, everyInterval,
   Quantity, isQuantity, isRecord, Ended, exitCode, removeFile, fakeClock, nowValue, waitFor, readFolder, soundOf, BEEP, CantCopy, DEEPEST_COPY,
   madeInside, tooDeepToCopy, workerEnded, workerResult, workerRoom, workerTaken, enterWorker, leaveWorker } from "./vm.js";
 
-const EQ = refNull("eq"); // any Moth value
+const EQ = refNull("eq"); // any Folio value
 const I32 = "i32";
 const F64 = "f64";
 const MAX_DEPTH = 2000; // as in the JIT: deeper calls go to the VM, which has its own stack
@@ -134,7 +134,7 @@ function declareTypes(m) {
   T.strbuf = m.type({ kind: "struct", fields: [{ type: refNull(T.chars), mutable: true }, { type: I32, mutable: true }] }); // and how many are in use
   if (T.strbuf !== 14) throw new Error("wasm.js: the types are out of order");
   T.big = m.type({ kind: "struct", fields: [{ type: refNull(T.ids), mutable: true }, { type: I32, mutable: true }] }); // a big whole number's limbs, and how many
-  T.fn = (n) => { // a Moth function with n inputs
+  T.fn = (n) => { // a Folio function with n inputs
     const index = m.funcType([refNull(T.env), ...Array(n).fill(EQ)], [EQ]);
     m.typeNames[index] = `fn${n}`;
     return index;
@@ -163,7 +163,7 @@ const wholeIn = (c, local, low, high) => c.emit("local.get", local).emit("local.
 
 const SHARED = parseRuntime(RUNTIME);
 
-// how each instruction's immediates are written, as wasm_asm in wasm.moth reads them
+// how each instruction's immediates are written, as wasm_asm in wasm.folio reads them
 const HOW = {
   block: "block", loop: "block", if: "block", try: "block", br: "index", br_if: "index", rethrow: "index", throw: "index", catch: "index", call: "index", call_ref: "index",
   "ref.func": "index", "local.get": "local", "local.set": "local", "local.tee": "local", "global.get": "index", "global.set": "index",
@@ -278,7 +278,7 @@ function declareRuntime(m, T, im) {
     c.emit("end");
   });
 
-  // An f64 as a Moth value: an i31 if it's whole, fits in 31 bits and isn't 0 or 1; 1 and 0 as boxes made once
+  // An f64 as a Folio value: an i31 if it's whole, fits in 31 bits and isn't 0 or 1; 1 and 0 as boxes made once
   // (-0 a box of its own); anything else a new box
   const one = m.global(ref(T.num), false, new Code().emit("f64.const", 1).emit("struct.new", T.num));
   const zero = m.global(ref(T.num), false, new Code().emit("f64.const", 0).emit("struct.new", T.num));
@@ -294,7 +294,7 @@ function declareRuntime(m, T, im) {
     c.emit("else").emit("local.get", 0).emit("struct.new", T.num).emit("end").emit("end").emit("end");
     c.emit("else").emit("local.get", 0).emit("struct.new", T.num).emit("end");
   });
-  // a Moth value that's a number, as an f64
+  // a Folio value that's a number, as an f64
   fn("unbox", [EQ], [F64], (c) => numOf(c, T, 0));
 
   // + - * /: two numbers here, anything else (joining text, or a mistake) in JavaScript
@@ -705,7 +705,7 @@ function declareRuntime(m, T, im) {
   return R;
 }
 
-// What JavaScript calls to look inside Moth's values, and to make them, when a check or `say` needs them.
+// What JavaScript calls to look inside Folio's values, and to make them, when a check or `say` needs them.
 function declareExports(m, T, R) {
   const fn = (label, params, results, write) => {
     const f = m.func(label, params, results);
@@ -800,9 +800,9 @@ function findCaptured(program) {
 
 const makesFunctions = (body) => body.some((s) => s.kind === "define" || s.fn || [s.then, s.otherwise, s.body, s.handler].some((b) => b && makesFunctions(b)));
 
-// ---------- compiling Moth ----------
+// ---------- compiling Folio ----------
 
-// One Moth function (or the program) as one WebAssembly function. Variables that functions made inside it
+// One Folio function (or the program) as one WebAssembly function. Variables that functions made inside it
 // use live in an array of slots in a scope struct, made when it's called, so those functions can reach
 // them later; the rest are locals.
 class WasmCompiler extends Scope {
@@ -1327,7 +1327,7 @@ class WasmCompiler extends Scope {
     this.setNumber(number);
   }
 
-  // A Moth function, made from `to` (or a handler's `when`), compiled now; what's returned emits the closure.
+  // A Folio function, made from `to` (or a handler's `when`), compiled now; what's returned emits the closure.
   closure(d) {
     const { T } = this.ctx;
     const inner = new WasmCompiler(this, d.name, d.params, d.body, this.ctx);
@@ -1617,7 +1617,7 @@ export function compileToWasmModule(program) {
   const m = new Module();
   const T = declareTypes(m);
   const im = {};
-  for (const [label, [params, results]] of Object.entries(IMPORTS)) im[label] = m.import("moth", label, m.funcType(params, results));
+  for (const [label, [params, results]] of Object.entries(IMPORTS)) im[label] = m.import("folio", label, m.funcType(params, results));
   // A mistake, thrown and caught in the module (DESIGN §146): what `if it fails with` gets (a `fail with`'s
   // value, or the mistake's message as text), 1 if that's a `fail with`'s value, and the mistake's position
   const mistake = m.tag(m.funcType([EQ, I32, I32], []));
@@ -1710,24 +1710,24 @@ export function wasm(program) {
   return wasmProgram(compileToWasmModule(program));
 }
 
-// A module and what running it needs to know, as compileToWasmModule gives them (or wasm.moth, the same back
-// end written in Moth), made ready to run.
+// A module and what running it needs to know, as compileToWasmModule gives them (or wasm.folio, the same back
+// end written in Folio), made ready to run.
 export function wasmProgram(made, module = new WebAssembly.Module(made.bytes)) {
   return { ...made, run: (print, draw, maxSteps, ask, disk, args, random, host, printError, clock, play) => instantiate(module, made, print, draw, maxSteps, ask, disk, args, random, host, printError, clock, play).main(maxSteps) };
 }
 
-// A module `moth build --target wasm` made (wasm_with_details in wasm.moth): its bytes, with what running it needs
-// as JSON in its custom section "moth", made ready to run as wasmProgram makes one.
+// A module `folio build --target wasm` made (wasm_with_details in wasm.folio): its bytes, with what running it needs
+// as JSON in its custom section "folio", made ready to run as wasmProgram makes one.
 export function wasmFile(bytes) {
   const module = bytes instanceof WebAssembly.Module ? bytes : new WebAssembly.Module(bytes); // or the module, compiled
   return wasmProgram(wasmDetails(bytes, module), module);
 }
 
-// what a module moth build --target wasm wrote holds: its bytes, and what running it needs, from its section
-// "moth", as compileToWasmModule gives them
+// what a module folio build --target wasm wrote holds: its bytes, and what running it needs, from its section
+// "folio", as compileToWasmModule gives them
 export function wasmDetails(bytes, module = new WebAssembly.Module(bytes)) {
-  const [section] = WebAssembly.Module.customSections(module, "moth");
-  if (!section) throw new Error("this module wasn't made by moth build --target wasm: it has no section called moth");
+  const [section] = WebAssembly.Module.customSections(module, "folio");
+  if (!section) throw new Error("this module wasn't made by folio build --target wasm: it has no section called folio");
   const details = JSON.parse(new TextDecoder().decode(section));
   const ats = details.ats.map(([line, col, file]) => ({ line, col, file: file || undefined }));
   return { ...details, bytes, ats };
@@ -1751,7 +1751,7 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     return trailOf(calls);
   };
   const errors = ats.map((at) => (message, value) => {
-    const err = new MothError(at, message, value, trail());
+    const err = new FolioError(at, message, value, trail());
     err.wasm = failing;
     failing = undefined;
     throwing(err);
@@ -1998,7 +1998,7 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       if (wanted >= 0 && kind !== KIND_TAGS[wanted]) errors[k](`'${names[name]}' needs ${kinds[id].params[i]} to be ${KINDS[wanted]}, not ${kind}`);
     },
     stopped: (k) => {
-      const err = new MothError(ats[k], stoppedMessage(maxSteps), undefined, trail());
+      const err = new FolioError(ats[k], stoppedMessage(maxSteps), undefined, trail());
       err.final = true; // no try catches it
       throwing(err);
     },
@@ -2066,21 +2066,21 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       }
     },
   };
-  x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  x = new WebAssembly.Instance(module, { folio: imports }).exports;
   units = new Uint16Array(x.memory.buffer);
   count = new Int32Array(x.memory.buffer, 0, 1);
-  // A mistake the module threw and nothing in it caught, as the MothError the other engines make: its message,
+  // A mistake the module threw and nothing in it caught, as the FolioError the other engines make: its message,
   // or a `fail with`'s value, kept as WebAssembly holds it too, so a `try` around an app's handler keeps it whole.
   // The calls that led to it are still the module's: nothing has undone them.
-  const mothError = (err) => {
+  const folioError = (err) => {
     if (!(err instanceof WebAssembly.Exception) || !err.is(x.mistake)) return err;
     const [value, given, k] = [0, 1, 2].map((i) => err.getArg(x.mistake, i));
     let made;
     if (given === 1) {
       const thrown = toJs(value);
-      made = new MothError(ats[k], show(thrown), thrown, trail());
+      made = new FolioError(ats[k], show(thrown), thrown, trail());
       made.wasm = value;
-    } else made = new MothError(ats[k], textValue(value), undefined, trail());
+    } else made = new FolioError(ats[k], textValue(value), undefined, trail());
     lastError = made;
     return made;
   };
@@ -2088,7 +2088,7 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     try {
       return run();
     } catch (err) {
-      throw mothError(err);
+      throw folioError(err);
     }
   };
   host.call = (handler, inputs) => {

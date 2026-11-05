@@ -1,4 +1,4 @@
-# what building and testing mothlang leaves
+# what building and testing foliolang leaves
 dist/
 build/
 __pycache__/

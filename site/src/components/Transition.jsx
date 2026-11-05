@@ -3,16 +3,16 @@ import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { gsap, veilGone } from "@/lib/motion";
 import { BASE } from "@/lib/site";
-import MothMark from "./MothMark";
+import FolioMark from "./FolioMark";
 
-const STORE = "moth-veil"; // the name the veil shows, kept for the next page when the browser loads it afresh
+const STORE = "folio-veil"; // the name the veil shows, kept for the next page when the browser loads it afresh
 
 // what the veil says on the way to a page
 export function pageWord(path) {
   if (path === "/" || path === "") return "Folio";
   const names = { "/playground": "Playground", "/learn": "Learn", "/docs": "Docs", "/docs/cookbook": "Cookbook", "/docs/examples": "Examples" };
   if (names[path]) return names[path];
-  if (path.startsWith("/docs/")) return `${path.slice("/docs/".length)}.moth`;
+  if (path.startsWith("/docs/")) return `${path.slice("/docs/".length)}.folio`;
   return path.split("/").filter(Boolean).at(-1) ?? "Folio";
 }
 
@@ -149,13 +149,13 @@ export default function Transition() {
       const url = new URL(a.href, location.href);
       if (url.origin !== location.origin || !(url.pathname === BASE || url.pathname.startsWith(`${BASE}/`))) return;
       const page = url.pathname.slice(BASE.length).replace(/\/$/, "") || "/";
-      if (/\.(?!html$)[a-z0-9]+$/i.test(page)) return; // a file: a picture, a .moth
+      if (/\.(?!html$)[a-z0-9]+$/i.test(page)) return; // a file: a picture, a .folio
       const here = location.pathname.slice(BASE.length).replace(/\/$/, "") || "/";
       if (page === here) return; // this page: its own anchors, or its search
       e.preventDefault();
       if (state.current.busy) return;
       state.current.busy = true;
-      try { sessionStorage.setItem("moth-curtain", "1"); } catch {} // the front page's first-visit count isn't wanted after this
+      try { sessionStorage.setItem("folio-curtain", "1"); } catch {} // the front page's first-visit count isn't wanted after this
       const word = pageWord(page.replace(/\.html$/, "").replace(/\/index$/, ""));
       const afresh = page === "/" || here === "/" || page === "/playground" || here === "/playground" || page.endsWith(".html");
       cover(word, url.pathname + url.hash).then(async () => {
@@ -181,7 +181,7 @@ export default function Transition() {
     <div className="veil" ref={veil} aria-hidden="true">
       <div className="veil-lamp" />
       <div className="veil-ink">
-        <div className="veil-top"><span className="veil-mark"><MothMark />Folio</span><span className="veil-to" /></div>
+        <div className="veil-top"><span className="veil-mark"><FolioMark />Folio</span><span className="veil-to" /></div>
         <p className="veil-word"><span /></p>
       </div>
     </div>

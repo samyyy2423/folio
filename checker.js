@@ -92,7 +92,7 @@ const found = (message) => {
 // Each check the checker makes of values, as a rule: given what's fixed at its spot (an operator, a name, a
 // unit) and a value for each operand, it throws Found with the message running would stop with, or doesn't.
 // The checker runs each on a value of the type it worked out for each operand (SAMPLES', or the value itself
-// where it's written out); make-checker-rules.mjs runs each on every type, for moth check.
+// where it's written out); make-checker-rules.mjs runs each on every type, for folio check.
 const typeOfValue = (v) => (v === null ? "nothing" : typeof v === "boolean" ? "yes/no" : typeof v === "string" ? "text" : typeof v === "number" ? "number"
   : Array.isArray(v) ? "list" : isRecord(v) ? "record" : isDictionary(v) ? "dictionary" : isBytes(v) ? "bytes" : v instanceof Closure ? "function"
     : MEASURE_TYPES[measureOf(v)]);
@@ -146,7 +146,7 @@ export function outcome(name, args, values) {
 
 // The operands of rule `name` whose value, not just type, can change what it does: for each, whether another
 // value of its type (PROBES') than the one the rule is given for it (SAMPLES', or FINE's) does something else.
-// Where a value written out is one of those, moth check leaves the rule out, as it knows types, not values.
+// Where a value written out is one of those, folio check leaves the rule out, as it knows types, not values.
 export function dependsOn(name, args, types) {
   const tried = (vs) => { // a value no program could give there (a unit's word that isn't one) does something else too
     try {
@@ -208,7 +208,7 @@ class Checker extends Scope {
     return this.all.types[this.all.mode].get(key);
   }
 
-  // `valued`: the problem rests on a value written out, not only on types, so moth check doesn't find it (see
+  // `valued`: the problem rests on a value written out, not only on types, so folio check doesn't find it (see
   // dependsOn); it's kept where JSON and the tests that compare don't see it
   warn(at, kind, message, valued = false) {
     if (at.file && kind === "unused") return; // a file the program uses can make more than this program needs
@@ -553,7 +553,7 @@ class Checker extends Scope {
       }
       case "define": {
         const key = this.source(s.name, () => "function");
-        const isTest = !this.parent && s.name.startsWith("test_"); // the test runner, test() in moth.js, calls it
+        const isTest = !this.parent && s.name.startsWith("test_"); // the test runner, test() in folio.js, calls it
         if (!this.all.made.has(key) && !isTest) this.all.made.set(key, { at: s.at, message: `'${s.name}' is made but never used` });
         if (s.madeKind) { // what a record the kind makes holds: its maker's inputs, its own functions, and what it's made from
           const from = s.body[0].value.kind === "call" ? s.body[0].value.name : null;
@@ -705,7 +705,7 @@ class Checker extends Scope {
     });
   }
 
-  // `rex's speak()`, where rex is surely a dog: dog has no `speak`, and nothing gives a record one (see ownCalls in moth.js)
+  // `rex's speak()`, where rex is surely a dog: dog has no `speak`, and nothing gives a record one (see ownCalls in folio.js)
   ownCall(e, types) {
     const helper = this.all.defines.get(this.key(e.name))?.[0]?.define;
     const tried = helper?.params[0] === "the record" && helper.body[0]?.kind === "try" ? helper.body[0] : null;

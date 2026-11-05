@@ -2,7 +2,7 @@
 //
 //     node scripts/sync.mjs        (npm run dev and npm run build run it first)
 //
-// - public/: Moth's engine (the modules the playground's worker runs, moth.wasm, the libraries a program may
+// - public/: Folio's engine (the modules the playground's worker runs, folio.wasm, the libraries a program may
 //   `use`), the pictures, and playground.js: the playground's own script, as index.html has it, word for word.
 //   The new playground page has every element it works with, by the same ids, so it drives the page unchanged.
 // - src/generated/: the lessons (learn-lessons.js), the examples (examples.js), and pages.json: the reference,
@@ -16,14 +16,9 @@ const SITE = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = join(SITE, "..");
 const PUBLIC = join(SITE, "public");
 const GENERATED = join(SITE, "src", "generated");
-export const BASE = process.env.MOTH_BASE_PATH ?? "/moth";
+export const BASE = process.env.FOLIO_BASE_PATH ?? "/folio";
 
 const read = (file) => readFileSync(join(ROOT, file), "utf8");
-
-// The site calls the language Folio, its new name; the repository still calls it Moth until it's renamed there
-// too. The name as a word, then (MothError and the like are other words), and not the .moth of a file or the moth
-// command, which are still what runs.
-export const brand = (text) => text.replace(/\bMoth\b/g, "Folio").replace(/\bMOTH\b/g, "FOLIO");
 const copy = (from, to = from) => {
   mkdirSync(dirname(join(PUBLIC, to)), { recursive: true });
   copyFileSync(join(ROOT, from), join(PUBLIC, to));
@@ -32,35 +27,35 @@ const copy = (from, to = from) => {
 // ---------- the engine ----------
 
 // what index.html's script and its worker import (make-web.mjs keeps the list), and what they fetch
-const MODULES = ["vm.js", "pictures.js", "scope.js", "jit.js", "wasm-binary.js", "wasm-runtime.js", "wasm.js", "checker.js", "moth.js", "examples.js", "worker.js"];
+const MODULES = ["vm.js", "pictures.js", "scope.js", "jit.js", "wasm-binary.js", "wasm-runtime.js", "wasm.js", "checker.js", "folio.js", "examples.js", "worker.js"];
 const makeWeb = read("make-web.mjs");
 for (const file of MODULES) if (!makeWeb.includes(`"${file}"`)) throw new Error(`sync.mjs: make-web.mjs no longer lists ${file}`);
-// the Moth files a program may `use` beside the page (the examples' own), and Moth's compiler written in Moth,
+// the Folio files a program may `use` beside the page (the examples' own), and Folio's compiler written in Folio,
 // for the Compiled view; not the compilers for machine code and WebAssembly, nor the bundled library
-const NOT_FOR_THE_PAGE = new Set(["machine.moth", "moth.moth", "stdlib.moth", "webpage.moth", "wasm.moth", "wasm-runtime.moth", "moth-wasm.moth"]);
+const NOT_FOR_THE_PAGE = new Set(["machine.folio", "folio.folio", "stdlib.folio", "webpage.folio", "wasm.folio", "wasm-runtime.folio", "folio-wasm.folio"]);
 
 export function syncEngine() {
   for (const file of MODULES) copy(file);
-  copy("moth.wasm");
-  for (const file of readdirSync(ROOT)) if (file.endsWith(".moth") && !NOT_FOR_THE_PAGE.has(file)) copy(file);
-  for (const file of readdirSync(join(ROOT, "tools"))) if (file.endsWith(".moth") && !file.endsWith(".test.moth")) copy(`tools/${file}`);
+  copy("folio.wasm");
+  for (const file of readdirSync(ROOT)) if (file.endsWith(".folio") && !NOT_FOR_THE_PAGE.has(file)) copy(file);
+  for (const file of readdirSync(join(ROOT, "tools"))) if (file.endsWith(".folio") && !file.endsWith(".test.folio")) copy(`tools/${file}`);
   for (const file of readdirSync(join(ROOT, "docs"))) if (file.endsWith(".svg")) copy(`docs/${file}`);
-  for (const file of readdirSync(join(ROOT, "apps"))) if (file.endsWith(".moth")) copy(`apps/${file}`); // the playground's two apps
+  for (const file of readdirSync(join(ROOT, "apps"))) if (file.endsWith(".folio")) copy(`apps/${file}`); // the playground's two apps
 }
 
 // The front page's gallery, as the old one had it: each program's name, what it is, its picture, and its code
 // (from examples.js, or the file the playground loads it from), for a link that opens it in the playground
 export async function gallery() {
   const { default: examples } = await import(new URL(`file:///${join(ROOT, "examples.js").replace(/\\/g, "/")}`).href);
-  const fromFile = { "Snake": "apps/snake.moth", "Paint": "apps/paint.moth", "Neural network": "neural.moth", "Handwriting": "handwriting.moth" };
+  const fromFile = { "Snake": "apps/snake.folio", "Paint": "apps/paint.folio", "Neural network": "neural.folio", "Handwriting": "handwriting.folio" };
   return [
     ["Snake", "A game: arrow keys and a timer", "snake.svg"],
     ["Paint", "Drag to draw, click a colour", "paint.svg"],
     ["Spiral", "The turtle, in colour", "spiral.svg"],
     ["Tree", "A function that calls itself", "tree.svg"],
-    ["Neural network", "Learns, in Moth", "neural.svg"],
+    ["Neural network", "Learns, in Folio", "neural.svg"],
     ["Handwriting", "Reads the digit you draw", "handwriting.svg"],
-  ].map(([name, about, picture]) => ({ name, about: brand(about), picture, code: brand(fromFile[name] ? read(fromFile[name]).trimEnd() : examples[name]) }));
+  ].map(([name, about, picture]) => ({ name, about, picture, code: fromFile[name] ? read(fromFile[name]).trimEnd() : examples[name] }));
 }
 
 // ---------- the playground's script ----------
@@ -87,12 +82,12 @@ export function idsUsed(script) {
 // ---------- the reference, the cookbook and the examples ----------
 
 // The page each generated file was at, on the old site, and where it is now
-const OLD = "https://site.invalid/moth/";
+const OLD = "https://site.invalid/folio/";
 function newAddress(href, from) {
   if (/^(https?:|mailto:|#|javascript:)/.test(href) && !href.startsWith(OLD)) return href;
   const url = new URL(href, from);
   if (!url.href.startsWith(OLD)) return href;
-  let path = url.pathname.slice("/moth/".length);
+  let path = url.pathname.slice("/folio/".length);
   let hash = url.hash;
   if (path === "" || path === "index.html") {
     if (hash === "#playground") return `${BASE}/playground`;
@@ -101,7 +96,7 @@ function newAddress(href, from) {
   }
   if (path === "learn.html") return `${BASE}/learn${hash}`;
   path = path.replace(/index\.html$/, "").replace(/\/$/, "").replace(/\.html$/, "");
-  if (/\.(svg|png|jpg|moth|json)$/.test(path)) return `${BASE}/${path}`;
+  if (/\.(svg|png|jpg|folio|json)$/.test(path)) return `${BASE}/${path}`;
   return `${BASE}/${path}${url.search}${hash}`;
 }
 
@@ -119,14 +114,14 @@ const between = (text, from, to, label) => {
 export function pageParts(file) {
   const html = read(file);
   const from = OLD + file;
-  const title = brand(between(html, "<title>", "</title>", file).replace(/&amp;/g, "&"));
-  const description = brand(between(html, '<meta name="description" content="', '"', file).replace(/&amp;/g, "&").replace(/&quot;/g, '"'));
-  const hero = brand(relink(between(html, '<div class="hero wrap">', "\n    </div>\n  </header>", file), from));
-  const body = brand(relink(between(html, "</header>", "<footer", file), from));
+  const title = between(html, "<title>", "</title>", file).replace(/&amp;/g, "&");
+  const description = between(html, '<meta name="description" content="', '"', file).replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const hero = relink(between(html, '<div class="hero wrap">', "\n    </div>\n  </header>", file), from);
+  const body = relink(between(html, "</header>", "<footer", file), from);
   let script = html.slice(html.indexOf("</footer>") + "</footer>".length, html.lastIndexOf("</body>")).trim();
   script = script.replace(/^<script>/, "").replace(/<\/script>$/, "");
   // the search's links, written as a template in the script: to a library's page, at a function
-  script = brand(script.replace(/href="\$\{library\}\.html#/g, `href="${BASE}/docs/\${library}#`)); // its search's words too
+  script = script.replace(/href="\$\{library\}\.html#/g, `href="${BASE}/docs/\${library}#`);
   return { title, description, hero, body, script };
 }
 
@@ -152,13 +147,12 @@ export function libraryCounts(pages) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   syncEngine();
   const script = playgroundScript();
-  writeFileSync(join(PUBLIC, "playground.js"), brand(script));
-  writeFileSync(join(PUBLIC, "examples.js"), brand(read("examples.js")));
+  writeFileSync(join(PUBLIC, "playground.js"), script);
   mkdirSync(GENERATED, { recursive: true });
   const pages = docsPages();
   writeFileSync(join(GENERATED, "pages.json"), JSON.stringify(pages));
   writeFileSync(join(GENERATED, "site.json"), JSON.stringify({ ...libraryCounts(pages), playgroundIds: idsUsed(script), gallery: await gallery() }));
-  writeFileSync(join(GENERATED, "learn-lessons.js"), brand(read("learn-lessons.js")));
-  writeFileSync(join(GENERATED, "examples.js"), brand(read("examples.js")));
+  copyFileSync(join(ROOT, "learn-lessons.js"), join(GENERATED, "learn-lessons.js"));
+  copyFileSync(join(ROOT, "examples.js"), join(GENERATED, "examples.js"));
   console.log(`synced: the engine, playground.js (${idsUsed(script).length} ids), ${Object.keys(pages).length} docs pages`);
 }

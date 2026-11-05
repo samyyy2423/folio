@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>python.moth · Moth's standard library</title>
-  <meta name="description" content="Python, inside a Moth program: CPython itself, through its C API, so a program can import Python's modules (NumPy, scikit-learn, anything installed), call…">
+  <title>python.folio · Folio's standard library</title>
+  <meta name="description" content="Python, inside a Folio program.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>python</em>.moth</h1>
-      <p>Python, inside a Moth program: CPython itself, through its C API, so a program can import Python's modules (NumPy, scikit-learn, anything installed), call…</p>
-      <p class="use"><code>use "python.moth" as python</code></p>
+      <h1><em>python</em>.folio</h1>
+      <p>Python, inside a Folio program.</p>
+      <p class="use"><code>use "python.folio" as python</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="python.moth's functions">
+    <nav class="toc" aria-label="python.folio's functions">
       <h2>13 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#start">start</a></li><li><a href="#run">run</a></li><li><a href="#evaluate">evaluate</a></li><li><a href="#import_module">import_module</a></li><li><a href="#call">call</a></li><li><a href="#call_object">call_object</a></li><li><a href="#attribute">attribute</a></li><li><a href="#set_variable">set_variable</a></li><li><a href="#variable">variable</a></li><li><a href="#to_python">to_python</a></li><li><a href="#from_python">from_python</a></li><li><a href="#release">release</a></li><li><a href="#version">version</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Python, inside a Moth program: CPython itself, through its C API, so a program can import Python's modules (NumPy, scikit-learn, anything installed), call their functions and run Python code. Numbers, text, yes and no, nothing, lists and dictionaries go across as each other; arrays (arrays.moth) as NumPy arrays, when NumPy is there; anything else stays a Python object, which can be called and asked for its attributes.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <p>Python, inside a Folio program: CPython itself, through its C API, so a program can import Python's modules (NumPy, scikit-learn, anything installed), call their functions and run Python code. Numbers, text, yes and no, nothing, lists and dictionaries go across as each other; arrays (arrays.folio) as NumPy arrays, when NumPy is there; anything else stays a Python object, which can be called and asked for its attributes.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">say</span> python's <span class="k">start</span>(<span class="k">nothing</span>)                      <span class="c"># where Python was found; or a library's path to use that one</span>
 python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</span>)
 <span class="k">say</span> python's evaluate(<span class="s">&quot;x // 3&quot;</span>)                  <span class="c"># 1209600</span>
@@ -67,13 +67,13 @@ python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</sp
 python's set_variable(<span class="s">&quot;data&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="n">3</span>, <span class="n">1</span>, <span class="n">2</span>)
 <span class="k">say</span> python's evaluate(<span class="s">&quot;sorted(data)&quot;</span>)            <span class="c"># [1, 2, 3]</span>
 <span class="k">say</span> python's variable(<span class="s">&quot;x&quot;</span>)                       <span class="c"># 3628800, set by the run above</span>
-<span class="k">set</span> pi_object <span class="k">to</span> python's attribute(math, <span class="s">&quot;pi&quot;</span>)  <span class="c"># a Python object, held by Moth</span>
-<span class="k">say</span> python's from_python(pi_object)              <span class="c"># 3.14159265358979, as Moth's own</span>
+<span class="k">set</span> pi_object <span class="k">to</span> python's attribute(math, <span class="s">&quot;pi&quot;</span>)  <span class="c"># a Python object, held by Folio</span>
+<span class="k">say</span> python's from_python(pi_object)              <span class="c"># 3.14159265358979, as Folio's own</span>
 <span class="k">set</span> three <span class="k">to</span> python's to_python(<span class="n">3</span>)
 <span class="k">set</span> sqrt <span class="k">to</span> python's attribute(math, <span class="s">&quot;sqrt&quot;</span>)
 <span class="k">say</span> python's call_object(sqrt, <span class="k">list</span> <span class="k">of</span> three)    <span class="c"># 1.73205080756888</span>
-python's release(three)                          <span class="c"># let go of, once Moth is done with it</span></code></pre></div>
-          <p>Python is found where the PYTHON_LIBRARY variable says (its DLL, or .so on Linux, or the folder it's in), else beside each folder in PATH (python3*.dll on Windows), else as Linux installs it (libpython3.*.so.1.0). A program that uses it is built with --allow-libraries. A mistake in Python is a <code>fail with</code> that says what Python said: &quot;Python: ZeroDivisionError: division by zero&quot;. Python objects aren't let go of when Moth is done with them: <a href="#release">release</a>(object) lets go of one.</p>
+python's release(three)                          <span class="c"># let go of, once Folio is done with it</span></code></pre></div>
+          <p>Python is found where the PYTHON_LIBRARY variable says (its DLL, or .so on Linux, or the folder it's in), else beside each folder in PATH (python3*.dll on Windows), else as Linux installs it (libpython3.*.so.1.0). A program that uses it is built with --allow-libraries. A mistake in Python is a <code>fail with</code> that says what Python said: &quot;Python: ZeroDivisionError: division by zero&quot;. Python objects aren't let go of when Folio is done with them: <a href="#release">release</a>(object) lets go of one.</p>
       </section>
       <section class="fns">
         <h2>Functions</h2>
@@ -84,9 +84,9 @@ python's release(three)                          <span class="c"># let go of, on
             <div><h4>Inputs</h4><ul class="inputs"><li><code>path</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start with path or nothing</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L119">python.moth line 119</a></p>
+          <p class="written">Written <code>to start with path or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L119">python.folio line 119</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">say</span> python's <span class="k">start</span>(<span class="k">nothing</span>)                      <span class="c"># where Python was found; or a library's path to use that one</span></code></pre></div>
         </section>
         <section class="fn" id="run">
@@ -96,9 +96,9 @@ python's release(three)                          <span class="c"># let go of, on
             <div><h4>Inputs</h4><ul class="inputs"><li><code>code</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to run with code</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L655">python.moth line 655</a></p>
+          <p class="written">Written <code>to run with code</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L655">python.folio line 655</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="evaluate">
@@ -108,9 +108,9 @@ python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>expression</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to evaluate with expression</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L666">python.moth line 666</a></p>
+          <p class="written">Written <code>to evaluate with expression</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L666">python.folio line 666</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">say</span> python's evaluate(<span class="s">&quot;x // 3&quot;</span>)                  <span class="c"># 1209600</span></code></pre></div>
         </section>
         <section class="fn" id="import_module">
@@ -120,21 +120,21 @@ python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to import_module with name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L676">python.moth line 676</a></p>
+          <p class="written">Written <code>to import_module with name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L676">python.folio line 676</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> math <span class="k">to</span> python's import_module(<span class="s">&quot;math&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="call">
           <h3><a href="#call"><code>python's call(object, name, inputs, named)</code></a></h3>
-          <p>object.name(inputs...), with inputs by name from a dictionary: what it gives, as Moth's value</p>
+          <p>object.name(inputs...), with inputs by name from a dictionary: what it gives, as Folio's value</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>object</code></li><li><code>name</code></li><li><code>inputs</code> <span class="optional">optional: empty list if it's left out</span></li><li><code>named</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to call with object, name, inputs or empty list, named or nothing</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L686">python.moth line 686</a></p>
+          <p class="written">Written <code>to call with object, name, inputs or empty list, named or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L686">python.folio line 686</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> math <span class="k">to</span> python's import_module(<span class="s">&quot;math&quot;</span>)
 <span class="k">say</span> python's call(math, <span class="s">&quot;sqrt&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="n">2</span>)       <span class="c"># 1.4142135623731</span></code></pre></div>
         </section>
@@ -145,9 +145,9 @@ python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>object</code></li><li><code>inputs</code> <span class="optional">optional: empty list if it's left out</span></li><li><code>named</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to call_object with object, inputs or empty list, named or nothing</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L696">python.moth line 696</a></p>
+          <p class="written">Written <code>to call_object with object, inputs or empty list, named or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L696">python.folio line 696</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> math <span class="k">to</span> python's import_module(<span class="s">&quot;math&quot;</span>)
 <span class="k">set</span> three <span class="k">to</span> python's to_python(<span class="n">3</span>)
 <span class="k">set</span> sqrt <span class="k">to</span> python's attribute(math, <span class="s">&quot;sqrt&quot;</span>)
@@ -160,61 +160,61 @@ python's run(<span class="s">&quot;import math\nx = math.factorial(10)&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>object</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to attribute with object, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L706">python.moth line 706</a></p>
+          <p class="written">Written <code>to attribute with object, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L706">python.folio line 706</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> math <span class="k">to</span> python's import_module(<span class="s">&quot;math&quot;</span>)
-<span class="k">set</span> pi_object <span class="k">to</span> python's attribute(math, <span class="s">&quot;pi&quot;</span>)  <span class="c"># a Python object, held by Moth</span></code></pre></div>
+<span class="k">set</span> pi_object <span class="k">to</span> python's attribute(math, <span class="s">&quot;pi&quot;</span>)  <span class="c"># a Python object, held by Folio</span></code></pre></div>
         </section>
         <section class="fn" id="set_variable">
           <h3><a href="#set_variable"><code>python's set_variable(name, value)</code></a></h3>
-          <p>a name in __main__, which run and evaluate see, given a Moth value</p>
+          <p>a name in __main__, which run and evaluate see, given a Folio value</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>name</code></li><li><code>value</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_variable with name, value</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L716">python.moth line 716</a></p>
+          <p class="written">Written <code>to set_variable with name, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L716">python.folio line 716</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 python's set_variable(<span class="s">&quot;data&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="n">3</span>, <span class="n">1</span>, <span class="n">2</span>)</code></pre></div>
         </section>
         <section class="fn" id="variable">
           <h3><a href="#variable"><code>python's variable(name)</code></a></h3>
-          <p>a name in __main__'s value, as a Moth value; a mistake if Python has no variable called that</p>
+          <p>a name in __main__'s value, as a Folio value; a mistake if Python has no variable called that</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to variable with name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L731">python.moth line 731</a></p>
+          <p class="written">Written <code>to variable with name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L731">python.folio line 731</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">say</span> python's variable(<span class="s">&quot;x&quot;</span>)                       <span class="c"># 3628800, set by the run above</span></code></pre></div>
         </section>
         <section class="fn" id="to_python">
           <h3><a href="#to_python"><code>python's to_python(value)</code></a></h3>
-          <p>a Moth value as a Python object Moth holds, which goes back to Python as it is</p>
+          <p>a Folio value as a Python object Folio holds, which goes back to Python as it is</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>value</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to to_python with value</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L745">python.moth line 745</a></p>
+          <p class="written">Written <code>to to_python with value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L745">python.folio line 745</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> three <span class="k">to</span> python's to_python(<span class="n">3</span>)</code></pre></div>
         </section>
         <section class="fn" id="from_python">
           <h3><a href="#from_python"><code>python's from_python(object)</code></a></h3>
-          <p>a Python object Moth holds as a Moth value, as call gives them</p>
+          <p>a Python object Folio holds as a Folio value, as call gives them</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>object</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to from_python with object</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L755">python.moth line 755</a></p>
+          <p class="written">Written <code>to from_python with object</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L755">python.folio line 755</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> math <span class="k">to</span> python's import_module(<span class="s">&quot;math&quot;</span>)
-<span class="k">set</span> pi_object <span class="k">to</span> python's attribute(math, <span class="s">&quot;pi&quot;</span>)  <span class="c"># a Python object, held by Moth</span>
-<span class="k">say</span> python's from_python(pi_object)              <span class="c"># 3.14159265358979, as Moth's own</span></code></pre></div>
+<span class="k">set</span> pi_object <span class="k">to</span> python's attribute(math, <span class="s">&quot;pi&quot;</span>)  <span class="c"># a Python object, held by Folio</span>
+<span class="k">say</span> python's from_python(pi_object)              <span class="c"># 3.14159265358979, as Folio's own</span></code></pre></div>
         </section>
         <section class="fn" id="release">
           <h3><a href="#release"><code>python's release(object)</code></a></h3>
@@ -223,11 +223,11 @@ python's set_variable(<span class="s">&quot;data&quot;</span>, <span class="k">l
             <div><h4>Inputs</h4><ul class="inputs"><li><code>object</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to release with object</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L765">python.moth line 765</a></p>
+          <p class="written">Written <code>to release with object</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L765">python.folio line 765</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 <span class="k">set</span> three <span class="k">to</span> python's to_python(<span class="n">3</span>)
-python's release(three)                          <span class="c"># let go of, once Moth is done with it</span></code></pre></div>
+python's release(three)                          <span class="c"># let go of, once Folio is done with it</span></code></pre></div>
         </section>
         <section class="fn" id="version">
           <h3><a href="#version"><code>python's version()</code></a></h3>
@@ -236,9 +236,9 @@ python's release(three)                          <span class="c"># let go of, on
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to version</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/python.moth#L784">python.moth line 784</a></p>
+          <p class="written">Written <code>to version</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/python.folio#L784">python.folio line 784</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.moth&quot;</span> <span class="k">as</span> python
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;python.folio&quot;</span> <span class="k">as</span> python
 python's version()</code></pre></div>
         </section>
       </section>
@@ -246,14 +246,14 @@ python's version()</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

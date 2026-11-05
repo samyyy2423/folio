@@ -5,7 +5,7 @@ import { BASE, playgroundLink } from "@/lib/site";
 import { LESSONS } from "@/generated/learn-lessons.js";
 import { gsap, motionReady, revealOnScroll, entrance } from "@/lib/motion";
 
-const STORE = "moth-learn-done"; // what learn.html kept, so progress made there carries on here
+const STORE = "folio-learn-done"; // what learn.html kept, so progress made there carries on here
 
 // WebAssembly where the browser has its GC and exceptions, as the playground starts on; else the JIT
 function engineHere() {

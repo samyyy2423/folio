@@ -1,12 +1,12 @@
-// Moth's language server, `moth lsp`, as the extension speaks to it: started as a program of its own, and spoken
+// Folio's language server, `folio lsp`, as the extension speaks to it: started as a program of its own, and spoken
 // to over its input and output with the Language Server Protocol's messages, each JSON after a Content-Length
-// line and an empty line. This file doesn't need VS Code, so the tests start it against moth itself.
+// line and an empty line. This file doesn't need VS Code, so the tests start it against folio itself.
 const { spawn } = require("child_process");
 
 // Starts `command lsp` and asks it to begin. Gives a promise of the server, once it has answered: its
 // capabilities, request(method, params) (a promise of its answer), notify(method, params), on(method, f) for
 // what it tells the editor, onExit(f), and stop(). It fails if the server can't be started, ends before it
-// answers (a moth from before moth lsp), or takes longer than `wait` milliseconds to.
+// answers (a folio from before folio lsp), or takes longer than `wait` milliseconds to.
 function startServer(command, { args = ["lsp"], cwd, initializationOptions, wait = 10000 } = {}) {
   return new Promise((resolve, reject) => {
     let child;
@@ -28,7 +28,7 @@ function startServer(command, { args = ["lsp"], cwd, initializationOptions, wait
       child.stdin.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`, "ascii"), body]));
     };
     const request = (method, params) => {
-      if (ended) return Promise.reject(new Error(`moth lsp has ended (${ended})`));
+      if (ended) return Promise.reject(new Error(`folio lsp has ended (${ended})`));
       const id = next++;
       return new Promise((done, fail) => {
         waiting.set(id, { done, fail });
@@ -72,10 +72,10 @@ function startServer(command, { args = ["lsp"], cwd, initializationOptions, wait
     const finish = (why) => {
       if (ended) return;
       ended = why;
-      for (const { fail } of waiting.values()) fail(new Error(`moth lsp has ended (${why})`));
+      for (const { fail } of waiting.values()) fail(new Error(`folio lsp has ended (${why})`));
       waiting.clear();
       for (const f of exits) f(why);
-      reject(new Error(`moth lsp couldn't start: ${why}${stderr ? `: ${stderr.trim()}` : ""}`));
+      reject(new Error(`folio lsp couldn't start: ${why}${stderr ? `: ${stderr.trim()}` : ""}`));
     };
     child.on("error", (err) => finish(err.code === "ENOENT" ? `there's no ${command}` : err.message));
     child.on("exit", (code) => finish(`it ended with ${code}`));
@@ -84,7 +84,7 @@ function startServer(command, { args = ["lsp"], cwd, initializationOptions, wait
       finish(`it didn't answer in ${wait / 1000} seconds`);
       child.kill();
     }, wait);
-    request("initialize", { processId: process.pid, rootUri: null, capabilities: {}, initializationOptions, clientInfo: { name: "moth for VS Code" } })
+    request("initialize", { processId: process.pid, rootUri: null, capabilities: {}, initializationOptions, clientInfo: { name: "folio for VS Code" } })
       .then((answer) => {
         clearTimeout(timer);
         notify("initialized", {});

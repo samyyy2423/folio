@@ -1,0 +1,25 @@
+# folio.wasm (DESIGN §144): Folio's compiler as a WebAssembly module of its own. This program is it: compiler.folio
+# reads a program, and wasm.folio makes it into the module folio build --target wasm makes. make-folio-wasm.mjs
+# builds it into folio.wasm, by itself; the playground compiles with it.
+#
+# It's run with the program's text and the files it may use as its arguments: the text, then each file's name and
+# text. It says one line: the module's bytes, each a number, with what running it needs in its section "folio"; or,
+# for a mistake in the program, "mistake" and the mistake as JSON, its place and its reason.
+
+use "wasm.folio" as webassembly
+
+set folio_given to arguments
+set folio_names to empty list
+set folio_texts to empty list
+set folio_k to 2
+repeat while folio_k is less than length of folio_given
+    add item folio_k of folio_given to folio_names
+    add item (folio_k + 1) of folio_given to folio_texts
+    set folio_k to folio_k + 2
+end
+try
+    set folio_made to webassembly's wasm_compile(item 1 of folio_given, folio_names, folio_texts)
+    say join webassembly's wasm_with_details(folio_made) with ","
+if it fails with folio_why
+    say "mistake " + (folio_why as json)
+end

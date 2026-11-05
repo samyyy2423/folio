@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>s3.moth · Moth's standard library</title>
+  <title>s3.folio · Folio's standard library</title>
   <meta name="description" content="Amazon S3 and the stores that speak its language (MinIO, Cloudflare R2, Backblaze B2, Ceph and more), as Python's boto3 has them.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>s3</em>.moth</h1>
+      <h1><em>s3</em>.folio</h1>
       <p>Amazon S3 and the stores that speak its language (MinIO, Cloudflare R2, Backblaze B2, Ceph and more), as Python's boto3 has them.</p>
-      <p class="use"><code>use "s3.moth" as s3</code></p>
+      <p class="use"><code>use "s3.folio" as s3</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="s3.moth's functions">
+    <nav class="toc" aria-label="s3.folio's functions">
       <h2>12 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#client">client</a></li><li><a href="#from_environment">from_environment</a></li><li><a href="#put_object">put_object</a></li><li><a href="#get_object">get_object</a></li><li><a href="#head_object">head_object</a></li><li><a href="#delete_object">delete_object</a></li><li><a href="#list_objects">list_objects</a></li><li><a href="#create_bucket">create_bucket</a></li><li><a href="#delete_bucket">delete_bucket</a></li><li><a href="#list_buckets">list_buckets</a></li><li><a href="#presigned_url">presigned_url</a></li><li><a href="#sign">sign</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Amazon S3 and the stores that speak its language (MinIO, Cloudflare R2, Backblaze B2, Ceph and more), as Python's boto3 has them: objects put, got, listed and deleted, buckets made and removed, and presigned URLs that let anyone with one get (or put) an object for a while, each request signed with AWS Signature Version 4, over http.moth. A program <code>moth build</code> makes can use it, built with --allow-libraries.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <p>Amazon S3 and the stores that speak its language (MinIO, Cloudflare R2, Backblaze B2, Ceph and more), as Python's boto3 has them: objects put, got, listed and deleted, buckets made and removed, and presigned URLs that let anyone with one get (or put) an object for a while, each request signed with AWS Signature Version 4, over http.folio. A program <code>folio build</code> makes can use it, built with --allow-libraries.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's client(<span class="s">&quot;https://s3.eu-west-1.amazonaws.com&quot;</span>, <span class="s">&quot;eu-west-1&quot;</span>, access_key, secret_key)
 <span class="k">set</span> store <span class="k">to</span> s3's client(<span class="s">&quot;http://localhost:9000&quot;</span>, <span class="s">&quot;us-east-1&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>)   <span class="c"># MinIO</span>
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
@@ -79,9 +79,9 @@ s3's create_bucket(store, <span class="s">&quot;photos&quot;</span>)       <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>endpoint</code></li><li><code>region</code></li><li><code>access_key</code></li><li><code>secret_key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to client with endpoint, region, access_key, secret_key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L47">s3.moth line 47</a></p>
+          <p class="written">Written <code>to client with endpoint, region, access_key, secret_key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L47">s3.folio line 47</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> minio <span class="k">to</span> s3's client(<span class="s">&quot;http://localhost:9000&quot;</span>, <span class="s">&quot;us-east-1&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>)
 <span class="k">say</span> minio</code></pre><pre class="says"><code>(record with endpoint &quot;http://localhost:9000&quot;, region &quot;us-east-1&quot;, access_key &quot;minioadmin&quot;, secret_key &quot;minioadmin&quot;, token nothing, path_style yes, sign_payload yes)</code></pre></div>
         </section>
@@ -92,9 +92,9 @@ s3's create_bucket(store, <span class="s">&quot;photos&quot;</span>)       <span
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to from_environment</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L61">s3.moth line 61</a></p>
+          <p class="written">Written <code>to from_environment</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L61">s3.folio line 61</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's client(<span class="s">&quot;http://localhost:9000&quot;</span>, <span class="s">&quot;us-east-1&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>)   <span class="c"># MinIO</span>
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span></code></pre></div>
         </section>
@@ -105,9 +105,9 @@ s3's create_bucket(store, <span class="s">&quot;photos&quot;</span>)       <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li><li><code>key</code></li><li><code>data</code></li><li><code>type</code> <span class="optional">optional: &quot;application/octet-stream&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to put_object with store, bucket, key, data, type or &quot;application/octet-stream&quot;</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L89">s3.moth line 89</a></p>
+          <p class="written">Written <code>to put_object with store, bucket, key, data, type or &quot;application/octet-stream&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L89">s3.folio line 89</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 s3's put_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s">&quot;2026/cat.png&quot;</span>, <span class="k">read</span> <span class="k">bytes</span> <span class="s">&quot;cat.png&quot;</span>, <span class="s">&quot;image/png&quot;</span>)</code></pre></div>
         </section>
@@ -118,9 +118,9 @@ s3's put_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to get_object with store, bucket, key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L94">s3.moth line 94</a></p>
+          <p class="written">Written <code>to get_object with store, bucket, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L94">s3.folio line 94</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 <span class="k">set</span> data <span class="k">to</span> s3's get_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s">&quot;2026/cat.png&quot;</span>)       <span class="c"># bytes</span></code></pre></div>
         </section>
@@ -131,9 +131,9 @@ s3's put_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to head_object with store, bucket, key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L100">s3.moth line 100</a></p>
+          <p class="written">Written <code>to head_object with store, bucket, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L100">s3.folio line 100</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 <span class="k">say</span> s3's head_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s">&quot;2026/cat.png&quot;</span>)   <span class="c"># its size, type, etag and modified; nothing if none</span></code></pre></div>
         </section>
@@ -144,9 +144,9 @@ s3's put_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to delete_object with store, bucket, key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L112">s3.moth line 112</a></p>
+          <p class="written">Written <code>to delete_object with store, bucket, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L112">s3.folio line 112</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 s3's delete_object(store, <span class="s">&quot;photos&quot;</span>, <span class="s">&quot;2026/cat.png&quot;</span>)</code></pre></div>
         </section>
@@ -157,9 +157,9 @@ s3's delete_object(store, <span class="s">&quot;photos&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li><li><code>prefix</code> <span class="optional">optional: &quot;&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to list_objects with store, bucket, prefix or &quot;&quot;</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L118">s3.moth line 118</a></p>
+          <p class="written">Written <code>to list_objects with store, bucket, prefix or &quot;&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L118">s3.folio line 118</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's client(<span class="s">&quot;https://s3.eu-west-1.amazonaws.com&quot;</span>, <span class="s">&quot;eu-west-1&quot;</span>, access_key, secret_key)
 <span class="k">set</span> store <span class="k">to</span> s3's client(<span class="s">&quot;http://localhost:9000&quot;</span>, <span class="s">&quot;us-east-1&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>, <span class="s">&quot;minioadmin&quot;</span>)   <span class="c"># MinIO</span>
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
@@ -180,9 +180,9 @@ s3's create_bucket(store, <span class="s">&quot;photos&quot;</span>)       <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to create_bucket with store, bucket</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L144">s3.moth line 144</a></p>
+          <p class="written">Written <code>to create_bucket with store, bucket</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L144">s3.folio line 144</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 s3's create_bucket(store, <span class="s">&quot;photos&quot;</span>)       <span class="c"># and delete_bucket; list_buckets says each one's name</span></code></pre></div>
         </section>
@@ -193,9 +193,9 @@ s3's create_bucket(store, <span class="s">&quot;photos&quot;</span>)       <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>bucket</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to delete_bucket with store, bucket</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L154">s3.moth line 154</a></p>
+          <p class="written">Written <code>to delete_bucket with store, bucket</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L154">s3.folio line 154</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 s3's delete_bucket(store, bucket)</code></pre></div>
         </section>
@@ -206,9 +206,9 @@ s3's delete_bucket(store, bucket)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to list_buckets with store</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L159">s3.moth line 159</a></p>
+          <p class="written">Written <code>to list_buckets with store</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L159">s3.folio line 159</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 s3's list_buckets(store)</code></pre></div>
         </section>
@@ -219,9 +219,9 @@ s3's list_buckets(store)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>method</code></li><li><code>bucket</code></li><li><code>key</code></li><li><code>seconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to presigned_url with store, method, bucket, key, seconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L172">s3.moth line 172</a></p>
+          <p class="written">Written <code>to presigned_url with store, method, bucket, key, seconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L172">s3.folio line 172</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> store <span class="k">to</span> s3's from_environment()     <span class="c"># AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ...</span>
 <span class="k">say</span> s3's presigned_url(store, <span class="s">&quot;GET&quot;</span>, <span class="s">&quot;photos&quot;</span>, <span class="s">&quot;2026/cat.png&quot;</span>, <span class="n">3600</span>)   <span class="c"># good for an hour</span></code></pre></div>
         </section>
@@ -232,9 +232,9 @@ s3's list_buckets(store)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>store</code></li><li><code>method</code></li><li><code>path</code></li><li><code>query</code></li><li><code>headers</code></li><li><code>payload_hash</code></li><li><code>stamp</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sign with store, method, path, query, headers, payload_hash, stamp</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/s3.moth#L198">s3.moth line 198</a></p>
+          <p class="written">Written <code>to sign with store, method, path, query, headers, payload_hash, stamp</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/s3.folio#L198">s3.folio line 198</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.moth&quot;</span> <span class="k">as</span> s3
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;s3.folio&quot;</span> <span class="k">as</span> s3
 <span class="k">set</span> signed <span class="k">to</span> s3's sign(s3_test_store, <span class="s">&quot;GET&quot;</span>, <span class="s">&quot;/test.txt&quot;</span>, <span class="k">empty</span> <span class="k">dictionary</span>, <span class="k">headers</span>, s3_test_empty, <span class="s">&quot;20130524T000000Z&quot;</span>)
 <span class="k">say</span> signed</code></pre></div>
         </section>
@@ -243,14 +243,14 @@ s3's list_buckets(store)</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

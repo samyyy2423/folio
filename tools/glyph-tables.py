@@ -1,5 +1,5 @@
-# Writes the glyph tables machine.moth draws text with on Linux, between the two lines that mark them in
-# machine.moth, from DejaVu Sans and DejaVu Sans Mono: each character drawn by FreeType, through Pillow,
+# Writes the glyph tables machine.folio draws text with on Linux, between the two lines that mark them in
+# machine.folio, from DejaVu Sans and DejaVu Sans Mono: each character drawn by FreeType, through Pillow,
 # at 16 pixels to the em, the size of what's written on buttons and in boxes, and DejaVu Sans at 24 too, to
 # draw text of other sizes from. The fonts are where Debian and Ubuntu keep them, or wherever the two arguments
 # say: python tools/glyph-tables.py [DejaVuSans.ttf DejaVuSansMono.ttf]
@@ -65,7 +65,7 @@ def table(path, em):
     return b"MF" + bytes([em, ascent, descent]) + struct.pack("<H", len(CHARS)) + heads + bytes(ink)
 
 
-def moth_lines(name, data):
+def folio_lines(name, data):
     text = base64.b64encode(data).decode()
     lines = [text[i:i + 100] for i in range(0, len(text), 100)]
     return f"set {name} to list of " + ",\n    ".join(f'"{line}"' for line in lines)
@@ -84,19 +84,19 @@ def main():
         "# height (1 each), and where its ink starts among the ink bytes (3); then the ink, 4 bits a pixel, the left",
         "# one in a byte's low half, each row starting on a byte of its own. Its characters are 32 to 126, 160 to 255",
         "# and U+FFFD, for any other. dejavu_notice is the fonts' licence, which goes into a program with them.",
-        moth_lines("dejavu_sans16_lines", table(sans, 16)),
-        moth_lines("dejavu_sans24_lines", table(sans, 24)),
-        moth_lines("dejavu_mono16_lines", table(mono, 16)),
+        folio_lines("dejavu_sans16_lines", table(sans, 16)),
+        folio_lines("dejavu_sans24_lines", table(sans, 24)),
+        folio_lines("dejavu_mono16_lines", table(mono, 16)),
         f'set dejavu_notice to "{notice}"',
         END,
     ])
-    file = Path(__file__).resolve().parent.parent / "machine.moth"
+    file = Path(__file__).resolve().parent.parent / "machine.folio"
     source = file.read_text(encoding="utf8")
     start, end = source.find(START), source.find(END)
     if start < 0 or end < 0:
-        raise SystemExit("machine.moth has no place marked for DejaVu's letters")
+        raise SystemExit("machine.folio has no place marked for DejaVu's letters")
     file.write_text(source[:start] + block + source[end + len(END):], encoding="utf8", newline="\n")
-    print(f"{len(CHARS)} characters in each table, written to machine.moth")
+    print(f"{len(CHARS)} characters in each table, written to machine.folio")
 
 
 if __name__ == "__main__":

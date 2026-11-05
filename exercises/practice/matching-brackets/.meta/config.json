@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "matching_brackets.moth"
+      "matching_brackets.folio"
     ],
     "test": [
-      "matching_brackets.test.moth"
+      "matching_brackets.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Say whether every bracket in some text is closed in the right order."

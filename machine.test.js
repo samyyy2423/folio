@@ -1,4 +1,4 @@
-// machine.moth, Moth's machine-code back end, against the JavaScript engine: every program it can make
+// machine.folio, Folio's machine-code back end, against the JavaScript engine: every program it can make
 // machine code of becomes a program for this system, which runs and must print, write as a mistake and exit
 // exactly as the JavaScript engine does. Windows and Linux only.
 import { test, after } from "node:test";
@@ -13,7 +13,7 @@ import { availableParallelism, networkInterfaces, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
-import { run, runWasm, compileToWasmBytes, test as testMoth, machineCompiler, check, excerpt, describeTrail, format, MothError, memoryDisk, soundWav } from "./moth.js";
+import { run, runWasm, compileToWasmBytes, test as testFolio, machineCompiler, check, excerpt, describeTrail, format, FolioError, memoryDisk, soundWav } from "./folio.js";
 import examples from "./examples.js";
 import { PROGRAMS, ERRORS, SAVING, TYPED, brokenPrograms } from "./cases.js";
 import { FAKE_NOW } from "./vm.js";
@@ -22,8 +22,8 @@ import { MACHINE_CASES, machinePrograms } from "./machine-programs.js";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 const target = { win32: "windows", linux: "linux" }[process.platform];
-const skip = target ? false : "machine.moth makes programs for Windows and Linux";
-const machine = machineCompiler(here("machine.moth"), here("compiler.moth"));
+const skip = target ? false : "machine.folio makes programs for Windows and Linux";
+const machine = machineCompiler(here("machine.folio"), here("compiler.folio"));
 const executable = (dir, name) => join(dir, target === "windows" ? `${name}.exe` : name);
 
 // What the JavaScript engine gives a program started away from a terminal, with no --allow flags and nothing to read:
@@ -38,7 +38,7 @@ const NOTHING_ALLOWED = {
   folder: refused("read files (start it with --allow-read)"),
 };
 
-// What the JavaScript engine prints for p.moth, writes to the error output (what it says there, then a
+// What the JavaScript engine prints for p.folio, writes to the error output (what it says there, then a
 // mistake), and exits with: 1 for a mistake, or what `stop the program` gave; null for a program too long to wait for.
 function onEngine(source, name) {
   let [stdout, stderr, status] = ["", "", 0];
@@ -51,7 +51,7 @@ function onEngine(source, name) {
       printError: (line) => (stderr += `${line}\n`), exit: (code) => (status = code) });
     return { stdout, stderr, status };
   } catch (err) {
-    if (!(err instanceof MothError)) throw err;
+    if (!(err instanceof FolioError)) throw err;
     if (/^stopped after|^can't run programs here|^can't use the library/.test(err.reason)) return null; // too long to wait for, or a program or library it would run
     stderr += `${err.file ?? name}:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n`;
     if (err.trail.length) stderr += `${describeTrail(err.trail)}\n`;
@@ -60,19 +60,19 @@ function onEngine(source, name) {
 }
 
 test("machine code says, fails and exits exactly as the JavaScript engine does", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   const sources = [...MACHINE_CASES, ...Object.values(examples), ...PROGRAMS.map(([s]) => s), ...ERRORS.map(([s]) => s),
     // half an emoji, which the fuzzer can make, can't be in a file: machine code shows it as U+FFFD
     ...brokenPrograms(11, 300).filter((source) => !/[\ud800-\udfff]/u.test(source)), ...machinePrograms(2026, 400)];
   let made = 0;
   try {
     sources.forEach((source, i) => {
-      const name = `p${i}.moth`;
+      const name = `p${i}.folio`;
       let bytes;
       try {
         bytes = machine(source, { target, name });
       } catch (err) {
-        if (err instanceof MothError) return; // not machine code yet, or a mistake in the program
+        if (err instanceof FolioError) return; // not machine code yet, or a mistake in the program
         throw err;
       }
       const want = onEngine(source, name);
@@ -81,7 +81,7 @@ test("machine code says, fails and exits exactly as the JavaScript engine does",
       writeFileSync(exe, bytes);
       if (target === "linux") chmodSync(exe, 0o755);
       // random numbers from the seed, and the clock from the moment, the JavaScript engine uses when it isn't given real ones
-      const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 30_000, maxBuffer: 256 * 1024 * 1024, env: { ...process.env, MOTH_SEED: "1", MOTH_NOW: String(FAKE_NOW) } });
+      const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 30_000, maxBuffer: 256 * 1024 * 1024, env: { ...process.env, FOLIO_SEED: "1", FOLIO_NOW: String(FAKE_NOW) } });
       assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, want, `${name}:\n${source}`);
       made++;
     });
@@ -92,7 +92,7 @@ test("machine code says, fails and exits exactly as the JavaScript engine does",
 });
 
 test("what can't become machine code yet stops at a mistake that says so", () => {
-  const not = (source, wanted) => assert.throws(() => machine(source, { target: "linux" }), (err) => err instanceof MothError && wanted.test(err.message), source);
+  const not = (source, wanted) => assert.throws(() => machine(source, { target: "linux" }), (err) => err instanceof FolioError && wanted.test(err.message), source);
   not("say 0x20000000000000", /^line 1: a hex or binary number this big can't become machine code yet/);
   not("say 1 +", /^line 1: expected a value but found the end of the code$/); // a mistake in the program, as run says it
 });
@@ -122,7 +122,7 @@ function withFiles(cases) {
   const dirs = [];
   try {
     cases.forEach(([source, files], i) => {
-      const dir = mkdtempSync(join(tmpdir(), "moth-files-"));
+      const dir = mkdtempSync(join(tmpdir(), "folio-files-"));
       dirs.push(dir);
       for (const [name, text] of Object.entries(files)) {
         mkdirSync(join(dir, ...name.split("/").slice(0, -1)), { recursive: true });
@@ -130,14 +130,14 @@ function withFiles(cases) {
       }
       let [stdout, stderr, status] = ["", "", 0];
       try {
-        run(source, (line) => (stdout += `${line}\n`), { file: "t.moth", disk: memoryDisk(files) });
+        run(source, (line) => (stdout += `${line}\n`), { file: "t.folio", disk: memoryDisk(files) });
       } catch (err) {
-        if (!(err instanceof MothError)) throw err;
-        stderr = `t.moth:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n`;
+        if (!(err instanceof FolioError)) throw err;
+        stderr = `t.folio:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n`;
         status = 1;
       }
       const exe = executable(dir, "t");
-      writeFileSync(exe, machine(source, { target, name: "t.moth", allow: ["--allow-read"] }));
+      writeFileSync(exe, machine(source, { target, name: "t.folio", allow: ["--allow-read"] }));
       if (target === "linux") chmodSync(exe, 0o755);
       const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8" });
       assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout, stderr, status }, `${i}: ${source}`);
@@ -149,7 +149,7 @@ function withFiles(cases) {
 
 test("a table read from a file is the list of records the JavaScript engine makes of it", { skip }, () => withFiles(TABLES));
 
-// `read the folder`: what is in a folder and the folders inside it, in Moth's order for text, a folder's name
+// `read the folder`: what is in a folder and the folders inside it, in Folio's order for text, a folder's name
 // with / after it; and what goes wrong. (The folder the program runs in also holds the program, so only the
 // folders inside it are compared.)
 const FOLDER_FILES = { "data/z.txt": "1", "data/a b.txt": "2", "data/sub/deep.txt": "3", "data/\u00c9.txt": "4", "data/B.txt": "5",
@@ -176,13 +176,13 @@ const GARBAGE = [
 ];
 
 test("garbage: programs that make far more than they keep say what the JavaScript engine says", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     GARBAGE.forEach((source, i) => {
       let want = "";
       run(source, (line) => (want += `${line}\n`));
       const exe = executable(dir, `g${i}`);
-      writeFileSync(exe, machine(source, { target, name: `g${i}.moth` }));
+      writeFileSync(exe, machine(source, { target, name: `g${i}.folio` }));
       if (target === "linux") chmodSync(exe, 0o755);
       const got = spawnSync(exe, [], { encoding: "utf8", timeout: 60_000 });
       assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: want, stderr: "", status: 0 }, source);
@@ -197,33 +197,33 @@ test("garbage: programs that make far more than they keep say what the JavaScrip
 test("a long line with thousands of places a mistake can happen stays small", { skip }, () => {
   const numbers = Array.from({ length: 4000 }, (_, i) => `-${(i % 97) / 10}`).join(", ");
   const source = `set x to list of ${numbers}, -"a"\nsay length of x\n`;
-  const bytes = machine(source, { target, name: "long.moth" });
+  const bytes = machine(source, { target, name: "long.folio" });
   assert.ok(bytes.length < 1_000_000, `${bytes.length} bytes`);
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     const exe = executable(dir, "long");
     writeFileSync(exe, bytes);
     if (target === "linux") chmodSync(exe, 0o755);
     const got = spawnSync(exe, [], { encoding: "utf8", maxBuffer: 1 << 24 });
-    assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, onEngine(source, "long.moth"));
+    assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, onEngine(source, "long.folio"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-// machine.moth, made into machine code, compiling itself: the bytes must be the ones it makes on Node.js. The
-// driver counts with `total` and `k`, made before it uses machine.moth, as machine.moth's own functions do: a
+// machine.folio, made into machine code, compiling itself: the bytes must be the ones it makes on Node.js. The
+// driver counts with `total` and `k`, made before it uses machine.folio, as machine.folio's own functions do: a
 // file used `as` a name keeps its own top level, so its functions' variables are theirs, not the driver's.
-test("machine.moth in machine code compiles itself into the same bytes", { skip }, () => {
-  const sources = { "machine.moth": here("machine.moth").replace(/\r/g, ""), "compiler.moth": here("compiler.moth").replace(/\r/g, "") };
-  const want = machine(sources["machine.moth"], { files: { "compiler.moth": sources["compiler.moth"] }, target, name: "machine.moth" });
+test("machine.folio in machine code compiles itself into the same bytes", { skip }, () => {
+  const sources = { "machine.folio": here("machine.folio").replace(/\r/g, ""), "compiler.folio": here("compiler.folio").replace(/\r/g, "") };
+  const want = machine(sources["machine.folio"], { files: { "compiler.folio": sources["compiler.folio"] }, target, name: "machine.folio" });
   let sum = 0, mix = 0;
-  const text = (code) => JSON.stringify(code).replaceAll("{", "\\{"); // as Moth text: a { is itself
+  const text = (code) => JSON.stringify(code).replaceAll("{", "\\{"); // as Folio text: a { is itself
   want.forEach((x, i) => { sum += x; mix += x * ((i + 1) & 1023); });
   const driver = `set total to 0
 set k to 0
-use "machine.moth" as m
-set made to m's compile_machine(${text(sources["machine.moth"])}, (list of "compiler.moth"), (list of ${text(sources["compiler.moth"])}), "${target}", "machine.moth")
+use "machine.folio" as m
+set made to m's compile_machine(${text(sources["machine.folio"])}, (list of "compiler.folio"), (list of ${text(sources["compiler.folio"])}), "${target}", "machine.folio")
 say length of made
 set mix to 0
 for each k from 1 to length of made
@@ -233,10 +233,10 @@ end
 say total
 say mix
 `;
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     const exe = executable(dir, "self");
-    writeFileSync(exe, machine(driver, { files: sources, target, name: "driver.moth" }));
+    writeFileSync(exe, machine(driver, { files: sources, target, name: "driver.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const got = spawnSync(exe, [], { encoding: "utf8", timeout: 120_000 });
     assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: `${want.length}\n${sum}\n${mix}\n`, stderr: "", status: 0 });
@@ -248,8 +248,8 @@ say mix
 // A `set` in a function changes a variable of the same name its top level made above the function, which in
 // these two files would only ever be a mistake: none of their functions sets a name its own top level makes.
 // (A file used `as` a name keeps its own top level, so names in different files can't clash.)
-test("machine.moth's and moth.moth's functions never set a name their own top level makes", () => {
-  for (const file of ["machine.moth", "moth.moth"]) {
+test("machine.folio's and folio.folio's functions never set a name their own top level makes", () => {
+  for (const file of ["machine.folio", "folio.folio"]) {
     const top = new Set([...here(file).matchAll(/^(?:set|to) ([a-z_0-9]+)/gm)].map((m) => m[1]));
     const set = [...new Set([...here(file).matchAll(/^[ \t]+(?:set|for each) ([a-z_0-9]+)/gm)].map((m) => m[1]))];
     assert.deepEqual(set.filter((n) => top.has(n)), [], file);
@@ -261,17 +261,17 @@ test("machine.moth's and moth.moth's functions never set a name their own top le
 // counts with names of its own, and each copy of the counter counts for itself.
 test("a file used as two names is two copies in machine code, each keeping its own top level", { skip }, () => {
   const files = {
-    "counter.moth": "set count to 0\nto bump\n    add 1 to count\n    return count\nend",
-    "tally.moth": "to tally with things\n    set total to 0\n    for each k in things\n        add k to total\n    end\n    return total\nend",
+    "counter.folio": "set count to 0\nto bump\n    add 1 to count\n    return count\nend",
+    "tally.folio": "to tally with things\n    set total to 0\n    for each k in things\n        add k to total\n    end\n    return total\nend",
   };
-  const source = 'set total to 100\nset k to "mine"\nuse "counter.moth" as a\nuse "counter.moth" as b\nuse "tally.moth" as t\nsay a\'s bump() " " a\'s bump() " " b\'s bump()\nsay t\'s tally((list of 1, 2, 3)) " " total " " k\n';
+  const source = 'set total to 100\nset k to "mine"\nuse "counter.folio" as a\nuse "counter.folio" as b\nuse "tally.folio" as t\nsay a\'s bump() " " a\'s bump() " " b\'s bump()\nsay t\'s tally((list of 1, 2, 3)) " " total " " k\n';
   let want = "";
   run(source, (line) => (want += `${line}\n`), { files: (name) => files[name] });
   assert.equal(want, "1 2 1\n6 100 mine\n");
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     const exe = executable(dir, "copies");
-    writeFileSync(exe, machine(source, { files, target, name: "copies.moth" }));
+    writeFileSync(exe, machine(source, { files, target, name: "copies.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const got = spawnSync(exe, [], { encoding: "utf8" });
     assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: want, stderr: "", status: 0 });
@@ -282,23 +282,23 @@ test("a file used as two names is two copies in machine code, each keeping its o
 
 test("a program becomes the same bytes each time, as a PE file for Windows and an ELF file for Linux", () => {
   const source = MACHINE_CASES[2];
-  const windows = machine(source, { target: "windows", name: "f.moth" });
-  const linux = machine(source, { target: "linux", name: "f.moth" });
+  const windows = machine(source, { target: "windows", name: "f.folio" });
+  const linux = machine(source, { target: "linux", name: "f.folio" });
   assert.deepEqual([...windows.slice(0, 2)], [0x4d, 0x5a]); // MZ
   assert.deepEqual([...linux.slice(0, 4)], [0x7f, 0x45, 0x4c, 0x46]); // \x7fELF
-  assert.deepEqual(machine(source, { target: "windows", name: "f.moth" }), windows);
+  assert.deepEqual(machine(source, { target: "windows", name: "f.folio" }), windows);
 });
 
-// Standalone Moth: moth.moth and machine.moth, made into machine code, are moth.exe (moth on Linux). Made once
+// Standalone Folio: folio.folio and machine.folio, made into machine code, are folio.exe (folio on Linux). Made once
 // here from the source, in a folder of its own with the source beside it, for the tests below.
 let standalone = null;
-function mothExe() {
+function folioExe() {
   if (standalone) return standalone;
-  const dir = mkdtempSync(join(tmpdir(), "moth-standalone-"));
-  const sources = Object.fromEntries(["moth.moth", "machine.moth", "compiler.moth", "wasm.moth", "wasm-runtime.moth", "stdlib.moth", "webpage.moth", "checker-rules.moth", "moth-debugger.moth", "tools/hash.moth", "moth-coverage.moth", "package.json"].map((f) => [f, here(f)]));
-  const made = machine(sources["moth.moth"], { files: { "machine.moth": sources["machine.moth"], "compiler.moth": sources["compiler.moth"], "wasm.moth": sources["wasm.moth"], "wasm-runtime.moth": sources["wasm-runtime.moth"], "stdlib.moth": sources["stdlib.moth"], "webpage.moth": sources["webpage.moth"], "checker-rules.moth": sources["checker-rules.moth"], "tools/hash.moth": sources["tools/hash.moth"], "moth-coverage.moth": sources["moth-coverage.moth"] }, target, name: "moth.moth", allow: ["--allow-read", "--allow-write", "--allow-run"],
-    include: Object.fromEntries(["moth-debugger.moth", "package.json"].map((file) => [file, Buffer.from(sources[file])])) });
-  const exe = executable(dir, "moth-first");
+  const dir = mkdtempSync(join(tmpdir(), "folio-standalone-"));
+  const sources = Object.fromEntries(["folio.folio", "machine.folio", "compiler.folio", "wasm.folio", "wasm-runtime.folio", "stdlib.folio", "webpage.folio", "checker-rules.folio", "folio-debugger.folio", "tools/hash.folio", "folio-coverage.folio", "package.json"].map((f) => [f, here(f)]));
+  const made = machine(sources["folio.folio"], { files: { "machine.folio": sources["machine.folio"], "compiler.folio": sources["compiler.folio"], "wasm.folio": sources["wasm.folio"], "wasm-runtime.folio": sources["wasm-runtime.folio"], "stdlib.folio": sources["stdlib.folio"], "webpage.folio": sources["webpage.folio"], "checker-rules.folio": sources["checker-rules.folio"], "tools/hash.folio": sources["tools/hash.folio"], "folio-coverage.folio": sources["folio-coverage.folio"] }, target, name: "folio.folio", allow: ["--allow-read", "--allow-write", "--allow-run"],
+    include: Object.fromEntries(["folio-debugger.folio", "package.json"].map((file) => [file, Buffer.from(sources[file])])) });
+  const exe = executable(dir, "folio-first");
   writeFileSync(exe, made);
   if (target === "linux") chmodSync(exe, 0o755);
   mkdirSync(join(dir, "tools"));
@@ -308,25 +308,25 @@ function mothExe() {
 }
 after(() => standalone && rmSync(standalone.dir, { recursive: true, force: true }));
 
-// moth debug (DESIGN §59): a program built to be debugged stops before its first line, and before each line
+// folio debug (DESIGN §59): a program built to be debugged stops before its first line, and before each line
 // it's told to, and says where it is, what each variable holds and which calls are in progress, from
 // commands on its input; and, told to go, does all the rest just as the program built the usual way does.
 const DEBUG_LIB = "set calls_made to 0\nto twice with t\n    add 1 to calls_made\n    return t + t\nend\n";
-const DEBUG_PROGRAM = "use \"lib.moth\" as lib\nto counter\n    set count to 0\n    to bump\n        add 1 to count\n        return count\n    end\n    return bump\nend\nto risky with n\n    if n is 0\n        fail with \"none left\"\n    end\n    return risky(n - 1)\nend\nset tick to counter()\ntick()\nset sam to record with name \"Sam\", pets (list of \"cat\")\ntry\n    risky(2)\nif it fails with why\n    say \"caught \" why\nend\nset name to ask \"Name?\"\nsay lib's twice(name) \" \" sam\nsay \"done\"";
+const DEBUG_PROGRAM = "use \"lib.folio\" as lib\nto counter\n    set count to 0\n    to bump\n        add 1 to count\n        return count\n    end\n    return bump\nend\nto risky with n\n    if n is 0\n        fail with \"none left\"\n    end\n    return risky(n - 1)\nend\nset tick to counter()\ntick()\nset sam to record with name \"Sam\", pets (list of \"cat\")\ntry\n    risky(2)\nif it fails with why\n    say \"caught \" why\nend\nset name to ask \"Name?\"\nsay lib's twice(name) \" \" sam\nsay \"done\"";
 const DEBUG_RUNS = [
-  ["step\nstep\nwhere\nlist\nbreak prog.moth 5\ngo\nvars\nwhere\nout\nnext\nshow tick\nshow sam\nshow nope\nbreak prog.moth 12\nbreaks\ngo\nwhere\nout\nshow why\nclear prog.moth 12\nclear prog.moth 12\ngo\nAna\n\n",
-    "lib.moth:1: set calls_made to 0\n(moth) step\nlib.moth:2: to twice with t\n(moth) step\nprog.moth:2: to counter\n(moth) where\n  prog.moth:2\n(moth) list\n   1  use \"lib.moth\" as lib\n-> 2  to counter\n   3      set count to 0\n   4      to bump\n   5          add 1 to count\n(moth) break prog.moth 5\nbreakpoint at prog.moth:5\n(moth) go\nprog.moth:5, in 'bump': add 1 to count\n(moth) vars\nbump is <function bump>\ncount is 0\ntick is <function bump>\nsam has no value yet\nwhy has no value yet\nname has no value yet\n(moth) where\n  prog.moth:5, in 'bump'\n  prog.moth:17\n(moth) out\nprog.moth:18: set sam to record with name \"Sam\", pets (list of \"cat\")\n(moth) next\nprog.moth:19: try\n(moth) show tick\ntick is <function bump>\n(moth) show sam\nsam is (record with name \"Sam\", pets [\"cat\"])\n(moth) show nope\nthere's no 'nope' here\n(moth) break prog.moth 12\nbreakpoint at prog.moth:12\n(moth) breaks\nbreakpoint at prog.moth:5\nbreakpoint at prog.moth:12\n(moth) go\nprog.moth:12, in 'risky': fail with \"none left\"\n(moth) where\n  prog.moth:12, in 'risky'\n  prog.moth:14, in 'risky'\n  prog.moth:14, in 'risky'\n  prog.moth:20\n(moth) out\nprog.moth:22: say \"caught \" why\n(moth) show why\nwhy is \"none left\"\n(moth) clear prog.moth 12\nbreakpoint at prog.moth:12 taken away\n(moth) clear prog.moth 12\nthere's no breakpoint there: breaks lists them\n(moth) go\ncaught none left\nName? Ana\nAnaAna (record with name \"Sam\", pets [\"cat\"])\ndone\n"],
-  ["break lib.moth 4\ngo\nBo\nshow t\nwhere\nfrobnicate\nhelp\n",
-    "lib.moth:1: set calls_made to 0\n(moth) break lib.moth 4\nbreakpoint at lib.moth:4\n(moth) go\ncaught none left\nName? Bo\nlib.moth:4, in 'lib's twice': return t + t\n(moth) show t\nt is \"Bo\"\n(moth) where\n  lib.moth:4, in 'lib's twice'\n  prog.moth:25\n(moth) frobnicate\nI don't know 'frobnicate': help says what I do\n(moth) help\nstep (s)        run this line, and stop at the next one, in a call it makes too\nnext (n)        run this line, and stop at the next one here or after\nout (o)         run on, and stop once this call is over\ngo (g)          run on, and stop only at a breakpoint\nbreak 12 (b)    stop at line 12 of this file; break math.moth 12 for another\nclear 12        take that breakpoint away; breaks lists them\nshow x (p)      what x holds, or a sum of what they hold: show x + 1, show item 2 of xs, show rex's age\nvars (v)        every variable, and what it holds\nwhere (w)       this line, and the calls in progress\nlist (l)        the lines around this one\nquit (q)        end the program here\n(moth) \nBoBo (record with name \"Sam\", pets [\"cat\"])\ndone\n"],
+  ["step\nstep\nwhere\nlist\nbreak prog.folio 5\ngo\nvars\nwhere\nout\nnext\nshow tick\nshow sam\nshow nope\nbreak prog.folio 12\nbreaks\ngo\nwhere\nout\nshow why\nclear prog.folio 12\nclear prog.folio 12\ngo\nAna\n\n",
+    "lib.folio:1: set calls_made to 0\n(folio) step\nlib.folio:2: to twice with t\n(folio) step\nprog.folio:2: to counter\n(folio) where\n  prog.folio:2\n(folio) list\n   1  use \"lib.folio\" as lib\n-> 2  to counter\n   3      set count to 0\n   4      to bump\n   5          add 1 to count\n(folio) break prog.folio 5\nbreakpoint at prog.folio:5\n(folio) go\nprog.folio:5, in 'bump': add 1 to count\n(folio) vars\nbump is <function bump>\ncount is 0\ntick is <function bump>\nsam has no value yet\nwhy has no value yet\nname has no value yet\n(folio) where\n  prog.folio:5, in 'bump'\n  prog.folio:17\n(folio) out\nprog.folio:18: set sam to record with name \"Sam\", pets (list of \"cat\")\n(folio) next\nprog.folio:19: try\n(folio) show tick\ntick is <function bump>\n(folio) show sam\nsam is (record with name \"Sam\", pets [\"cat\"])\n(folio) show nope\nthere's no 'nope' here\n(folio) break prog.folio 12\nbreakpoint at prog.folio:12\n(folio) breaks\nbreakpoint at prog.folio:5\nbreakpoint at prog.folio:12\n(folio) go\nprog.folio:12, in 'risky': fail with \"none left\"\n(folio) where\n  prog.folio:12, in 'risky'\n  prog.folio:14, in 'risky'\n  prog.folio:14, in 'risky'\n  prog.folio:20\n(folio) out\nprog.folio:22: say \"caught \" why\n(folio) show why\nwhy is \"none left\"\n(folio) clear prog.folio 12\nbreakpoint at prog.folio:12 taken away\n(folio) clear prog.folio 12\nthere's no breakpoint there: breaks lists them\n(folio) go\ncaught none left\nName? Ana\nAnaAna (record with name \"Sam\", pets [\"cat\"])\ndone\n"],
+  ["break lib.folio 4\ngo\nBo\nshow t\nwhere\nfrobnicate\nhelp\n",
+    "lib.folio:1: set calls_made to 0\n(folio) break lib.folio 4\nbreakpoint at lib.folio:4\n(folio) go\ncaught none left\nName? Bo\nlib.folio:4, in 'lib's twice': return t + t\n(folio) show t\nt is \"Bo\"\n(folio) where\n  lib.folio:4, in 'lib's twice'\n  prog.folio:25\n(folio) frobnicate\nI don't know 'frobnicate': help says what I do\n(folio) help\nstep (s)        run this line, and stop at the next one, in a call it makes too\nnext (n)        run this line, and stop at the next one here or after\nout (o)         run on, and stop once this call is over\ngo (g)          run on, and stop only at a breakpoint\nbreak 12 (b)    stop at line 12 of this file; break math.folio 12 for another\nclear 12        take that breakpoint away; breaks lists them\nshow x (p)      what x holds, or a sum of what they hold: show x + 1, show item 2 of xs, show rex's age\nvars (v)        every variable, and what it holds\nwhere (w)       this line, and the calls in progress\nlist (l)        the lines around this one\nquit (q)        end the program here\n(folio) \nBoBo (record with name \"Sam\", pets [\"cat\"])\ndone\n"],
   ["next\nnext\nquit\n",
-    "lib.moth:1: set calls_made to 0\n(moth) next\nlib.moth:2: to twice with t\n(moth) next\nprog.moth:2: to counter\n(moth) quit\n"],
+    "lib.folio:1: set calls_made to 0\n(folio) next\nlib.folio:2: to twice with t\n(folio) next\nprog.folio:2: to counter\n(folio) quit\n"],
 ];
 
 test("a program built to be debugged steps, stops at breakpoints, and shows its variables and calls", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-debug-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-debug-"));
   try {
     const exe = executable(dir, "prog");
-    writeFileSync(exe, machine(DEBUG_PROGRAM, { target, name: "prog.moth", debug: true, files: { "lib.moth": DEBUG_LIB, "moth-debugger.moth": here("moth-debugger.moth") } }));
+    writeFileSync(exe, machine(DEBUG_PROGRAM, { target, name: "prog.folio", debug: true, files: { "lib.folio": DEBUG_LIB, "folio-debugger.folio": here("folio-debugger.folio") } }));
     if (target === "linux") chmodSync(exe, 0o755);
     for (const [input, want] of DEBUG_RUNS) {
       const got = spawnSync(exe, [], { input, encoding: "utf8", timeout: 60_000 });
@@ -338,8 +338,8 @@ test("a program built to be debugged steps, stops at breakpoints, and shows its 
 });
 
 test("a program built to be debugged, told to go, says and fails just as its usual build does", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-debug-"));
-  const files = { "moth-debugger.moth": here("moth-debugger.moth") };
+  const dir = mkdtempSync(join(tmpdir(), "folio-debug-"));
+  const files = { "folio-debugger.folio": here("folio-debugger.folio") };
   // not those that ask, whose questions would take the commands, nor those that use the clock or chance
   const sources = [...PROGRAMS.map(([s]) => s), ...ERRORS.map(([s]) => s), ...Object.values(examples)]
     .filter((source) => !/\b(ask|random|clock|wait|the time)\b/.test(source));
@@ -348,12 +348,12 @@ test("a program built to be debugged, told to go, says and fails just as its usu
     sources.forEach((source, i) => {
       let usual;
       try {
-        usual = machine(source, { target, name: "p.moth" });
+        usual = machine(source, { target, name: "p.folio" });
       } catch (err) {
-        if (err instanceof MothError) return; // not machine code yet, or a mistake in the program
+        if (err instanceof FolioError) return; // not machine code yet, or a mistake in the program
         throw err;
       }
-      const debugged = machine(source, { target, name: "p.moth", debug: true, files });
+      const debugged = machine(source, { target, name: "p.folio", debug: true, files });
       const ran = (bytes, name) => {
         const exe = executable(dir, name);
         writeFileSync(exe, bytes);
@@ -362,8 +362,8 @@ test("a program built to be debugged, told to go, says and fails just as its usu
       };
       const want = ran(usual, `u${i}`);
       const got = ran(debugged, `d${i}`);
-      const first = /^[^\n]*\n\(moth\) go\n/.exec(got.stdout); // where it stopped first, and the command
-      const stopped = got.stdout.replace(/stopped at the mistake, at [^\n]*\n\(moth\) \n?$/, ""); // and where it stopped at a mistake (DESIGN §93)
+      const first = /^[^\n]*\n\(folio\) go\n/.exec(got.stdout); // where it stopped first, and the command
+      const stopped = got.stdout.replace(/stopped at the mistake, at [^\n]*\n\(folio\) \n?$/, ""); // and where it stopped at a mistake (DESIGN §93)
       assert.deepEqual({ stdout: first ? stopped.slice(first[0].length) : stopped, stderr: got.stderr, status: got.status },
         { stdout: want.stdout, stderr: want.stderr, status: want.status }, source);
       compared++;
@@ -374,123 +374,123 @@ test("a program built to be debugged, told to go, says and fails just as its usu
   assert.ok(compared > 200, `only ${compared} compared`);
 });
 
-test("moth.exe debug runs a program with the debugger it was built with, passing its arguments on", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe debug runs a program with the debugger it was built with, passing its arguments on", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "debugging");
   mkdirSync(sub, { recursive: true });
-  writeFileSync(join(sub, "area.moth"), "to area with w, h\n    return w * h\nend\nset total to 0\nfor each i from 1 to 3\n    add area(i, 2) to total\nend\nsay \"total \" total \" from \" arguments\n");
-  const got = spawnSync(exe, ["debug", "area.moth", "a", "b"], { cwd: sub, input: "break 2\ngo\nwhere\nvars\nclear 2\ngo\n", encoding: "utf8", timeout: 120_000 });
+  writeFileSync(join(sub, "area.folio"), "to area with w, h\n    return w * h\nend\nset total to 0\nfor each i from 1 to 3\n    add area(i, 2) to total\nend\nsay \"total \" total \" from \" arguments\n");
+  const got = spawnSync(exe, ["debug", "area.folio", "a", "b"], { cwd: sub, input: "break 2\ngo\nwhere\nvars\nclear 2\ngo\n", encoding: "utf8", timeout: 120_000 });
   assert.equal(got.stderr, "");
   assert.equal(got.stdout, [
-    "area.moth:1: to area with w, h", "(moth) break 2", "breakpoint at area.moth:2", "(moth) go", "area.moth:2, in 'area': return w * h",
-    "(moth) where", "  area.moth:2, in 'area'", "  area.moth:6", "(moth) vars", "w is 1", "h is 2", "total is 0", "i is 1",
-    "(moth) clear 2", "breakpoint at area.moth:2 taken away", "(moth) go", 'total 12 from ["a", "b"]', ""].join("\n"));
+    "area.folio:1: to area with w, h", "(folio) break 2", "breakpoint at area.folio:2", "(folio) go", "area.folio:2, in 'area': return w * h",
+    "(folio) where", "  area.folio:2, in 'area'", "  area.folio:6", "(folio) vars", "w is 1", "h is 2", "total is 0", "i is 1",
+    "(folio) clear 2", "breakpoint at area.folio:2 taken away", "(folio) go", 'total 12 from ["a", "b"]', ""].join("\n"));
   assert.equal(got.status, 0);
-  assert.deepEqual(readdirSync(sub), ["area.moth"]); // the program it built, gone
+  assert.deepEqual(readdirSync(sub), ["area.folio"]); // the program it built, gone
   const wrong = spawnSync(exe, ["debug"], { cwd: sub, encoding: "utf8" });
   assert.equal(wrong.status, 2);
-  assert.match(wrong.stderr, /moth debug \[--allow-\.\.\.\] <file\.moth> \[arguments\.\.\.\]/);
+  assert.match(wrong.stderr, /folio debug \[--allow-\.\.\.\] <file\.folio> \[arguments\.\.\.\]/);
 });
 
 // Packages (DESIGN §60): Git repositories made here, a package that uses a file of its own and another that
-// uses it, fetched, run, updated to a new commit, fetched again at theirs, and taken away, by moth.exe
+// uses it, fetched, run, updated to a new commit, fetched again at theirs, and taken away, by folio.exe
 const gitHere = spawnSync("git", ["--version"], { encoding: "utf8" }).status === 0;
-// The package index: moth search lists an index's packages, or those with every word asked for, and moth add
+// The package index: folio search lists an index's packages, or those with every word asked for, and folio add
 // takes one by its name there; a name the index hasn't, an index that isn't there and one that isn't JSON say so
-test("moth search lists a package index, and moth add takes a package by its name there", { skip: skip || (gitHere ? false : "there's no git") }, () => {
-  const { dir, exe } = mothExe();
+test("folio search lists a package index, and folio add takes a package by its name there", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "indexing");
   mkdirSync(root, { recursive: true });
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
   const source = join(root, "greeter");
   mkdirSync(source);
-  writeFileSync(join(source, "greeter.moth"), 'to greet with who\n    return "Hello, " + who + "!"\nend\n');
+  writeFileSync(join(source, "greeter.folio"), 'to greet with who\n    return "Hello, " + who + "!"\nend\n');
   for (const args of [["init", "-q"], ["add", "."], ["commit", "-qm", "one"]]) {
-    assert.equal(spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", ...args], { cwd: source }).status, 0);
+    assert.equal(spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", ...args], { cwd: source }).status, 0);
   }
   const app = join(root, "app");
   mkdirSync(app);
   writeFileSync(join(app, "index.json"), JSON.stringify({ packages: { greeter: { repository: source.replace(/\\/g, "/"), about: "Says hello to anyone" },
     zipper: { repository: "github.com/example/zipper", about: "Squeezes files" } } }));
-  assert.deepEqual(moth(app, "search", "--index", "index.json"), ["greeter  Says hello to anyone\nzipper   Squeezes files\n", "", 0]);
-  assert.deepEqual(moth(app, "search", "HELLO", "anyone", "--index", "index.json"), ["greeter  Says hello to anyone\n", "", 0]);
-  assert.deepEqual(moth(app, "search", "nothing", "--index", "index.json"), ["no package in the index has nothing\n", "", 0]);
-  const added = moth(app, "add", "greeter", "--index", "index.json");
+  assert.deepEqual(folio(app, "search", "--index", "index.json"), ["greeter  Says hello to anyone\nzipper   Squeezes files\n", "", 0]);
+  assert.deepEqual(folio(app, "search", "HELLO", "anyone", "--index", "index.json"), ["greeter  Says hello to anyone\n", "", 0]);
+  assert.deepEqual(folio(app, "search", "nothing", "--index", "index.json"), ["no package in the index has nothing\n", "", 0]);
+  const added = folio(app, "add", "greeter", "--index", "index.json");
   assert.match(added[0], /^added greeter at [0-9a-f]{7}, from .*greeter\n$/);
-  writeFileSync(join(app, "p.moth"), 'use the package "greeter"\nsay greet("Sam")\n');
-  assert.deepEqual(moth(app, "run", "p.moth"), ["Hello, Sam!\n", "", 0]);
-  assert.deepEqual(moth(app, "add", "nope", "--index", "index.json"), ["", "moth: the package index has no package called nope: moth search lists them\n", 1]);
-  assert.deepEqual(moth(app, "search", "--index", "nowhere.json"), ["", "moth: can't read the package index at nowhere.json: there is no file called 'nowhere.json'\n", 1]);
+  writeFileSync(join(app, "p.folio"), 'use the package "greeter"\nsay greet("Sam")\n');
+  assert.deepEqual(folio(app, "run", "p.folio"), ["Hello, Sam!\n", "", 0]);
+  assert.deepEqual(folio(app, "add", "nope", "--index", "index.json"), ["", "folio: the package index has no package called nope: folio search lists them\n", 1]);
+  assert.deepEqual(folio(app, "search", "--index", "nowhere.json"), ["", "folio: can't read the package index at nowhere.json: there is no file called 'nowhere.json'\n", 1]);
   writeFileSync(join(app, "bad.json"), "{ not json");
-  const bad = moth(app, "search", "--index", "bad.json");
+  const bad = folio(app, "search", "--index", "bad.json");
   assert.deepEqual([bad[0], bad[2]], ["", 1]);
-  assert.match(bad[1], /^moth: the package index at bad\.json isn't one: /);
+  assert.match(bad[1], /^folio: the package index at bad\.json isn't one: /);
 });
 
 // a package asked for at a version (DESIGN §93): at a tag, which update leaves there, and on a branch, which
 // update follows; and a version that isn't there
-test("moth add takes a package at a tag, a branch or a commit, and update keeps to it", { skip: skip || (gitHere ? false : "there's no git") }, () => {
-  const { dir, exe } = mothExe();
+test("folio add takes a package at a tag, a branch or a commit, and update keeps to it", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "versions");
   mkdirSync(root, { recursive: true });
   const git = (cwd, ...args) => {
-    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
     assert.equal(done.status, 0, done.stderr);
     return done.stdout.trim();
   };
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
   const lib = join(root, "kind");
   mkdirSync(lib);
-  writeFileSync(join(lib, "kind.moth"), 'set word to "one"\n');
+  writeFileSync(join(lib, "kind.folio"), 'set word to "one"\n');
   git(lib, "init", "-q");
   git(lib, "add", ".");
   git(lib, "commit", "-qm", "one");
   git(lib, "tag", "v1");
   const one = git(lib, "rev-parse", "HEAD");
   git(lib, "checkout", "-qb", "next");
-  writeFileSync(join(lib, "kind.moth"), 'set word to "two"\n');
+  writeFileSync(join(lib, "kind.folio"), 'set word to "two"\n');
   git(lib, "commit", "-qam", "two");
   const two = git(lib, "rev-parse", "HEAD");
   const pinned = join(root, "pinned");
   const following = join(root, "following");
   for (const at of [pinned, following]) {
     mkdirSync(at);
-    writeFileSync(join(at, "app.moth"), 'use the package "kind" as kind\nsay kind\'s word\n');
+    writeFileSync(join(at, "app.folio"), 'use the package "kind" as kind\nsay kind\'s word\n');
   }
-  assert.deepEqual(moth(pinned, "add", "../kind@v1"), [`added kind at ${one.slice(0, 7)} (v1), from ../kind\n`, "", 0]);
-  assert.deepEqual(moth(pinned, "run", "app.moth"), ["one\n", "", 0]);
-  assert.deepEqual(moth(following, "add", "../kind@next"), [`added kind at ${two.slice(0, 7)} (next), from ../kind\n`, "", 0]);
-  assert.deepEqual(moth(following, "run", "app.moth"), ["two\n", "", 0]);
-  writeFileSync(join(lib, "kind.moth"), 'set word to "three"\n');
+  assert.deepEqual(folio(pinned, "add", "../kind@v1"), [`added kind at ${one.slice(0, 7)} (v1), from ../kind\n`, "", 0]);
+  assert.deepEqual(folio(pinned, "run", "app.folio"), ["one\n", "", 0]);
+  assert.deepEqual(folio(following, "add", "../kind@next"), [`added kind at ${two.slice(0, 7)} (next), from ../kind\n`, "", 0]);
+  assert.deepEqual(folio(following, "run", "app.folio"), ["two\n", "", 0]);
+  writeFileSync(join(lib, "kind.folio"), 'set word to "three"\n');
   git(lib, "commit", "-qam", "three");
   const three = git(lib, "rev-parse", "HEAD");
-  assert.deepEqual(moth(pinned, "update"), [`kind stays at v1, ${one.slice(0, 7)}\n`, "", 0]);
-  assert.deepEqual(moth(following, "update"), [`kind: ${two.slice(0, 7)} -> ${three.slice(0, 7)}\n`, "", 0]);
-  assert.deepEqual(moth(following, "run", "app.moth"), ["three\n", "", 0]);
-  assert.match(readFileSync(join(following, "moth.packages"), "utf8"), new RegExp(`\\nkind \\.\\./kind@next ${three}\\n$`));
+  assert.deepEqual(folio(pinned, "update"), [`kind stays at v1, ${one.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(following, "update"), [`kind: ${two.slice(0, 7)} -> ${three.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(following, "run", "app.folio"), ["three\n", "", 0]);
+  assert.match(readFileSync(join(following, "folio.packages"), "utf8"), new RegExp(`\\nkind \\.\\./kind@next ${three}\\n$`));
   const nowhere = join(root, "nowhere");
   mkdirSync(nowhere);
-  const missing = moth(nowhere, "add", "../kind@v9");
+  const missing = folio(nowhere, "add", "../kind@v9");
   assert.deepEqual([missing[0], missing[2]], ["", 1]);
-  assert.match(missing[1], /^moth: \.\.\/kind has no tag, branch or commit called v9: /);
+  assert.match(missing[1], /^folio: \.\.\/kind has no tag, branch or commit called v9: /);
 });
 
-test("moth add, update, get and remove keep packages/ and moth.packages, and use the package finds them", { skip: skip || (gitHere ? false : "there's no git") }, () => {
-  const { dir, exe } = mothExe();
+test("folio add, update, get and remove keep packages/ and folio.packages, and use the package finds them", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "packaging");
   mkdirSync(root, { recursive: true });
   const git = (cwd, ...args) => {
-    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
     assert.equal(done.status, 0, done.stderr);
     return done.stdout.trim();
   };
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
@@ -503,85 +503,85 @@ test("moth add, update, get and remove keep packages/ and moth.packages, and use
     git(at, "commit", "-qm", "one");
     return at;
   };
-  const greet = repo("greet", { "greet.moth": 'use "words.moth" as words\nto hello with n\n    return words\'s hi + ", " + n\nend\n', "words.moth": 'set hi to "Hello"\n' });
+  const greet = repo("greet", { "greet.folio": 'use "words.folio" as words\nto hello with n\n    return words\'s hi + ", " + n\nend\n', "words.folio": 'set hi to "Hello"\n' });
   const first = git(greet, "rev-parse", "HEAD");
   const app = join(root, "app");
   mkdirSync(app);
-  writeFileSync(join(app, "app.moth"), 'use the package "greet" as greet\nsay greet\'s hello("Sam")\n');
-  assert.deepEqual(moth(app, "packages"), ["no packages: moth add <git repository> adds one\n", "", 0]);
-  assert.deepEqual(moth(app, "add", "../greet"), [`added greet at ${first.slice(0, 7)}, from ../greet\n`, "", 0]);
-  assert.match(readFileSync(join(app, "moth.packages"), "utf8"), new RegExp(`\\ngreet \\.\\./greet ${first}\\n$`));
-  assert.deepEqual(moth(app, "run", "app.moth"), ["Hello, Sam\n", "", 0]);
+  writeFileSync(join(app, "app.folio"), 'use the package "greet" as greet\nsay greet\'s hello("Sam")\n');
+  assert.deepEqual(folio(app, "packages"), ["no packages: folio add <git repository> adds one\n", "", 0]);
+  assert.deepEqual(folio(app, "add", "../greet"), [`added greet at ${first.slice(0, 7)}, from ../greet\n`, "", 0]);
+  assert.match(readFileSync(join(app, "folio.packages"), "utf8"), new RegExp(`\\ngreet \\.\\./greet ${first}\\n$`));
+  assert.deepEqual(folio(app, "run", "app.folio"), ["Hello, Sam\n", "", 0]);
 
   // a new commit: update moves to it, and a second says it's at its newest
-  writeFileSync(join(greet, "words.moth"), 'set hi to "Hi"\n');
+  writeFileSync(join(greet, "words.folio"), 'set hi to "Hi"\n');
   git(greet, "commit", "-qam", "two");
   const second = git(greet, "rev-parse", "HEAD");
-  assert.deepEqual(moth(app, "update"), [`greet: ${first.slice(0, 7)} -> ${second.slice(0, 7)}\n`, "", 0]);
-  assert.deepEqual(moth(app, "run", "app.moth"), ["Hi, Sam\n", "", 0]);
-  assert.deepEqual(moth(app, "update", "greet"), [`greet is at its newest, ${second.slice(0, 7)}\n`, "", 0]);
-  assert.deepEqual(moth(app, "packages"), [`greet at ${second.slice(0, 7)}, from ../greet\n`, "", 0]);
+  assert.deepEqual(folio(app, "update"), [`greet: ${first.slice(0, 7)} -> ${second.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "run", "app.folio"), ["Hi, Sam\n", "", 0]);
+  assert.deepEqual(folio(app, "update", "greet"), [`greet is at its newest, ${second.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "packages"), [`greet at ${second.slice(0, 7)}, from ../greet\n`, "", 0]);
 
   // packages/ gone, as on another computer: get brings each back, at its commit
   rmSync(join(app, "packages"), { recursive: true, force: true });
-  assert.deepEqual(moth(app, "packages"), [`greet at ${second.slice(0, 7)}, from ../greet (not fetched: moth get fetches it)\n`, "", 0]);
-  assert.deepEqual(moth(app, "get"), [`greet at ${second.slice(0, 7)}\n`, "", 0]);
-  assert.deepEqual(moth(app, "run", "app.moth"), ["Hi, Sam\n", "", 0]);
+  assert.deepEqual(folio(app, "packages"), [`greet at ${second.slice(0, 7)}, from ../greet (not fetched: folio get fetches it)\n`, "", 0]);
+  assert.deepEqual(folio(app, "get"), [`greet at ${second.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "run", "app.folio"), ["Hi, Sam\n", "", 0]);
 
-  // a package that uses another comes with it, at the commit its own moth.packages lists
-  const shout = repo("shout", { "shout.moth": 'use the package "greet" as greet\nto shout with n\n    return uppercase of greet\'s hello(n)\nend\n',
-    "moth.packages": `greet ../greet ${first}\n` });
+  // a package that uses another comes with it, at the commit its own folio.packages lists
+  const shout = repo("shout", { "shout.folio": 'use the package "greet" as greet\nto shout with n\n    return uppercase of greet\'s hello(n)\nend\n',
+    "folio.packages": `greet ../greet ${first}\n` });
   const shouting = git(shout, "rev-parse", "HEAD");
   const other = join(root, "other");
   mkdirSync(other);
-  writeFileSync(join(other, "app.moth"), 'use the package "shout" as shout\nsay shout\'s shout("Bo")\n');
-  assert.deepEqual(moth(other, "add", "../shout"),
+  writeFileSync(join(other, "app.folio"), 'use the package "shout" as shout\nsay shout\'s shout("Bo")\n');
+  assert.deepEqual(folio(other, "add", "../shout"),
     [`added shout at ${shouting.slice(0, 7)}, from ../shout\nadded greet at ${first.slice(0, 7)}, which shout uses\n`, "", 0]);
-  assert.deepEqual(moth(other, "run", "app.moth"), ["HELLO, BO\n", "", 0]);
+  assert.deepEqual(folio(other, "run", "app.folio"), ["HELLO, BO\n", "", 0]);
 
   // mistakes
-  assert.deepEqual(moth(other, "add", "../shout"), ["", "moth: there's a package called shout here already: moth update shout moves it to its newest\n", 1]);
-  assert.deepEqual(moth(other, "add", "../shout", "bad/name"),
-    ["", "moth: 'bad/name' can't be a package's name (letters, digits, '-', '_' and '.' make one): give it one, as in moth add ../shout thing\n", 1]);
-  const nowhere = moth(other, "add", "../nowhere");
+  assert.deepEqual(folio(other, "add", "../shout"), ["", "folio: there's a package called shout here already: folio update shout moves it to its newest\n", 1]);
+  assert.deepEqual(folio(other, "add", "../shout", "bad/name"),
+    ["", "folio: 'bad/name' can't be a package's name (letters, digits, '-', '_' and '.' make one): give it one, as in folio add ../shout thing\n", 1]);
+  const nowhere = folio(other, "add", "../nowhere");
   assert.equal(nowhere[2], 1);
-  assert.match(nowhere[1], /^moth: git couldn't fetch \.\.\/nowhere: /);
-  assert.deepEqual(moth(other, "remove", "nope"), ["", "moth: there's no package called nope here: moth packages lists them\n", 1]);
-  assert.equal(moth(other, "add")[2], 2);
-  assert.deepEqual(moth(root, "get"), ["", "moth: there's no moth.packages here: moth add <git repository> adds a package\n", 1]);
+  assert.match(nowhere[1], /^folio: git couldn't fetch \.\.\/nowhere: /);
+  assert.deepEqual(folio(other, "remove", "nope"), ["", "folio: there's no package called nope here: folio packages lists them\n", 1]);
+  assert.equal(folio(other, "add")[2], 2);
+  assert.deepEqual(folio(root, "get"), ["", "folio: there's no folio.packages here: folio add <git repository> adds a package\n", 1]);
 
   // remove: its folder and its line gone
-  assert.deepEqual(moth(other, "remove", "greet"), ["removed greet\n", "", 0]);
+  assert.deepEqual(folio(other, "remove", "greet"), ["removed greet\n", "", 0]);
   assert.deepEqual(readdirSync(join(other, "packages")), ["shout"]);
-  assert.deepEqual(moth(other, "packages"), [`shout at ${shouting.slice(0, 7)}, from ../shout\n`, "", 0]);
+  assert.deepEqual(folio(other, "packages"), [`shout at ${shouting.slice(0, 7)}, from ../shout\n`, "", 0]);
 });
 
-// A package uses the standard library as a program does (DESIGN §127): `use "text.moth"` in packages/datey is
-// the package's own text.moth if it has one, and moth's if not, from its main file and from a file it uses; a
+// A package uses the standard library as a program does (DESIGN §127): `use "text.folio"` in packages/datey is
+// the package's own text.folio if it has one, and folio's if not, from its main file and from a file it uses; a
 // file beside the program, of the same name, is the program's alone. Every command that reads the program's
 // files finds them so: run, check, build, build --web, build --target wasm and test.
-test("a package moth add fetched uses the standard library, and moth build builds a program that uses it", { skip: skip || (gitHere ? false : "there's no git") }, () => {
-  const { dir, exe } = mothExe();
+test("a package folio add fetched uses the standard library, and folio build builds a program that uses it", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "standard-packages");
   mkdirSync(root, { recursive: true });
   const git = (cwd, ...args) => {
-    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
     assert.equal(done.status, 0, done.stderr);
     return done.stdout.trim();
   };
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
   const datey = join(root, "datey");
   mkdirSync(datey);
   const files = {
-    "datey.moth": 'use "text.moth" as text\nuse "dates.moth" as dates\nuse "words.moth" as words\nuse "json.moth" as json\n'
+    "datey.folio": 'use "text.folio" as text\nuse "dates.folio" as dates\nuse "words.folio" as words\nuse "json.folio" as json\n'
       + "to datey_say with year, month, day, days\n    set d to dates's date(year, month, day)\n"
       + "    return words's day_of(d) + \", \" + text's grouped(days) + \" days on, \" + json's parse(\"[1]\")\nend\n",
     // a file the package uses, using the standard library's without a name of its own
-    "words.moth": 'use "dates.moth" as dates\nuse "text.moth"\nto day_of with d\n    return dates\'s weekday_name(d) + " " + grouped(1000 * day of d) + " " + dates\'s month_name(d)\nend\n',
-    "json.moth": "to parse with t\n    return \"the package's own json.moth\"\nend\n", // the package's own comes before moth's
+    "words.folio": 'use "dates.folio" as dates\nuse "text.folio"\nto day_of with d\n    return dates\'s weekday_name(d) + " " + grouped(1000 * day of d) + " " + dates\'s month_name(d)\nend\n',
+    "json.folio": "to parse with t\n    return \"the package's own json.folio\"\nend\n", // the package's own comes before folio's
   };
   for (const [file, text] of Object.entries(files)) writeFileSync(join(datey, file), text);
   git(datey, "init", "-q");
@@ -591,52 +591,52 @@ test("a package moth add fetched uses the standard library, and moth build build
 
   const app = join(root, "app");
   mkdirSync(app);
-  // the program's own text.moth, which is the program's and not the package's
-  writeFileSync(join(app, "text.moth"), "to grouped with n\n    return \"the program's own text.moth\"\nend\n");
-  writeFileSync(join(app, "app.moth"), 'use the package "datey" as datey\nuse "text.moth" as text\nuse "dates.moth" as dates\n'
+  // the program's own text.folio, which is the program's and not the package's
+  writeFileSync(join(app, "text.folio"), "to grouped with n\n    return \"the program's own text.folio\"\nend\n");
+  writeFileSync(join(app, "app.folio"), 'use the package "datey" as datey\nuse "text.folio" as text\nuse "dates.folio" as dates\n'
     + "say datey's datey_say(2026, 11, 5, 1234567)\nsay text's grouped(5)\nsay dates's weekday_name(dates's date(2000, 1, 1))\n");
-  const said = "Thursday 5,000 November, 1,234,567 days on, the package's own json.moth\nthe program's own text.moth\nSaturday\n";
-  assert.deepEqual(moth(app, "add", "../datey"), [`added datey at ${commit.slice(0, 7)}, from ../datey\n`, "", 0]);
-  assert.deepEqual(moth(app, "run", "app.moth"), [said, "", 0]);
-  assert.deepEqual(moth(app, "check", "app.moth"), ["app.moth: no problems found\n", "", 0]);
+  const said = "Thursday 5,000 November, 1,234,567 days on, the package's own json.folio\nthe program's own text.folio\nSaturday\n";
+  assert.deepEqual(folio(app, "add", "../datey"), [`added datey at ${commit.slice(0, 7)}, from ../datey\n`, "", 0]);
+  assert.deepEqual(folio(app, "run", "app.folio"), [said, "", 0]);
+  assert.deepEqual(folio(app, "check", "app.folio"), ["app.folio: no problems found\n", "", 0]);
 
   // built, then run as a program of its own
-  const built = moth(app, "build", "app.moth");
-  assert.match(built[0], /^compiled app\.moth to machine code for (Windows|Linux) -> app(\.exe)? \([\d,]+ bytes\)\n$/);
+  const built = folio(app, "build", "app.folio");
+  assert.match(built[0], /^compiled app\.folio to machine code for (Windows|Linux) -> app(\.exe)? \([\d,]+ bytes\)\n$/);
   assert.deepEqual(built.slice(1), ["", 0]);
   const ran = spawnSync(executable(app, "app"), [], { cwd: app, encoding: "utf8" });
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], [said, "", 0]);
 
-  // a page: the package's files of the standard library's are moth's own copies, by the names the parser asks for
-  assert.deepEqual(moth(app, "build", "--web", "app.moth").slice(1), ["", 0]);
-  const page = JSON.parse(/window\.MOTH_APP = (.*);\n/.exec(readFileSync(join(app, "app.html"), "utf8"))[1]);
-  assert.deepEqual(Object.keys(page.files).sort(), ["dates.moth", "packages/datey/dates.moth", "packages/datey/datey.moth", "packages/datey/json.moth",
-    "packages/datey/text.moth", "packages/datey/words.moth", "text.moth"]);
-  assert.equal(page.files["packages/datey/text.moth"], here("tools/text.moth"));
-  assert.equal(page.files["packages/datey/dates.moth"], here("tools/dates.moth"));
-  assert.equal(page.files["packages/datey/json.moth"], files["json.moth"]);
+  // a page: the package's files of the standard library's are folio's own copies, by the names the parser asks for
+  assert.deepEqual(folio(app, "build", "--web", "app.folio").slice(1), ["", 0]);
+  const page = JSON.parse(/window\.FOLIO_APP = (.*);\n/.exec(readFileSync(join(app, "app.html"), "utf8"))[1]);
+  assert.deepEqual(Object.keys(page.files).sort(), ["dates.folio", "packages/datey/dates.folio", "packages/datey/datey.folio", "packages/datey/json.folio",
+    "packages/datey/text.folio", "packages/datey/words.folio", "text.folio"]);
+  assert.equal(page.files["packages/datey/text.folio"], here("tools/text.folio"));
+  assert.equal(page.files["packages/datey/dates.folio"], here("tools/dates.folio"));
+  assert.equal(page.files["packages/datey/json.folio"], files["json.folio"]);
   const out = [];
   run(page.source, (line) => out.push(line), { files: (name) => page.files[name] });
   assert.equal(out.join("\n") + "\n", said);
 
   // a WebAssembly module, which runs as the program does
-  assert.deepEqual(moth(app, "build", "app.moth", "--target", "wasm").slice(1), ["", 0]);
+  assert.deepEqual(folio(app, "build", "app.folio", "--target", "wasm").slice(1), ["", 0]);
   const fromWasm = [];
   runWasm(readFileSync(join(app, "app.wasm")), (line) => fromWasm.push(line));
   assert.equal(fromWasm.join("\n") + "\n", said);
 
   // and its tests, which use it too
-  writeFileSync(join(app, "app.test.moth"), 'use the package "datey" as datey\nto test_say\n    expect datey\'s datey_say(2024, 2, 29, 7) is "Thursday 29,000 February, 7 days on, the package\'s own json.moth"\nend\n');
-  assert.deepEqual(moth(app, "test", "app.test.moth"), ["✓ test_say\n1 passed\n", "", 0]);
+  writeFileSync(join(app, "app.test.folio"), 'use the package "datey" as datey\nto test_say\n    expect datey\'s datey_say(2024, 2, 29, 7) is "Thursday 29,000 February, 7 days on, the package\'s own json.folio"\nend\n');
+  assert.deepEqual(folio(app, "test", "app.test.folio"), ["✓ test_say\n1 passed\n", "", 0]);
 
   // a name the standard library hasn't is still a mistake, and says where it looked
-  writeFileSync(join(app, "packages", "datey", "datey.moth"), 'use "nowhere.moth"\n');
-  const missing = moth(app, "run", "app.moth");
+  writeFileSync(join(app, "packages", "datey", "datey.folio"), 'use "nowhere.folio"\n');
+  const missing = folio(app, "run", "app.folio");
   assert.equal(missing[2], 1);
-  assert.match(missing[1], /^packages\/datey\/datey\.moth:1:5: there is no file called 'packages\/datey\/nowhere\.moth'\n/);
+  assert.match(missing[1], /^packages\/datey\/datey\.folio:1:5: there is no file called 'packages\/datey\/nowhere\.folio'\n/);
 });
 
-// The sum moth.sums keeps for a package's files (DESIGN §103), made here as sha256sum would: for each file but
+// The sum folio.sums keeps for a package's files (DESIGN §103), made here as sha256sum would: for each file but
 // Git's own, in the order of its path's bytes, its SHA-256, two spaces, its path and a line end; then the
 // SHA-256 of that
 function filesSum(root) {
@@ -654,136 +654,136 @@ function filesSum(root) {
   return `sha256:${createHash("sha256").update(lines).digest("hex")}`;
 }
 
-// moth.sums (DESIGN §103): add and update write the sum of each package's files and get checks it, so a package
-// changed in packages/, or where it comes from, is found; a moth.packages from before sums gets them from get;
-// and a package's own moth.sums is checked for the packages it brings
-test("moth.sums keeps the sum of each package's files, and moth get finds a package that has changed", { skip: skip || (gitHere ? false : "there's no git") }, () => {
-  const { dir, exe } = mothExe();
+// folio.sums (DESIGN §103): add and update write the sum of each package's files and get checks it, so a package
+// changed in packages/, or where it comes from, is found; a folio.packages from before sums gets them from get;
+// and a package's own folio.sums is checked for the packages it brings
+test("folio.sums keeps the sum of each package's files, and folio get finds a package that has changed", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "summing");
   mkdirSync(root, { recursive: true });
   const git = (cwd, ...args) => {
-    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
     assert.equal(done.status, 0, done.stderr);
     return done.stdout.trim();
   };
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
   const lib = join(root, "lib");
   mkdirSync(join(lib, "data"), { recursive: true });
-  writeFileSync(join(lib, "lib.moth"), 'use "data/words.moth" as words\nto hello with n\n    return words\'s hi + ", " + n\nend\n');
-  writeFileSync(join(lib, "data", "words.moth"), 'set hi to "Hello"\n');
-  writeFileSync(join(lib, ".gitattributes"), "* text=auto\n"); // line ends the system's own, but for moth's checkouts
+  writeFileSync(join(lib, "lib.folio"), 'use "data/words.folio" as words\nto hello with n\n    return words\'s hi + ", " + n\nend\n');
+  writeFileSync(join(lib, "data", "words.folio"), 'set hi to "Hello"\n');
+  writeFileSync(join(lib, ".gitattributes"), "* text=auto\n"); // line ends the system's own, but for folio's checkouts
   git(lib, "init", "-q");
   git(lib, "add", ".");
   git(lib, "commit", "-qm", "one");
   const one = git(lib, "rev-parse", "HEAD");
   const app = join(root, "app");
   mkdirSync(app);
-  writeFileSync(join(app, "app.moth"), 'use the package "lib" as lib\nsay lib\'s hello("Sam")\n');
-  const sums = () => readFileSync(join(app, "moth.sums"), "utf8");
+  writeFileSync(join(app, "app.folio"), 'use the package "lib" as lib\nsay lib\'s hello("Sam")\n');
+  const sums = () => readFileSync(join(app, "folio.sums"), "utf8");
   const packaged = join(app, "packages", "lib");
-  assert.deepEqual(moth(app, "add", "../lib"), [`added lib at ${one.slice(0, 7)}, from ../lib\n`, "", 0]);
-  assert.equal(readFileSync(join(packaged, "lib.moth"), "utf8").includes("\r"), false);
+  assert.deepEqual(folio(app, "add", "../lib"), [`added lib at ${one.slice(0, 7)}, from ../lib\n`, "", 0]);
+  assert.equal(readFileSync(join(packaged, "lib.folio"), "utf8").includes("\r"), false);
   const sum = filesSum(packaged);
   assert.match(sums(), new RegExp(`^# .*\\n# .*\\nlib ${one} ${sum}\\n$`));
-  assert.deepEqual(moth(app, "get"), [`lib at ${one.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "get"), [`lib at ${one.slice(0, 7)}\n`, "", 0]);
 
   // a file changed, or one added, in packages/: get and update say which, and leave them
-  const changed = (file) => ["", `moth: packages/lib has changed since it was fetched (${file}): remove that folder, and moth get fetches it again\n`, 1];
-  writeFileSync(join(packaged, "data", "words.moth"), 'set hi to "Gotcha"\n');
-  assert.deepEqual(moth(app, "get"), changed("data/words.moth"));
-  assert.deepEqual(moth(app, "update"), changed("data/words.moth"));
-  assert.equal(readFileSync(join(packaged, "data", "words.moth"), "utf8"), 'set hi to "Gotcha"\n');
+  const changed = (file) => ["", `folio: packages/lib has changed since it was fetched (${file}): remove that folder, and folio get fetches it again\n`, 1];
+  writeFileSync(join(packaged, "data", "words.folio"), 'set hi to "Gotcha"\n');
+  assert.deepEqual(folio(app, "get"), changed("data/words.folio"));
+  assert.deepEqual(folio(app, "update"), changed("data/words.folio"));
+  assert.equal(readFileSync(join(packaged, "data", "words.folio"), "utf8"), 'set hi to "Gotcha"\n');
   git(packaged, "checkout", "-q", "--", ".");
-  writeFileSync(join(packaged, "extra.moth"), "say 1\n");
-  assert.deepEqual(moth(app, "get"), changed("extra.moth"));
+  writeFileSync(join(packaged, "extra.folio"), "say 1\n");
+  assert.deepEqual(folio(app, "get"), changed("extra.folio"));
   rmSync(join(app, "packages"), { recursive: true, force: true });
-  assert.deepEqual(moth(app, "get"), [`lib at ${one.slice(0, 7)}\n`, "", 0]);
-  assert.deepEqual(moth(app, "run", "app.moth"), ["Hello, Sam\n", "", 0]);
+  assert.deepEqual(folio(app, "get"), [`lib at ${one.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "run", "app.folio"), ["Hello, Sam\n", "", 0]);
 
   // where it comes from, it isn't what it was: what's fetched isn't kept
   const zeros = `sha256:${"0".repeat(64)}`;
-  writeFileSync(join(app, "moth.sums"), sums().replace(sum, zeros));
+  writeFileSync(join(app, "folio.sums"), sums().replace(sum, zeros));
   rmSync(join(app, "packages"), { recursive: true, force: true });
-  assert.deepEqual(moth(app, "get"), ["", `moth: lib at ${one.slice(0, 7)}, from ../lib, isn't what moth.sums says: its files' sum is ${sum}, not ${zeros}, so it wasn't kept\n`, 1]);
+  assert.deepEqual(folio(app, "get"), ["", `folio: lib at ${one.slice(0, 7)}, from ../lib, isn't what folio.sums says: its files' sum is ${sum}, not ${zeros}, so it wasn't kept\n`, 1]);
   assert.equal(existsSync(packaged), false);
 
-  // a moth.packages from before sums: get fetches each package again, as moth fetches now, and writes its sum down
-  rmSync(join(app, "moth.sums"));
-  assert.deepEqual(moth(app, "get"), [`lib at ${one.slice(0, 7)}, its sum now in moth.sums\n`, "", 0]);
+  // a folio.packages from before sums: get fetches each package again, as folio fetches now, and writes its sum down
+  rmSync(join(app, "folio.sums"));
+  assert.deepEqual(folio(app, "get"), [`lib at ${one.slice(0, 7)}, its sum now in folio.sums\n`, "", 0]);
   assert.match(sums(), new RegExp(`\\nlib ${one} ${sum}\\n$`));
-  rmSync(join(app, "moth.sums"));
-  writeFileSync(join(packaged, "lib.moth"), readFileSync(join(packaged, "lib.moth"), "utf8").replace(/\n/g, "\r\n")); // as an older moth could leave it
-  assert.deepEqual(moth(app, "get"), [`lib at ${one.slice(0, 7)}, its sum now in moth.sums\n`, "", 0]);
+  rmSync(join(app, "folio.sums"));
+  writeFileSync(join(packaged, "lib.folio"), readFileSync(join(packaged, "lib.folio"), "utf8").replace(/\n/g, "\r\n")); // as an older folio could leave it
+  assert.deepEqual(folio(app, "get"), [`lib at ${one.slice(0, 7)}, its sum now in folio.sums\n`, "", 0]);
   assert.match(sums(), new RegExp(`\\nlib ${one} ${sum}\\n$`));
 
   // update: the new commit, and its sum
-  writeFileSync(join(lib, "data", "words.moth"), 'set hi to "Hi"\n');
+  writeFileSync(join(lib, "data", "words.folio"), 'set hi to "Hi"\n');
   git(lib, "commit", "-qam", "two");
   const two = git(lib, "rev-parse", "HEAD");
-  assert.deepEqual(moth(app, "update"), [`lib: ${one.slice(0, 7)} -> ${two.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "update"), [`lib: ${one.slice(0, 7)} -> ${two.slice(0, 7)}\n`, "", 0]);
   const newer = filesSum(packaged);
   assert.notEqual(newer, sum);
   assert.match(sums(), new RegExp(`\\nlib ${two} ${newer}\\n$`));
-  assert.deepEqual(moth(app, "run", "app.moth"), ["Hi, Sam\n", "", 0]);
+  assert.deepEqual(folio(app, "run", "app.folio"), ["Hi, Sam\n", "", 0]);
 
-  // a package's own moth.sums, for the packages it brings: a sum that fits, and one that doesn't
+  // a package's own folio.sums, for the packages it brings: a sum that fits, and one that doesn't
   const user = join(root, "user");
   mkdirSync(user);
-  writeFileSync(join(user, "user.moth"), 'use the package "lib" as lib\nto shout with n\n    return uppercase of lib\'s hello(n)\nend\n');
-  writeFileSync(join(user, "moth.packages"), `lib ../lib ${one}\n`);
-  writeFileSync(join(user, "moth.sums"), `lib ${one} ${sum}\n`);
+  writeFileSync(join(user, "user.folio"), 'use the package "lib" as lib\nto shout with n\n    return uppercase of lib\'s hello(n)\nend\n');
+  writeFileSync(join(user, "folio.packages"), `lib ../lib ${one}\n`);
+  writeFileSync(join(user, "folio.sums"), `lib ${one} ${sum}\n`);
   git(user, "init", "-q");
   git(user, "add", ".");
   git(user, "commit", "-qm", "one");
   const using = git(user, "rev-parse", "HEAD");
   const other = join(root, "other");
   mkdirSync(other);
-  assert.deepEqual(moth(other, "add", "../user"), [`added user at ${using.slice(0, 7)}, from ../user\nadded lib at ${one.slice(0, 7)}, which user uses\n`, "", 0]);
-  assert.match(readFileSync(join(other, "moth.sums"), "utf8"), new RegExp(`\\nuser ${using} ${filesSum(join(other, "packages", "user"))}\\nlib ${one} ${sum}\\n$`));
+  assert.deepEqual(folio(other, "add", "../user"), [`added user at ${using.slice(0, 7)}, from ../user\nadded lib at ${one.slice(0, 7)}, which user uses\n`, "", 0]);
+  assert.match(readFileSync(join(other, "folio.sums"), "utf8"), new RegExp(`\\nuser ${using} ${filesSum(join(other, "packages", "user"))}\\nlib ${one} ${sum}\\n$`));
   const ones = `sha256:${"1".repeat(64)}`;
-  writeFileSync(join(user, "moth.sums"), `lib ${one} ${ones}\n`);
+  writeFileSync(join(user, "folio.sums"), `lib ${one} ${ones}\n`);
   git(user, "commit", "-qam", "wrong");
   const wrong = git(user, "rev-parse", "HEAD");
   const third = join(root, "third");
   mkdirSync(third);
-  assert.deepEqual(moth(third, "add", "../user"), [`added user at ${wrong.slice(0, 7)}, from ../user\n`,
-    `moth: lib at ${one.slice(0, 7)}, from ../lib, isn't what user's moth.sums says: its files' sum is ${sum}, not ${ones}, so it wasn't kept\n`, 1]);
+  assert.deepEqual(folio(third, "add", "../user"), [`added user at ${wrong.slice(0, 7)}, from ../user\n`,
+    `folio: lib at ${one.slice(0, 7)}, from ../lib, isn't what user's folio.sums says: its files' sum is ${sum}, not ${ones}, so it wasn't kept\n`, 1]);
   assert.deepEqual(readdirSync(join(third, "packages")), ["user"]);
 
   // remove: its sum goes with it
-  assert.deepEqual(moth(other, "remove", "lib"), ["removed lib\n", "", 0]);
-  assert.doesNotMatch(readFileSync(join(other, "moth.sums"), "utf8"), /\nlib /);
+  assert.deepEqual(folio(other, "remove", "lib"), ["removed lib\n", "", 0]);
+  assert.doesNotMatch(readFileSync(join(other, "folio.sums"), "utf8"), /\nlib /);
 });
 
 // --signed (DESIGN §104): a package's commit, or the tag it was asked for at, must have a signature git trusts;
 // here SSH signatures, checked against a file of the keys allowed to sign
 const sshKeygen = gitHere && spawnSync("ssh-keygen", ["-?"], { encoding: "utf8" }).error === undefined;
-test("moth add, get and update --signed take only packages signed by a key git trusts", { skip: skip || (sshKeygen ? false : "there's no git or no ssh-keygen") }, () => {
-  const { dir, exe } = mothExe();
+test("folio add, get and update --signed take only packages signed by a key git trusts", { skip: skip || (sshKeygen ? false : "there's no git or no ssh-keygen") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "signing");
   mkdirSync(root, { recursive: true });
   for (const key of ["trusted", "stranger"]) {
     assert.equal(spawnSync("ssh-keygen", ["-q", "-t", "ed25519", "-N", "", "-C", key, "-f", join(root, key)]).status, 0);
   }
-  writeFileSync(join(root, "allowed"), `moth@example.com ${readFileSync(join(root, "trusted.pub"), "utf8").trim()}\n`);
+  writeFileSync(join(root, "allowed"), `folio@example.com ${readFileSync(join(root, "trusted.pub"), "utf8").trim()}\n`);
   const env = { ...process.env, GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "gpg.ssh.allowedSignersFile", GIT_CONFIG_VALUE_0: join(root, "allowed") };
   const git = (cwd, ...args) => {
-    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", "-c", "gpg.format=ssh", ...args], { cwd, encoding: "utf8" });
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", "-c", "gpg.format=ssh", ...args], { cwd, encoding: "utf8" });
     assert.equal(done.status, 0, done.stderr);
     return done.stdout.trim();
   };
   const by = (key) => ["-c", `user.signingkey=${join(root, key)}`];
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, env, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
   const lib = join(root, "lib");
   mkdirSync(lib);
   const commit = (word, key) => {
-    writeFileSync(join(lib, "lib.moth"), `set word to "${word}"\n`);
+    writeFileSync(join(lib, "lib.folio"), `set word to "${word}"\n`);
     git(lib, "add", ".");
     git(lib, ...(key ? by(key) : []), "commit", "-q", ...(key ? ["-S"] : []), "-m", word);
     return git(lib, "rev-parse", "HEAD");
@@ -802,52 +802,52 @@ test("moth add, get and update --signed take only packages signed by a key git t
   };
 
   let app = folder("plain");
-  assert.deepEqual(moth(app, "add", "../lib@v1", "--signed"), ["", `moth: lib at ${plain.slice(0, 7)} isn't signed\n`, 1]);
+  assert.deepEqual(folio(app, "add", "../lib@v1", "--signed"), ["", `folio: lib at ${plain.slice(0, 7)} isn't signed\n`, 1]);
   assert.deepEqual(readdirSync(app), ["packages"]);
   assert.deepEqual(readdirSync(join(app, "packages")), []);
   app = folder("signed");
-  assert.deepEqual(moth(app, "add", `../lib@${signed}`, "--signed"), [`added lib at ${signed.slice(0, 7)} (${signed}), from ../lib\n`, "", 0]);
-  assert.deepEqual(moth(app, "get", "--signed"), [`lib at ${signed.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "add", `../lib@${signed}`, "--signed"), [`added lib at ${signed.slice(0, 7)} (${signed}), from ../lib\n`, "", 0]);
+  assert.deepEqual(folio(app, "get", "--signed"), [`lib at ${signed.slice(0, 7)}\n`, "", 0]);
   app = folder("tagged");
-  assert.deepEqual(moth(app, "add", "../lib@v3", "--signed"), [`added lib at ${tagged.slice(0, 7)} (v3), from ../lib\n`, "", 0]);
-  assert.deepEqual(moth(app, "get", "--signed"), [`lib at ${tagged.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(app, "add", "../lib@v3", "--signed"), [`added lib at ${tagged.slice(0, 7)} (v3), from ../lib\n`, "", 0]);
+  assert.deepEqual(folio(app, "get", "--signed"), [`lib at ${tagged.slice(0, 7)}\n`, "", 0]);
 
   // signed, by a key that isn't trusted; taken without --signed, after which get --signed says so
   app = folder("strange");
-  let got = moth(app, "add", "../lib", "--signed");
+  let got = folio(app, "add", "../lib", "--signed");
   assert.deepEqual([got[0], got[2]], ["", 1]);
-  assert.match(got[1], new RegExp(`^moth: lib at ${strange.slice(0, 7)} has no signature git trusts: .+\\n$`));
-  assert.deepEqual(moth(app, "add", "../lib"), [`added lib at ${strange.slice(0, 7)}, from ../lib\n`, "", 0]);
-  got = moth(app, "get", "--signed");
+  assert.match(got[1], new RegExp(`^folio: lib at ${strange.slice(0, 7)} has no signature git trusts: .+\\n$`));
+  assert.deepEqual(folio(app, "add", "../lib"), [`added lib at ${strange.slice(0, 7)}, from ../lib\n`, "", 0]);
+  got = folio(app, "get", "--signed");
   assert.deepEqual([got[0], got[2]], ["", 1]);
-  assert.match(got[1], /^moth: lib at [0-9a-f]{7} has no signature git trusts: /);
+  assert.match(got[1], /^folio: lib at [0-9a-f]{7} has no signature git trusts: /);
 
   // update --signed on a branch: a newest commit that isn't signed isn't taken, and a signed one is
   git(lib, "checkout", "-qb", "next", signed);
   app = folder("following");
-  assert.deepEqual(moth(app, "add", "../lib@next", "--signed"), [`added lib at ${signed.slice(0, 7)} (next), from ../lib\n`, "", 0]);
+  assert.deepEqual(folio(app, "add", "../lib@next", "--signed"), [`added lib at ${signed.slice(0, 7)} (next), from ../lib\n`, "", 0]);
   const unsigned = commit("unsigned");
-  assert.deepEqual(moth(app, "update", "--signed"), ["", `moth: lib at ${unsigned.slice(0, 7)} isn't signed\nmoth: so lib stays at ${signed.slice(0, 7)}\n`, 1]);
-  assert.match(readFileSync(join(app, "moth.packages"), "utf8"), new RegExp(`\\nlib \\.\\./lib@next ${signed}\\n$`));
+  assert.deepEqual(folio(app, "update", "--signed"), ["", `folio: lib at ${unsigned.slice(0, 7)} isn't signed\nfolio: so lib stays at ${signed.slice(0, 7)}\n`, 1]);
+  assert.match(readFileSync(join(app, "folio.packages"), "utf8"), new RegExp(`\\nlib \\.\\./lib@next ${signed}\\n$`));
   assert.equal(git(join(app, "packages", "lib"), "rev-parse", "HEAD"), signed);
   const later = commit("later", "trusted");
-  assert.deepEqual(moth(app, "update", "--signed"), [`lib: ${signed.slice(0, 7)} -> ${later.slice(0, 7)}\n`, "", 0]);
-  assert.equal(moth(app, "search", "--signed")[2], 2);
+  assert.deepEqual(folio(app, "update", "--signed"), [`lib: ${signed.slice(0, 7)} -> ${later.slice(0, 7)}\n`, "", 0]);
+  assert.equal(folio(app, "search", "--signed")[2], 2);
 });
 
-// moth audit (DESIGN §105): each package checked against the package index's advisories, by the commits one
+// folio audit (DESIGN §105): each package checked against the package index's advisories, by the commits one
 // names, or from the commit a problem came in with to the one that fixed it; a package not fetched, an index
 // with no advisories, one whose advisories aren't, and a folder with no packages
-test("moth audit says which advisories in the package index are about the commits a program's packages are at", { skip: skip || (gitHere ? false : "there's no git") }, () => {
-  const { dir, exe } = mothExe();
+test("folio audit says which advisories in the package index are about the commits a program's packages are at", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { dir, exe } = folioExe();
   const root = join(dir, "auditing");
   mkdirSync(root, { recursive: true });
   const git = (cwd, ...args) => {
-    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    const done = spawnSync("git", ["-c", "user.name=folio", "-c", "user.email=folio@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
     assert.equal(done.status, 0, done.stderr);
     return done.stdout.trim();
   };
-  const moth = (cwd, ...args) => {
+  const folio = (cwd, ...args) => {
     const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
@@ -855,7 +855,7 @@ test("moth audit says which advisories in the package index are about the commit
   mkdirSync(lib);
   git(lib, "init", "-q");
   const commit = (word) => {
-    writeFileSync(join(lib, "lib.moth"), `set word to "${word}"\n`);
+    writeFileSync(join(lib, "lib.folio"), `set word to "${word}"\n`);
     git(lib, "add", ".");
     git(lib, "commit", "-qm", word);
     return git(lib, "rev-parse", "HEAD");
@@ -868,56 +868,56 @@ test("moth audit says which advisories in the package index are about the commit
   writeFileSync(join(root, "index.json"), JSON.stringify({
     packages: { lib: { repository: where, about: "Words" }, zipper: { repository: "github.com/example/zipper", about: "Squeezes files" } },
     advisories: [
-      { id: "MOTH-2026-1", package: "lib", introduced: broken, fixed, severity: "high", about: "hello() runs what it's given", link: "https://example.com/1" },
-      { id: "MOTH-2026-2", repository: `${where.toUpperCase()}.git/`, commits: [first.slice(0, 7)], about: "the first commit leaks" },
-      { id: "MOTH-2026-3", package: "zipper", commits: [zipCommit], about: "zipper eats files" },
+      { id: "FOLIO-2026-1", package: "lib", introduced: broken, fixed, severity: "high", about: "hello() runs what it's given", link: "https://example.com/1" },
+      { id: "FOLIO-2026-2", repository: `${where.toUpperCase()}.git/`, commits: [first.slice(0, 7)], about: "the first commit leaks" },
+      { id: "FOLIO-2026-3", package: "zipper", commits: [zipCommit], about: "zipper eats files" },
     ],
   }));
   const at = (name, commit) => {
     const app = join(root, name);
     mkdirSync(app);
-    assert.equal(moth(app, "add", `${lib}@${commit}`)[2], 0);
+    assert.equal(folio(app, "add", `${lib}@${commit}`)[2], 0);
     return app;
   };
   const index = ["--index", "../index.json"];
-  assert.deepEqual(moth(at("first", first), "audit", ...index), [`lib at ${first.slice(0, 7)}: MOTH-2026-2: the first commit leaks\n  not fixed yet\n1 advisory is about these packages\n`, "", 1]);
+  assert.deepEqual(folio(at("first", first), "audit", ...index), [`lib at ${first.slice(0, 7)}: FOLIO-2026-2: the first commit leaks\n  not fixed yet\n1 advisory is about these packages\n`, "", 1]);
   const brokenApp = at("broken", broken);
-  assert.deepEqual(moth(brokenApp, "audit", ...index), [`lib at ${broken.slice(0, 7)}: MOTH-2026-1 (high): hello() runs what it's given\n  fixed at ${fixed.slice(0, 7)}: moth update lib takes its newest\n  https://example.com/1\n1 advisory is about these packages\n`, "", 1]);
+  assert.deepEqual(folio(brokenApp, "audit", ...index), [`lib at ${broken.slice(0, 7)}: FOLIO-2026-1 (high): hello() runs what it's given\n  fixed at ${fixed.slice(0, 7)}: folio update lib takes its newest\n  https://example.com/1\n1 advisory is about these packages\n`, "", 1]);
   const fixedApp = at("fixed", fixed);
-  assert.deepEqual(moth(fixedApp, "audit", ...index), [`no advisories about lib at ${fixed.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(fixedApp, "audit", ...index), [`no advisories about lib at ${fixed.slice(0, 7)}\n`, "", 0]);
 
   // a package from a site, written another way than the index has it, and named by the commits it's at
-  writeFileSync(join(fixedApp, "moth.packages"), `${readFileSync(join(fixedApp, "moth.packages"), "utf8")}zip https://GitHub.com/example/zipper.git ${zipCommit}\n`);
-  assert.deepEqual(moth(fixedApp, "audit", ...index), [`zip at 0123456: MOTH-2026-3: zipper eats files\n  not fixed yet\n1 advisory is about these packages\n`, "", 1]);
+  writeFileSync(join(fixedApp, "folio.packages"), `${readFileSync(join(fixedApp, "folio.packages"), "utf8")}zip https://GitHub.com/example/zipper.git ${zipCommit}\n`);
+  assert.deepEqual(folio(fixedApp, "audit", ...index), [`zip at 0123456: FOLIO-2026-3: zipper eats files\n  not fixed yet\n1 advisory is about these packages\n`, "", 1]);
 
   // the history it needs isn't fetched; an index with no advisories; advisories that aren't; no packages
   rmSync(join(brokenApp, "packages"), { recursive: true, force: true });
-  assert.deepEqual(moth(brokenApp, "audit", ...index), ["", "moth: lib isn't fetched, so it couldn't be checked: moth get fetches it\n", 1]);
+  assert.deepEqual(folio(brokenApp, "audit", ...index), ["", "folio: lib isn't fetched, so it couldn't be checked: folio get fetches it\n", 1]);
   writeFileSync(join(root, "quiet.json"), JSON.stringify({ packages: {} }));
-  assert.deepEqual(moth(brokenApp, "audit", "--index", "../quiet.json"), [`no advisories about lib at ${broken.slice(0, 7)}\n`, "", 0]);
+  assert.deepEqual(folio(brokenApp, "audit", "--index", "../quiet.json"), [`no advisories about lib at ${broken.slice(0, 7)}\n`, "", 0]);
   writeFileSync(join(root, "bad.json"), JSON.stringify({ packages: { lib: { repository: where } }, advisories: [5] }));
-  const bad = moth(brokenApp, "audit", "--index", "../bad.json");
+  const bad = folio(brokenApp, "audit", "--index", "../bad.json");
   assert.deepEqual([bad[0], bad[2]], ["", 1]);
-  assert.match(bad[1], /^moth: an advisory in the package index at \.\.\/bad\.json isn't one: /);
-  assert.deepEqual(moth(root, "audit", ...index), ["", "moth: there's no moth.packages here: moth add <git repository> adds a package\n", 1]);
-  assert.equal(moth(root, "audit", "extra")[2], 2);
+  assert.match(bad[1], /^folio: an advisory in the package index at \.\.\/bad\.json isn't one: /);
+  assert.deepEqual(folio(root, "audit", ...index), ["", "folio: there's no folio.packages here: folio add <git repository> adds a package\n", 1]);
+  assert.equal(folio(root, "audit", "extra")[2], 2);
 });
 
-// moth build --web: a page holding the program and the files it uses (math.moth from the standard library),
+// folio build --web: a page holding the program and the files it uses (math.folio from the standard library),
 // as JSON nothing in which ends its script; and a program with a mistake says it, and makes no page
-// `moth build --installer` (DESIGN §99): app-setup, which puts the program in a folder (--into, so no menu entry
+// `folio build --installer` (DESIGN §99): app-setup, which puts the program in a folder (--into, so no menu entry
 // is made here) with what takes it away, which --uninstall runs; and --sign, a command run on each program made
-test("moth.exe build --installer makes a setup program that installs and takes away the program, and --sign signs each", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe build --installer makes a setup program that installs and takes away the program, and --sign signs each", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "installing");
   mkdirSync(sub);
-  writeFileSync(join(sub, "app.moth"), 'say "installed and running"\n');
+  writeFileSync(join(sub, "app.folio"), 'say "installed and running"\n');
   const signer = target === "windows" ? "cmd /c echo" : "echo";
-  const built = spawnSync(exe, ["build", "app.moth", "--installer", "--name", "Moth Test App", "--version", "2.1.0", "--sign", signer], { cwd: sub, encoding: "utf8" });
+  const built = spawnSync(exe, ["build", "app.folio", "--installer", "--name", "Folio Test App", "--version", "2.1.0", "--sign", signer], { cwd: sub, encoding: "utf8" });
   const [app, setup, remover] = target === "windows" ? ["app.exe", "app-setup.exe", "uninstall.cmd"] : ["app", "app-setup", "uninstall.sh"];
   const lines = built.stdout.split("\n");
   assert.deepEqual([lines[1], lines[3], lines[4], built.stderr, built.status], [`signed ${app}`, `signed ${setup}`, "", "", 0], built.stdout);
-  assert.match(lines[2], new RegExp(`^made its installer -> ${setup.replace(".", "\\.")} \\([\\d,]+ bytes\\): run, it installs Moth Test App 2\\.1\\.0$`));
+  assert.match(lines[2], new RegExp(`^made its installer -> ${setup.replace(".", "\\.")} \\([\\d,]+ bytes\\): run, it installs Folio Test App 2\\.1\\.0$`));
   if (target === "linux") chmodSync(join(sub, setup), 0o755);
   const into = join(sub, "portable");
   const installed = spawnSync(join(sub, setup), ["--quiet", "--into", into], { encoding: "utf8" });
@@ -930,46 +930,46 @@ test("moth.exe build --installer makes a setup program that installs and takes a
   const wrong = spawnSync(join(sub, setup), ["--frobnicate"], { encoding: "utf8" });
   assert.equal(wrong.status, 1);
   assert.match(wrong.stderr, /the installer takes --uninstall, --quiet and --into <folder>, not --frobnicate/);
-  const unsigned = spawnSync(exe, ["build", "app.moth", "--sign", "no-such-signer"], { cwd: sub, encoding: "utf8" });
-  assert.deepEqual([unsigned.stderr, unsigned.status], ["moth: --sign couldn't start no-such-signer: there is no program called 'no-such-signer'\n", 1]);
+  const unsigned = spawnSync(exe, ["build", "app.folio", "--sign", "no-such-signer"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([unsigned.stderr, unsigned.status], ["folio: --sign couldn't start no-such-signer: there is no program called 'no-such-signer'\n", 1]);
 });
 
-test("moth.exe build --web makes a page that holds the program and the files it uses", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe build --web makes a page that holds the program and the files it uses", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "web");
   mkdirSync(sub);
-  const source = 'use "math.moth"\nsay sqrt(2)\nsay "</script> stays in its text"\n';
-  writeFileSync(join(sub, "app.moth"), source);
-  const built = spawnSync(exe, ["build", "--web", "app.moth"], { cwd: sub, encoding: "utf8" });
-  assert.match(built.stdout, /^made app\.html, a page that runs app\.moth in a browser \([\d,]+ bytes\)\n$/);
+  const source = 'use "math.folio"\nsay sqrt(2)\nsay "</script> stays in its text"\n';
+  writeFileSync(join(sub, "app.folio"), source);
+  const built = spawnSync(exe, ["build", "--web", "app.folio"], { cwd: sub, encoding: "utf8" });
+  assert.match(built.stdout, /^made app\.html, a page that runs app\.folio in a browser \([\d,]+ bytes\)\n$/);
   assert.deepEqual([built.stderr, built.status], ["", 0]);
   const html = readFileSync(join(sub, "app.html"), "utf8");
-  const json = /window\.MOTH_APP = (.*);\n/.exec(html)[1];
+  const json = /window\.FOLIO_APP = (.*);\n/.exec(html)[1];
   assert.ok(!/<\/script/i.test(json), "the program's text would end the page's script");
   const app = JSON.parse(json);
-  assert.deepEqual([app.name, app.source, Object.keys(app.files)], ["app.moth", source, ["math.moth"]]);
-  assert.equal(app.files["math.moth"], here("math.moth"));
-  writeFileSync(join(sub, "bad.moth"), "say 1 +\n");
-  const bad = spawnSync(exe, ["build", "--web", "bad.moth"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([app.name, app.source, Object.keys(app.files)], ["app.folio", source, ["math.folio"]]);
+  assert.equal(app.files["math.folio"], here("math.folio"));
+  writeFileSync(join(sub, "bad.folio"), "say 1 +\n");
+  const bad = spawnSync(exe, ["build", "--web", "bad.folio"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([bad.stdout, bad.status], ["", 1]);
-  assert.match(bad.stderr, /^bad\.moth:2:1: expected a value but found the end of the code\n/);
+  assert.match(bad.stderr, /^bad\.folio:2:1: expected a value but found the end of the code\n/);
   assert.ok(!existsSync(join(sub, "bad.html")));
 });
 
-// moth build --target wasm (DESIGN §125): app.wasm, the module wasm.moth makes, here made by wasm.moth as machine
+// folio build --target wasm (DESIGN §125): app.wasm, the module wasm.folio makes, here made by wasm.folio as machine
 // code, which must be wasm.js's bytes; what running it needs follows in a section of its own, and runWasm runs it
 // as the VM runs the program. A program with a mistake says it, and makes no module.
-test("moth.exe build --target wasm makes wasm.js's module, which runs as the VM runs the program", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe build --target wasm makes wasm.js's module, which runs as the VM runs the program", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "wasm");
   mkdirSync(sub);
-  const source = 'use "math.moth"\nto fib with n\n    if n is less than 2\n        return n\n    end\n    return fib(n - 1) + fib(n - 2)\nend\nsay "fib(15) is " fib(15) " and " sqrt(2)\nset d to dictionary where "é" is list of 1, "x"\nsay d\nsay item 3 of item "é" of d\n';
-  writeFileSync(join(sub, "app.moth"), source);
-  const built = spawnSync(exe, ["build", "app.moth", "--target", "wasm"], { cwd: sub, encoding: "utf8" });
-  assert.match(built.stdout, /^compiled app\.moth to WebAssembly -> app\.wasm \([\d,]+ bytes\)\n$/);
+  const source = 'use "math.folio"\nto fib with n\n    if n is less than 2\n        return n\n    end\n    return fib(n - 1) + fib(n - 2)\nend\nsay "fib(15) is " fib(15) " and " sqrt(2)\nset d to dictionary where "é" is list of 1, "x"\nsay d\nsay item 3 of item "é" of d\n';
+  writeFileSync(join(sub, "app.folio"), source);
+  const built = spawnSync(exe, ["build", "app.folio", "--target", "wasm"], { cwd: sub, encoding: "utf8" });
+  assert.match(built.stdout, /^compiled app\.folio to WebAssembly -> app\.wasm \([\d,]+ bytes\)\n$/);
   assert.deepEqual([built.stderr, built.status], ["", 0]);
   const bytes = readFileSync(join(sub, "app.wasm"));
-  const files = { "math.moth": here("math.moth") };
+  const files = { "math.folio": here("math.folio") };
   const module = compileToWasmBytes(source, { files: (name) => files[name] }).bytes;
   assert.deepEqual([...bytes.subarray(0, module.length)], [...module]);
   const outcome = (go) => {
@@ -984,22 +984,22 @@ test("moth.exe build --target wasm makes wasm.js's module, which runs as the VM 
   const vm = outcome((print) => run(source, print, { engine: "vm", files: (name) => files[name] }));
   assert.deepEqual(vm.slice(0, 2), ["fib(15) is 610 and 1.41421356237309", '(dictionary where "é" is [1, "x"])']);
   assert.deepEqual(outcome((print) => runWasm(bytes, print)), vm);
-  writeFileSync(join(sub, "bad.moth"), "say 1 +\n");
-  const bad = spawnSync(exe, ["build", "bad.moth", "--target", "wasm"], { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "bad.folio"), "say 1 +\n");
+  const bad = spawnSync(exe, ["build", "bad.folio", "--target", "wasm"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([bad.stdout, bad.status], ["", 1]);
-  assert.match(bad.stderr, /^bad\.moth:2:1: expected a value but found the end of the code\n/);
+  assert.match(bad.stderr, /^bad\.folio:2:1: expected a value but found the end of the code\n/);
   assert.ok(!existsSync(join(sub, "bad.wasm")));
 });
 
-// `moth notebook`: each ```moth block run in turn, as the shell's entries, and what it said written under it,
+// `folio notebook`: each ```folio block run in turn, as the shell's entries, and what it said written under it,
 // in place of the ```output block there was; a block that ends in a value shows it; a mistake is written there
 // too, and the next block still has what came before. Run again, the file stays the same.
-test("moth.exe notebook runs a Markdown file's blocks, and writes what each said under it", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe notebook runs a Markdown file's blocks, and writes what each said under it", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "notebook");
   mkdirSync(sub);
-  writeFileSync(join(sub, "notes.md"), "# Squares\n\nSome numbers first.\n\n```moth\nset xs to list of 1, 2, 3, 4\nsay \"made \" + length of xs\n```\n\nTheir squares, with a function:\n\n```moth\nto square with n\n    return n * n\nend\nlist of square(x) for each x in xs\n```\n\n```output\nan old output, which goes\n```\n\nA mistake:\n\n```moth\nsay 1 / 0\n```\n\nAnd the names from before are still there:\n\n```moth\nsay xs\nsay square(12)\n```\n");
-  const after = "# Squares\n\nSome numbers first.\n\n```moth\nset xs to list of 1, 2, 3, 4\nsay \"made \" + length of xs\n```\n\n```output\nmade 4\n```\n\nTheir squares, with a function:\n\n```moth\nto square with n\n    return n * n\nend\nlist of square(x) for each x in xs\n```\n\n```output\n[1, 4, 9, 16]\n```\n\nA mistake:\n\n```moth\nsay 1 / 0\n```\n\n```output\nblock 3:1:7: can't divide by zero\nsay 1 / 0\n      ^\n```\n\nAnd the names from before are still there:\n\n```moth\nsay xs\nsay square(12)\n```\n\n```output\n[1, 2, 3, 4]\n144\n```\n";
+  writeFileSync(join(sub, "notes.md"), "# Squares\n\nSome numbers first.\n\n```folio\nset xs to list of 1, 2, 3, 4\nsay \"made \" + length of xs\n```\n\nTheir squares, with a function:\n\n```folio\nto square with n\n    return n * n\nend\nlist of square(x) for each x in xs\n```\n\n```output\nan old output, which goes\n```\n\nA mistake:\n\n```folio\nsay 1 / 0\n```\n\nAnd the names from before are still there:\n\n```folio\nsay xs\nsay square(12)\n```\n");
+  const after = "# Squares\n\nSome numbers first.\n\n```folio\nset xs to list of 1, 2, 3, 4\nsay \"made \" + length of xs\n```\n\n```output\nmade 4\n```\n\nTheir squares, with a function:\n\n```folio\nto square with n\n    return n * n\nend\nlist of square(x) for each x in xs\n```\n\n```output\n[1, 4, 9, 16]\n```\n\nA mistake:\n\n```folio\nsay 1 / 0\n```\n\n```output\nblock 3:1:7: can't divide by zero\nsay 1 / 0\n      ^\n```\n\nAnd the names from before are still there:\n\n```folio\nsay xs\nsay square(12)\n```\n\n```output\n[1, 2, 3, 4]\n144\n```\n";
   for (const time of [1, 2]) {
     const ran = spawnSync(exe, ["notebook", "notes.md"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["notes.md: 4 blocks run, 1 of them with a mistake\n", "", 1], `run ${time}`);
@@ -1008,19 +1008,19 @@ test("moth.exe notebook runs a Markdown file's blocks, and writes what each said
   assert.deepEqual(readdirSync(sub), ["notes.md"], "what it built to run the blocks was left behind");
 });
 
-// `moth kernel` (DESIGN §122), as editors/jupyter's kernel talks to it: each line names a file of a cell's code,
+// `folio kernel` (DESIGN §122), as editors/jupyter's kernel talks to it: each line names a file of a cell's code,
 // which runs as a notebook's block does, with its output and mistakes going out as they come, between a line of
-// byte 1 and "moth-cell" and one of byte 1 and "moth-done ok" or "moth-done failed", and one of byte 1 and
-// "moth-done" on the error output; a number before the file's name numbers the cell, unless that would go back;
+// byte 1 and "folio-cell" and one of byte 1 and "folio-done ok" or "folio-done failed", and one of byte 1 and
+// "folio-done" on the error output; a number before the file's name numbers the cell, unless that would go back;
 // a question is answered from the input. Each line is written once what it waits for has come, as the kernel
 // writes them, and what the kernel built and kept is gone at the end.
-test("moth.exe kernel runs cells for Jupyter, each with what the ones before made", { skip }, async () => {
-  const { dir, exe } = mothExe();
+test("folio.exe kernel runs cells for Jupyter, each with what the ones before made", { skip }, async () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "kernel");
   mkdirSync(sub);
-  const cells = { "1.moth": 'set xs to list of 1, 2, 3\nsay "made " + length of xs\n', "2.moth": "xs\n\n", "3.moth": "set xs to list of 9\nsay item 9 of xs\n",
-    "4.moth": "to double with n\n    return n * 2\nend\ndouble(item 3 of xs)\n", "5.moth": "\n  \n", "6.moth": 'say "to the error output" to the error output\nsay nope\n',
-    "7.moth": 'set name to ask "Name?"\nsay "hi " + name\n' };
+  const cells = { "1.folio": 'set xs to list of 1, 2, 3\nsay "made " + length of xs\n', "2.folio": "xs\n\n", "3.folio": "set xs to list of 9\nsay item 9 of xs\n",
+    "4.folio": "to double with n\n    return n * 2\nend\ndouble(item 3 of xs)\n", "5.folio": "\n  \n", "6.folio": 'say "to the error output" to the error output\nsay nope\n',
+    "7.folio": 'set name to ask "Name?"\nsay "hi " + name\n' };
   for (const [name, code] of Object.entries(cells)) writeFileSync(join(sub, name), code);
   const child = spawn(exe, ["kernel", "--allow-read"], { cwd: sub, stdio: ["pipe", "pipe", "pipe"] });
   let [stdout, stderr] = ["", ""];
@@ -1031,29 +1031,29 @@ test("moth.exe kernel runs cells for Jupyter, each with what the ones before mad
     for (const start = Date.now(); !ready(); await new Promise((r) => setTimeout(r, 20)))
       if (Date.now() - start > 120_000) throw new Error(`waited for ${what}: ${JSON.stringify(stdout)} ${JSON.stringify(stderr)}`);
   };
-  const done = () => (stdout.match(/\x01moth-done (ok|failed)\n/g) ?? []).length;
-  for (const line of ["1.moth", "2.moth", "3.moth", "4.moth", "5.moth", "9 6.moth", "missing.moth", "7.moth", "Ana", "8 3.moth"]) {
+  const done = () => (stdout.match(/\x01folio-done (ok|failed)\n/g) ?? []).length;
+  for (const line of ["1.folio", "2.folio", "3.folio", "4.folio", "5.folio", "9 6.folio", "missing.folio", "7.folio", "Ana", "8 3.folio"]) {
     const before = done();
     child.stdin.write(line + "\n");
-    if (line === "7.moth") await until(() => stdout.endsWith("Name? "), "the question");
+    if (line === "7.folio") await until(() => stdout.endsWith("Name? "), "the question");
     else await until(() => done() > before, line);
   }
   child.stdin.write("\n");
   const status = await ended;
   const mistake = (cell, line, why, code, at) => `cell ${cell}:${line}:${at}: ${why}\n${code}\n${" ".repeat(at - 1)}^\n`;
-  assert.deepEqual([stdout, stderr, status], [" 1.moth\n\x01moth-cell\nmade 3\n\x01moth-done ok\n 2.moth\n\x01moth-cell\n[1, 2, 3]\n\x01moth-done ok\n"
-    + " 3.moth\n\x01moth-cell\n\x01moth-done failed\n 4.moth\n\x01moth-cell\n6\n\x01moth-done ok\n 5.moth\n\x01moth-cell\n\x01moth-done ok\n"
-    + " 9 6.moth\n\x01moth-cell\n\x01moth-done failed\n missing.moth\n\x01moth-cell\n\x01moth-done failed\n"
-    + " 7.moth\n\x01moth-cell\nName? Ana\nhi Ana\n\x01moth-done ok\n 8 3.moth\n\x01moth-cell\n\x01moth-done failed\n \n",
-  "\x01moth-done\n\x01moth-done\n" + mistake(3, 2, "there is no item 9, the list only has 1 item", "say item 9 of xs", 5) + "\x01moth-done\n\x01moth-done\n\x01moth-done\n"
-    + "to the error output\n" + mistake(9, 2, "'nope' has no value yet (give it one with 'set nope to ...')", "say nope", 5) + "\x01moth-done\n"
-    + "moth: there is no file called 'missing.moth'\n\x01moth-done\n\x01moth-done\n"
-    + mistake(11, 2, "there is no item 9, the list only has 1 item", "say item 9 of xs", 5) + "\x01moth-done\n", 0]);
+  assert.deepEqual([stdout, stderr, status], [" 1.folio\n\x01folio-cell\nmade 3\n\x01folio-done ok\n 2.folio\n\x01folio-cell\n[1, 2, 3]\n\x01folio-done ok\n"
+    + " 3.folio\n\x01folio-cell\n\x01folio-done failed\n 4.folio\n\x01folio-cell\n6\n\x01folio-done ok\n 5.folio\n\x01folio-cell\n\x01folio-done ok\n"
+    + " 9 6.folio\n\x01folio-cell\n\x01folio-done failed\n missing.folio\n\x01folio-cell\n\x01folio-done failed\n"
+    + " 7.folio\n\x01folio-cell\nName? Ana\nhi Ana\n\x01folio-done ok\n 8 3.folio\n\x01folio-cell\n\x01folio-done failed\n \n",
+  "\x01folio-done\n\x01folio-done\n" + mistake(3, 2, "there is no item 9, the list only has 1 item", "say item 9 of xs", 5) + "\x01folio-done\n\x01folio-done\n\x01folio-done\n"
+    + "to the error output\n" + mistake(9, 2, "'nope' has no value yet (give it one with 'set nope to ...')", "say nope", 5) + "\x01folio-done\n"
+    + "folio: there is no file called 'missing.folio'\n\x01folio-done\n\x01folio-done\n"
+    + mistake(11, 2, "there is no item 9, the list only has 1 item", "say item 9 of xs", 5) + "\x01folio-done\n", 0]);
   assert.deepEqual(readdirSync(sub).sort(), Object.keys(cells).sort(), "what the kernel built or kept was left behind");
 });
 
-// editors/jupyter's kernel (DESIGN §122): its own tests, in Python, against a stand-in for moth kernel and against
-// the moth built here; and, where ipykernel and jupyter_client are installed, as Jupyter runs it
+// editors/jupyter's kernel (DESIGN §122): its own tests, in Python, against a stand-in for folio kernel and against
+// the folio built here; and, where ipykernel and jupyter_client are installed, as Jupyter runs it
 function pythonCommand() {
   for (const command of ["python3", "python"]) {
     const asked = spawnSync(command, ["-c", "import sys; print(sys.version_info >= (3, 8))"], { encoding: "utf8", cwd: tmpdir() });
@@ -1062,139 +1062,139 @@ function pythonCommand() {
   return null;
 }
 const jupyterPython = target ? pythonCommand() : null;
-test("editors/jupyter's kernel runs cells through moth kernel, as Jupyter runs them", { skip: skip || (!jupyterPython && "there's no Python 3.8 or later here") }, () => {
-  const { exe } = mothExe();
-  const ran = spawnSync(jupyterPython, ["-B", fileURLToPath(new URL("./editors/jupyter/test_moth_kernel.py", import.meta.url))],
-    { cwd: tmpdir(), env: { ...process.env, MOTH: exe }, encoding: "utf8", timeout: 600_000 });
+test("editors/jupyter's kernel runs cells through folio kernel, as Jupyter runs them", { skip: skip || (!jupyterPython && "there's no Python 3.8 or later here") }, () => {
+  const { exe } = folioExe();
+  const ran = spawnSync(jupyterPython, ["-B", fileURLToPath(new URL("./editors/jupyter/test_folio_kernel.py", import.meta.url))],
+    { cwd: tmpdir(), env: { ...process.env, FOLIO: exe }, encoding: "utf8", timeout: 600_000 });
   assert.equal(ran.status, 0, ran.stdout + ran.stderr);
   assert.match(ran.stderr, /\r?\nOK( \(skipped=\d+\))?\r?\n$/); // Python ends its lines with \r\n on Windows
 });
 
 // The shell: a line whose value makes functions of its own (a list built from a list) runs once, not again in
 // every entry after it
-test("moth.exe shell runs an entry that builds a list once", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe shell runs an entry that builds a list once", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "shell-lists");
   mkdirSync(sub);
   const ran = spawnSync(exe, ["shell"], { cwd: sub, encoding: "utf8", input: "set xs to list of 1, 2\nsay list of x * 2 for each x in xs\nsay 5\nxs\n", timeout: 120_000 });
-  assert.equal(ran.stdout.split("\n").filter((l) => !l.startsWith("Moth shell")).join("\n"),
-    "moth> set xs to list of 1, 2\nmoth> say list of x * 2 for each x in xs\n[2, 4]\nmoth> say 5\n5\nmoth> xs\n[1, 2]\nmoth> \n\n");
+  assert.equal(ran.stdout.split("\n").filter((l) => !l.startsWith("Folio shell")).join("\n"),
+    "folio> set xs to list of 1, 2\nfolio> say list of x * 2 for each x in xs\n[2, 4]\nfolio> say 5\n5\nfolio> xs\n[1, 2]\nfolio> \n\n");
 });
 
-// `moth profile`: the program runs as moth run runs it, and then the error output says each function's own time
+// `folio profile`: the program runs as folio run runs it, and then the error output says each function's own time
 // and calls, and the lines that took longest, with how often each ran; also when it stops itself
-test("moth.exe profile runs a program, then says where its time went", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe profile runs a program, then says where its time went", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "profiling");
   mkdirSync(sub);
-  writeFileSync(join(sub, "work.moth"), "to slow_sum with n\n    set total to 0\n    for each k from 1 to n\n        set total to total + k * k\n    end\n    return total\nend\n"
+  writeFileSync(join(sub, "work.folio"), "to slow_sum with n\n    set total to 0\n    for each k from 1 to n\n        set total to total + k * k\n    end\n    return total\nend\n"
     + "to quick with x\n    return x + 1\nend\nset grand to 0\nfor each i from 1 to 40\n    set grand to grand + slow_sum(20000)\n    set grand to quick(grand)\nend\nsay grand\nsay arguments\n");
-  const ran = spawnSync(exe, ["profile", "work.moth", "a", "b"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
+  const ran = spawnSync(exe, ["profile", "work.folio", "a", "b"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
   assert.deepEqual([ran.stdout, ran.status], ["106674666800040\n[\"a\", \"b\"]\n", 0], ran.stderr);
   const lines = ran.stderr.split("\n");
-  assert.match(lines[0], /^moth profile: \d+\.\d{3} s in all, 800246 lines run$/);
+  assert.match(lines[0], /^folio profile: \d+\.\d{3} s in all, 800246 lines run$/);
   assert.equal(lines[2], "  own time        calls  function");
   assert.match(lines[3], /^ +\d+\.\d{3} s +\d+\.\d% +40  slow_sum$/);
   assert.ok(lines.some((l) => / 40  quick$/.test(l)) && lines.some((l) => / 1  \(the program\)$/.test(l)), ran.stderr);
   const top = lines.indexOf("  time                 runs  line");
-  assert.match(lines[top + 1], /^ +\d+\.\d{3} s +\d+\.\d% +800000  work\.moth:4  set total to total \+ k \* k$/);
-  writeFileSync(join(sub, "stops.moth"), 'say "before"\nstop the program with 3\n');
-  const stops = spawnSync(exe, ["profile", "stops.moth"], { cwd: sub, encoding: "utf8" });
+  assert.match(lines[top + 1], /^ +\d+\.\d{3} s +\d+\.\d% +800000  work\.folio:4  set total to total \+ k \* k$/);
+  writeFileSync(join(sub, "stops.folio"), 'say "before"\nstop the program with 3\n');
+  const stops = spawnSync(exe, ["profile", "stops.folio"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([stops.stdout, stops.status], ["before\n", 3]);
-  assert.match(stops.stderr, /^moth profile: 0\.\d{3} s in all, 2 lines run\n[^]*stops\.moth:2  stop the program with 3\n$/);
+  assert.match(stops.stderr, /^folio profile: 0\.\d{3} s in all, 2 lines run\n[^]*stops\.folio:2  stop the program with 3\n$/);
   // after a mistake: its report, then the profile up to it
-  writeFileSync(join(sub, "oops.moth"), "to f with n\n    return item n of list of 1\nend\nsay f(1)\nsay f(2)\nsay \"never\"\n");
-  const oops = spawnSync(exe, ["profile", "oops.moth"], { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "oops.folio"), "to f with n\n    return item n of list of 1\nend\nsay f(1)\nsay f(2)\nsay \"never\"\n");
+  const oops = spawnSync(exe, ["profile", "oops.folio"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([oops.stdout, oops.status], ["1\n", 1]);
-  assert.match(oops.stderr, /^oops\.moth:2:12: there is no item 2, the list only has 1 item\n[^]*\nmoth profile: \d+\.\d{3} s in all, 5 lines run\n[^]* 2  f\n/);
+  assert.match(oops.stderr, /^oops\.folio:2:12: there is no item 2, the list only has 1 item\n[^]*\nfolio profile: \d+\.\d{3} s in all, 5 lines run\n[^]* 2  f\n/);
   // an app: its handlers' calls and lines, and the time it waited for them on a line of its own
-  writeFileSync(join(sub, "keys.moth"), "set count to 0\nwhen a key is pressed with key\n    set count to count + 1\n    say \"key \" + key\nend\n");
-  const keys = spawnSync(exe, ["profile", "keys.moth"], { cwd: sub, encoding: "utf8", env: { ...process.env, MOTH_PICTURE: join(sub, "keys.bmp"), MOTH_EVENTS: "key left;key right;tick 0" } });
+  writeFileSync(join(sub, "keys.folio"), "set count to 0\nwhen a key is pressed with key\n    set count to count + 1\n    say \"key \" + key\nend\n");
+  const keys = spawnSync(exe, ["profile", "keys.folio"], { cwd: sub, encoding: "utf8", env: { ...process.env, FOLIO_PICTURE: join(sub, "keys.bmp"), FOLIO_EVENTS: "key left;key right;tick 0" } });
   assert.deepEqual([keys.stdout, keys.status], ["key left\nkey right\n", 0], keys.stderr);
-  assert.match(keys.stderr, /^moth profile: \d+\.\d{3} s in all, 6 lines run\n/);
+  assert.match(keys.stderr, /^folio profile: \d+\.\d{3} s in all, 6 lines run\n/);
   assert.match(keys.stderr, /\n +\d+\.\d{3} s +\d+\.\d% {10}\(waiting for events\)\n/);
   assert.match(keys.stderr, /\n +\d+\.\d{3} s +\d+\.\d% +2  when a key is pressed\n/);
-  assert.match(keys.stderr, /\n +\d+\.\d{3} s +\d+\.\d% +2  keys\.moth:4  say "key " \+ key\n/);
+  assert.match(keys.stderr, /\n +\d+\.\d{3} s +\d+\.\d% +2  keys\.folio:4  say "key " \+ key\n/);
   rmSync(join(sub, "keys.bmp"), { force: true });
-  assert.deepEqual(readdirSync(sub).sort(), ["keys.moth", "oops.moth", "stops.moth", "work.moth"], "the program built to profile was left behind");
+  assert.deepEqual(readdirSync(sub).sort(), ["keys.folio", "oops.folio", "stops.folio", "work.folio"], "the program built to profile was left behind");
 });
 
-// `moth coverage` (DESIGN §93): the program runs, then the error output says how many lines with a statement
+// `folio coverage` (DESIGN §93): the program runs, then the error output says how many lines with a statement
 // on them ran, and which didn't, in the program's file and in a file it uses
-test("moth.exe coverage says which lines of a program and the files it uses ran", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe coverage says which lines of a program and the files it uses ran", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "covering");
   mkdirSync(sub);
-  writeFileSync(join(sub, "half.moth"), "to half with n\n    if n is divisible by 2\n        return n / 2\n    end\n    return nothing\nend\n");
-  writeFileSync(join(sub, "cov.moth"), 'use "half.moth"\nsay half(4)\nif no\n    say "never"\nend\nset x to 1\n');
-  const ran = spawnSync(exe, ["coverage", "cov.moth"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
-  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["2\n", "moth coverage: 6 of 8 lines run (75.0%)\n  cov.moth: 3 of 4 (75.0%), not run: 4\n"
-    + "  half.moth: 3 of 4 (75.0%), not run: 5\n", 0]);
-  assert.deepEqual(readdirSync(sub).sort(), ["cov.moth", "half.moth"], "the program built for coverage was left behind");
+  writeFileSync(join(sub, "half.folio"), "to half with n\n    if n is divisible by 2\n        return n / 2\n    end\n    return nothing\nend\n");
+  writeFileSync(join(sub, "cov.folio"), 'use "half.folio"\nsay half(4)\nif no\n    say "never"\nend\nset x to 1\n');
+  const ran = spawnSync(exe, ["coverage", "cov.folio"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["2\n", "folio coverage: 6 of 8 lines run (75.0%)\n  cov.folio: 3 of 4 (75.0%), not run: 4\n"
+    + "  half.folio: 3 of 4 (75.0%), not run: 5\n", 0]);
+  assert.deepEqual(readdirSync(sub).sort(), ["cov.folio", "half.folio"], "the program built for coverage was left behind");
 
-  // --lcov writes them to lcov.info too, each file by its path from the folder moth runs in
-  const lcov = spawnSync(exe, ["coverage", "--lcov", "covering/cov.moth"], { cwd: dir, encoding: "utf8", timeout: 120_000 });
-  assert.deepEqual([lcov.stdout, lcov.stderr, lcov.status], ["2\n", "moth coverage: 6 of 8 lines run (75.0%)\n  cov.moth: 3 of 4 (75.0%), not run: 4\n"
-    + "  half.moth: 3 of 4 (75.0%), not run: 5\nwrote lcov.info\n", 0]);
-  assert.equal(readFileSync(join(dir, "lcov.info"), "utf8"), "TN:\nSF:covering/cov.moth\nDA:2,1\nDA:3,1\nDA:4,0\nDA:6,1\nLF:4\nLH:3\nend_of_record\n"
-    + "TN:\nSF:covering/half.moth\nDA:1,1\nDA:2,1\nDA:3,1\nDA:5,0\nLF:4\nLH:3\nend_of_record\n");
+  // --lcov writes them to lcov.info too, each file by its path from the folder folio runs in
+  const lcov = spawnSync(exe, ["coverage", "--lcov", "covering/cov.folio"], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+  assert.deepEqual([lcov.stdout, lcov.stderr, lcov.status], ["2\n", "folio coverage: 6 of 8 lines run (75.0%)\n  cov.folio: 3 of 4 (75.0%), not run: 4\n"
+    + "  half.folio: 3 of 4 (75.0%), not run: 5\nwrote lcov.info\n", 0]);
+  assert.equal(readFileSync(join(dir, "lcov.info"), "utf8"), "TN:\nSF:covering/cov.folio\nDA:2,1\nDA:3,1\nDA:4,0\nDA:6,1\nLF:4\nLH:3\nend_of_record\n"
+    + "TN:\nSF:covering/half.folio\nDA:1,1\nDA:2,1\nDA:3,1\nDA:5,0\nLF:4\nLH:3\nend_of_record\n");
   rmSync(join(dir, "lcov.info"));
 });
 
-// moth coverage of tests (DESIGN §133): each test run as moth test runs it, with what each ran added up, and said
-// of the files the tests use: not the tests' own, nor moth's copies of the standard library, nor packages
-test("moth.exe coverage runs a file's tests, or a folder's, and says which lines of the files they test ran", { skip }, () => {
-  const { dir, exe } = mothExe();
+// folio coverage of tests (DESIGN §133): each test run as folio test runs it, with what each ran added up, and said
+// of the files the tests use: not the tests' own, nor folio's copies of the standard library, nor packages
+test("folio.exe coverage runs a file's tests, or a folder's, and says which lines of the files they test ran", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "covering-tests");
   mkdirSync(join(sub, "more"), { recursive: true });
   mkdirSync(join(sub, "packages", "boxes"), { recursive: true });
   // a branch never taken (line 4), a function never called (line 11), and a line run many times (line 15)
-  writeFileSync(join(sub, "shapes.moth"), 'use "json.moth" as json\nto area with w, h\n    if w is less than 0\n        fail with "no width is less than 0"\n'
+  writeFileSync(join(sub, "shapes.folio"), 'use "json.folio" as json\nto area with w, h\n    if w is less than 0\n        fail with "no width is less than 0"\n'
     + "    else\n        return w * h\n    end\nend\n\nto perimeter with w, h\n    return 2 * (w + h)\nend\n\nto described with sizes\n"
     + "    for each size in sizes\n        say json's parse(\"[\" + size + \"]\")\n    end\nend\n");
-  writeFileSync(join(sub, "shapes.test.moth"), 'use "shapes.moth"\nuse the package "boxes" as boxes\n\nto test_area\n    expect area(2, 3) is boxes\'s six()\nend\n\n'
+  writeFileSync(join(sub, "shapes.test.folio"), 'use "shapes.folio"\nuse the package "boxes" as boxes\n\nto test_area\n    expect area(2, 3) is boxes\'s six()\nend\n\n'
     + "to test_described\n    described(list of 1, 2, 3)\nend\n");
-  writeFileSync(join(sub, "packages", "boxes", "boxes.moth"), "to six\n    return 6\nend\n");
-  // a file in a folder, and a test of it that fails, which still counts, and says what it says as moth test does
-  writeFileSync(join(sub, "more", "sizes.moth"), "to bigger with a, b\n    if a is greater than b\n        return a\n    end\n    return b\nend\n");
-  writeFileSync(join(sub, "more", "sizes.test.moth"), 'use "sizes.moth"\nto test_bigger\n    expect bigger(1, 2) is 2\nend\n'
+  writeFileSync(join(sub, "packages", "boxes", "boxes.folio"), "to six\n    return 6\nend\n");
+  // a file in a folder, and a test of it that fails, which still counts, and says what it says as folio test does
+  writeFileSync(join(sub, "more", "sizes.folio"), "to bigger with a, b\n    if a is greater than b\n        return a\n    end\n    return b\nend\n");
+  writeFileSync(join(sub, "more", "sizes.test.folio"), 'use "sizes.folio"\nto test_bigger\n    expect bigger(1, 2) is 2\nend\n'
     + 'to test_wrong\n    say "it was asked"\n    expect bigger(1, 2) is 1\nend\n');
-  const moth = (...args) => {
+  const folio = (...args) => {
     const done = spawnSync(exe, args, { cwd: sub, encoding: "utf8", timeout: 120_000 });
     return [done.stdout, done.stderr, done.status];
   };
-  const shapes = "  shapes.moth: 7 of 9 (77.8%), not run: 4, 11\n";
-  assert.deepEqual(moth("coverage", "shapes.test.moth"), ["✓ test_area\n✓ test_described\n2 passed\nmoth coverage: 7 of 9 lines run (77.8%)\n" + shapes, "", 0]);
+  const shapes = "  shapes.folio: 7 of 9 (77.8%), not run: 4, 11\n";
+  assert.deepEqual(folio("coverage", "shapes.test.folio"), ["✓ test_area\n✓ test_described\n2 passed\nfolio coverage: 7 of 9 lines run (77.8%)\n" + shapes, "", 0]);
 
-  // every .test.moth file here and in the folders inside, as moth test finds them, and lcov.info
-  const sizes = join("more", "sizes.test.moth");
+  // every .test.folio file here and in the folders inside, as folio test finds them, and lcov.info
+  const sizes = join("more", "sizes.test.folio");
   const failed = `✗ test_wrong\n    ${sizes}:7:5: expected 2 to be 1\n        expect bigger(1, 2) is 1\n        ^\n    it said:\n      it was asked\n`;
-  const said = `${sizes}\n✓ test_bigger\n${failed}shapes.test.moth\n✓ test_area\n✓ test_described\n3 passed, 1 failed\n`
-    + "moth coverage: 10 of 13 lines run (76.9%)\n  more/sizes.moth: 3 of 4 (75.0%), not run: 3\n" + shapes;
-  assert.deepEqual(moth("coverage", "--lcov"), [said + "wrote lcov.info\n", "", 1]);
-  const lcov = "TN:\nSF:more/sizes.moth\nDA:1,2\nDA:2,2\nDA:3,0\nDA:5,2\nLF:4\nLH:3\nend_of_record\n"
-    + "TN:\nSF:shapes.moth\nDA:2,2\nDA:3,1\nDA:4,0\nDA:6,1\nDA:10,2\nDA:11,0\nDA:14,2\nDA:15,1\nDA:16,3\nLF:9\nLH:7\nend_of_record\n";
+  const said = `${sizes}\n✓ test_bigger\n${failed}shapes.test.folio\n✓ test_area\n✓ test_described\n3 passed, 1 failed\n`
+    + "folio coverage: 10 of 13 lines run (76.9%)\n  more/sizes.folio: 3 of 4 (75.0%), not run: 3\n" + shapes;
+  assert.deepEqual(folio("coverage", "--lcov"), [said + "wrote lcov.info\n", "", 1]);
+  const lcov = "TN:\nSF:more/sizes.folio\nDA:1,2\nDA:2,2\nDA:3,0\nDA:5,2\nLF:4\nLH:3\nend_of_record\n"
+    + "TN:\nSF:shapes.folio\nDA:2,2\nDA:3,1\nDA:4,0\nDA:6,1\nDA:10,2\nDA:11,0\nDA:14,2\nDA:15,1\nDA:16,3\nLF:9\nLH:7\nend_of_record\n";
   assert.equal(readFileSync(join(sub, "lcov.info"), "utf8"), lcov);
   rmSync(join(sub, "lcov.info"));
-  // the same, named, with the flags after them; and moth test as it was
-  assert.deepEqual(moth("coverage", sizes, "shapes.test.moth", "--lcov"), [said + "wrote lcov.info\n", "", 1]);
+  // the same, named, with the flags after them; and folio test as it was
+  assert.deepEqual(folio("coverage", sizes, "shapes.test.folio", "--lcov"), [said + "wrote lcov.info\n", "", 1]);
   assert.equal(readFileSync(join(sub, "lcov.info"), "utf8"), lcov);
-  assert.deepEqual(moth("test", "shapes.test.moth"), ["✓ test_area\n✓ test_described\n2 passed\n", "", 0]);
-  assert.deepEqual(readdirSync(sub).sort(), ["lcov.info", "more", "packages", "shapes.moth", "shapes.test.moth"], "a program built for coverage was left behind");
-  assert.deepEqual(readdirSync(join(sub, "more")).sort(), ["sizes.moth", "sizes.test.moth"], "a program built for coverage was left behind");
-  const wrong = moth("coverage", "shapes.test.moth", "--nope");
-  assert.deepEqual([wrong[0], wrong[1].startsWith("usage: moth build"), wrong[2]], ["", true, 2]);
+  assert.deepEqual(folio("test", "shapes.test.folio"), ["✓ test_area\n✓ test_described\n2 passed\n", "", 0]);
+  assert.deepEqual(readdirSync(sub).sort(), ["lcov.info", "more", "packages", "shapes.folio", "shapes.test.folio"], "a program built for coverage was left behind");
+  assert.deepEqual(readdirSync(join(sub, "more")).sort(), ["sizes.folio", "sizes.test.folio"], "a program built for coverage was left behind");
+  const wrong = folio("coverage", "shapes.test.folio", "--nope");
+  assert.deepEqual([wrong[0], wrong[1].startsWith("usage: folio build"), wrong[2]], ["", true, 2]);
 });
 
 // `show` works out a sum of the variables the line can see (DESIGN §98): items, fields, comparisons, brackets
 test("a program built to be debugged shows sums of its variables, and says why one can't be worked out", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-debug-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-debug-"));
   try {
     const exe = executable(dir, "d");
-    writeFileSync(exe, machine("set xs to list of 10, 20, 30\nset sam to record with name \"Sam\", age 20, pet (record with name \"Rex\")\nset total to 7\nsay total\n", { target, name: "p.moth", debug: true, files: { "moth-debugger.moth": here("moth-debugger.moth") } }));
+    writeFileSync(exe, machine("set xs to list of 10, 20, 30\nset sam to record with name \"Sam\", age 20, pet (record with name \"Rex\")\nset total to 7\nsay total\n", { target, name: "p.folio", debug: true, files: { "folio-debugger.folio": here("folio-debugger.folio") } }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { input: "step\nstep\nstep\nshow total + 1\nshow item 2 of xs + total\nshow sam's pet's name\nshow age of sam\nshow total is greater than 5 and not (total is 9)\nshow 2 * (3 + 4)\nshow -total\nshow nope + 1\nshow item 9 of xs\nquit\n", encoding: "utf8", timeout: 60_000 });
-    assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["p.moth:1: set xs to list of 10, 20, 30\n(moth) step\np.moth:2: set sam to record with name \"Sam\", age 20, pet (record with name \"Rex\")\n(moth) step\np.moth:3: set total to 7\n(moth) step\np.moth:4: say total\n(moth) show total + 1\ntotal + 1 is 8\n(moth) show item 2 of xs + total\nitem 2 of xs + total is 27\n(moth) show sam's pet's name\nsam's pet's name is \"Rex\"\n(moth) show age of sam\nage of sam is 20\n(moth) show total is greater than 5 and not (total is 9)\ntotal is greater than 5 and not (total is 9) is yes\n(moth) show 2 * (3 + 4)\n2 * (3 + 4) is 14\n(moth) show -total\n-total is -7\n(moth) show nope + 1\ncan't work out nope + 1: there's no 'nope' here\n(moth) show item 9 of xs\ncan't work out item 9 of xs: there is no item 9, the list only has 3 items\n(moth) quit\n", "", 0]);
+    assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["p.folio:1: set xs to list of 10, 20, 30\n(folio) step\np.folio:2: set sam to record with name \"Sam\", age 20, pet (record with name \"Rex\")\n(folio) step\np.folio:3: set total to 7\n(folio) step\np.folio:4: say total\n(folio) show total + 1\ntotal + 1 is 8\n(folio) show item 2 of xs + total\nitem 2 of xs + total is 27\n(folio) show sam's pet's name\nsam's pet's name is \"Rex\"\n(folio) show age of sam\nage of sam is 20\n(folio) show total is greater than 5 and not (total is 9)\ntotal is greater than 5 and not (total is 9) is yes\n(folio) show 2 * (3 + 4)\n2 * (3 + 4) is 14\n(folio) show -total\n-total is -7\n(folio) show nope + 1\ncan't work out nope + 1: there's no 'nope' here\n(folio) show item 9 of xs\ncan't work out item 9 of xs: there is no item 9, the list only has 3 items\n(folio) quit\n", "", 0]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -1202,65 +1202,65 @@ test("a program built to be debugged shows sums of its variables, and says why o
 
 // a program built to be debugged stops at its mistake, after the report, with the variables the line could see
 test("a program built to be debugged stops at a mistake, to look at what went wrong", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-debug-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-debug-"));
   try {
     const exe = executable(dir, "d");
     writeFileSync(exe, machine("to divide with a, b\n    set half to a / 2\n    return a / b\nend\nset total to 10\nsay divide(total, 2)\nsay divide(total, 0)\nsay \"never\"\n",
-      { target, name: "p.moth", debug: true, files: { "moth-debugger.moth": here("moth-debugger.moth") } }));
+      { target, name: "p.folio", debug: true, files: { "folio-debugger.folio": here("folio-debugger.folio") } }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { input: "go\nvars\nshow b\nwhere\nlist\nquit\n", encoding: "utf8", timeout: 60_000 });
-    assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["p.moth:1: to divide with a, b\n(moth) go\n5\nstopped at the mistake, at p.moth:3, in 'divide': return a / b\n"
-      + "(moth) vars\na is 10\nb is 0\nhalf is 5\ntotal is 10\n(moth) show b\nb is 0\n(moth) where\n  p.moth:3, in 'divide'\n  p.moth:7\n(moth) list\n"
-      + "   1  to divide with a, b\n   2      set half to a / 2\n-> 3      return a / b\n   4  end\n   5  set total to 10\n   6  say divide(total, 2)\n(moth) quit\n",
-      "p.moth:3:14: can't divide by zero\n    return a / b\n             ^\n  in 'divide', called from line 7\n", 1]);
+    assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["p.folio:1: to divide with a, b\n(folio) go\n5\nstopped at the mistake, at p.folio:3, in 'divide': return a / b\n"
+      + "(folio) vars\na is 10\nb is 0\nhalf is 5\ntotal is 10\n(folio) show b\nb is 0\n(folio) where\n  p.folio:3, in 'divide'\n  p.folio:7\n(folio) list\n"
+      + "   1  to divide with a, b\n   2      set half to a / 2\n-> 3      return a / b\n   4  end\n   5  set total to 10\n   6  say divide(total, 2)\n(folio) quit\n",
+      "p.folio:3:14: can't divide by zero\n    return a / b\n             ^\n  in 'divide', called from line 7\n", 1]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-// The standard library: in a folder with nothing else in it, a program uses json.moth, math.moth and big.moth,
-// and big.moth's tests run, from moth's own copies; a file of a standard name beside the program is used instead
-test("moth.exe has the standard library, so a program anywhere can use it, and a file beside it comes first", { skip }, () => {
-  const { dir, exe } = mothExe();
+// The standard library: in a folder with nothing else in it, a program uses json.folio, math.folio and big.folio,
+// and big.folio's tests run, from folio's own copies; a file of a standard name beside the program is used instead
+test("folio.exe has the standard library, so a program anywhere can use it, and a file beside it comes first", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "anywhere");
   mkdirSync(sub);
-  writeFileSync(join(sub, "p.moth"), 'use "json.moth" as json\nuse "math.moth"\nuse "big.moth" as big\nsay item "a" of json\'s parse("\\{\\"a\\": [1, 2]}")\nsay sqrt(16)\nsay big\'s power(2, 70)\n');
-  const ran = spawnSync(exe, ["run", "p.moth"], { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "p.folio"), 'use "json.folio" as json\nuse "math.folio"\nuse "big.folio" as big\nsay item "a" of json\'s parse("\\{\\"a\\": [1, 2]}")\nsay sqrt(16)\nsay big\'s power(2, 70)\n');
+  const ran = spawnSync(exe, ["run", "p.folio"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["[1, 2]\n4\n1180591620717411303424\n", "", 0]);
-  writeFileSync(join(sub, "big.test.moth"), here("tools/big.test.moth"));
-  const tested = spawnSync(exe, ["test", "big.test.moth"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
+  writeFileSync(join(sub, "big.test.folio"), here("tools/big.test.folio"));
+  const tested = spawnSync(exe, ["test", "big.test.folio"], { cwd: sub, encoding: "utf8", timeout: 120_000 });
   assert.deepEqual([tested.stdout.split("\n").at(-2), tested.status], ["8 passed", 0], tested.stdout);
-  writeFileSync(join(sub, "math.moth"), "to sqrt with x\n    return \"my own\"\nend\n");
-  const own = spawnSync(exe, ["run", "p.moth"], { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "math.folio"), "to sqrt with x\n    return \"my own\"\nend\n");
+  const own = spawnSync(exe, ["run", "p.folio"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([own.stdout, own.status], ["[1, 2]\nmy own\n1180591620717411303424\n", 0]);
-  writeFileSync(join(sub, "q.moth"), 'use "nowhere.moth"\n');
-  const missing = spawnSync(exe, ["run", "q.moth"], { cwd: sub, encoding: "utf8" });
-  assert.match(missing.stderr, /there is no file called 'nowhere\.moth'/);
+  writeFileSync(join(sub, "q.folio"), 'use "nowhere.folio"\n');
+  const missing = spawnSync(exe, ["run", "q.folio"], { cwd: sub, encoding: "utf8" });
+  assert.match(missing.stderr, /there is no file called 'nowhere\.folio'/);
 });
 
-test("moth.exe builds a program, and itself into the same bytes", { skip }, () => {
-  const { dir, exe, made } = mothExe();
-  writeFileSync(join(dir, "lib.moth"), "to twice with t\n    return t + t\nend\n");
-  writeFileSync(join(dir, "hi.moth"), 'use "lib.moth" as lib\nsay lib\'s twice("ab")\nsay uppercase of "straße"\n');
-  const built = spawnSync(exe, ["build", "hi.moth"], { cwd: dir, encoding: "utf8" });
+test("folio.exe builds a program, and itself into the same bytes", { skip }, () => {
+  const { dir, exe, made } = folioExe();
+  writeFileSync(join(dir, "lib.folio"), "to twice with t\n    return t + t\nend\n");
+  writeFileSync(join(dir, "hi.folio"), 'use "lib.folio" as lib\nsay lib\'s twice("ab")\nsay uppercase of "straße"\n');
+  const built = spawnSync(exe, ["build", "hi.folio"], { cwd: dir, encoding: "utf8" });
   assert.equal(built.status, 0, built.stdout + built.stderr);
-  assert.match(built.stdout, /^compiled hi\.moth to machine code for (Windows|Linux) -> hi(\.exe)? \(.* bytes\)\n$/);
+  assert.match(built.stdout, /^compiled hi\.folio to machine code for (Windows|Linux) -> hi(\.exe)? \(.* bytes\)\n$/);
   assert.equal(spawnSync(executable(dir, "hi"), [], { encoding: "utf8" }).stdout, "abab\nSTRASSE\n");
-  const again = spawnSync(exe, ["build", "moth.moth", "--allow-read", "--allow-write", "--allow-run", "--include", "moth-debugger.moth", "--include", "package.json"], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+  const again = spawnSync(exe, ["build", "folio.folio", "--allow-read", "--allow-write", "--allow-run", "--include", "folio-debugger.folio", "--include", "package.json"], { cwd: dir, encoding: "utf8", timeout: 120_000 });
   assert.equal(again.status, 0, again.stdout + again.stderr);
-  assert.ok(Buffer.from(made).equals(readFileSync(executable(dir, "moth"))), "moth.exe built itself into different bytes");
-  const version = spawnSync(executable(dir, "moth"), ["--version"], { cwd: tmpdir(), encoding: "utf8" });
-  assert.deepEqual([version.status, version.stdout, version.stderr], [0, `moth ${JSON.parse(here("package.json")).version}\n`, ""]);
+  assert.ok(Buffer.from(made).equals(readFileSync(executable(dir, "folio"))), "folio.exe built itself into different bytes");
+  const version = spawnSync(executable(dir, "folio"), ["--version"], { cwd: tmpdir(), encoding: "utf8" });
+  assert.deepEqual([version.status, version.stdout, version.stderr], [0, `folio ${JSON.parse(here("package.json")).version}\n`, ""]);
 });
 
-test("moth.exe --version and version say the release version away from its source", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe --version and version say the release version away from its source", { skip }, () => {
+  const { dir, exe } = folioExe();
   const away = join(dir, "version away");
   mkdirSync(away);
-  const moved = executable(away, "renamed-moth");
+  const moved = executable(away, "renamed-folio");
   copyFileSync(exe, moved);
   if (target === "linux") chmodSync(moved, 0o755);
-  const want = `moth ${JSON.parse(here("package.json")).version}\n`;
+  const want = `folio ${JSON.parse(here("package.json")).version}\n`;
   for (const manifest of [null, '{"version":"0.0.0"}', "not JSON"]) {
     if (manifest !== null) writeFileSync(join(away, "package.json"), manifest);
     for (const command of ["--version", "version"]) {
@@ -1270,13 +1270,13 @@ test("moth.exe --version and version say the release version away from its sourc
   }
 });
 
-test("moth.exe version commands reject extra arguments", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe version commands reject extra arguments", { skip }, () => {
+  const { dir, exe } = folioExe();
   for (const args of [["--version", "extra"], ["version", "extra"], ["version", "--allow-all"]]) {
     const said = spawnSync(exe, args, { cwd: dir, encoding: "utf8", input: "", timeout: 5_000 });
     assert.deepEqual([said.status, said.stdout], [2, ""], args.join(" "));
-    assert.match(said.stderr, /^usage: moth /);
-    assert.match(said.stderr, /moth --version \| moth version/);
+    assert.match(said.stderr, /^usage: folio /);
+    assert.match(said.stderr, /folio --version \| folio version/);
   }
 });
 
@@ -1296,15 +1296,15 @@ function resourceTypes(exe) {
   }
   return [];
 }
-test("moth build ships a program with an icon, its version, and files built into it", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio build ships a program with an icon, its version, and files built into it", { skip }, () => {
+  const { dir, exe } = folioExe();
   mkdirSync(join(dir, "data", "more"), { recursive: true });
   writeFileSync(join(dir, "data", "hello.txt"), "Hello from inside the program");
   writeFileSync(join(dir, "data", "more", "deep.txt"), "deeper");
   writeFileSync(join(dir, "logo.png"), readFileSync(new URL("./docs/mandelbrot.png", import.meta.url)));
-  writeFileSync(join(dir, "app.moth"), 'say read "data/hello.txt"\nsay read "data/more/deep.txt"\nsay length of read bytes "logo.png"\n'
+  writeFileSync(join(dir, "app.folio"), 'say read "data/hello.txt"\nsay read "data/more/deep.txt"\nsay length of read bytes "logo.png"\n'
     + 'try\n    say read "not built in.txt"\nif it fails with why\n    say why\nend\n');
-  const built = spawnSync(exe, ["build", "app.moth", "--include", "data", "--include", "./logo.png", "--icon", "logo.png", "--version", "2.5.1"],
+  const built = spawnSync(exe, ["build", "app.folio", "--include", "data", "--include", "./logo.png", "--icon", "logo.png", "--version", "2.5.1"],
     { cwd: dir, encoding: "utf8" });
   assert.equal(built.status, 0, built.stdout + built.stderr);
   const away = join(dir, "away");
@@ -1319,40 +1319,40 @@ test("moth build ships a program with an icon, its version, and files built into
     assert.deepEqual(resourceTypes(moved), [3, 14, 16]); // RT_ICON, RT_GROUP_ICON, RT_VERSION
     assert.ok(readFileSync(moved).includes(Buffer.from("2.5.1\0", "utf16le")));
   }
-  for (const [flag, value, said] of [["--icon", "app.moth", "the icon isn't an .ico or a .png file"],
+  for (const [flag, value, said] of [["--icon", "app.folio", "the icon isn't an .ico or a .png file"],
     ["--version", "1.x", "a version is up to four numbers with dots between, as 1.2.3, not '1.x'"],
     ["--include", "nowhere.txt", "there is no file called 'nowhere.txt'"]]) {
-    const wrong = spawnSync(exe, ["build", "app.moth", flag, value], { cwd: dir, encoding: "utf8" });
+    const wrong = spawnSync(exe, ["build", "app.folio", flag, value], { cwd: dir, encoding: "utf8" });
     assert.equal(wrong.status, 1, wrong.stdout + wrong.stderr);
     assert.ok(wrong.stderr.includes(said), wrong.stderr);
   }
 });
 
-test("a program moth.exe builds uses files, and shows a mistake in one as moth run did", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("a program folio.exe builds uses files, and shows a mistake in one as folio run did", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "uses");
   mkdirSync(sub);
-  writeFileSync(join(sub, "shapes.moth"), "to square with n\n    return n * n\nend\nto check with n\n    if n is less than 0\n        fail with \"below 0\"\n    end\n    return n\nend\n");
-  writeFileSync(join(sub, "main.moth"), 'use "shapes.moth" as shapes\nsay shapes\'s square(12)\nsay shapes\'s check(0 - 1)\n');
-  const built = spawnSync(exe, ["build", join("uses", "main.moth")], { cwd: dir, encoding: "utf8" });
+  writeFileSync(join(sub, "shapes.folio"), "to square with n\n    return n * n\nend\nto check with n\n    if n is less than 0\n        fail with \"below 0\"\n    end\n    return n\nend\n");
+  writeFileSync(join(sub, "main.folio"), 'use "shapes.folio" as shapes\nsay shapes\'s square(12)\nsay shapes\'s check(0 - 1)\n');
+  const built = spawnSync(exe, ["build", join("uses", "main.folio")], { cwd: dir, encoding: "utf8" });
   assert.equal(built.status, 0, built.stdout + built.stderr);
   const ran = spawnSync(executable(sub, "main"), [], { cwd: sub, encoding: "utf8" });
   assert.equal(ran.stdout, "144\n");
-  assert.equal(ran.stderr, "shapes.moth:6:9: below 0\n        fail with \"below 0\"\n        ^\n  in 'shapes's check', called from line 3\n");
+  assert.equal(ran.stderr, "shapes.folio:6:9: below 0\n        fail with \"below 0\"\n        ^\n  in 'shapes's check', called from line 3\n");
   assert.equal(ran.status, 1);
-  const missing = spawnSync(exe, ["build", "nowhere.moth"], { cwd: dir, encoding: "utf8" });
-  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "moth: there is no file called 'nowhere.moth'\n"]);
-  writeFileSync(join(sub, "broken.moth"), 'use "shapes.moth" as shapes\nsay shapes\'s square(1, 2\n');
-  const broken = spawnSync(exe, ["build", join("uses", "broken.moth")], { cwd: dir, encoding: "utf8" });
+  const missing = spawnSync(exe, ["build", "nowhere.folio"], { cwd: dir, encoding: "utf8" });
+  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "folio: there is no file called 'nowhere.folio'\n"]);
+  writeFileSync(join(sub, "broken.folio"), 'use "shapes.folio" as shapes\nsay shapes\'s square(1, 2\n');
+  const broken = spawnSync(exe, ["build", join("uses", "broken.folio")], { cwd: dir, encoding: "utf8" });
   assert.deepEqual([broken.status, broken.stdout], [1, ""]); // a mistake in the program: on the error output, and 1
-  assert.equal(broken.stderr, `${join("uses", "broken.moth")}:3:1: expected ')' but found the end of the code\n\n^\n`);
+  assert.equal(broken.stderr, `${join("uses", "broken.folio")}:3:1: expected ')' but found the end of the code\n\n^\n`);
 });
 
-// `run program` and `remove the file`: a program moth.exe builds starts another and waits for it, with the
+// `run program` and `remove the file`: a program folio.exe builds starts another and waits for it, with the
 // same input and output, and gives the number it ended with; and only if it was built with --allow-run.
-test("a program moth.exe builds starts another program, waits for it, and removes a file", { skip }, () => {
-  const { dir, exe } = mothExe();
-  writeFileSync(join(dir, "child.moth"), [
+test("a program folio.exe builds starts another program, waits for it, and removes a file", { skip }, () => {
+  const { dir, exe } = folioExe();
+  writeFileSync(join(dir, "child.folio"), [
     'say "child out"',
     'say "child err" to the error output',
     "for each a in arguments",
@@ -1362,7 +1362,7 @@ test("a program moth.exe builds starts another program, waits for it, and remove
     'say "child heard " answer',
     "stop the program with 7",
   ].join("\n"));
-  writeFileSync(join(dir, "parent.moth"), [
+  writeFileSync(join(dir, "parent.folio"), [
     'say "parent before"',
     `set child to "${target === "windows" ? "./child.exe" : "./child"}"`,
     'set code to run program child with (list of "one", "two words", "q\\"uote", "")',
@@ -1382,30 +1382,45 @@ test("a program moth.exe builds starts another program, waits for it, and remove
     "end",
     'set missing to run program "nowhere-at-all-here"',
   ].join("\n"));
-  assert.equal(spawnSync(exe, ["build", "child.moth"], { cwd: dir, encoding: "utf8" }).status, 0);
+  assert.equal(spawnSync(exe, ["build", "child.folio"], { cwd: dir, encoding: "utf8" }).status, 0);
   // without --allow-run it may not start one, and away from a terminal it isn't asked
-  const built = spawnSync(exe, ["build", "parent.moth", "--allow-read", "--allow-write"], { cwd: dir, encoding: "utf8" });
+  const built = spawnSync(exe, ["build", "parent.folio", "--allow-read", "--allow-write"], { cwd: dir, encoding: "utf8" });
   assert.equal(built.status, 0, built.stdout + built.stderr);
   const refused = spawnSync(executable(dir, "parent"), [], { cwd: dir, encoding: "utf8", input: "Sam\n" });
   assert.equal(refused.stdout, "parent before\n");
   assert.match(refused.stderr, /: can't run '\.\/child(\.exe)?': this program isn't allowed to start programs \(start it with --allow-run\)\n/);
   assert.equal(refused.status, 1);
   // with it, the child says what it says where this program's own words go, and ends with 7
-  const again = spawnSync(exe, ["build", "parent.moth", "--allow-read", "--allow-write", "--allow-run"], { cwd: dir, encoding: "utf8" });
+  const again = spawnSync(exe, ["build", "parent.folio", "--allow-read", "--allow-write", "--allow-run"], { cwd: dir, encoding: "utf8" });
   assert.equal(again.status, 0, again.stdout + again.stderr);
   const ran = spawnSync(executable(dir, "parent"), [], { cwd: dir, encoding: "utf8", input: "Sam\n" });
   assert.equal(ran.stdout, ["parent before", "child out", "[one]", "[two words]", 'q"uote'.replace(/^/, "[") + "]", "[]", "Name? Sam",
     "child heard Sam", "child ended with 7", "temporary", "there is no file called 'gone.txt'", "there is no file called 'gone.txt'", ""].join("\n"));
-  assert.equal(ran.stderr, `child err\nparent.moth:18:16: there is no program called 'nowhere-at-all-here'\nset missing to run program "nowhere-at-all-here"\n               ^\n`);
+  assert.equal(ran.stderr, `child err\nparent.folio:18:16: there is no program called 'nowhere-at-all-here'\nset missing to run program "nowhere-at-all-here"\n               ^\n`);
   assert.equal(ran.status, 1);
   assert.ok(!existsSync(join(dir, "gone.txt")));
 });
 
-// `moth run`: the program built into a file beside it, run with the arguments after it, ending with the
+// `folio run`: the program built into a file beside it, run with the arguments after it, ending with the
 // number it ended with, and the file gone again.
-test("moth.exe runs a program, passing its arguments, input, output and exit code through", { skip }, () => {
-  const { dir, exe } = mothExe();
-  writeFileSync(join(dir, "tool.moth"), [
+// Folio was Moth (DESIGN §150): a .moth program still runs, its `use "math.moth"` is folio's math.folio, a file
+// beside it it names .moth is found as .folio if it's been renamed, and folio test finds .test.moth files
+test("folio.exe runs a .moth program from before the rename, and finds its .test.moth files", { skip }, () => {
+  const { dir, exe } = folioExe();
+  const sub = join(dir, "from-moth");
+  mkdirSync(sub, { recursive: true });
+  writeFileSync(join(sub, "old.moth"), 'use "math.moth"\nuse "helper.moth" as helper\nsay sqrt(16) " " helper\'s greet("Ana")\n');
+  writeFileSync(join(sub, "helper.folio"), 'to greet with name\n    return "Hi, " + name\nend\n');
+  writeFileSync(join(sub, "old.test.moth"), 'use "helper.moth" as helper\nto test_greet\n    expect helper\'s greet("Bo") is "Hi, Bo"\nend\n');
+  const ran = spawnSync(exe, ["run", "old.moth", "--allow-read"], { cwd: sub, encoding: "utf8", timeout: 120000 });
+  assert.deepEqual([ran.stdout, ran.status], ["4 Hi, Ana\n", 0], ran.stderr);
+  const tested = spawnSync(exe, ["test", "--allow-read"], { cwd: sub, encoding: "utf8", timeout: 120000 });
+  assert.deepEqual([tested.stdout.split("\n").at(-2), tested.status], ["1 passed", 0], tested.stdout + tested.stderr);
+});
+
+test("folio.exe runs a program, passing its arguments, input, output and exit code through", { skip }, () => {
+  const { dir, exe } = folioExe();
+  writeFileSync(join(dir, "tool.folio"), [
     "for each a in arguments",
     '    say "[" a "]"',
     "end",
@@ -1416,125 +1431,125 @@ test("moth.exe runs a program, passing its arguments, input, output and exit cod
     "stop the program with 5",
   ].join("\n"));
   writeFileSync(join(dir, "notes.txt"), "noted");
-  writeFileSync(join(dir, "broken.moth"), "say 1 +\n");
+  writeFileSync(join(dir, "broken.folio"), "say 1 +\n");
   mkdirSync(join(dir, "deeper"), { recursive: true });
-  writeFileSync(join(dir, "deeper", "deep.moth"), 'say "deep"\n');
+  writeFileSync(join(dir, "deeper", "deep.folio"), 'say "deep"\n');
   const left = () => readdirSync(dir).filter((name) => /-run([.]exe)?$/.test(name));
-  const ran = spawnSync(exe, ["run", "--allow-read", "tool.moth", "one", "two words", "--allow-write"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
+  const ran = spawnSync(exe, ["run", "--allow-read", "tool.folio", "one", "two words", "--allow-write"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
   assert.deepEqual({ stdout: ran.stdout, stderr: ran.stderr, status: ran.status }, {
     stdout: "[one]\n[two words]\n[--allow-write]\nName? Sam\nheard Sam\nnoted\n", // what comes after the file is the program's own
     stderr: "to the error output\n",
     status: 5,
   });
   assert.deepEqual(left(), [], "the file it ran was left behind");
-  // without the flag the program may not read, as `moth build` builds the flags in
-  const unallowed = spawnSync(exe, ["run", "tool.moth"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
+  // without the flag the program may not read, as `folio build` builds the flags in
+  const unallowed = spawnSync(exe, ["run", "tool.folio"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
   assert.match(unallowed.stderr, /can't read 'notes\.txt': this program isn't allowed to read files/);
   assert.equal(unallowed.status, 1);
   assert.deepEqual(left(), []);
   // a mistake in the program, or no such file: the mistake on the error output, and 1
-  const broken = spawnSync(exe, ["run", "broken.moth"], { cwd: dir, encoding: "utf8" });
-  assert.deepEqual([broken.status, broken.stdout, broken.stderr], [1, "", "broken.moth:2:1: expected a value but found the end of the code\n\n^\n"]);
-  const missing = spawnSync(exe, ["run", "nowhere.moth"], { cwd: dir, encoding: "utf8" });
-  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "moth: there is no file called 'nowhere.moth'\n"]);
+  const broken = spawnSync(exe, ["run", "broken.folio"], { cwd: dir, encoding: "utf8" });
+  assert.deepEqual([broken.status, broken.stdout, broken.stderr], [1, "", "broken.folio:2:1: expected a value but found the end of the code\n\n^\n"]);
+  const missing = spawnSync(exe, ["run", "nowhere.folio"], { cwd: dir, encoding: "utf8" });
+  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "folio: there is no file called 'nowhere.folio'\n"]);
   // a file already where the program would go for a while is left as it is, and nothing runs
   writeFileSync(join(dir, "tool-run.exe"), "mine");
   writeFileSync(join(dir, "tool-run"), "mine");
-  const inTheWay = spawnSync(exe, ["run", "--allow-read", "tool.moth"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
+  const inTheWay = spawnSync(exe, ["run", "--allow-read", "tool.folio"], { cwd: dir, encoding: "utf8", input: "Sam\n" });
   const temp = target === "windows" ? "tool-run.exe" : "tool-run";
-  assert.deepEqual([inTheWay.status, inTheWay.stdout, inTheWay.stderr], [1, "", `moth: there's already a file called './${temp}', where the program would go while it runs: move it first\n`]);
+  assert.deepEqual([inTheWay.status, inTheWay.stdout, inTheWay.stderr], [1, "", `folio: there's already a file called './${temp}', where the program would go while it runs: move it first\n`]);
   assert.equal(readFileSync(join(dir, temp), "utf8"), "mine");
   rmSync(join(dir, "tool-run.exe"));
   rmSync(join(dir, "tool-run"));
   // a program in a folder of its own, and `run` with no file at all
-  const deep = spawnSync(exe, ["run", join("deeper", "deep.moth")], { cwd: dir, encoding: "utf8" });
+  const deep = spawnSync(exe, ["run", join("deeper", "deep.folio")], { cwd: dir, encoding: "utf8" });
   assert.deepEqual([deep.status, deep.stdout], [0, "deep\n"]);
-  const slashed = spawnSync(exe, ["run", "deeper/deep.moth"], { cwd: dir, encoding: "utf8" }); // a / on Windows too
+  const slashed = spawnSync(exe, ["run", "deeper/deep.folio"], { cwd: dir, encoding: "utf8" }); // a / on Windows too
   assert.deepEqual([slashed.status, slashed.stdout, slashed.stderr], [0, "deep\n", ""]);
   assert.deepEqual(readdirSync(join(dir, "deeper")).filter((name) => /-run([.]exe)?$/.test(name)), []);
-  for (const bad of [["run"], ["run", "--target", "linux", "tool.moth"], ["walk", "tool.moth"]]) {
+  for (const bad of [["run"], ["run", "--target", "linux", "tool.folio"], ["walk", "tool.folio"]]) {
     const said = spawnSync(exe, bad, { cwd: dir, encoding: "utf8" });
     assert.deepEqual([said.status, said.stdout], [2, ""], bad.join(" "));
-    assert.match(said.stderr, /^usage: moth /, bad.join(" "));
+    assert.match(said.stderr, /^usage: folio /, bad.join(" "));
   }
 });
 
-// moth new (DESIGN §140): a project of each kind in a folder of its own, whose tests pass as it's made, and whose
+// folio new (DESIGN §140): a project of each kind in a folder of its own, whose tests pass as it's made, and whose
 // program runs
-test("moth.exe new makes a project of each kind, whose tests pass and whose program runs", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe new makes a project of each kind, whose tests pass and whose program runs", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "new");
   mkdirSync(sub);
-  const moth = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
+  const folio = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
   for (const kind of ["app", "web", "package", "library"]) {
-    const made = moth(sub, "new", kind, `my_${kind}`);
+    const made = folio(sub, "new", kind, `my_${kind}`);
     assert.equal(made.status, 0, made.stderr);
     assert.match(made.stdout, new RegExp(`^made my_${kind}/, `));
     const folder = join(sub, `my_${kind}`);
-    for (const file of [`my_${kind}.moth`, `my_${kind}.test.moth`, "README.md", ".gitignore", join(".github", "workflows", "test.yml")]) {
+    for (const file of [`my_${kind}.folio`, `my_${kind}.test.folio`, "README.md", ".gitignore", join(".github", "workflows", "test.yml")]) {
       assert.ok(existsSync(join(folder, file)), `${kind}: ${file}`);
     }
-    const tested = moth(folder, "test");
+    const tested = folio(folder, "test");
     assert.equal(tested.status, 0, `${kind}: ${tested.stdout}${tested.stderr}`);
     assert.match(tested.stdout, /\d+ passed/);
   }
-  assert.equal(moth(join(sub, "my_app"), "run", "main.moth").stdout, "Hello, world!\n");
-  assert.equal(moth(sub, "new", "plain").status, 0); // an app, unless it says
-  assert.ok(existsSync(join(sub, "plain", "main.moth")));
-  const again = moth(sub, "new", "plain");
-  assert.deepEqual([again.status, again.stderr], [1, "moth: there's already something called plain here\n"]);
-  assert.equal(moth(sub, "new", "9lives").status, 1);
-  assert.equal(moth(sub, "new", "gadget", "thing").status, 2); // no such kind: how to use moth
+  assert.equal(folio(join(sub, "my_app"), "run", "main.folio").stdout, "Hello, world!\n");
+  assert.equal(folio(sub, "new", "plain").status, 0); // an app, unless it says
+  assert.ok(existsSync(join(sub, "plain", "main.folio")));
+  const again = folio(sub, "new", "plain");
+  assert.deepEqual([again.status, again.stderr], [1, "folio: there's already something called plain here\n"]);
+  assert.equal(folio(sub, "new", "9lives").status, 1);
+  assert.equal(folio(sub, "new", "gadget", "thing").status, 2); // no such kind: how to use folio
 });
 
-// moth explain (DESIGN §140): the first mistake moth check finds in a file, said as check says it, then what it
+// folio explain (DESIGN §140): the first mistake folio check finds in a file, said as check says it, then what it
 // means, why it happens and how to put it right; or the mistake a message is from
-test("moth.exe explains the first mistake moth check finds in a file, or the mistake a message is from", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe explains the first mistake folio check finds in a file, or the mistake a message is from", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "explain");
   mkdirSync(sub);
-  const moth = (...args) => spawnSync(exe, args, { cwd: sub, encoding: "utf8" });
-  writeFileSync(join(sub, "slip.moth"), "say totl\nset total to 1\nsay total\n");
-  const slip = moth("explain", "slip.moth");
+  const folio = (...args) => spawnSync(exe, args, { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "slip.folio"), "say totl\nset total to 1\nsay total\n");
+  const slip = folio("explain", "slip.folio");
   assert.equal(slip.status, 0);
-  assert.match(slip.stdout, /^slip\.moth:1:5: will fail: 'totl' has no value yet\. Did you mean 'total'\?\nsay totl\n {4}\^\n\nA name is used before anything gives it a value\.\n/);
+  assert.match(slip.stdout, /^slip\.folio:1:5: will fail: 'totl' has no value yet\. Did you mean 'total'\?\nsay totl\n {4}\^\n\nA name is used before anything gives it a value\.\n/);
   assert.match(slip.stdout, /This makes the mistake:\n\n {4}say total\n {4}set total to 5\n\nand this puts it right:\n\n {4}set total to 5\n {4}say total\n$/);
-  writeFileSync(join(sub, "symbol.moth"), "if x > 3\n    say x\nend\n");
-  assert.match(moth("explain", "symbol.moth").stdout, /error: I don't understand '>'[^]*A symbol Moth doesn't have\./);
-  assert.match(moth("explain", "can't", "divide", "by", "zero").stdout, /^\nA division by 0\.\n/);
-  assert.match(moth("explain", "line 4: there is no item 0, items are counted from 1").stdout, /An item number below 1\./);
-  const unknown = moth("explain", "something odd happened");
-  assert.deepEqual([unknown.status, unknown.stdout.startsWith("\nmoth has no more to say")], [1, true]);
-  writeFileSync(join(sub, "fine.moth"), 'say "fine"\n');
-  assert.equal(moth("explain", "fine.moth").status, 1);
+  writeFileSync(join(sub, "symbol.folio"), "if x > 3\n    say x\nend\n");
+  assert.match(folio("explain", "symbol.folio").stdout, /error: I don't understand '>'[^]*A symbol Folio doesn't have\./);
+  assert.match(folio("explain", "can't", "divide", "by", "zero").stdout, /^\nA division by 0\.\n/);
+  assert.match(folio("explain", "line 4: there is no item 0, items are counted from 1").stdout, /An item number below 1\./);
+  const unknown = folio("explain", "something odd happened");
+  assert.deepEqual([unknown.status, unknown.stdout.startsWith("\nfolio has no more to say")], [1, true]);
+  writeFileSync(join(sub, "fine.folio"), 'say "fine"\n');
+  assert.equal(folio("explain", "fine.folio").status, 1);
 });
 
-// moth explain's examples, put right, are Moth that reads; each is in moth.moth as a Moth text
-test("moth explain's examples put right are Moth that reads without a mistake", () => {
+// folio explain's examples, put right, are Folio that reads; each is in folio.folio as a Folio text
+test("folio explain's examples put right are Folio that reads without a mistake", () => {
   const literal = (text) => JSON.parse(text.replace(/\\\{/g, "{"));
   const quoted = '("(?:[^"\\\\]|\\\\.)*")';
-  const entries = [...here("moth.moth").matchAll(new RegExp(`add record with has cli_has, title ${quoted}, why ${quoted}, wrong ${quoted}, right ${quoted} to cli_known`, "g"))];
+  const entries = [...here("folio.folio").matchAll(new RegExp(`add record with has cli_has, title ${quoted}, why ${quoted}, wrong ${quoted}, right ${quoted} to cli_known`, "g"))];
   assert.ok(entries.length >= 30, `only ${entries.length}`);
   for (const [, title, , , right] of entries) {
     const code = literal(right);
-    if (code.startsWith("moth ")) continue; // a command to type, not a program; any other file it uses is there, empty
-    const errors = check(code, { files: (name) => (name === "math.moth" ? here("math.moth") : "") }).filter((p) => p.kind === "error");
+    if (code.startsWith("folio ")) continue; // a command to type, not a program; any other file it uses is there, empty
+    const errors = check(code, { files: (name) => (name === "math.folio" ? here("math.folio") : "") }).filter((p) => p.kind === "error");
     assert.deepEqual(errors, [], `${literal(title)}\n${code}`);
   }
 });
 
-// moth upgrade (DESIGN §140): a release from a place of its own (MOTH_RELEASES), laid out as GitHub's are, put in
-// place of the moth on PATH only once its SHA-256 is the one SHA256SUMS.txt says
-test("moth.exe upgrade puts a newer release in place of the moth on PATH, only once its sum checks out", { skip }, () => {
-  const { dir, exe } = mothExe();
+// folio upgrade (DESIGN §140): a release from a place of its own (FOLIO_RELEASES), laid out as GitHub's are, put in
+// place of the folio on PATH only once its SHA-256 is the one SHA256SUMS.txt says
+test("folio.exe upgrade puts a newer release in place of the folio on PATH, only once its sum checks out", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "upgrade");
   const bin = join(sub, "bin");
   const releases = join(sub, "releases");
   mkdirSync(bin, { recursive: true });
   mkdirSync(releases);
   const windows = process.platform === "win32";
-  const asset = windows ? "moth-windows.exe" : "moth-linux";
-  const installed = join(bin, windows ? "moth.exe" : "moth");
+  const asset = windows ? "folio-windows.exe" : "folio-linux";
+  const installed = join(bin, windows ? "folio.exe" : "folio");
   copyFileSync(exe, installed);
   const release = (tag, bytes, sum = createHash("sha256").update(bytes).digest("hex")) => {
     writeFileSync(join(releases, "latest.json"), JSON.stringify({ tag_name: tag }));
@@ -1542,35 +1557,35 @@ test("moth.exe upgrade puts a newer release in place of the moth on PATH, only o
     writeFileSync(join(releases, "SHA256SUMS.txt"), `${sum}  ${asset}\n`);
   };
   const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === "PATH") ?? "PATH";
-  const env = { ...process.env, MOTH_RELEASES: releases, [pathKey]: `${bin}${windows ? ";" : ":"}${process.env[pathKey]}` };
+  const env = { ...process.env, FOLIO_RELEASES: releases, [pathKey]: `${bin}${windows ? ";" : ":"}${process.env[pathKey]}` };
   const upgrade = (...args) => spawnSync(installed, ["upgrade", ...args], { cwd: sub, encoding: "utf8", env });
   const version = JSON.parse(here("package.json")).version;
   const same = () => readFileSync(installed).equals(readFileSync(exe));
 
-  release("v1.0.0", "an old moth");
-  assert.deepEqual([upgrade().stdout, upgrade("--check").stdout], [`moth ${version} is the latest\n`, `moth ${version} is the latest\n`]);
-  release("v99.0.0", "a moth changed on the way", "0".repeat(64));
+  release("v1.0.0", "an old folio");
+  assert.deepEqual([upgrade().stdout, upgrade("--check").stdout], [`folio ${version} is the latest\n`, `folio ${version} is the latest\n`]);
+  release("v99.0.0", "a folio changed on the way", "0".repeat(64));
   const tampered = upgrade();
   assert.equal(tampered.status, 1);
-  assert.match(tampered.stderr, /isn't what SHA256SUMS\.txt says it is, so moth is as it was/);
+  assert.match(tampered.stderr, /isn't what SHA256SUMS\.txt says it is, so folio is as it was/);
   assert.ok(same());
-  release("v99.0.0", "the new moth");
-  assert.equal(upgrade("--check").stdout, `moth 99.0.0 is out (this is ${version}): moth upgrade gets it\n`);
+  release("v99.0.0", "the new folio");
+  assert.equal(upgrade("--check").stdout, `folio 99.0.0 is out (this is ${version}): folio upgrade gets it\n`);
   assert.ok(same());
   const done = upgrade();
   assert.deepEqual([done.status, done.stderr], [0, ""]);
-  assert.match(done.stdout, new RegExp(`^moth ${version.replace(/\./g, "\\.")} -> 99\\.0\\.0, at .*${windows ? "moth\\.exe" : "moth"}\\n$`));
-  assert.equal(readFileSync(installed, "utf8"), "the new moth");
+  assert.match(done.stdout, new RegExp(`^folio ${version.replace(/\./g, "\\.")} -> 99\\.0\\.0, at .*${windows ? "folio\\.exe" : "folio"}\\n$`));
+  assert.equal(readFileSync(installed, "utf8"), "the new folio");
 });
 
-// moth doc (DESIGN §140): a page for each file from its comments, and an index for more than one
-test("moth.exe doc makes a page of HTML for each file from its comments, and an index for more than one", { skip }, () => {
-  const { dir, exe } = mothExe();
+// folio doc (DESIGN §140): a page for each file from its comments, and an index for more than one
+test("folio.exe doc makes a page of HTML for each file from its comments, and an index for more than one", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "doc");
   mkdirSync(sub);
-  writeFileSync(join(sub, "shapes.moth"), "# Shapes & sizes: areas of <things>.\n#\n#   say area(2, 3)\n\n# the area of a rectangle,\n# its width times its height\nto area with width, height\n    return width * height\nend\n\nto untold\n    return 1\nend\n");
-  writeFileSync(join(sub, "more.moth"), "# More of them.\n\nkind square with side\n    to area with self\n        return side * side\n    end\nend\n");
-  const made = spawnSync(exe, ["doc", "shapes.moth", "more.moth", "--into", "pages"], { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "shapes.folio"), "# Shapes & sizes: areas of <things>.\n#\n#   say area(2, 3)\n\n# the area of a rectangle,\n# its width times its height\nto area with width, height\n    return width * height\nend\n\nto untold\n    return 1\nend\n");
+  writeFileSync(join(sub, "more.folio"), "# More of them.\n\nkind square with side\n    to area with self\n        return side * side\n    end\nend\n");
+  const made = spawnSync(exe, ["doc", "shapes.folio", "more.folio", "--into", "pages"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([made.status, made.stdout, made.stderr], [0, "wrote pages/shapes.html\nwrote pages/more.html\nwrote pages/index.html\n", ""]);
   const page = readFileSync(join(sub, "pages", "shapes.html"), "utf8");
   assert.match(page, /^<!doctype html>\n/);
@@ -1579,35 +1594,35 @@ test("moth.exe doc makes a page of HTML for each file from its comments, and an 
   assert.match(page, /<section id="untold">\n<h2><code>untold<\/code><\/h2>\n<pre class="called"><code>to untold<\/code><\/pre>\n<\/section>/);
   assert.match(readFileSync(join(sub, "pages", "more.html"), "utf8"), /<pre class="called"><code>kind square with side<\/code><\/pre>/);
   assert.match(readFileSync(join(sub, "pages", "index.html"), "utf8"), /<li><a href="shapes\.html"><code>shapes<\/code><\/a> Shapes &amp; sizes: areas of &lt;things&gt;\.<\/li>/);
-  assert.equal(spawnSync(exe, ["doc", "shapes.moth"], { cwd: sub, encoding: "utf8" }).stdout, "wrote doc/shapes.html\n");
+  assert.equal(spawnSync(exe, ["doc", "shapes.folio"], { cwd: sub, encoding: "utf8" }).stdout, "wrote doc/shapes.html\n");
 });
 
-// moth bench (DESIGN §140): each bench_ function's time a call, from five samples of as many calls as take 50 ms
-test("moth.exe bench times each bench_ function, as the mean of five samples, with their spread", { skip }, () => {
-  const { dir, exe } = mothExe();
+// folio bench (DESIGN §140): each bench_ function's time a call, from five samples of as many calls as take 50 ms
+test("folio.exe bench times each bench_ function, as the mean of five samples, with their spread", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "bench");
   mkdirSync(sub);
-  writeFileSync(join(sub, "fast.bench.moth"), "set numbers to list of 5, 3, 8, 1\n\nto bench_add\n    set s to 0\n    for each n in numbers\n        add n to s\n    end\nend\n\nto bench_order\n    set put to numbers in order\nend\n");
+  writeFileSync(join(sub, "fast.bench.folio"), "set numbers to list of 5, 3, 8, 1\n\nto bench_add\n    set s to 0\n    for each n in numbers\n        add n to s\n    end\nend\n\nto bench_order\n    set put to numbers in order\nend\n");
   const ran = spawnSync(exe, ["bench"], { cwd: sub, encoding: "utf8" });
   assert.deepEqual([ran.status, ran.stderr], [0, ""]);
   const line = (name) => `${name} +[\\d.]+ (ns|µs|ms|s) ± \\d+%  \\(5 samples of \\d+ calls, \\d+ a second\\)\\n`;
-  assert.match(ran.stdout, new RegExp(`^fast\\.bench\\.moth\\n${line("bench_add  ")}${line("bench_order")}$`));
-  writeFileSync(join(sub, "none.moth"), "say 1\n");
-  const none = spawnSync(exe, ["bench", "none.moth"], { cwd: sub, encoding: "utf8" });
-  assert.deepEqual([none.status, none.stderr], [1, "moth: none.moth has no bench_ functions to time\n"]);
+  assert.match(ran.stdout, new RegExp(`^fast\\.bench\\.folio\\n${line("bench_add  ")}${line("bench_order")}$`));
+  writeFileSync(join(sub, "none.folio"), "say 1\n");
+  const none = spawnSync(exe, ["bench", "none.folio"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([none.status, none.stderr], [1, "folio: none.folio has no bench_ functions to time\n"]);
   const empty = join(sub, "empty");
   mkdirSync(empty);
   const nothing = spawnSync(exe, ["bench"], { cwd: empty, encoding: "utf8" });
-  assert.deepEqual([nothing.status, nothing.stderr], [1, "moth: no benchmarks found: name a file, or put bench_ functions in files ending in .bench.moth\n"]);
+  assert.deepEqual([nothing.status, nothing.stderr], [1, "folio: no benchmarks found: name a file, or put bench_ functions in files ending in .bench.folio\n"]);
 });
 
-// moth watch (DESIGN §140): a command, run again each time a .moth file changes, until it's stopped
-test("moth.exe watch runs a command again each time a .moth file here changes", { skip }, async () => {
-  const { dir, exe } = mothExe();
+// folio watch (DESIGN §140): a command, run again each time a .folio file changes, until it's stopped
+test("folio.exe watch runs a command again each time a .folio file here changes", { skip }, async () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "watch");
   mkdirSync(sub);
-  writeFileSync(join(sub, "w.moth"), 'say "one"\n');
-  const child = spawn(exe, ["watch", "run", "w.moth"], { cwd: sub });
+  writeFileSync(join(sub, "w.folio"), 'say "one"\n');
+  const child = spawn(exe, ["watch", "run", "w.folio"], { cwd: sub });
   let out = "";
   let said = "";
   child.stdout.on("data", (d) => (out += d));
@@ -1620,49 +1635,49 @@ test("moth.exe watch runs a command again each time a .moth file here changes", 
   };
   try {
     await seen("one\n");
-    writeFileSync(join(sub, "w.moth"), 'say "two"\n');
+    writeFileSync(join(sub, "w.folio"), 'say "two"\n');
     await seen("two\n");
   } finally {
     child.kill();
   }
   assert.equal(out, "one\ntwo\n");
-  assert.match(said, /^moth watch: that ended with 0; it runs again when a \.moth file here changes \(Ctrl\+C stops\)\n/);
+  assert.match(said, /^folio watch: that ended with 0; it runs again when a \.folio file here changes \(Ctrl\+C stops\)\n/);
 });
 
-// moth publish (DESIGN §140): the package here, checked, as the index would have it; --dry-run says what it would add
-test("moth.exe publish finds the package here, checks it, and says what it would add to the index", { skip }, () => {
-  const { dir, exe } = mothExe();
+// folio publish (DESIGN §140): the package here, checked, as the index would have it; --dry-run says what it would add
+test("folio.exe publish finds the package here, checks it, and says what it would add to the index", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "publish");
   mkdirSync(sub);
-  const moth = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
-  assert.equal(moth(sub, "new", "package", "greeter").status, 0);
+  const folio = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
+  assert.equal(folio(sub, "new", "package", "greeter").status, 0);
   const folder = join(sub, "greeter");
-  const git = (...args) => spawnSync("git", ["-c", "user.name=Moth", "-c", "user.email=moth@example.com", ...args], { cwd: folder, encoding: "utf8" });
+  const git = (...args) => spawnSync("git", ["-c", "user.name=Folio", "-c", "user.email=folio@example.com", ...args], { cwd: folder, encoding: "utf8" });
   git("init", "-q");
   git("add", "-A");
   git("commit", "-qm", "the package");
   git("remote", "add", "origin", join(sub, "elsewhere", "greeter"));
   const index = (packages) => writeFileSync(join(sub, "index.json"), `${JSON.stringify({ packages }, null, 2)}\n`);
-  index({ cron: { repository: "github.com/samyyy2423/moth-cron", about: "Cron schedules" } });
-  const dry = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Says hello, loudly");
+  index({ cron: { repository: "github.com/samyyy2423/folio-cron", about: "Cron schedules" } });
+  const dry = folio(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Says hello, loudly");
   assert.equal(dry.status, 0, dry.stderr);
-  assert.match(dry.stdout, /^moth publish: its tests first\n[^]*2 passed\nmoth publish would add to the index:\n {2}"greeter": \{"repository":".*greeter","about":"Says hello, loudly"\}\n$/);
-  const long = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "x".repeat(101));
+  assert.match(dry.stdout, /^folio publish: its tests first\n[^]*2 passed\nfolio publish would add to the index:\n {2}"greeter": \{"repository":".*greeter","about":"Says hello, loudly"\}\n$/);
+  const long = folio(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "x".repeat(101));
   assert.equal(long.status, 1);
   assert.match(long.stderr, /needs a line about greeter, of at most 100 characters/);
   index({ greeter: { repository: "github.com/someone/greeter", about: "Another" } });
-  const taken = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"));
+  const taken = folio(folder, "publish", "--dry-run", "--index", join(sub, "index.json"));
   assert.equal(taken.status, 1);
   assert.match(taken.stderr, /the index has a package called greeter already, from github\.com\/someone\/greeter: choose another name/);
-  writeFileSync(join(folder, "greeter.test.moth"), 'use "greeter.moth" as lib\n\nto test_wrong\n    expect lib\'s shout("hi") is "hi"\nend\n');
-  const failing = moth(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Hi");
+  writeFileSync(join(folder, "greeter.test.folio"), 'use "greeter.folio" as lib\n\nto test_wrong\n    expect lib\'s shout("hi") is "hi"\nend\n');
+  const failing = folio(folder, "publish", "--dry-run", "--index", join(sub, "index.json"), "--about", "Hi");
   assert.equal(failing.status, 1);
   assert.match(failing.stderr, /greeter's tests don't pass, so it isn't published/);
 });
 
-// the index moth publish writes is laid out as the index's own repository lays it out, as JSON.stringify does
-test("moth publish writes the index as its repository has it: two spaces a level, the names in order", () => {
-  const source = here("moth.moth");
+// the index folio publish writes is laid out as the index's own repository lays it out, as JSON.stringify does
+test("folio publish writes the index as its repository has it: two spaces a level, the names in order", () => {
+  const source = here("folio.folio");
   const start = source.indexOf("to cli_index_text with cli_packages\n");
   const code = source.slice(start, source.indexOf("\nend\n", start) + 5);
   const packages = { zed: { repository: "github.com/a/zed", about: 'Quotes " and \\ and é' }, alpha: { repository: "github.com/a/alpha", about: "First" } };
@@ -1674,17 +1689,17 @@ test("moth publish writes the index as its repository has it: two spaces a level
   assert.equal(`${said.join("\n")}\n`, `${JSON.stringify({ packages: sorted }, null, 2)}\n\n`);
 });
 
-// mcp.moth (DESIGN §141): a server moth builds answers an AI app over its input and output, a message a line
-test("an MCP server moth builds answers an app's messages over its input and output", { skip }, () => {
-  const { dir, exe } = mothExe();
+// mcp.folio (DESIGN §141): a server folio builds answers an AI app over its input and output, a message a line
+test("an MCP server folio builds answers an app's messages over its input and output", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "mcp");
   mkdirSync(sub);
-  writeFileSync(join(sub, "calc.moth"), [
-    'use "mcp.moth" as mcp', "", "to add_up with given", '    return item "a" of given + item "b" of given', "end", "",
+  writeFileSync(join(sub, "calc.folio"), [
+    'use "mcp.folio" as mcp', "", "to add_up with given", '    return item "a" of given + item "b" of given', "end", "",
     'set calc to mcp\'s server("calculator", "1.0.0")', 'set needs to dictionary where "a" is "number", "b" is "number"',
     'mcp\'s tool(calc, "add", "Adds two numbers", needs, add_up)', "mcp's serve(calc)", "",
   ].join("\n"));
-  const built = spawnSync(exe, ["build", "calc.moth"], { cwd: sub, encoding: "utf8" });
+  const built = spawnSync(exe, ["build", "calc.folio"], { cwd: sub, encoding: "utf8" });
   assert.equal(built.status, 0, built.stderr);
   const messages = [
     { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } },
@@ -1703,17 +1718,17 @@ test("an MCP server moth builds answers an app's messages over its input and out
   ]);
 });
 
-// `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
+// `folio tidy`: the one way Folio writes code, which is what format() in folio.js writes. Every Folio file
 // here is tidy already, so --check must say so; then messy and randomly broken programs, each tidied to
 // exactly the bytes format() makes of it.
-test("moth.exe tidies code to the same bytes format() does, and --check only says which files need it", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe tidies code to the same bytes format() does, and --check only says which files need it", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "tidying");
   mkdirSync(sub, { recursive: true });
   const tidy = (names) => spawnSync(exe, ["tidy", ...names], { cwd: sub, encoding: "utf8", timeout: 120_000 });
-  const mine = new Map(); // what every Moth file here holds, by the name it gets in the folder
+  const mine = new Map(); // what every Folio file here holds, by the name it gets in the folder
   for (const folder of [".", "tools", "apps"]) {
-    for (const file of readdirSync(new URL(`./${folder}/`, import.meta.url)).filter((f) => f.endsWith(".moth"))) {
+    for (const file of readdirSync(new URL(`./${folder}/`, import.meta.url)).filter((f) => f.endsWith(".folio"))) {
       mine.set(file, readFileSync(new URL(`./${folder}/${file}`, import.meta.url), "utf8"));
     }
   }
@@ -1724,7 +1739,7 @@ test("moth.exe tidies code to the same bytes format() does, and --check only say
   assert.equal(checked.status, 0);
   for (const [name, text] of mine) assert.equal(readFileSync(join(sub, name), "utf8"), text, `${name} was changed by --check`);
 
-  // the messy example from moth.test.js, and programs broken on purpose: byte for byte what format() makes
+  // the messy example from folio.test.js, and programs broken on purpose: byte for byte what format() makes
   const messy = ["to   area with w,h", "return w*h", "  end", "", "", "", "if area( 2,3 ) is 6   # check", '        say "six"',
     "# a note before else", "else", 'say  "no"', "end", "set l to list of 1 ,2,", " 3", "say - 5", "try", "say 1/0",
     "if it fails with why", " say why", "end", "set r to record with label -1, x (2 + 3)", "move forward (1 + 2)", "", ""].join("\n");
@@ -1739,10 +1754,10 @@ test("moth.exe tidies code to the same bytes format() does, and --check only say
     try {
       want = format(source);
     } catch (err) {
-      if (err instanceof MothError) return; // code that can't be read: below
+      if (err instanceof FolioError) return; // code that can't be read: below
       throw err;
     }
-    const name = `t${i}.moth`;
+    const name = `t${i}.folio`;
     writeFileSync(join(sub, name), source);
     names.push(name);
     wanted.push(want);
@@ -1753,22 +1768,22 @@ test("moth.exe tidies code to the same bytes format() does, and --check only say
   names.forEach((name, i) => assert.equal(readFileSync(join(sub, name), "utf8"), wanted[i], name));
   assert.equal(tidy(names).stdout, names.map((name) => `${name} is tidy\n`).join("")); // and tidy the second time
   // code with a mistake in it can't be tidied: the mistake, where it is, and 1
-  writeFileSync(join(sub, "wrong.moth"), "if yes\n    say 1\n");
-  const wrong = tidy(["wrong.moth"]);
-  assert.deepEqual([wrong.status, wrong.stdout, wrong.stderr], [1, "", "wrong.moth:3:1: 'if' from line 1 is missing its 'end'\n\n^\n"]);
-  assert.equal(readFileSync(join(sub, "wrong.moth"), "utf8"), "if yes\n    say 1\n");
-  const missing = tidy(["nowhere.moth"]);
-  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "moth: there is no file called 'nowhere.moth'\n"]);
+  writeFileSync(join(sub, "wrong.folio"), "if yes\n    say 1\n");
+  const wrong = tidy(["wrong.folio"]);
+  assert.deepEqual([wrong.status, wrong.stdout, wrong.stderr], [1, "", "wrong.folio:3:1: 'if' from line 1 is missing its 'end'\n\n^\n"]);
+  assert.equal(readFileSync(join(sub, "wrong.folio"), "utf8"), "if yes\n    say 1\n");
+  const missing = tidy(["nowhere.folio"]);
+  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "folio: there is no file called 'nowhere.folio'\n"]);
   for (const bad of [["tidy"], ["tidy", "--check"]]) {
     const said = spawnSync(exe, bad, { cwd: sub, encoding: "utf8" });
     assert.deepEqual([said.status, said.stdout], [2, ""], bad.join(" "));
   }
 });
 
-// `moth check`: the problems checker.js finds, in its own words and its own order (DESIGN §107), types and
-// all: it works them out as checker.js does, and looks up what each rule does in checker-rules.moth. What it
+// `folio check`: the problems checker.js finds, in its own words and its own order (DESIGN §107), types and
+// all: it works them out as checker.js does, and looks up what each rule does in checker-rules.folio. What it
 // leaves out are the problems checker.js marks `valued`, which rest on a value written out, not on types.
-const checkedBy = (file, source, files = {}) => { // what `moth check file` must say
+const checkedBy = (file, source, files = {}) => { // what `folio check file` must say
   const problems = check(source, { files: (name) => files[name] }).filter((p) => !p.valued);
   if (!problems.length) return `${file}: no problems found\n`;
   return problems.map((p) => {
@@ -1776,55 +1791,55 @@ const checkedBy = (file, source, files = {}) => { // what `moth check file` must
     return `${p.file ?? file}:${p.line}:${p.col}: ${kind}: ${p.message}\n${excerpt(p.file ? files[p.file] : source, p)}\n`;
   }).join("");
 };
-const wrongIn = (said) => (/: (will fail|doesn't fit): /.test(said) ? 1 : 0); // what moth check ends with
+const wrongIn = (said) => (/: (will fail|doesn't fit): /.test(said) ? 1 : 0); // what folio check ends with
 
 
-test("moth.exe finds the problems the checker finds without running the program", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe finds the problems the checker finds without running the program", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "checking");
   mkdirSync(sub, { recursive: true });
   const checking = (name) => spawnSync(exe, ["check", name], { cwd: sub, encoding: "utf8", timeout: 60_000 });
   const lib = "set lib_x to 1\nto twice with n\n    return n * 2\nend\n";
   const cases = [
-    ["clean.moth", 'set total to 0\nfor each i from 1 to 10\n    add i to total\nend\nsay total\n', 0],
-    ["names.moth", 'say "Total: " totl\nset total to 1\nsay totl\n', 1],
-    ["after.moth", "to f\n    return 1\n    say 2\nend\nf()\nstop the program\nsay 3\n", 0],
-    ["unused.moth", 'set kept to 1\nto helper\n    set inside to 2\nend\nsay kept\n', 0],
-    ["calls.moth", 'say helper(2)\nto helper with x\n    return x\nend\nsay helpr(2)\n', 1],
-    ["caught.moth", "try\n    say nowhere\nif it fails with why\n    say why\nend\nsay yes or alsonowhere\n", 0],
-    ["tests.moth", "to test_one\n    expect 1 is 1\nend\n", 0],
-    ["module.moth", `use "lib.moth" as lib\nsay lib's twice(2)\nsay lib's thrice(2)\n`, 1],
-    ["plain.moth", 'use "lib.moth"\nsay twice(lib_x)\nsay thrice(1)\n', 1],
-    ["sums.moth", 'set name to "Moth"\nsay name * 2\nsay 1 / 0\nsay length of 5\nrepeat "x" times\nend\nset l to list of 1\nsay item 0 of l\n', 1],
-    // what each ends with is the checker's: TYPED[4] and TYPED[6] are right as they are (see moth.test.js)
-    ...TYPED.map((source, i) => [`typed${i}.moth`, source, wrongIn(checkedBy(`typed${i}.moth`, source))]),
+    ["clean.folio", 'set total to 0\nfor each i from 1 to 10\n    add i to total\nend\nsay total\n', 0],
+    ["names.folio", 'say "Total: " totl\nset total to 1\nsay totl\n', 1],
+    ["after.folio", "to f\n    return 1\n    say 2\nend\nf()\nstop the program\nsay 3\n", 0],
+    ["unused.folio", 'set kept to 1\nto helper\n    set inside to 2\nend\nsay kept\n', 0],
+    ["calls.folio", 'say helper(2)\nto helper with x\n    return x\nend\nsay helpr(2)\n', 1],
+    ["caught.folio", "try\n    say nowhere\nif it fails with why\n    say why\nend\nsay yes or alsonowhere\n", 0],
+    ["tests.folio", "to test_one\n    expect 1 is 1\nend\n", 0],
+    ["module.folio", `use "lib.folio" as lib\nsay lib's twice(2)\nsay lib's thrice(2)\n`, 1],
+    ["plain.folio", 'use "lib.folio"\nsay twice(lib_x)\nsay thrice(1)\n', 1],
+    ["sums.folio", 'set name to "Folio"\nsay name * 2\nsay 1 / 0\nsay length of 5\nrepeat "x" times\nend\nset l to list of 1\nsay item 0 of l\n', 1],
+    // what each ends with is the checker's: TYPED[4] and TYPED[6] are right as they are (see folio.test.js)
+    ...TYPED.map((source, i) => [`typed${i}.folio`, source, wrongIn(checkedBy(`typed${i}.folio`, source))]),
   ];
-  writeFileSync(join(sub, "lib.moth"), lib);
+  writeFileSync(join(sub, "lib.folio"), lib);
   for (const [name, source] of cases) writeFileSync(join(sub, name), source);
   for (const [name, source, status] of cases) {
     const said = checking(name);
-    assert.equal(said.stdout, checkedBy(name, source, { "lib.moth": lib }), name);
+    assert.equal(said.stdout, checkedBy(name, source, { "lib.folio": lib }), name);
     assert.deepEqual([said.status, said.stderr], [status, ""], name);
   }
   // what rests on a value written out is left to the playground's checker: dividing by zero, item 0, repeat "x" times
-  assert.equal(check(cases.find(([name]) => name === "sums.moth")[1]).filter((p) => p.valued).length, 3);
+  assert.equal(check(cases.find(([name]) => name === "sums.folio")[1]).filter((p) => p.valued).length, 3);
   // code that can't be read at all is one problem of its own, and a file that isn't there says so
-  writeFileSync(join(sub, "wrong.moth"), "say 1 +\n");
-  const wrong = checking("wrong.moth");
-  assert.deepEqual([wrong.status, wrong.stdout, wrong.stderr], [1, "wrong.moth:2:1: error: expected a value but found the end of the code\n\n^\n", ""]);
-  const missing = checking("nowhere.moth");
-  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "moth: there is no file called 'nowhere.moth'\n"]);
+  writeFileSync(join(sub, "wrong.folio"), "say 1 +\n");
+  const wrong = checking("wrong.folio");
+  assert.deepEqual([wrong.status, wrong.stdout, wrong.stderr], [1, "wrong.folio:2:1: error: expected a value but found the end of the code\n\n^\n", ""]);
+  const missing = checking("nowhere.folio");
+  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "", "folio: there is no file called 'nowhere.folio'\n"]);
   // and the same words as the checker on working programs, and on programs broken on purpose
   let checked = 0;
   const programs = [...Object.values(examples), ...PROGRAMS.map(([source]) => source), ...brokenPrograms(3, 120)];
   programs.forEach((source, i) => {
-    const name = `b${i}.moth`;
+    const name = `b${i}.folio`;
     writeFileSync(join(sub, name), source);
     let want;
     try {
       want = checkedBy(name, source);
     } catch (err) {
-      if (err instanceof MothError) return;
+      if (err instanceof FolioError) return;
       throw err;
     }
     if (/: error: /.test(want)) return; // code that can't be read: its mistake, checked above
@@ -1836,7 +1851,7 @@ test("moth.exe finds the problems the checker finds without running the program"
   assert.ok(checked > 100, `only ${checked} were checked`);
 });
 
-// `moth lsp` (DESIGN §108), spoken to as an editor speaks to it: each message written as the Language Server
+// `folio lsp` (DESIGN §108), spoken to as an editor speaks to it: each message written as the Language Server
 // Protocol frames it, and each it says read so, its Content-Length the bytes after the empty line exactly.
 // What isn't framed so goes in `framing`, which must stay empty.
 function lspSession(exe, cwd) {
@@ -1884,7 +1899,7 @@ function lspSession(exe, cwd) {
   session.next = (fits) => new Promise((done, fail) => {
     const k = session.said.findIndex(fits);
     if (k >= 0) return done(session.said.splice(k, 1)[0]);
-    const timer = setTimeout(() => fail(new Error(`moth lsp said nothing that fits: ${JSON.stringify(session.said)} ${session.stderr}`)), 60_000);
+    const timer = setTimeout(() => fail(new Error(`folio lsp said nothing that fits: ${JSON.stringify(session.said)} ${session.stderr}`)), 60_000);
     waiters.push({ fits, done: (m) => (clearTimeout(timer), done(m)) });
   });
   let id = 0;
@@ -1899,21 +1914,21 @@ function lspSession(exe, cwd) {
   return session;
 }
 
-test("moth lsp answers an editor: problems as it's typed, tidying, the outline, definitions across files, hovers and completion", { skip }, async () => {
-  const { dir, exe } = mothExe();
+test("folio lsp answers an editor: problems as it's typed, tidying, the outline, definitions across files, hovers and completion", { skip }, async () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "lsp work"); // a space, which a file's address writes as %20
   mkdirSync(sub, { recursive: true });
   const lib = "# twice the number, for café prices\nto twice with n as a number gives a number\n    return n * 2\nend\n";
   const shapes = "# Shapes: the areas of squares and the rest.\n\n# a square's area\nto square with side\n    return side * side\nend\n";
-  writeFileSync(join(sub, "lib.moth"), lib);
-  writeFileSync(join(sub, "shapes.moth"), shapes);
+  writeFileSync(join(sub, "lib.folio"), lib);
+  writeFileSync(join(sub, "shapes.folio"), shapes);
   // A file's address as VS Code writes it. ~ is unreserved, so file:///a~b and file:///a%7Eb are the same address
-  // (RFC 3986, 6.2.2.2); VS Code and moth lsp write ~ and Node's pathToFileURL %7E, which Windows's short names
+  // (RFC 3986, 6.2.2.2); VS Code and folio lsp write ~ and Node's pathToFileURL %7E, which Windows's short names
   // such as C:\Users\SAMUP_~1 bring into the temporary folder's path.
   const uri = (name) => pathToFileURL(join(sub, name)).href.replace(/%7E/gi, "~");
   const main = [
-    'use "lib.moth"', // 0
-    'use "shapes.moth" as shapes',
+    'use "lib.folio"', // 0
+    'use "shapes.folio" as shapes',
     "",
     "# the area of a box",
     "to area with w as a number, h as a number gives a number",
@@ -1933,29 +1948,29 @@ test("moth lsp answers an editor: problems as it's typed, tidying, the outline, 
     "set unused to 1",
     "",
   ].join("\n");
-  // what moth check, and checker.js, find in a document, as the protocol has a problem: its line and column
-  // from 0, 1 for what makes moth check end with 1 and 2 for the rest, and the checker's words
+  // what folio check, and checker.js, find in a document, as the protocol has a problem: its line and column
+  // from 0, 1 for what makes folio check end with 1 and 2 for the rest, and the checker's words
   const want = (source, files) => check(source, { files: (name) => files[name] }).filter((p) => !p.valued && !p.file)
     .map((p) => [p.line - 1, p.col - 1, ["fails", "error", "doesn't fit"].includes(p.kind) ? 1 : 2, p.message]);
   const got = (found) => found.map((d) => [d.range.start.line, d.range.start.character, d.severity, d.message]);
-  const at = (line, character, name = "main.moth") => ({ textDocument: { uri: uri(name) }, position: { line, character } });
+  const at = (line, character, name = "main.folio") => ({ textDocument: { uri: uri(name) }, position: { line, character } });
   const s = lspSession(exe, sub);
   try {
     const hello = await s.ask("initialize", { processId: null, rootUri: pathToFileURL(sub).href, capabilities: {} });
     assert.deepEqual(hello, { capabilities: { textDocumentSync: { openClose: true, change: 1, save: true }, documentFormattingProvider: true,
-      documentSymbolProvider: true, definitionProvider: true, hoverProvider: true, completionProvider: { triggerCharacters: ["'"] } }, serverInfo: { name: "moth" } });
+      documentSymbolProvider: true, definitionProvider: true, hoverProvider: true, completionProvider: { triggerCharacters: ["'"] } }, serverInfo: { name: "folio" } });
     s.tell("initialized", {});
 
-    // the problems as a document opens: moth check's, the types' among them, with what's never used faded
-    s.tell("textDocument/didOpen", { textDocument: { uri: uri("main.moth"), languageId: "moth", version: 1, text: main } });
-    const opened = await s.problems(uri("main.moth"));
-    assert.deepEqual(got(opened), want(main, { "lib.moth": lib, "shapes.moth": shapes }));
+    // the problems as a document opens: folio check's, the types' among them, with what's never used faded
+    s.tell("textDocument/didOpen", { textDocument: { uri: uri("main.folio"), languageId: "folio", version: 1, text: main } });
+    const opened = await s.problems(uri("main.folio"));
+    assert.deepEqual(got(opened), want(main, { "lib.folio": lib, "shapes.folio": shapes }));
     assert.ok(opened.some((d) => d.message === "'area' needs w to be a number, not text" && d.severity === 1), JSON.stringify(opened));
     assert.deepEqual(opened.find((d) => d.message === "'unused' is set but never used").tags, [1]);
 
     // the outline: functions, kinds with their own functions in them, and variables, each to its end
     const shown = (x) => [x.name, x.kind, x.detail, x.range.start.line, x.range.end.line, x.selectionRange.start.character, x.children.map(shown)];
-    assert.deepEqual((await s.ask("textDocument/documentSymbol", { textDocument: { uri: uri("main.moth") } })).map(shown), [
+    assert.deepEqual((await s.ask("textDocument/documentSymbol", { textDocument: { uri: uri("main.folio") } })).map(shown), [
       ["area", 12, "with w as a number, h as a number gives a number", 4, 6, 3, []],
       ["dog", 5, "with name as text", 8, 12, 5, [["speak", 6, "with self", 9, 11, 7, []]]],
       ["size", 13, "", 14, 14, 4, []],
@@ -1968,84 +1983,84 @@ test("moth lsp answers an editor: problems as it's typed, tidying, the outline, 
       const l = await s.ask("textDocument/definition", at(...p));
       return l && [l.uri, l.range.start.line, l.range.start.character, l.range.end.character];
     };
-    assert.deepEqual(await where(14, 13), [uri("main.moth"), 4, 3, 7]); // area
-    assert.deepEqual(await where(5, 11), [uri("main.moth"), 4, 13, 14]); // w, an input of area
-    assert.deepEqual(await where(16, 27), [uri("main.moth"), 14, 4, 8]); // size
-    assert.deepEqual(await where(16, 22), [uri("lib.moth"), 1, 3, 8]); // twice, lib.moth's
-    assert.deepEqual(await where(16, 45), [uri("shapes.moth"), 3, 3, 9]); // shapes's square
-    assert.deepEqual(await where(16, 12), [uri("main.moth"), 9, 7, 12]); // rex's speak, dog's
-    assert.deepEqual(await where(16, 36), [uri("shapes.moth"), 0, 0, 0]); // shapes, the file
-    assert.deepEqual(await where(0, 7), [uri("lib.moth"), 0, 0, 0]); // "lib.moth"
-    assert.equal(await where(16, 1), null); // say, a Moth word
+    assert.deepEqual(await where(14, 13), [uri("main.folio"), 4, 3, 7]); // area
+    assert.deepEqual(await where(5, 11), [uri("main.folio"), 4, 13, 14]); // w, an input of area
+    assert.deepEqual(await where(16, 27), [uri("main.folio"), 14, 4, 8]); // size
+    assert.deepEqual(await where(16, 22), [uri("lib.folio"), 1, 3, 8]); // twice, lib.folio's
+    assert.deepEqual(await where(16, 45), [uri("shapes.folio"), 3, 3, 9]); // shapes's square
+    assert.deepEqual(await where(16, 12), [uri("main.folio"), 9, 7, 12]); // rex's speak, dog's
+    assert.deepEqual(await where(16, 36), [uri("shapes.folio"), 0, 0, 0]); // shapes, the file
+    assert.deepEqual(await where(0, 7), [uri("lib.folio"), 0, 0, 0]); // "lib.folio"
+    assert.equal(await where(16, 1), null); // say, a Folio word
 
     // what a name is: a function with what it takes and gives and the comment above it, a variable with
     // what it holds, an input, a kind, a kind's own function with what it gives, and a file it uses
     const hover = async (...p) => (await s.ask("textDocument/hover", at(...p)))?.contents ?? null;
-    assert.deepEqual(await hover(14, 13), { kind: "markdown", value: "```moth\nto area with w as a number, h as a number gives a number\n```\n\nthe area of a box" });
-    assert.equal((await hover(16, 22)).value, "```moth\nto twice with n as a number gives a number\n```\n\ntwice the number, for café prices\n\nIn lib.moth, line 2.");
+    assert.deepEqual(await hover(14, 13), { kind: "markdown", value: "```folio\nto area with w as a number, h as a number gives a number\n```\n\nthe area of a box" });
+    assert.equal((await hover(16, 22)).value, "```folio\nto twice with n as a number gives a number\n```\n\ntwice the number, for café prices\n\nIn lib.folio, line 2.");
     assert.equal((await hover(14, 5)).value, "`size`, a variable: a number\n\nFirst set on line 15.");
     assert.equal((await hover(15, 5)).value, "`rex`, a variable: a dog\n\nFirst set on line 16.");
     assert.equal((await hover(5, 11)).value, "`w`, an input of `area`: a number");
-    assert.equal((await hover(8, 6)).value, "```moth\nkind dog with name as text\n```");
-    assert.equal((await hover(16, 12)).value, "```moth\nto speak with self\n```\n\nGives text.");
-    assert.equal((await hover(1, 22)).value, '```moth\nuse "shapes.moth" as shapes\n```\n\nShapes: the areas of squares and the rest.');
+    assert.equal((await hover(8, 6)).value, "```folio\nkind dog with name as text\n```");
+    assert.equal((await hover(16, 12)).value, "```folio\nto speak with self\n```\n\nGives text.");
+    assert.equal((await hover(1, 22)).value, '```folio\nuse "shapes.folio" as shapes\n```\n\nShapes: the areas of squares and the rest.');
     assert.equal(await hover(16, 1), null);
 
-    // what can come next: what the program makes that the line can see, and Moth's words
+    // what can come next: what the program makes that the line can see, and Folio's words
     const all = await s.ask("textDocument/completion", at(17, 0));
     assert.deepEqual(all.filter((c) => c.kind !== 14).map((c) => [c.label, c.kind, c.detail]), [["twice", 3, "with n as a number gives a number"],
       ["area", 3, "with w as a number, h as a number gives a number"], ["dog", 7, "with name as text"], ["size", 6, undefined], ["rex", 6, undefined], ["unused", 6, undefined]]);
     assert.ok(["say", "set", "for each", "if it fails"].every((w) => all.some((c) => c.label === w && c.kind === 14)));
 
-    // As it's typed: an unfinished line and a function not yet ended are the one mistake moth check says, and
-    // the rest is still known; after `rex's`, what a dog has, and after `shapes's`, what shapes.moth makes
+    // As it's typed: an unfinished line and a function not yet ended are the one mistake folio check says, and
+    // the rest is still known; after `rex's`, what a dog has, and after `shapes's`, what shapes.folio makes
     const typing = main + "set half to\nto later with x\n    say rex's \n    say shapes's ";
-    s.tell("textDocument/didChange", { textDocument: { uri: uri("main.moth"), version: 2 }, contentChanges: [{ text: typing }] });
-    const typed = await s.problems(uri("main.moth"));
-    assert.deepEqual(got(typed), want(typing, { "lib.moth": lib, "shapes.moth": shapes }));
+    s.tell("textDocument/didChange", { textDocument: { uri: uri("main.folio"), version: 2 }, contentChanges: [{ text: typing }] });
+    const typed = await s.problems(uri("main.folio"));
+    assert.deepEqual(got(typed), want(typing, { "lib.folio": lib, "shapes.folio": shapes }));
     assert.equal(typed.length, 1);
-    assert.deepEqual((await s.ask("textDocument/documentSymbol", { textDocument: { uri: uri("main.moth") } })).map((x) => x.name), ["area", "dog", "size", "rex", "unused", "later"]);
+    assert.deepEqual((await s.ask("textDocument/documentSymbol", { textDocument: { uri: uri("main.folio") } })).map((x) => x.name), ["area", "dog", "size", "rex", "unused", "later"]);
     const labels = async (...p) => (await s.ask("textDocument/completion", at(...p))).map((c) => c.label);
     assert.ok((await labels(19, 11)).includes("later"));
     assert.deepEqual(await labels(21, 14), ["name", "speak"]);
     assert.deepEqual(await labels(22, 17), ["square"]);
     assert.equal((await hover(15, 5)).value, "`rex`, a variable: a dog\n\nFirst set on line 16.");
 
-    // An unsaved change to a file it uses counts: lib.moth, opened with twice taking text, has its problems
-    // said, and main.moth, which uses it, has its own said again
-    s.tell("textDocument/didChange", { textDocument: { uri: uri("main.moth"), version: 3 }, contentChanges: [{ text: main }] });
-    await s.problems(uri("main.moth"));
+    // An unsaved change to a file it uses counts: lib.folio, opened with twice taking text, has its problems
+    // said, and main.folio, which uses it, has its own said again
+    s.tell("textDocument/didChange", { textDocument: { uri: uri("main.folio"), version: 3 }, contentChanges: [{ text: main }] });
+    await s.problems(uri("main.folio"));
     const changed = lib.replace("with n as a number gives a number", "with n as text gives text").replace("n * 2", "n + n");
-    s.tell("textDocument/didOpen", { textDocument: { uri: uri("lib.moth"), languageId: "moth", version: 1, text: changed } });
-    assert.deepEqual(got(await s.problems(uri("lib.moth"))), want(changed, {}));
-    const again = await s.problems(uri("main.moth"));
-    assert.deepEqual(got(again), want(main, { "lib.moth": changed, "shapes.moth": shapes }));
+    s.tell("textDocument/didOpen", { textDocument: { uri: uri("lib.folio"), languageId: "folio", version: 1, text: changed } });
+    assert.deepEqual(got(await s.problems(uri("lib.folio"))), want(changed, {}));
+    const again = await s.problems(uri("main.folio"));
+    assert.deepEqual(got(again), want(main, { "lib.folio": changed, "shapes.folio": shapes }));
     assert.ok(again.some((d) => d.message === "'twice' needs n to be text, not a number"), JSON.stringify(again));
-    assert.equal((await hover(16, 22)).value, "```moth\nto twice with n as text gives text\n```\n\ntwice the number, for café prices\n\nIn lib.moth, line 2.");
+    assert.equal((await hover(16, 22)).value, "```folio\nto twice with n as text gives text\n```\n\ntwice the number, for café prices\n\nIn lib.folio, line 2.");
     // closed, it's the file on the disk again
-    s.tell("textDocument/didClose", { textDocument: { uri: uri("lib.moth") } });
-    assert.deepEqual(await s.problems(uri("lib.moth")), []);
-    assert.deepEqual(got(await s.problems(uri("main.moth"))), got(opened));
+    s.tell("textDocument/didClose", { textDocument: { uri: uri("lib.folio") } });
+    assert.deepEqual(await s.problems(uri("lib.folio")), []);
+    assert.deepEqual(got(await s.problems(uri("main.folio"))), got(opened));
 
-    // tidying is moth tidy's, which is format()'s; tidy code needs nothing; code with a mistake is left as it is
+    // tidying is folio tidy's, which is format()'s; tidy code needs nothing; code with a mistake is left as it is
     const messy = "to   area with w,h\nreturn w*h\n  end\nsay area(2,3)\n";
-    s.tell("textDocument/didOpen", { textDocument: { uri: uri("messy.moth"), languageId: "moth", version: 1, text: messy } });
-    await s.problems(uri("messy.moth"));
+    s.tell("textDocument/didOpen", { textDocument: { uri: uri("messy.folio"), languageId: "folio", version: 1, text: messy } });
+    await s.problems(uri("messy.folio"));
     const tidy = (name) => s.ask("textDocument/formatting", { textDocument: { uri: uri(name) }, options: { tabSize: 4, insertSpaces: true } });
-    assert.deepEqual(await tidy("messy.moth"), [{ range: { start: { line: 0, character: 0 }, end: { line: 4, character: 0 } }, newText: format(messy) }]);
-    s.tell("textDocument/didChange", { textDocument: { uri: uri("messy.moth"), version: 2 }, contentChanges: [{ text: format(messy) }] });
-    await s.problems(uri("messy.moth"));
-    assert.deepEqual(await tidy("messy.moth"), []);
-    s.tell("textDocument/didChange", { textDocument: { uri: uri("messy.moth"), version: 3 }, contentChanges: [{ text: "say (1\n" }] });
-    await s.problems(uri("messy.moth"));
-    assert.deepEqual(await tidy("messy.moth"), []);
+    assert.deepEqual(await tidy("messy.folio"), [{ range: { start: { line: 0, character: 0 }, end: { line: 4, character: 0 } }, newText: format(messy) }]);
+    s.tell("textDocument/didChange", { textDocument: { uri: uri("messy.folio"), version: 2 }, contentChanges: [{ text: format(messy) }] });
+    await s.problems(uri("messy.folio"));
+    assert.deepEqual(await tidy("messy.folio"), []);
+    s.tell("textDocument/didChange", { textDocument: { uri: uri("messy.folio"), version: 3 }, contentChanges: [{ text: "say (1\n" }] });
+    await s.problems(uri("messy.folio"));
+    assert.deepEqual(await tidy("messy.folio"), []);
     assert.deepEqual((await s.next((m) => m.method === "window/showMessage")).params,
-      { type: 2, message: "Moth can't tidy this until its mistake is put right: expected ')' but found the end of the code" });
+      { type: 2, message: "Folio can't tidy this until its mistake is put right: expected ')' but found the end of the code" });
     // a file not open is read from the disk
-    assert.deepEqual((await s.ask("textDocument/documentSymbol", { textDocument: { uri: uri("shapes.moth") } })).map((x) => x.name), ["square"]);
+    assert.deepEqual((await s.ask("textDocument/documentSymbol", { textDocument: { uri: uri("shapes.folio") } })).map((x) => x.name), ["square"]);
 
     // what it doesn't do it says so, and a note it doesn't know it lets be
-    assert.deepEqual(await s.ask("textDocument/references", at(14, 13)), { error: { code: -32601, message: "moth lsp doesn't do textDocument/references" } });
+    assert.deepEqual(await s.ask("textDocument/references", at(14, 13)), { error: { code: -32601, message: "folio lsp doesn't do textDocument/references" } });
     s.tell("$/setTrace", { value: "off" });
     // a message that comes in pieces, and two that come in one, are each read as they are
     const piece = s.framed({ jsonrpc: "2.0", id: 900, method: "textDocument/hover", params: at(14, 5) });
@@ -2056,7 +2071,7 @@ test("moth lsp answers an editor: problems as it's typed, tidying, the outline, 
     s.raw(piece.subarray(piece.length - 5));
     assert.equal((await s.next((m) => m.id === 900)).result.contents.value, "`size`, a variable: a number\n\nFirst set on line 15.");
     s.raw(Buffer.concat([s.framed({ jsonrpc: "2.0", id: 901, method: "textDocument/hover", params: at(14, 13) }), s.framed({ jsonrpc: "2.0", id: 902, method: "textDocument/hover", params: at(15, 5) })]));
-    assert.match((await s.next((m) => m.id === 901)).result.contents.value, /^```moth\nto area/);
+    assert.match((await s.next((m) => m.id === 901)).result.contents.value, /^```folio\nto area/);
     assert.match((await s.next((m) => m.id === 902)).result.contents.value, /^`rex`/);
 
     // shutdown, then exit: it ends with 0
@@ -2072,8 +2087,8 @@ test("moth lsp answers an editor: problems as it's typed, tidying, the outline, 
   const quiet = lspSession(exe, sub);
   try {
     await quiet.ask("initialize", { processId: null, capabilities: {}, initializationOptions: { diagnostics: false } });
-    quiet.tell("textDocument/didOpen", { textDocument: { uri: uri("main.moth"), languageId: "moth", version: 1, text: main } });
-    assert.deepEqual((await quiet.ask("textDocument/documentSymbol", { textDocument: { uri: uri("main.moth") } })).map((x) => x.name), ["area", "dog", "size", "rex", "unused"]);
+    quiet.tell("textDocument/didOpen", { textDocument: { uri: uri("main.folio"), languageId: "folio", version: 1, text: main } });
+    assert.deepEqual((await quiet.ask("textDocument/documentSymbol", { textDocument: { uri: uri("main.folio") } })).map((x) => x.name), ["area", "dog", "size", "rex", "unused"]);
     assert.deepEqual(quiet.said, []);
     quiet.tell("exit", null);
     assert.equal(await quiet.exited, 1);
@@ -2085,28 +2100,28 @@ test("moth lsp answers an editor: problems as it's typed, tidying, the outline, 
   const { startServer } = createRequire(import.meta.url)("./editors/vscode/client.js");
   const server = await startServer(exe, { cwd: sub, initializationOptions: { diagnostics: false } });
   assert.equal(server.capabilities.hoverProvider, true);
-  server.notify("textDocument/didOpen", { textDocument: { uri: uri("main.moth"), languageId: "moth", version: 1, text: main } });
+  server.notify("textDocument/didOpen", { textDocument: { uri: uri("main.folio"), languageId: "folio", version: 1, text: main } });
   assert.equal((await server.request("textDocument/hover", at(16, 22))).contents.value.split("\n")[1], "to twice with n as a number gives a number");
   await assert.rejects(server.request("textDocument/references", at(14, 13)), { code: -32601 });
   const ended = new Promise((done) => server.onExit(done));
   await server.stop();
   assert.equal(await ended, "it ended with 0");
-  // and a moth that isn't there, or that ends before it answers, as one from before moth lsp would
-  await assert.rejects(startServer(join(sub, "no-moth-here")), /moth lsp couldn't start: there's no /);
-  await assert.rejects(startServer(exe, { args: ["lsp-not"] }), /moth lsp couldn't start: it ended with 2/);
+  // and a folio that isn't there, or that ends before it answers, as one from before folio lsp would
+  await assert.rejects(startServer(join(sub, "no-folio-here")), /folio lsp couldn't start: there's no /);
+  await assert.rejects(startServer(exe, { args: ["lsp-not"] }), /folio lsp couldn't start: it ended with 2/);
 });
 
-// `ask for 5 bytes` (DESIGN §108), what moth lsp reads messages with: the next 5 bytes of the input, waited for
+// `ask for 5 bytes` (DESIGN §108), what folio lsp reads messages with: the next 5 bytes of the input, waited for
 // but not to a line's end, or as many as come before it ends, and then none; from the same input `ask` reads
 // lines from. Only machine code reads the input so: the playground's engines say so.
 test("ask for ... bytes reads the input as it comes, in machine code", { skip }, () => {
   const source = ['set name to ask "Name? "', 'say "hi " name', "set got to ask for 5 bytes", "repeat while length of got is greater than 0",
     '    say length of got ": " (got as text)', "    set got to ask for 5 bytes", "end", "say length of (ask for 3 bytes)", "try",
     "    say ask for -1 bytes", "if it fails with why", "    say why", "end"].join("\n");
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     const exe = executable(dir, "ask");
-    writeFileSync(exe, machine(source, { target, name: "ask.moth" }));
+    writeFileSync(exe, machine(source, { target, name: "ask.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { input: "Sam\nhello world é", encoding: "utf8", timeout: 60_000 });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status],
@@ -2115,13 +2130,13 @@ test("ask for ... bytes reads the input as it comes, in machine code", { skip },
     rmSync(dir, { recursive: true, force: true });
   }
   for (const engine of ["vm", "jit", "wasm"]) {
-    assert.throws(() => run("say length of (ask for 5 bytes)", () => {}, { engine }), { reason: "'ask for ... bytes' reads the input as it comes, which only a program moth builds can do" });
+    assert.throws(() => run("say length of (ask for 5 bytes)", () => {}, { engine }), { reason: "'ask for ... bytes' reads the input as it comes, which only a program folio builds can do" });
   }
   assert.throws(() => run('say ask for "x"', () => {}), { reason: "say how many bytes, as in 'ask for 64 bytes'" });
 });
 
 // The debug adapter (editors/vscode/debug-adapter.js, DESIGN §109) as an editor other than VS Code starts it, a
-// program of its own speaking the Debug Adapter Protocol, on moth debug: breakpoints in the program and a file it
+// program of its own speaking the Debug Adapter Protocol, on folio debug: breakpoints in the program and a file it
 // uses, the calls in progress, variables, hovers and the debug console, stepping, the program's question
 // answered, the mistake it stops at, and how it ended; and a program stopped while it runs, cleanly.
 function dapSession(cwd) {
@@ -2164,49 +2179,49 @@ function dapSession(cwd) {
   return session;
 }
 
-test("the debug adapter debugs a program through moth debug, over the Debug Adapter Protocol", { skip }, async () => {
-  const { dir, exe } = mothExe();
+test("the debug adapter debugs a program through folio debug, over the Debug Adapter Protocol", { skip }, async () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "dap work");
   mkdirSync(sub, { recursive: true });
-  writeFileSync(join(sub, "lib.moth"), DEBUG_LIB);
-  writeFileSync(join(sub, "prog.moth"), DEBUG_PROGRAM);
+  writeFileSync(join(sub, "lib.folio"), DEBUG_LIB);
+  writeFileSync(join(sub, "prog.folio"), DEBUG_PROGRAM);
   const file = (name) => join(sub, name);
   const s = dapSession(sub);
   try {
-    const can = await s.ask("initialize", { adapterID: "moth", linesStartAt1: true, columnsStartAt1: true });
+    const can = await s.ask("initialize", { adapterID: "folio", linesStartAt1: true, columnsStartAt1: true });
     assert.equal(can.supportsConfigurationDoneRequest, true);
     await s.next((m) => m.event === "initialized");
-    assert.equal(await s.ask("launch", { program: file("prog.moth"), mothPath: exe }), null);
-    assert.deepEqual(await s.ask("setBreakpoints", { source: { path: file("lib.moth") }, breakpoints: [{ line: 4 }] }), { breakpoints: [{ verified: true, line: 4 }] });
-    await s.ask("setBreakpoints", { source: { path: file("prog.moth") }, breakpoints: [{ line: 5 }] });
+    assert.equal(await s.ask("launch", { program: file("prog.folio"), folioPath: exe }), null);
+    assert.deepEqual(await s.ask("setBreakpoints", { source: { path: file("lib.folio") }, breakpoints: [{ line: 4 }] }), { breakpoints: [{ verified: true, line: 4 }] });
+    await s.ask("setBreakpoints", { source: { path: file("prog.folio") }, breakpoints: [{ line: 5 }] });
     await s.ask("setExceptionBreakpoints", { filters: [] });
     await s.ask("configurationDone");
 
     // at the breakpoint in bump: where it is, the calls in progress, what the line can see
     assert.deepEqual(await s.stopped(), { reason: "breakpoint", threadId: 1, allThreadsStopped: true });
     const frames = (await s.ask("stackTrace", { threadId: 1 })).stackFrames.map((f) => [f.name, f.source.path, f.line]);
-    assert.deepEqual(frames, [["bump", file("prog.moth"), 5], ["the program", file("prog.moth"), 17]]);
+    assert.deepEqual(frames, [["bump", file("prog.folio"), 5], ["the program", file("prog.folio"), 17]]);
     assert.deepEqual(await s.ask("scopes", { frameId: 0 }), { scopes: [{ name: "Variables", variablesReference: 1, expensive: false }] });
     const shown = async () => (await s.ask("variables", { variablesReference: 1 })).variables.map((v) => [v.name, v.value]);
     assert.deepEqual((await shown()).slice(0, 3), [["bump", "<function bump>"], ["count", "0"], ["tick", "<function bump>"]]);
     assert.deepEqual(await s.ask("evaluate", { expression: "count + 1", context: "hover" }), { result: "1", variablesReference: 0 });
     assert.deepEqual(await s.ask("evaluate", { expression: "nope", context: "watch" }), { failed: "there's no 'nope' here" });
-    assert.deepEqual(await s.ask("evaluate", { expression: "where", context: "repl" }), { result: "  prog.moth:5, in 'bump'\n  prog.moth:17", variablesReference: 0 });
+    assert.deepEqual(await s.ask("evaluate", { expression: "where", context: "repl" }), { result: "  prog.folio:5, in 'bump'\n  prog.folio:17", variablesReference: 0 });
     // stepping: out of bump, then over a line
-    await s.ask("setBreakpoints", { source: { path: file("prog.moth") }, breakpoints: [] }); // taken away, at the next command
+    await s.ask("setBreakpoints", { source: { path: file("prog.folio") }, breakpoints: [] }); // taken away, at the next command
     await s.ask("stepOut", { threadId: 1 });
     assert.equal((await s.stopped()).reason, "step");
     assert.deepEqual((await s.ask("stackTrace", { threadId: 1 })).stackFrames.map((f) => f.line), [18]);
     await s.ask("next", { threadId: 1 });
     await s.stopped();
     assert.deepEqual((await s.ask("stackTrace", { threadId: 1 })).stackFrames.map((f) => f.line), [19]);
-    assert.deepEqual(await s.ask("pause", { threadId: 1 }), { failed: "moth debug stops only at a line it's told to: set a breakpoint there" });
-    // on to the program's question, answered in the debug console, and the breakpoint in lib.moth
+    assert.deepEqual(await s.ask("pause", { threadId: 1 }), { failed: "folio debug stops only at a line it's told to: set a breakpoint there" });
+    // on to the program's question, answered in the debug console, and the breakpoint in lib.folio
     await s.ask("continue", { threadId: 1 });
     await s.next((m) => m.event === "output" && /Name\? $/.test(s.output));
     await s.ask("evaluate", { expression: "Ana", context: "repl" });
     assert.equal((await s.stopped()).reason, "breakpoint");
-    assert.deepEqual((await s.ask("stackTrace", { threadId: 1 })).stackFrames.map((f) => [f.name, f.source.path, f.line]), [["lib's twice", file("lib.moth"), 4], ["the program", file("prog.moth"), 25]]);
+    assert.deepEqual((await s.ask("stackTrace", { threadId: 1 })).stackFrames.map((f) => [f.name, f.source.path, f.line]), [["lib's twice", file("lib.folio"), 4], ["the program", file("prog.folio"), 25]]);
     assert.deepEqual((await shown()).find(([name]) => name === "t"), ["t", '"Ana"']);
     // on to the end: what it said, and that it ended with 0
     await s.ask("continue", { threadId: 1 });
@@ -2217,14 +2232,14 @@ test("the debug adapter debugs a program through moth debug, over the Debug Adap
   } finally {
     s.kill();
   }
-  assert.ok(!existsSync(join(sub, `prog-debug${target === "windows" ? ".exe" : ""}`)), "moth debug left the program it built");
+  assert.ok(!existsSync(join(sub, `prog-debug${target === "windows" ? ".exe" : ""}`)), "folio debug left the program it built");
 
   // A mistake that ends the program: stopped there, with what it could see, and then ended with 1
-  writeFileSync(join(sub, "broken.moth"), "to risky with n\n    if n is 0\n        fail with \"none left\"\n    end\n    return risky(n - 1)\nend\nsay risky(2)\n");
+  writeFileSync(join(sub, "broken.folio"), "to risky with n\n    if n is 0\n        fail with \"none left\"\n    end\n    return risky(n - 1)\nend\nsay risky(2)\n");
   const m = dapSession(sub);
   try {
-    await m.ask("initialize", { adapterID: "moth" });
-    await m.ask("launch", { program: file("broken.moth"), mothPath: exe });
+    await m.ask("initialize", { adapterID: "folio" });
+    await m.ask("launch", { program: file("broken.folio"), folioPath: exe });
     await m.ask("configurationDone");
     const stop = await m.stopped();
     assert.deepEqual([stop.reason, stop.description, stop.text], ["exception", "Stopped at the mistake", 'fail with "none left"']);
@@ -2236,12 +2251,12 @@ test("the debug adapter debugs a program through moth debug, over the Debug Adap
     m.kill();
   }
 
-  // stopped on entry, and a program stopped while it runs: ended, and the program moth built taken away
-  writeFileSync(join(sub, "forever.moth"), "set n to 0\nrepeat while yes\n    add 1 to n\n    wait 10 milliseconds\nend\n");
+  // stopped on entry, and a program stopped while it runs: ended, and the program folio built taken away
+  writeFileSync(join(sub, "forever.folio"), "set n to 0\nrepeat while yes\n    add 1 to n\n    wait 10 milliseconds\nend\n");
   const f = dapSession(sub);
   try {
-    await f.ask("initialize", { adapterID: "moth" });
-    await f.ask("launch", { program: file("forever.moth"), mothPath: exe, stopOnEntry: true });
+    await f.ask("initialize", { adapterID: "folio" });
+    await f.ask("launch", { program: file("forever.folio"), folioPath: exe, stopOnEntry: true });
     await f.ask("configurationDone");
     assert.equal((await f.stopped()).reason, "entry");
     assert.deepEqual((await f.ask("stackTrace", { threadId: 1 })).stackFrames.map((x) => x.line), [1]);
@@ -2251,80 +2266,80 @@ test("the debug adapter debugs a program through moth debug, over the Debug Adap
     await f.ask("disconnect");
     await f.next((x) => x.event === "terminated");
     await new Promise((r) => setTimeout(r, 1000));
-    assert.ok(!existsSync(join(sub, `forever-debug${target === "windows" ? ".exe" : ""}`)), "the program moth debug built is still there");
+    assert.ok(!existsSync(join(sub, `forever-debug${target === "windows" ? ".exe" : ""}`)), "the program folio debug built is still there");
   } finally {
     f.kill();
   }
-  // and a moth that isn't there
+  // and a folio that isn't there
   const n = dapSession(sub);
   try {
-    await n.ask("initialize", { adapterID: "moth" });
-    assert.match((await n.ask("launch", { program: file("prog.moth"), mothPath: join(sub, "no-moth-here") })).failed, /^there's no .*no-moth-here: install moth/);
+    await n.ask("initialize", { adapterID: "folio" });
+    assert.match((await n.ask("launch", { program: file("prog.folio"), folioPath: join(sub, "no-folio-here") })).failed, /^there's no .*no-folio-here: install folio/);
   } finally {
     n.kill();
   }
 });
 
-// `moth test`: every test_ function in a file, each in a run of its own, said as test() in moth.js says it.
-const TESTS_IN_MOTH = ["set count to 0", "to average with numbers", "    return 10 / length of numbers", "end",
+// `folio test`: every test_ function in a file, each in a run of its own, said as test() in folio.js says it.
+const TESTS_IN_FOLIO = ["set count to 0", "to average with numbers", "    return 10 / length of numbers", "end",
   "to test_one", "    add 1 to count", "    expect count is 1", "end", "to test_two", "    add 1 to count",
   '    say "count is " count', "    expect count is 2", "end", "to test_three", "    expect average(empty list) is 1",
   "end", "to helper", "    expect 1 is 2", "end"].join("\n");
 
-test("moth.exe runs a file's tests, each in a run of its own, and says what test() says", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe runs a file's tests, each in a run of its own, and says what test() says", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "testing");
   mkdirSync(sub, { recursive: true });
   const testing = (names) => spawnSync(exe, ["test", ...names], { cwd: sub, encoding: "utf8", timeout: 120_000 });
-  writeFileSync(join(sub, "sample.test.moth"), TESTS_IN_MOTH);
-  // what moth.js's test() makes of the same file, said the way the command line says it
-  const results = testMoth(TESTS_IN_MOTH);
+  writeFileSync(join(sub, "sample.test.folio"), TESTS_IN_FOLIO);
+  // what folio.js's test() makes of the same file, said the way the command line says it
+  const results = testFolio(TESTS_IN_FOLIO);
   const said = results.map(({ name, said: lines, error }) => {
     if (!error) return `✓ ${name}\n`;
-    const report = [`sample.test.moth:${error.line}:${error.col}: ${error.reason}`, ...excerpt(TESTS_IN_MOTH, error).split("\n")];
+    const report = [`sample.test.folio:${error.line}:${error.col}: ${error.reason}`, ...excerpt(TESTS_IN_FOLIO, error).split("\n")];
     if (error.trail.length) report.push(...describeTrail(error.trail).split("\n"));
     if (lines.length) report.push("it said:", ...lines.map((line) => `  ${line}`));
     return `✗ ${name}\n${report.map((line) => `    ${line}`).join("\n")}\n`;
   }).join("");
-  const ran = testing(["sample.test.moth"]);
+  const ran = testing(["sample.test.folio"]);
   assert.equal(ran.stdout, `${said}1 passed, 2 failed\n`);
   assert.deepEqual([ran.status, ran.stderr], [1, ""]);
   assert.deepEqual(readdirSync(sub).filter((name) => name.includes("-test.") || name.endsWith("-test")), [], "the file it built was left behind");
 
   // the tools' own tests, which must pass; a file with no tests, which is one test itself; a test that
   // stops the program; a file that can't be read at all; and more than one file at once
-  for (const name of ["json.moth", "json.test.moth"]) writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
-  const tools = testing(["json.test.moth"]);
+  for (const name of ["json.folio", "json.test.folio"]) writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
+  const tools = testing(["json.test.folio"]);
   assert.equal(tools.stdout, ["test_values", "test_lists_and_objects", "test_spaces_and_lines", "test_escapes", "test_mistakes"]
     .map((name) => `✓ ${name}\n`).join("") + "5 passed\n");
   assert.deepEqual([tools.status, tools.stderr], [0, ""]);
-  writeFileSync(join(sub, "none.test.moth"), 'say 1\nexpect 1 is 2\n');
-  const none = testing(["none.test.moth"]);
-  assert.equal(none.stdout, "✗ none.test.moth\n    none.test.moth:2:1: expected 1 to be 2\n    expect 1 is 2\n    ^\n    it said:\n      1\n0 passed, 1 failed\n");
-  writeFileSync(join(sub, "stops.test.moth"), 'to test_a\n    say "before"\n    stop the program with 4\nend\nto test_b\n    expect yes\nend\n');
-  const stops = testing(["stops.test.moth"]);
+  writeFileSync(join(sub, "none.test.folio"), 'say 1\nexpect 1 is 2\n');
+  const none = testing(["none.test.folio"]);
+  assert.equal(none.stdout, "✗ none.test.folio\n    none.test.folio:2:1: expected 1 to be 2\n    expect 1 is 2\n    ^\n    it said:\n      1\n0 passed, 1 failed\n");
+  writeFileSync(join(sub, "stops.test.folio"), 'to test_a\n    say "before"\n    stop the program with 4\nend\nto test_b\n    expect yes\nend\n');
+  const stops = testing(["stops.test.folio"]);
   assert.equal(stops.stdout, "✗ test_a\n    stopped the program with 4\n    it said:\n      before\n✓ test_b\n1 passed, 1 failed\n");
-  writeFileSync(join(sub, "broken.test.moth"), "to test_a\n    say 1\n");
-  const broken = testing(["broken.test.moth"]);
-  assert.deepEqual([broken.status, broken.stdout, broken.stderr], [1, "0 passed, 1 failed\n", "broken.test.moth:3:1: 'to' from line 1 is missing its 'end'\n\n^\n"]);
-  const several = testing(["json.test.moth", "none.test.moth"]); // each file named, then how many in all
-  assert.match(several.stdout, /^json\.test\.moth\n✓ test_values\n/);
-  assert.match(several.stdout, /none\.test\.moth\n✗ none\.test\.moth\n/);
+  writeFileSync(join(sub, "broken.test.folio"), "to test_a\n    say 1\n");
+  const broken = testing(["broken.test.folio"]);
+  assert.deepEqual([broken.status, broken.stdout, broken.stderr], [1, "0 passed, 1 failed\n", "broken.test.folio:3:1: 'to' from line 1 is missing its 'end'\n\n^\n"]);
+  const several = testing(["json.test.folio", "none.test.folio"]); // each file named, then how many in all
+  assert.match(several.stdout, /^json\.test\.folio\n✓ test_values\n/);
+  assert.match(several.stdout, /none\.test\.folio\n✗ none\.test\.folio\n/);
   assert.equal(several.stdout.split("\n").at(-2), "5 passed, 1 failed");
-  const missing = testing(["nowhere.test.moth"]);
-  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "0 passed, 1 failed\n", "moth: there is no file called 'nowhere.test.moth'\n"]);
+  const missing = testing(["nowhere.test.folio"]);
+  assert.deepEqual([missing.status, missing.stdout, missing.stderr], [1, "0 passed, 1 failed\n", "folio: there is no file called 'nowhere.test.folio'\n"]);
 });
 
-// `moth test` with no file named finds them as the Node.js command line did (cli.js at 1.5.1, findTests below):
-// every file ending in .test.moth here and in the folders inside, but not hidden ones or node_modules, sorted
+// `folio test` with no file named finds them as the Node.js command line did (cli.js at 1.5.1, findTests below):
+// every file ending in .test.folio here and in the folders inside, but not hidden ones or node_modules, sorted
 // by localeCompare and joined with the system's separator. A failing test's mistake names its file's path.
-test("moth.exe test with no file named finds every .test.moth file, as the Node.js command line did", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("folio.exe test with no file named finds every .test.folio file, as the Node.js command line did", { skip }, () => {
+  const { dir, exe } = folioExe();
   const tree = join(dir, "finding");
   const pass = "to test_one\n    expect 1 is 1\nend\n";
-  const files = { "b.test.moth": pass, "A.test.moth": pass, "1.test.moth": pass, "_u.test.moth": "expect yes\n", "x.moth": "say 1\n",
-    "sub/c.test.moth": pass, "sub/a_b.test.moth": "to test_wrong\n    expect 1 is 2\nend\n", "sub/deeper/d-1.test.moth": pass,
-    "sub/deeper/d.test.moth": pass, "Zeta/z.test.moth": pass, ".hidden/x.test.moth": pass, "node_modules/y.test.moth": pass };
+  const files = { "b.test.folio": pass, "A.test.folio": pass, "1.test.folio": pass, "_u.test.folio": "expect yes\n", "x.folio": "say 1\n",
+    "sub/c.test.folio": pass, "sub/a_b.test.folio": "to test_wrong\n    expect 1 is 2\nend\n", "sub/deeper/d-1.test.folio": pass,
+    "sub/deeper/d.test.folio": pass, "Zeta/z.test.folio": pass, ".hidden/x.test.folio": pass, "node_modules/y.test.folio": pass };
   for (const [name, text] of Object.entries(files)) {
     mkdirSync(join(tree, ...name.split("/").slice(0, -1)), { recursive: true });
     writeFileSync(join(tree, ...name.split("/")), text);
@@ -2335,37 +2350,37 @@ test("moth.exe test with no file named finds every .test.moth file, as the Node.
       if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
       const path = join(folder, entry.name);
       if (entry.isDirectory()) found.push(...findTests(path));
-      else if (entry.name.endsWith(".test.moth")) found.push(path);
+      else if (entry.name.endsWith(".test.folio")) found.push(path);
     }
     return found;
   };
   const wanted = findTests(".");
   assert.equal(wanted.length, 9);
   const ran = spawnSync(exe, ["test"], { cwd: tree, encoding: "utf8", timeout: 300_000 });
-  assert.deepEqual(ran.stdout.split("\n").filter((line) => line.endsWith(".test.moth") && !/^[✓✗ ]/.test(line)), wanted); // each file's name, then its tests
-  const wrong = join("sub", "a_b.test.moth");
+  assert.deepEqual(ran.stdout.split("\n").filter((line) => line.endsWith(".test.folio") && !/^[✓✗ ]/.test(line)), wanted); // each file's name, then its tests
+  const wrong = join("sub", "a_b.test.folio");
   assert.ok(ran.stdout.includes(`${wrong}\n✗ test_wrong\n    ${wrong}:2:5: expected 1 to be 2\n`), ran.stdout);
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.split("\n").at(-2)], [1, "", "8 passed, 1 failed"]);
   const empty = join(dir, "no-tests");
   mkdirSync(join(empty, "sub"), { recursive: true });
-  writeFileSync(join(empty, "sub", "plain.moth"), "say 1\n");
+  writeFileSync(join(empty, "sub", "plain.folio"), "say 1\n");
   const none = spawnSync(exe, ["test"], { cwd: empty, encoding: "utf8" });
-  assert.deepEqual([none.status, none.stdout, none.stderr], [1, "", "moth: no tests found: name a file, or put tests in files ending in .test.moth\n"]);
+  assert.deepEqual([none.status, none.stdout, none.stderr], [1, "", "folio: no tests found: name a file, or put tests in files ending in .test.folio\n"]);
 });
 
 // `run program ... keeping its output`: what the program said instead of letting it through, however much
 // of it there is, from both its outputs at once.
-test("a program moth.exe builds keeps what another program said, and its number", { skip }, () => {
-  const { dir, exe } = mothExe();
+test("a program folio.exe builds keeps what another program said, and its number", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "keeping");
   mkdirSync(sub, { recursive: true });
-  writeFileSync(join(sub, "child.moth"), ['say "out one"', 'say "err one" to the error output', 'say "out two"',
+  writeFileSync(join(sub, "child.folio"), ['say "out one"', 'say "err one" to the error output', 'say "out two"',
     "for each a in arguments", '    say "[" a "]"', "end", "stop the program with 7"].join("\n"));
   // a program that fills both its outputs: more than a pipe holds, so they must be read as it writes them
-  writeFileSync(join(sub, "loud.moth"), ["for each i from 1 to 20000", '    say "line " i " of a great many, to fill a pipe up"',
+  writeFileSync(join(sub, "loud.folio"), ["for each i from 1 to 20000", '    say "line " i " of a great many, to fill a pipe up"',
     '    say "and the same to the other one" to the error output', "end", "stop the program with 3"].join("\n"));
   const child = target === "windows" ? "./child.exe" : "./child";
-  writeFileSync(join(sub, "keeps.moth"), [
+  writeFileSync(join(sub, "keeps.folio"), [
     `set answer to run program "${child}" with (list of "a b") keeping its output`,
     'say "code " code of answer',
     'say "output: [" output of answer "]"',
@@ -2373,8 +2388,8 @@ test("a program moth.exe builds keeps what another program said, and its number"
     `set loud to run program "${target === "windows" ? "./loud.exe" : "./loud"}" keeping its output`,
     'say "loud " code of loud " " length of output of loud " " length of mistakes of loud',
   ].join("\n"));
-  for (const name of ["child", "loud"]) assert.equal(spawnSync(exe, ["build", `${name}.moth`], { cwd: sub, encoding: "utf8" }).status, 0);
-  assert.equal(spawnSync(exe, ["build", "keeps.moth", "--allow-run"], { cwd: sub, encoding: "utf8" }).status, 0);
+  for (const name of ["child", "loud"]) assert.equal(spawnSync(exe, ["build", `${name}.folio`], { cwd: sub, encoding: "utf8" }).status, 0);
+  assert.equal(spawnSync(exe, ["build", "keeps.folio", "--allow-run"], { cwd: sub, encoding: "utf8" }).status, 0);
   const kept = spawnSync(executable(sub, "keeps"), [], { cwd: sub, encoding: "utf8", timeout: 120_000, maxBuffer: 1 << 26 });
   assert.deepEqual([kept.status, kept.stderr], [0, ""]);
   let loud = 0; // how much the loud one says, in characters, the new line after each line counted
@@ -2384,7 +2399,7 @@ test("a program moth.exe builds keeps what another program said, and its number"
 });
 
 // A program that takes arguments, asks, reads and writes, built with each set of --allow flags, each in a
-// folder of its own with the same files in it. What it must do is what `moth run tool.moth` with the same flags,
+// folder of its own with the same files in it. What it must do is what `folio run tool.folio` with the same flags,
 // arguments and input did on Windows, and its machine code on Linux, the same, before the Node.js command line
 // was dropped.
 const ALLOW_SOURCE = [
@@ -2405,40 +2420,40 @@ const ALLOW_SOURCE = [
   'set again to ask "Again?"',
   'say read "missing.txt"',
 ].join("\n");
-const AS_MOTH_RUN_DID = [
-  {"flags": [], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.moth:6:1: can't write 'out.txt': this program isn't allowed to write files (start it with --allow-write)\nwrite \"made by \" + name to \"out.txt\"\n^\n", "status": 1, "out": null},
-  {"flags": ["--allow-read"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.moth:6:1: can't write 'out.txt': this program isn't allowed to write files (start it with --allow-write)\nwrite \"made by \" + name to \"out.txt\"\n^\n", "status": 1, "out": null},
-  {"flags": ["--allow-read", "--allow-write"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\nmade by Sam\n(6 bytes: 104, 101, 108, 108, 111, 10)\n100000\ncan't read 'data': EISDIR: illegal operation on a directory, read\nAgain? again\n", "stderr": "tool.moth:16:5: there is no file called 'missing.txt'\nsay read \"missing.txt\"\n    ^\n", "status": 1, "out": "made by Sam"},
-  {"flags": ["--allow-all"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\nmade by Sam\n(6 bytes: 104, 101, 108, 108, 111, 10)\n100000\ncan't read 'data': EISDIR: illegal operation on a directory, read\nAgain? again\n", "stderr": "tool.moth:16:5: there is no file called 'missing.txt'\nsay read \"missing.txt\"\n    ^\n", "status": 1, "out": "made by Sam"},
-  {"flags": ["--allow-read=data,in.txt", "--allow-write=."], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.moth:7:5: can't read 'out.txt': this program isn't allowed to read files (start it with --allow-read)\nsay read \"out.txt\"\n    ^\n", "status": 1, "out": "made by Sam"},
-  {"flags": ["--allow-read=data", "--allow-write=data", "--allow-net=example.com"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.moth:6:1: can't write 'out.txt': this program isn't allowed to write files (start it with --allow-write)\nwrite \"made by \" + name to \"out.txt\"\n^\n", "status": 1, "out": null}
+const AS_FOLIO_RUN_DID = [
+  {"flags": [], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.folio:6:1: can't write 'out.txt': this program isn't allowed to write files (start it with --allow-write)\nwrite \"made by \" + name to \"out.txt\"\n^\n", "status": 1, "out": null},
+  {"flags": ["--allow-read"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.folio:6:1: can't write 'out.txt': this program isn't allowed to write files (start it with --allow-write)\nwrite \"made by \" + name to \"out.txt\"\n^\n", "status": 1, "out": null},
+  {"flags": ["--allow-read", "--allow-write"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\nmade by Sam\n(6 bytes: 104, 101, 108, 108, 111, 10)\n100000\ncan't read 'data': EISDIR: illegal operation on a directory, read\nAgain? again\n", "stderr": "tool.folio:16:5: there is no file called 'missing.txt'\nsay read \"missing.txt\"\n    ^\n", "status": 1, "out": "made by Sam"},
+  {"flags": ["--allow-all"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\nmade by Sam\n(6 bytes: 104, 101, 108, 108, 111, 10)\n100000\ncan't read 'data': EISDIR: illegal operation on a directory, read\nAgain? again\n", "stderr": "tool.folio:16:5: there is no file called 'missing.txt'\nsay read \"missing.txt\"\n    ^\n", "status": 1, "out": "made by Sam"},
+  {"flags": ["--allow-read=data,in.txt", "--allow-write=."], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.folio:7:5: can't read 'out.txt': this program isn't allowed to read files (start it with --allow-read)\nsay read \"out.txt\"\n    ^\n", "status": 1, "out": "made by Sam"},
+  {"flags": ["--allow-read=data", "--allow-write=data", "--allow-net=example.com"], "stdout": "[one]\n[two words]\n[q\"uote]\n[]\nName? Sam\nHi Sam\n", "stderr": "tool.folio:6:1: can't write 'out.txt': this program isn't allowed to write files (start it with --allow-write)\nwrite \"made by \" + name to \"out.txt\"\n^\n", "status": 1, "out": null}
 ];
 
-test("moth.exe builds --allow flags in, and its program reads, writes, asks and takes arguments as moth run did", { skip }, () => {
-  const { exe } = mothExe();
+test("folio.exe builds --allow flags in, and its program reads, writes, asks and takes arguments as folio run did", { skip }, () => {
+  const { exe } = folioExe();
   const dirs = [];
   const setUp = () => {
-    const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+    const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
     dirs.push(dir);
-    writeFileSync(join(dir, "tool.moth"), ALLOW_SOURCE);
+    writeFileSync(join(dir, "tool.folio"), ALLOW_SOURCE);
     writeFileSync(join(dir, "in.txt"), "hello\n");
     mkdirSync(join(dir, "data"));
     writeFileSync(join(dir, "data", "big.txt"), "é".repeat(100_000));
     return dir;
   };
   try {
-    for (const want of AS_MOTH_RUN_DID) {
+    for (const want of AS_FOLIO_RUN_DID) {
       const dir = setUp();
-      const built = spawnSync(exe, ["build", "tool.moth", ...want.flags], { cwd: dir, encoding: "utf8" });
+      const built = spawnSync(exe, ["build", "tool.folio", ...want.flags], { cwd: dir, encoding: "utf8" });
       assert.equal(built.status, 0, built.stdout + built.stderr);
       const got = spawnSync(executable(dir, "tool"), ["one", "two words", 'q"uote', ""], { cwd: dir, encoding: "utf8", input: "Sam\r\nagain" });
       const out = existsSync(join(dir, "out.txt")) ? readFileSync(join(dir, "out.txt"), "utf8") : null;
       assert.deepEqual({ flags: want.flags, stdout: got.stdout, stderr: got.stderr, status: got.status, out }, want, want.flags.join(" "));
     }
-    for (const bad of ["--allow-everything", "--allow-all=x"]) { // not a flag moth knows: it says how to use it, ends with 2, and builds nothing
+    for (const bad of ["--allow-everything", "--allow-all=x"]) { // not a flag folio knows: it says how to use it, ends with 2, and builds nothing
       const dir = setUp();
-      const said = spawnSync(exe, ["build", "tool.moth", bad], { cwd: dir, encoding: "utf8" });
-      assert.match(said.stderr, /^usage: moth /, bad);
+      const said = spawnSync(exe, ["build", "tool.folio", bad], { cwd: dir, encoding: "utf8" });
+      assert.match(said.stderr, /^usage: folio /, bad);
       assert.deepEqual([said.status, said.stdout], [2, ""], bad);
       assert.ok(!existsSync(executable(dir, "tool")), bad);
     }
@@ -2448,7 +2463,7 @@ test("moth.exe builds --allow flags in, and its program reads, writes, asks and 
 });
 
 // Going online: a program reads sites from a server of this test's own, on 127.0.0.1 over plain http, so
-// nothing here needs the internet. What it must say is what moth-native (Moth's Rust engine, which went
+// nothing here needs the internet. What it must say is what folio-native (Folio's Rust engine, which went
 // online with curl) said: the page's text or bytes, a move to another address followed only where the
 // program may go, and any other answer from 300 up, a refused connection or an address that can't be one
 // a mistake in the same words, on Windows (WinHTTP) and on Linux (curl) alike.
@@ -2561,7 +2576,7 @@ function online(base, nobody, { refused = () => false } = {}) {
 
 test("a program reads sites: their text and bytes, moves to another address, and what can go wrong", { skip }, async () => {
   const server = await siteServer();
-  const dir = mkdtempSync(join(tmpdir(), "moth-online-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-online-"));
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
     const nobody = `http://127.0.0.1:${await unusedPort()}/`;
@@ -2576,15 +2591,15 @@ test("a program reads sites: their text and bytes, moves to another address, and
       [[], () => true], // away from a terminal no one is asked, so nothing is allowed
       [["--allow-read", "--allow-write"], () => true],
     ]) {
-      writeFileSync(exe, machine(ONLINE_SOURCE, { target, name: "online.moth", allow }));
+      writeFileSync(exe, machine(ONLINE_SOURCE, { target, name: "online.folio", allow }));
       if (target === "linux") chmodSync(exe, 0o755);
       const got = await runWhileServing(exe, [base, nobody], dir);
       assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: online(base, nobody, { refused }), stderr: "", status: 0 }, allow.join(" "));
     }
-    // and `moth run`, which builds the --allow flags in the same way
-    const { exe: moth, dir: mothDir } = mothExe();
-    writeFileSync(join(mothDir, "online.moth"), ONLINE_SOURCE);
-    const ran = await runWhileServing(moth, ["run", "--allow-net=127.0.0.1", "online.moth", base, nobody], mothDir);
+    // and `folio run`, which builds the --allow flags in the same way
+    const { exe: folio, dir: folioDir } = folioExe();
+    writeFileSync(join(folioDir, "online.folio"), ONLINE_SOURCE);
+    const ran = await runWhileServing(folio, ["run", "--allow-net=127.0.0.1", "online.folio", base, nobody], folioDir);
     assert.deepEqual({ stdout: ran.stdout, stderr: ran.stderr, status: ran.status }, { stdout: online(base, nobody, { refused: (address) => !local(address) }), stderr: "", status: 0 });
   } finally {
     server.close();
@@ -2598,15 +2613,15 @@ test("a program reads sites: their text and bytes, moves to another address, and
 // would: whole numbers, numbers, text and wide text both ways, bytes C writes into, pointers, nothing, yes
 // or no, more inputs than there are registers for, and a function of the library's as a value
 function libraryRun(source, allow = ["--allow-libraries"], env = {}) {
-  const dir = mkdtempSync(join(tmpdir(), "moth-library-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-library-"));
   try {
     const files = {};
-    for (const name of ["sqlite.moth", "windows.moth", "linux.moth", "ui.moth", "tasks.moth", "system.moth", "game.moth", "sockets.moth", "cores.moth",
-      "secrets.moth", "crypto.moth", "base64.moth", "http.moth", "server.moth", "zip.moth", "websocket.moth", "hash.moth", "email.moth", "dates.moth", "log.moth", "zones.moth"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of ["sqlite.folio", "windows.folio", "linux.folio", "ui.folio", "tasks.folio", "system.folio", "game.folio", "sockets.folio", "cores.folio",
+      "secrets.folio", "crypto.folio", "base64.folio", "http.folio", "server.folio", "zip.folio", "websocket.folio", "hash.folio", "email.folio", "dates.folio", "log.folio", "zones.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     if (source.includes("mandelbrot.png")) writeFileSync(join(dir, "mandelbrot.png"), readFileSync(new URL("./docs/mandelbrot.png", import.meta.url)));
     if (source.includes("beep.wav")) writeFileSync(join(dir, "beep.wav"), silentWav());
     const exe = executable(dir, "p");
-    const bytes = machine(source, { target, name: "p.moth", allow, files });
+    const bytes = machine(source, { target, name: "p.folio", allow, files });
     writeFileSync(exe, bytes);
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "", env: { ...process.env, ...env } });
@@ -2646,7 +2661,7 @@ end
 
 test("a program calls a C library's functions as C does, on Windows and on Linux", { skip }, () => {
   const ran = libraryRun(`${C_LIBRARY}say strlen("héllo") " " abs(0 - 5) " " atof("2.5") " " sqrt(2) " " pow(2, 10)
-say getenv("MOTH_LIBRARY_TEST") " " getenv("MOTH_NO_SUCH_VARIABLE")
+say getenv("FOLIO_LIBRARY_TEST") " " getenv("FOLIO_NO_SUCH_VARIABLE")
 say wcslen("héllo") " " strchr("hello", 108) " " strchr("hello", 122)
 set b to 4 bytes
 say (memset(b, 7, 3) is greater than 0) " " b
@@ -2655,7 +2670,7 @@ set out to 200 bytes
 sprintf(out, "%d %.1f %s %d %d %.0f %.0f %.0f %.0f %.0f %.0f %.0f %d", 1, 2.5, "x", 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 say c_text(out)
 set f to abs
-say f(0 - 8)`, ["--allow-libraries"], { MOTH_LIBRARY_TEST: "on" });
+say f(0 - 8)`, ["--allow-libraries"], { FOLIO_LIBRARY_TEST: "on" });
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], [
     "6 5 2.5 1.4142135623731 1024\non nothing\n5 llo nothing\nyes (4 bytes: 7, 7, 7, 0)\nyes no\n1 2.5 x 3 4 5 6 7 8 9 10 11 12\n8\n", "", 0]);
   // a mistake in what it's given, a library that isn't there, a function that isn't in it, and no --allow-libraries
@@ -2667,11 +2682,11 @@ use the library "msvcrt" or "c" as c
 end
 say ${call}`, allow).stderr.split("\n")[0];
   const lib = target === "windows" ? "msvcrt" : "c";
-  assert.equal(wrong("abs(2.5)"), "p.moth:3:5: 'abs' needs input 1 to be a whole number from -2147483648 to 4294967295, not 2.5");
-  assert.equal(wrong("memset(\"x\", 0, 1)"), "p.moth:34:5: 'memset' needs input 1 to be bytes, not text");
-  assert.equal(wrong("nowhere()"), "p.moth:29:5: there is no library called 'no_such_library_here'");
-  assert.equal(wrong("c's no_such_function_here()"), `p.moth:32:5: the library '${lib}' has no function called 'no_such_function_here'`);
-  assert.equal(wrong("abs(1)", []), "p.moth:3:5: can't use the library 'msvcrt' or 'c': this program isn't allowed to use libraries (start it with --allow-libraries)");
+  assert.equal(wrong("abs(2.5)"), "p.folio:3:5: 'abs' needs input 1 to be a whole number from -2147483648 to 4294967295, not 2.5");
+  assert.equal(wrong("memset(\"x\", 0, 1)"), "p.folio:34:5: 'memset' needs input 1 to be bytes, not text");
+  assert.equal(wrong("nowhere()"), "p.folio:29:5: there is no library called 'no_such_library_here'");
+  assert.equal(wrong("c's no_such_function_here()"), `p.folio:32:5: the library '${lib}' has no function called 'no_such_function_here'`);
+  assert.equal(wrong("abs(1)", []), "p.folio:3:5: can't use the library 'msvcrt' or 'c': this program isn't allowed to use libraries (start it with --allow-libraries)");
 });
 
 test("a library's structures are records, its callbacks the program's functions, and a float is a float", { skip }, () => {
@@ -2755,8 +2770,8 @@ to count_window with window, extra
     return yes
 end
 set instance to GetModuleHandleW(nothing)
-say RegisterClassExW(record with size 80, procedure on_message, instance instance, class_name "MothTest") is not 0
-set window to CreateWindowExW(0, "MothTest", "Moth", 0, 0, 0, 200, 100, nothing, nothing, instance, nothing)
+say RegisterClassExW(record with size 80, procedure on_message, instance instance, class_name "FolioTest") is not 0
+set window to CreateWindowExW(0, "FolioTest", "Folio", 0, 0, 0, 200, 100, nothing, nothing, instance, nothing)
 say DestroyWindow(window) " " (1 is in messages) " " (2 is in messages)
 say EnumWindows(count_window, nothing) " " (seen is greater than 0)`);
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["yes\nyes yes yes\nyes yes\n", "", 0]);
@@ -2764,18 +2779,18 @@ say EnumWindows(count_window, nothing) " " (seen is greater than 0)`);
 
 test("only a program that uses a library is linked by Linux's dynamic linker, or imports what loads one on Windows", { skip }, () => {
   for (const t of ["windows", "linux"]) {
-    const plain = Buffer.from(machine('say "hello"', { target: t, name: "p.moth" }));
-    const using = Buffer.from(machine('use the library "c"\n    abs(a whole number) gives a whole number\nend\nsay "hello"', { target: t, name: "p.moth" }));
+    const plain = Buffer.from(machine('say "hello"', { target: t, name: "p.folio" }));
+    const using = Buffer.from(machine('use the library "c"\n    abs(a whole number) gives a whole number\nend\nsay "hello"', { target: t, name: "p.folio" }));
     const marks = t === "linux" ? "/lib64/ld-linux-x86-64.so.2" : "LoadLibraryExW";
     assert.deepEqual([plain.includes(marks), using.includes(marks)], [false, true], t);
   }
 });
 
-// tools/sqlite.moth, a library of Moth's on SQLite: Windows' own winsqlite3.dll, or Linux's libsqlite3.so.0
+// tools/sqlite.folio, a library of Folio's on SQLite: Windows' own winsqlite3.dll, or Linux's libsqlite3.so.0
 const sqliteHere = target === "windows" ? existsSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "winsqlite3.dll"))
   : ["/usr/lib/x86_64-linux-gnu/libsqlite3.so.0", "/usr/lib64/libsqlite3.so.0", "/usr/lib/libsqlite3.so.0"].some((f) => existsSync(f));
-test("tools/sqlite.moth keeps a database in a file, through SQLite", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, () => {
-  const ran = libraryRun(`use "sqlite.moth" as sqlite
+test("tools/sqlite.folio keeps a database in a file, through SQLite", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, () => {
+  const ran = libraryRun(`use "sqlite.folio" as sqlite
 set people to sqlite's open("people.db")
 sqlite's run(people, "create table people (name text, age integer, height real, note text)")
 say sqlite's run_with(people, "insert into people values (?, ?, ?, ?)", list of "Sam", 20, 1.8, nothing)
@@ -2795,43 +2810,43 @@ say length of sqlite's query(again, "select * from people")`);
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ['1\n1\nSam is 20, 1.8 m, nothing\nAna Lee 😀 is 31, 1.65 m, hé\n[(dictionary where "n" is 1)]\nSQLite: no such table: nowhere\n2\n', "", 0]);
 });
 
-// text.moth and dates.moth, in Moth alone: their own tests, run by moth.exe's test runner, in machine code
-test("text.moth, dates.moth, hash.moth, base64.moth, toml.moth, options.moth, collections.moth, lists.moth, stats.moth, sync.moth, big.moth, fractions.moth, sets.moth, images.moth, crypto.moth, charts.moth, xml.moth, zip.moth and math.moth pass their own tests in machine code", { skip }, () => {
-  const { dir, exe } = mothExe();
+// text.folio and dates.folio, in Folio alone: their own tests, run by folio.exe's test runner, in machine code
+test("text.folio, dates.folio, hash.folio, base64.folio, toml.folio, options.folio, collections.folio, lists.folio, stats.folio, sync.folio, big.folio, fractions.folio, sets.folio, images.folio, crypto.folio, charts.folio, xml.folio, zip.folio and math.folio pass their own tests in machine code", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "text-and-dates");
   mkdirSync(sub);
-  for (const name of ["text.moth", "text.test.moth", "dates.moth", "dates.test.moth", "hash.moth", "hash.test.moth", "big.moth", "big.test.moth",
-    "xml.moth", "xml.test.moth", "zip.moth", "zip.test.moth", "base64.moth", "base64.test.moth", "toml.moth", "toml.test.moth", "options.moth",
-    "options.test.moth", "collections.moth", "collections.test.moth", "lists.moth", "lists.test.moth", "stats.moth", "stats.test.moth", "sync.moth", "sync.test.moth", "fractions.moth", "fractions.test.moth", "sets.moth", "sets.test.moth", "images.moth", "images.test.moth", "crypto.moth", "crypto.test.moth", "charts.moth", "charts.test.moth",
-    "secrets.moth"]) {
+  for (const name of ["text.folio", "text.test.folio", "dates.folio", "dates.test.folio", "hash.folio", "hash.test.folio", "big.folio", "big.test.folio",
+    "xml.folio", "xml.test.folio", "zip.folio", "zip.test.folio", "base64.folio", "base64.test.folio", "toml.folio", "toml.test.folio", "options.folio",
+    "options.test.folio", "collections.folio", "collections.test.folio", "lists.folio", "lists.test.folio", "stats.folio", "stats.test.folio", "sync.folio", "sync.test.folio", "fractions.folio", "fractions.test.folio", "sets.folio", "sets.test.folio", "images.folio", "images.test.folio", "crypto.folio", "crypto.test.folio", "charts.folio", "charts.test.folio",
+    "secrets.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
-  for (const name of ["math.moth", "math.test.moth"]) writeFileSync(join(sub, name), readFileSync(new URL(`./${name}`, import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "text.test.moth", "dates.test.moth", "hash.test.moth", "big.test.moth", "xml.test.moth", "zip.test.moth", "math.test.moth",
-    "base64.test.moth", "toml.test.moth", "options.test.moth", "collections.test.moth", "lists.test.moth", "stats.test.moth", "sync.test.moth", "fractions.test.moth", "sets.test.moth", "images.test.moth", "crypto.test.moth", "charts.test.moth"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  for (const name of ["math.folio", "math.test.folio"]) writeFileSync(join(sub, name), readFileSync(new URL(`./${name}`, import.meta.url), "utf8"));
+  const ran = spawnSync(exe, ["test", "text.test.folio", "dates.test.folio", "hash.test.folio", "big.test.folio", "xml.test.folio", "zip.test.folio", "math.test.folio",
+    "base64.test.folio", "toml.test.folio", "options.test.folio", "collections.test.folio", "lists.test.folio", "stats.test.folio", "sync.test.folio", "fractions.test.folio", "sets.test.folio", "images.test.folio", "crypto.test.folio", "charts.test.folio"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
   assert.equal(ran.stdout.split("\n").at(-2), "93 passed");
 });
 
-// tools/arrays.moth (DESIGN §118): its own tests, in machine code, where machine code's own loops do the work and
-// must give what Moth gives to the last bit
-test("arrays.moth and ai.moth pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
-  const { dir, exe } = mothExe();
+// tools/arrays.folio (DESIGN §118): its own tests, in machine code, where machine code's own loops do the work and
+// must give what Folio gives to the last bit
+test("arrays.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "arrays");
   mkdirSync(sub);
-  for (const name of ["arrays.moth", "arrays.test.moth", "ai.moth", "ai.test.moth", "http.moth", "sockets.moth", "system.moth", "zip.moth"]) {
+  for (const name of ["arrays.folio", "arrays.test.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
-  writeFileSync(join(sub, "math.moth"), readFileSync(new URL("./math.moth", import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "arrays.test.moth", "ai.test.moth", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
+  const ran = spawnSync(exe, ["test", "arrays.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
   assert.equal(ran.stdout.split("\n").at(-2), "13 passed");
 });
 
-// Moth's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
+// Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
 // numbers given to C as where its numbers are
-test("a program uses Moth's own library without --allow-libraries, and gives C a list of numbers where they are", { skip }, () => {
-  const own = libraryRun(`use the library "moth"
+test("a program uses Folio's own library without --allow-libraries, and gives C a list of numbers where they are", { skip }, () => {
+  const own = libraryRun(`use the library "folio"
     numbers_reduce(a long whole number, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
 end
 set out to list of 0, 0
@@ -2839,12 +2854,12 @@ say numbers_reduce(1, out, (list of 1, 2, 3, 4, 5, 6), 2, 3, 1, 0) " " out
 say numbers_reduce(1, out, (list of 1, 2, 3), 2, 3, 1, 0) " " out
 say numbers_reduce(2, out, (list of 1, "x", 3), 1, 3, 1, 0)`, []);
   assert.deepEqual([own.stdout, own.stderr, own.status], ["0 [6, 15]\n1 [6, 15]\n1\n", "", 0]);
-  if (target === "linux") assert.equal(own.bytes.includes(Buffer.from("libdl.so.2")), false, "Moth's own library isn't linked");
-  const unknown = () => machine(`use the library "moth"
+  if (target === "linux") assert.equal(own.bytes.includes(Buffer.from("libdl.so.2")), false, "Folio's own library isn't linked");
+  const unknown = () => machine(`use the library "folio"
     numbers_nowhere(a list of numbers) gives a whole number
 end
-numbers_nowhere(list of 1)`, { target, name: "p.moth" });
-  assert.throws(unknown, /the library 'moth' has no function called 'numbers_nowhere'/);
+numbers_nowhere(list of 1)`, { target, name: "p.folio" });
+  assert.throws(unknown, /the library 'folio' has no function called 'numbers_nowhere'/);
   const c = libraryRun(`use the library "msvcrt" or "c"
     memcpy(a list of numbers, a list of numbers, a long whole number) gives a pointer
     memset(a list of numbers, a whole number, a long whole number) gives a pointer
@@ -2857,8 +2872,8 @@ say (item 1 of to_here is not item 1 of to_here) " " (item 2 of to_here is not i
 say item 1 of to_here + 1
 memcpy(to_here, (list of 1, "two"), 16)`);
   assert.deepEqual([c.stdout, c.stderr.split("\n")[0], c.status], ["[1.5, -2, 1000000]\nyes yes 1000000\nNaN\n",
-    "p.moth:2:5: 'memcpy' needs input 2 to be a list of numbers, not a list with text in it", 1]);
-  assert.throws(() => machine('use the library "msvcrt"\n    f(a whole number) gives a list of numbers\nend\n', { target, name: "p.moth" }),
+    "p.folio:2:5: 'memcpy' needs input 2 to be a list of numbers, not a list with text in it", 1]);
+  assert.throws(() => machine('use the library "msvcrt"\n    f(a whole number) gives a list of numbers\nend\n', { target, name: "p.folio" }),
     (err) => err.reason === "a library's function can't give a list of numbers: only a function's input can be one");
 });
 
@@ -2884,8 +2899,8 @@ use the library "msvcrt" or "c"
 end
 say call_abs(found("abs"), -5) " " call_strlen(found("strlen"), "héllo")
 call_abs(nothing, 1)`);
-  assert.deepEqual([ran.stdout, ran.stderr.split("\n")[0], ran.status], ["5 6\n", `p.moth:${target === "windows" ? 9 : 8}:5: 'call_abs' needs input 1 to be where a function is, not nothing`, 1]);
-  assert.throws(() => machine('use the library "c"\n    "at an address" as f(a whole number) gives a whole number\nend\nf(1)\n', { target, name: "p.moth" }),
+  assert.deepEqual([ran.stdout, ran.stderr.split("\n")[0], ran.status], ["5 6\n", `p.folio:${target === "windows" ? 9 : 8}:5: 'call_abs' needs input 1 to be where a function is, not nothing`, 1]);
+  assert.throws(() => machine('use the library "c"\n    "at an address" as f(a whole number) gives a whole number\nend\nf(1)\n', { target, name: "p.folio" }),
     (err) => err.reason === "a function at an address takes where it is first, as a pointer");
   const refused = libraryRun(`${finding}
 say found("abs")`, []);
@@ -2921,23 +2936,23 @@ function onnxModel(type) {
   const graph = [...bytes(1, node(["X", "W"], ["XW"], "MatMul")), ...bytes(1, node(["XW", "B"], ["Z"], "Add")), ...bytes(1, node(["Z"], ["Y"], "Relu")),
     ...str(2, "dense"), ...bytes(5, tensor("W", [3, 2], [1, -1, 0.5, 2, 2, 0.25])), ...bytes(5, tensor("B", [2], [0.5, 1])),
     ...bytes(11, valueInfo("X", ["batch", 3])), ...bytes(12, valueInfo("Y", ["batch", 2]))];
-  return Buffer.from([...int(1, 7), ...str(2, "moth"), ...bytes(7, graph), ...bytes(8, [...str(1, ""), ...int(2, 13)])]);
+  return Buffer.from([...int(1, 7), ...str(2, "folio"), ...bytes(7, graph), ...bytes(8, [...str(1, ""), ...int(2, 13)])]);
 }
 
 // ONNX Runtime comes with Windows 11; on Linux, from its release, where the test looks for it
 const onnxHere = target === "windows" ? existsSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "onnxruntime.dll"))
   : ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib", "/usr/local/lib"].some((d) => existsSync(join(d, "libonnxruntime.so")) || existsSync(join(d, "libonnxruntime.so.1")));
-test("tools/onnx.moth runs an ONNX model through ONNX Runtime's C API, in floats and in doubles", { skip: skip || (!onnxHere && "ONNX Runtime isn't installed") }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-onnx-"));
+test("tools/onnx.folio runs an ONNX model through ONNX Runtime's C API, in floats and in doubles", { skip: skip || (!onnxHere && "ONNX Runtime isn't installed") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-onnx-"));
   try {
     writeFileSync(join(dir, "dense.onnx"), onnxModel(1));
     writeFileSync(join(dir, "dense64.onnx"), onnxModel(11));
     const files = {};
-    for (const name of ["onnx.moth", "arrays.moth"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
-    files["math.moth"] = readFileSync(new URL("./math.moth", import.meta.url), "utf8");
+    for (const name of ["onnx.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(`use "onnx.moth" as onnx
-use "arrays.moth" as arrays
+    writeFileSync(exe, machine(`use "onnx.folio" as onnx
+use "arrays.folio" as arrays
 say length of split onnx's version() by "."
 for each file in list of "dense.onnx", "dense64.onnx"
     set model to onnx's load(file)
@@ -2965,7 +2980,7 @@ try
 if it fails with why
     say "fails: " position of "nowhere.onnx" in why is greater than 0
 end
-`, { target, name: "p.moth", files, allow: ["--allow-libraries"] }));
+`, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8" });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], [`3
@@ -2996,13 +3011,13 @@ function numpyBlas() {
 }
 const blasHere = target === "windows" ? numpyBlas()
   : ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"].some((d) => existsSync(join(d, "libopenblas.so.0")) || existsSync(join(d, "libopenblas.so"))) && "system";
-test("arrays.moth's matmul goes through BLAS once use_blas finds it, and gives what its own loops give", { skip: skip || (!blasHere && "OpenBLAS isn't installed (nor NumPy, which has a copy)") }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-blas-"));
+test("arrays.folio's matmul goes through BLAS once use_blas finds it, and gives what its own loops give", { skip: skip || (!blasHere && "OpenBLAS isn't installed (nor NumPy, which has a copy)") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-blas-"));
   try {
     if (target === "windows") copyFileSync(blasHere, join(dir, "libscipy_openblas64_.dll"));
-    const files = { "arrays.moth": readFileSync(new URL("./tools/arrays.moth", import.meta.url), "utf8"), "math.moth": readFileSync(new URL("./math.moth", import.meta.url), "utf8") };
+    const files = { "arrays.folio": readFileSync(new URL("./tools/arrays.folio", import.meta.url), "utf8"), "math.folio": readFileSync(new URL("./math.folio", import.meta.url), "utf8") };
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(`use "arrays.moth" as arrays
+    writeFileSync(exe, machine(`use "arrays.folio" as arrays
 set p to arrays's random(list of 70, 50)
 set q to arrays's random(list of 50, 30)
 set own to arrays's matmul(p, q)
@@ -3013,7 +3028,7 @@ say arrays's close(own, blas, 0.000000001) " " blas's shape
 say arrays's to_list(arrays's matmul(arrays's array(list of (list of 1, 2)), arrays's array(list of (list of 3), (list of 4))))
 arrays's stop_using_blas()
 say arrays's same(arrays's matmul(p, q), own)
-`, { target, name: "p.moth", files, allow: ["--allow-libraries"] }));
+`, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8" });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["yes\nyes [70, 30]\n[[11]]\nyes\n", "", 0]);
@@ -3022,7 +3037,7 @@ say arrays's same(arrays's matmul(p, q), own)
   }
 });
 
-// tools/python.moth: CPython inside the program, through its C API, from the Python this computer has
+// tools/python.folio: CPython inside the program, through its C API, from the Python this computer has
 function pythonHere() {
   for (const command of ["python3", "python"]) {
     const asked = spawnSync(command, ["-E", "-c", "import sys, os, sysconfig\n" +
@@ -3037,15 +3052,15 @@ function pythonHere() {
   return null;
 }
 const python = target ? pythonHere() : null;
-test("tools/python.moth runs Python inside the program: code, modules, values both ways, and Python's mistakes", { skip: skip || (!python && "Python's library isn't installed") }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-python-"));
+test("tools/python.folio runs Python inside the program: code, modules, values both ways, and Python's mistakes", { skip: skip || (!python && "Python's library isn't installed") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-python-"));
   try {
     const files = {};
-    for (const name of ["python.moth", "arrays.moth"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
-    files["math.moth"] = readFileSync(new URL("./math.moth", import.meta.url), "utf8");
+    for (const name of ["python.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(`use "python.moth" as python
-use "arrays.moth" as arrays
+    writeFileSync(exe, machine(`use "python.folio" as python
+use "arrays.folio" as arrays
 say python's start() is not nothing
 python's run("import math\\nx = math.factorial(10)")
 say python's evaluate("x // 3")
@@ -3091,7 +3106,7 @@ if python's evaluate("__import__('importlib.util').util.find_spec('numpy') is no
     say python's evaluate("a.T @ a") " " python's evaluate("str(a.dtype)")
     say python's evaluate("__import__('numpy').array(['a', 'b'])")
 end
-`, { target, name: "p.moth", files, allow: ["--allow-libraries"] }));
+`, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, PYTHON_LIBRARY: python.library } });
     const numpy = python.numpy ? "[0, 0.25, 0.5, 0.75, 1]\n2.6\n[[10, 14], [14, 20]] float64\n[\"a\", \"b\"]\n" : "";
@@ -3117,12 +3132,12 @@ ${numpy}`, "", 0]);
   }
 });
 
-// tools/ai.moth (DESIGN §121), against a server of the test's own that answers as Anthropic's Messages API and
+// tools/ai.folio (DESIGN §121), against a server of the test's own that answers as Anthropic's Messages API and
 // OpenAI's chat completions and embeddings do: plain and streamed answers (server-sent events, in chunks),
 // tools, JSON, embeddings, and the APIs' mistakes. The keys are made up, and only ever in the environment.
 async function aiMock() {
   const seen = [];
-  const vocabulary = ["moth", "night", "bee", "day", "fly"];
+  const vocabulary = ["folio", "night", "bee", "day", "fly"];
   const embedding = (text) => vocabulary.map((w) => text.toLowerCase().split(w).length - 1);
   const lastUser = (messages) => [...messages].reverse().find((m) => m.role === "user" || m.role === "tool");
   const pieces = (text) => text.match(/.{1,5}/gsu);
@@ -3153,7 +3168,7 @@ async function aiMock() {
           content = [{ type: "text", text: "Let me check." }, { type: "tool_use", id: "toolu_1", name: sent.tools[0].name, input: { city: "Paris" } }];
           stop = "tool_use";
         } else if (result) content = [{ type: "text", text: `The tool said: ${result.content}${result.is_error ? " (an error)" : ""}` }];
-        else if (sent.output_config?.format) content = [{ type: "text", text: '{"name": "Luna moth", "wingspan": 114}' }];
+        else if (sent.output_config?.format) content = [{ type: "text", text: '{"name": "Luna folio", "wingspan": 114}' }];
         else content = [{ type: "text", text: `You said: ${typeof last.content === "string" ? last.content : last.content[0].text}${sent.system ? ` [${sent.system}]` : ""}` }];
         if (!sent.stream) return json(200, { id: "msg_1", type: "message", role: "assistant", model: sent.model, content, stop_reason: stop, usage: { input_tokens: 11, output_tokens: 7 } });
         const list = [["message_start", { type: "message_start", message: { id: "msg_1", model: sent.model, content: [], usage: { input_tokens: 11, output_tokens: 1 } } }]];
@@ -3184,7 +3199,7 @@ async function aiMock() {
           message = { role: "assistant", content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: sent.tools[0].function.name, arguments: '{"city": "Paris"}' } }] };
           finish = "tool_calls";
         } else if (last.role === "tool") message = { role: "assistant", content: `The tool said: ${last.content}` };
-        else if (sent.response_format) message = { role: "assistant", content: '{"name": "Luna moth", "wingspan": 114}' };
+        else if (sent.response_format) message = { role: "assistant", content: '{"name": "Luna folio", "wingspan": 114}' };
         else message = { role: "assistant", content: `You said: ${last.content}${system}` };
         if (!sent.stream) return json(200, { model: sent.model, choices: [{ index: 0, message, finish_reason: finish }], usage: { prompt_tokens: 5, completion_tokens: 3 } });
         const list = [];
@@ -3205,12 +3220,12 @@ async function aiMock() {
   return { server, seen, base: `http://127.0.0.1:${server.address().port}` };
 }
 
-const AI_PROGRAM = `use "ai.moth" as ai
-use "system.moth" as system
+const AI_PROGRAM = `use "ai.folio" as ai
+use "system.folio" as system
 set base to system's environment("MOCK_BASE")
 set claude to ai's anthropic("claude-opus-5-5", dictionary where "base_url" is base)
 say claude
-say ai's answer(claude, "Name a moth.")
+say ai's answer(claude, "Name a folio.")
 set reply to ai's chat(claude, (list of (record with role "user", content "Hi")), dictionary where "system" is "Be brief.")
 say reply's text " | " reply's stop_reason " | " reply's usage's input_tokens " " reply's usage's output_tokens " | " reply's model
 set pieces to empty list
@@ -3231,7 +3246,7 @@ end
 say ai's chat_with_tools(claude, "Is it sunny in Paris?", list of ai's tool("get_weather", "The weather", empty dictionary, broken))'s text
 set first_turn to ai's stream(claude, "Is it sunny?", keep_piece, dictionary where "tools" is list of weather)
 say first_turn's stop_reason " " first_turn's tool_calls
-say ai's answer_json(claude, "A moth", dictionary where "type" is "object")
+say ai's answer_json(claude, "A folio", dictionary where "type" is "object")
 set gpt to ai's openai("gpt-test", dictionary where "base_url" is base + "/v1")
 say gpt " " ai's answer(gpt, "Hello there", "Be kind.")
 set pieces to empty list
@@ -3241,13 +3256,13 @@ say streamed's text " | " streamed's stop_reason " | " streamed's usage's input_
 say ai's chat_with_tools(gpt, "Is it sunny in Paris?", list of weather)'s text
 set gpt_turn to ai's stream(gpt, "Is it sunny?", keep_piece, dictionary where "tools" is list of weather)
 say gpt_turn's stop_reason " " gpt_turn's tool_calls
-say ai's answer_json(gpt, "A moth", dictionary where "type" is "object")
-set texts to list of "moths fly at night", "bees fly by day", "a moth at night, a moth"
+say ai's answer_json(gpt, "A folio", dictionary where "type" is "object")
+set texts to list of "folios fly at night", "bees fly by day", "a folio at night, a folio"
 set embedded to ai's embed(gpt, texts)
 say embedded
 set index to ai's vectors()
 ai's add_vector(index, texts, embedded)
-for each found in ai's search(index, ai's embed(gpt, "night moth"), 2)
+for each found in ai's search(index, ai's embed(gpt, "night folio"), 2)
     say found's key " " found's score with 3 decimals
 end
 say ai's answer(ai's openai_compatible(base + "/v1", "local-model"), "Hi, with no key")
@@ -3259,9 +3274,9 @@ if it fails with why
 end
 `;
 
-// the keys: a wrong one, as the API says, or none, as ai.moth says, for each client
-const AI_KEYS_PROGRAM = `use "ai.moth" as ai
-use "system.moth" as system
+// the keys: a wrong one, as the API says, or none, as ai.folio says, for each client
+const AI_KEYS_PROGRAM = `use "ai.folio" as ai
+use "system.folio" as system
 set base to system's environment("MOCK_BASE")
 to ignore with piece
 end
@@ -3302,35 +3317,35 @@ function runAi(exe, cwd, env) {
   });
 }
 
-test("tools/ai.moth talks to Anthropic's and OpenAI's APIs: answers, streams, tools, JSON and embeddings", { skip }, async () => {
+test("tools/ai.folio talks to Anthropic's and OpenAI's APIs: answers, streams, tools, JSON and embeddings", { skip }, async () => {
   const { server, seen, base } = await aiMock();
-  const dir = mkdtempSync(join(tmpdir(), "moth-ai-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-ai-"));
   try {
     const files = {};
-    for (const name of ["ai.moth", "http.moth", "sockets.moth", "system.moth", "zip.moth", "arrays.moth"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
-    files["math.moth"] = readFileSync(new URL("./math.moth", import.meta.url), "utf8");
+    for (const name of ["ai.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(AI_PROGRAM, { target, name: "p.moth", files, allow: ["--allow-libraries", "--allow-net"] }));
+    writeFileSync(exe, machine(AI_PROGRAM, { target, name: "p.folio", files, allow: ["--allow-libraries", "--allow-net"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = await runAi(exe, dir, { ...process.env, MOCK_BASE: base, ANTHROPIC_API_KEY: "test-key-not-real", OPENAI_API_KEY: "test-openai-key" });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], [`an Anthropic client (claude-opus-5-5)
-You said: Name a moth.
+You said: Name a folio.
 You said: Hi [Be brief.] | end_turn | 11 7 | claude-opus-5-5
 5 pieces: You s|aid: |Write| a ha|iku.
 You said: Write a haiku. | end_turn | 7
 The tool said: sunny in Paris
 The tool said: no weather today (an error)
 tool_use [(record with id "toolu_1", name "get_weather", input (dictionary where "city" is "Paris"))]
-(dictionary where "name" is "Luna moth", "wingspan" is 114)
+(dictionary where "name" is "Luna folio", "wingspan" is 114)
 an OpenAI client (gpt-test) You said: Hello there [Be kind.]
 You s|aid: |Strea|m thi|s
 You said: Stream this | stop | 5
 The tool said: sunny in Paris
 tool_calls [(record with id "call_1", name "get_weather", input (dictionary where "city" is "Paris"))]
-(dictionary where "name" is "Luna moth", "wingspan" is 114)
+(dictionary where "name" is "Luna folio", "wingspan" is 114)
 [[1, 1, 0, 0, 1], [0, 0, 1, 1, 1], [2, 1, 0, 0, 0]]
-a moth at night, a moth 0.949
-moths fly at night 0.816
+a folio at night, a folio 0.949
+folios fly at night 0.816
 You said: Hi, with no key
 You said: Hi, with a key
 Anthropic's API has no embeddings: use openai_compatible() with a server that has them, as Voyage AI, OpenAI or Ollama
@@ -3339,7 +3354,7 @@ Anthropic's API has no embeddings: use openai_compatible() with a server that ha
     // Anthropic's), a stream's tools streamed eagerly, and a tool's result sent back after the model's turn
     const first = seen[0];
     assert.deepEqual([first.url, first.headers["content-type"], first.body], ["/v1/messages", "application/json",
-      { model: "claude-opus-5-5", max_tokens: 16000, messages: [{ role: "user", content: "Name a moth." }] }]);
+      { model: "claude-opus-5-5", max_tokens: 16000, messages: [{ role: "user", content: "Name a folio." }] }]);
     const streamedTools = seen.find((s) => s.body.stream && s.body.tools && s.url === "/v1/messages");
     assert.deepEqual([streamedTools.body.max_tokens, streamedTools.body.tools[0].eager_input_streaming, streamedTools.headers.accept], [64000, true, "text/event-stream"]);
     const toolRound = seen.find((s) => s.url === "/v1/messages" && s.body.messages.length === 3);
@@ -3354,7 +3369,7 @@ Anthropic's API has no embeddings: use openai_compatible() with a server that ha
     assert.equal(seen.filter((s) => s.body.model === "gpt-test").at(-1).headers.authorization, "Bearer test-openai-key");
     // a wrong key, and none
     const keys = executable(dir, "keys");
-    writeFileSync(keys, machine(AI_KEYS_PROGRAM, { target, name: "keys.moth", files, allow: ["--allow-libraries", "--allow-net"] }));
+    writeFileSync(keys, machine(AI_KEYS_PROGRAM, { target, name: "keys.folio", files, allow: ["--allow-libraries", "--allow-net"] }));
     if (target === "linux") chmodSync(keys, 0o755);
     const without = { ...process.env, MOCK_BASE: base };
     delete without.ANTHROPIC_API_KEY;
@@ -3379,15 +3394,15 @@ You said: no key needed
   }
 });
 
-// The company libraries (DESIGN §110-§117): yaml.moth, jwt.moth, s3.moth, oauth.moth, redis.moth, postgres.moth,
-// mysql.moth and wire.moth: their own tests, run by moth.exe's test runner, in machine code; --allow-libraries for
+// The company libraries (DESIGN §110-§117): yaml.folio, jwt.folio, s3.folio, oauth.folio, redis.folio, postgres.folio,
+// mysql.folio and wire.folio: their own tests, run by folio.exe's test runner, in machine code; --allow-libraries for
 // those that ask the system for randomness or the time
-const COMPANY_TESTS = ["yaml", "jwt", "s3", "oauth", "redis", "postgres", "mysql", "wire"].map((name) => `${name}.test.moth`);
-test("yaml.moth, jwt.moth, s3.moth, oauth.moth, redis.moth, postgres.moth, mysql.moth and wire.moth pass their own tests in machine code", { skip }, () => {
-  const { dir, exe } = mothExe();
+const COMPANY_TESTS = ["yaml", "jwt", "s3", "oauth", "redis", "postgres", "mysql", "wire"].map((name) => `${name}.test.folio`);
+test("yaml.folio, jwt.folio, s3.folio, oauth.folio, redis.folio, postgres.folio, mysql.folio and wire.folio pass their own tests in machine code", { skip }, () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "company");
   mkdirSync(sub);
-  for (const name of readdirSync(new URL("./tools/", import.meta.url)).filter((f) => f.endsWith(".moth"))) writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url)));
+  for (const name of readdirSync(new URL("./tools/", import.meta.url)).filter((f) => f.endsWith(".folio"))) writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url)));
   const ran = spawnSync(exe, ["test", ...COMPANY_TESTS, "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
   assert.equal(ran.stdout.split("\n").at(-2), "44 passed");
@@ -3396,12 +3411,12 @@ test("yaml.moth, jwt.moth, s3.moth, oauth.moth, redis.moth, postgres.moth, mysql
 // A program of the company libraries' built with --allow-libraries, every file in tools/ there for it to use,
 // and run with these arguments: what it said, as lines, and the rest of what spawnSync says
 function companyRun(source, args) {
-  const dir = mkdtempSync(join(tmpdir(), "moth-company-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-company-"));
   try {
     const files = {};
-    for (const name of readdirSync(new URL("./tools/", import.meta.url)).filter((f) => f.endsWith(".moth"))) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of readdirSync(new URL("./tools/", import.meta.url)).filter((f) => f.endsWith(".folio"))) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(source, { target, name: "p.moth", allow: ["--allow-libraries"], files }));
+    writeFileSync(exe, machine(source, { target, name: "p.folio", allow: ["--allow-libraries"], files }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, args, { cwd: dir, encoding: "utf8", timeout: 180_000 });
     return { ...ran, lines: ran.stdout.split("\n").slice(0, -1) };
@@ -3412,30 +3427,30 @@ function companyRun(source, args) {
 
 // The live tests: a real server, where the environment says where one is (CI starts each in a container, as
 // .github/workflows/test.yml has them; on another computer, docker run them and set these), else skipped:
-// MOTH_POSTGRES_URL postgres://moth:moth-test@127.0.0.1:5432/moth (a superuser, its host's logins md5 or scram)
-// MOTH_MYSQL_URL mysql://root:moth-root@127.0.0.1:3306/moth (MySQL 8.4, started with --mysql-native-password=ON)
-// MOTH_REDIS_URL redis://127.0.0.1:6379 (Redis 6 or later, for its ACL users)
-// MOTH_S3_URL http://moth-test-key:moth-test-secret@127.0.0.1:9000 (MinIO, its root user's key and secret)
+// FOLIO_POSTGRES_URL postgres://folio:folio-test@127.0.0.1:5432/folio (a superuser, its host's logins md5 or scram)
+// FOLIO_MYSQL_URL mysql://root:folio-root@127.0.0.1:3306/folio (MySQL 8.4, started with --mysql-native-password=ON)
+// FOLIO_REDIS_URL redis://127.0.0.1:6379 (Redis 6 or later, for its ACL users)
+// FOLIO_S3_URL http://folio-test-key:folio-test-secret@127.0.0.1:9000 (MinIO, its root user's key and secret)
 const live = (name) => skip || (!process.env[name] && `no server here: set ${name} to test against one`);
 
-// tools/postgres.moth against PostgreSQL: SCRAM-SHA-256, then a user whose password is kept as MD5; every kind of
+// tools/postgres.folio against PostgreSQL: SCRAM-SHA-256, then a user whose password is kept as MD5; every kind of
 // value both ways, a name that would be SQL if it were pasted in, 5000 rows, a transaction rolled back and one
 // committed, the server's errors, a password it won't take, and TLS required of a server that hasn't it
-test("tools/postgres.moth queries a real PostgreSQL, with parameters, types and transactions", { skip: live("MOTH_POSTGRES_URL") }, () => {
-  const ran = companyRun(String.raw`use "postgres.moth" as pg
+test("tools/postgres.folio queries a real PostgreSQL, with parameters, types and transactions", { skip: live("FOLIO_POSTGRES_URL") }, () => {
+  const ran = companyRun(String.raw`use "postgres.folio" as pg
 
 set url to item 1 of arguments
 set db to pg's connect_url(url)
 say pg's transaction_status(db)
-pg's run_script(db, "drop table if exists moth_people; create table moth_people (id serial primary key, name text not null, age int, score double precision, ok boolean, data bytea, doc jsonb, tags text[], born date, price numeric(10, 2))")
-set sql to "insert into moth_people (name, age, score, ok, data, doc, tags, born, price) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+pg's run_script(db, "drop table if exists folio_people; create table folio_people (id serial primary key, name text not null, age int, score double precision, ok boolean, data bytea, doc jsonb, tags text[], born date, price numeric(10, 2))")
+set sql to "insert into folio_people (name, age, score, ok, data, doc, tags, born, price) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
 say pg's execute(db, sql, list of "Sam", 20, 1.5, yes, (list of 0, 255, 10) as bytes, (dictionary where "pets" is (list of "cat")), "\{a,\"b c\"}", "2006-01-02", 12.5)
-say pg's execute(db, sql, list of "Robert'); drop table moth_people; --", nothing, nothing, no, nothing, nothing, nothing, nothing, nothing)
+say pg's execute(db, sql, list of "Robert'); drop table folio_people; --", nothing, nothing, no, nothing, nothing, nothing, nothing, nothing)
 say pg's execute(db, sql, list of "Zoë 😀", -7, -0.25, nothing, 0 bytes, (list of 1, "two"), "\{}", nothing, 99999999.99)
-for each row in pg's query(db, "select name, age, score, ok, data, doc, tags, born, price from moth_people order by id")
+for each row in pg's query(db, "select name, age, score, ok, data, doc, tags, born, price from folio_people order by id")
     say row
 end
-say pg's query_one(db, "select count(*) as n, sum(age) as total from moth_people where name like $1", list of "%o%")
+say pg's query_one(db, "select count(*) as n, sum(age) as total from folio_people where name like $1", list of "%o%")
 say pg's query_one(db, "select 1 where false")
 set many to pg's query(db, "select g, g * 2 as twice from generate_series(1, 5000) as g")
 set total to 0
@@ -3445,7 +3460,7 @@ end
 say length of many " " total
 # a transaction that fails: rolled back, and its mistake said again
 to failing with db
-    pg's execute(db, "delete from moth_people")
+    pg's execute(db, "delete from folio_people")
     pg's execute(db, "insert into nowhere values (1)")
 end
 try
@@ -3453,24 +3468,24 @@ try
 if it fails with why
     say why
 end
-say pg's query_one(db, "select count(*) as n from moth_people") " " pg's transaction_status(db)
+say pg's query_one(db, "select count(*) as n from folio_people") " " pg's transaction_status(db)
 to adding with db
-    pg's execute(db, "insert into moth_people (name) values ($1)", list of "Ana")
+    pg's execute(db, "insert into folio_people (name) values ($1)", list of "Ana")
     return "added"
 end
 say pg's in_transaction(db, adding)
-say pg's query_one(db, "select count(*) as n from moth_people")
+say pg's query_one(db, "select count(*) as n from folio_people")
 try
-    pg's execute(db, "insert into moth_people (id, name) values ($1, $2)", list of 1, "again")
+    pg's execute(db, "insert into folio_people (id, name) values ($1, $2)", list of 1, "again")
 if it fails with why
     say why
 end
 say pg's query_one(db, "select $1::int + 1 as n, $2::text as t, $3::float8 as f, $4::bool as b, $5::numeric as big", list of 41, "x", 0.1, no, 12345678901234)
-pg's run_script(db, "drop table moth_people")
+pg's run_script(db, "drop table folio_people")
 # a user whose password is kept as MD5, which logs in the MD5 way
-pg's run_script(db, "drop role if exists moth_md5; set password_encryption = 'md5'; create role moth_md5 login password 'md5-test'")
+pg's run_script(db, "drop role if exists folio_md5; set password_encryption = 'md5'; create role folio_md5 login password 'md5-test'")
 set parts to pg's pg_url_options(url)
-set item "user" of parts to "moth_md5"
+set item "user" of parts to "folio_md5"
 set item "password" of parts to "md5-test"
 set md5_db to pg's connect(parts)
 say pg's query_one(md5_db, "select current_user as who")
@@ -3481,7 +3496,7 @@ try
 if it fails with why
     say why
 end
-pg's run_script(db, "drop role moth_md5")
+pg's run_script(db, "drop role folio_md5")
 set item "tls" of parts to "require"
 try
     pg's connect(parts)
@@ -3490,7 +3505,7 @@ if it fails with why
 end
 pg's close(db)
 say "done"
-`, [process.env.MOTH_POSTGRES_URL]);
+`, [process.env.FOLIO_POSTGRES_URL]);
   assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
   assert.deepEqual(ran.lines, [
     "I",
@@ -3498,7 +3513,7 @@ say "done"
     "1",
     "1",
     "(dictionary where \"name\" is \"Sam\", \"age\" is 20, \"score\" is 1.5, \"ok\" is yes, \"data\" is (3 bytes: 0, 255, 10), \"doc\" is (dictionary where \"pets\" is [\"cat\"]), \"tags\" is [\"a\", \"b c\"], \"born\" is \"2006-01-02\", \"price\" is 12.5)",
-    "(dictionary where \"name\" is \"Robert'); drop table moth_people; --\", \"age\" is nothing, \"score\" is nothing, \"ok\" is no, \"data\" is nothing, \"doc\" is nothing, \"tags\" is nothing, \"born\" is nothing, \"price\" is nothing)",
+    "(dictionary where \"name\" is \"Robert'); drop table folio_people; --\", \"age\" is nothing, \"score\" is nothing, \"ok\" is no, \"data\" is nothing, \"doc\" is nothing, \"tags\" is nothing, \"born\" is nothing, \"price\" is nothing)",
     "(dictionary where \"name\" is \"Zoë 😀\", \"age\" is -7, \"score\" is -0.25, \"ok\" is nothing, \"data\" is (0 bytes), \"doc\" is [1, \"two\"], \"tags\" is [], \"born\" is nothing, \"price\" is 99999999.99)",
     "(dictionary where \"n\" is 2, \"total\" is -7)",
     "nothing",
@@ -3507,48 +3522,48 @@ say "done"
     "(dictionary where \"n\" is 3) I",
     "added",
     "(dictionary where \"n\" is 4)",
-    "PostgreSQL said: duplicate key value violates unique constraint \"moth_people_pkey\" (23505). Key (id)=(1) already exists.",
+    "PostgreSQL said: duplicate key value violates unique constraint \"folio_people_pkey\" (23505). Key (id)=(1) already exists.",
     "(dictionary where \"n\" is 42, \"t\" is \"x\", \"f\" is 0.1, \"b\" is no, \"big\" is 12345678901234)",
-    "(dictionary where \"who\" is \"moth_md5\")",
-    "PostgreSQL said: password authentication failed for user \"moth_md5\" (28P01)",
+    "(dictionary where \"who\" is \"folio_md5\")",
+    "PostgreSQL said: password authentication failed for user \"folio_md5\" (28P01)",
     "the PostgreSQL server at 127.0.0.1 has no TLS, and tls is \"require\"",
     "done",
   ]);
 });
 
-// tools/mysql.moth against MySQL 8.4: caching_sha2_password the full way, its password sent RSA-encrypted (TLS
+// tools/mysql.folio against MySQL 8.4: caching_sha2_password the full way, its password sent RSA-encrypted (TLS
 // is "prefer", and the server's certificate is its own, which can't be checked), then the fast way; every kind
 // of value both ways, by prepared statements and as text; errors; a mysql_native_password user and a
 // sha256_password user (a server without the plugin skips it); users that aren't there, whom the server gives a
 // plugin at random, refused all the same; and TLS required of a certificate it can't check
-test("tools/mysql.moth queries a real MySQL, with prepared statements, types and transactions", { skip: live("MOTH_MYSQL_URL") }, () => {
-  const ran = companyRun(String.raw`use "mysql.moth" as mysql
+test("tools/mysql.folio queries a real MySQL, with prepared statements, types and transactions", { skip: live("FOLIO_MYSQL_URL") }, () => {
+  const ran = companyRun(String.raw`use "mysql.folio" as mysql
 
 set url to item 1 of arguments
 set db to mysql's connect_url(url)
 say "connected, secure: " secure of db
-mysql's run_script(db, "drop table if exists moth_people; create table moth_people (id int auto_increment primary key, name varchar(100) not null, age int, score double, small float, ok boolean, data blob, doc json, born date, at datetime(6), dur time, price decimal(10, 2), big bigint unsigned) character set utf8mb4")
-set sql to "insert into moth_people (name, age, score, small, ok, data, doc, born, at, dur, price, big) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+mysql's run_script(db, "drop table if exists folio_people; create table folio_people (id int auto_increment primary key, name varchar(100) not null, age int, score double, small float, ok boolean, data blob, doc json, born date, at datetime(6), dur time, price decimal(10, 2), big bigint unsigned) character set utf8mb4")
+set sql to "insert into folio_people (name, age, score, small, ok, data, doc, born, at, dur, price, big) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 set done to mysql's run(db, sql, list of "Sam", 20, 1.5, 0.5, yes, (list of 0, 255, 10) as bytes, (dictionary where "pets" is (list of "cat")), "2006-01-02", "2026-11-04 10:15:00.25", "-26:03:04", 12.5, 9007199254740991)
 say count of done " " last_id of done
-say mysql's execute(db, sql, list of "Robert'); drop table moth_people; --", nothing, nothing, nothing, no, nothing, nothing, nothing, nothing, nothing, nothing, nothing)
+say mysql's execute(db, sql, list of "Robert'); drop table folio_people; --", nothing, nothing, nothing, no, nothing, nothing, nothing, nothing, nothing, nothing, nothing)
 say mysql's execute(db, sql, list of "Zoë 😀", -7, -0.25, nothing, nothing, 0 bytes, (list of 1, "two"), nothing, nothing, "12:30:00", 99999999.99, 0)
-for each row in mysql's query(db, "select name, age, score, small, ok, data, doc, born, at, dur, price, big from moth_people order by id")
+for each row in mysql's query(db, "select name, age, score, small, ok, data, doc, born, at, dur, price, big from folio_people order by id")
     say row
 end
-say mysql's query_one(db, "select count(*) as n, sum(age) as total from moth_people where name like ?", list of "%o%")
+say mysql's query_one(db, "select count(*) as n, sum(age) as total from folio_people where name like ?", list of "%o%")
 say mysql's query_one(db, "select 1 from dual where false")
-say mysql's run_script(db, "select id, name from moth_people where id = 1")
-mysql's run_script(db, "drop table if exists moth_many; create table moth_many (n int)")
-mysql's run_script(db, "insert into moth_many (n) with recursive seq (n) as (select 1 union all select n + 1 from seq where n < 1000) select n from seq")
-set many to mysql's query(db, "select n, n * 2 as twice from moth_many")
+say mysql's run_script(db, "select id, name from folio_people where id = 1")
+mysql's run_script(db, "drop table if exists folio_many; create table folio_many (n int)")
+mysql's run_script(db, "insert into folio_many (n) with recursive seq (n) as (select 1 union all select n + 1 from seq where n < 1000) select n from seq")
+set many to mysql's query(db, "select n, n * 2 as twice from folio_many")
 set total to 0
 for each row in many
     set total to total + item "twice" of row
 end
 say length of many " " total
 to failing with db
-    mysql's execute(db, "delete from moth_people")
+    mysql's execute(db, "delete from folio_people")
     mysql's execute(db, "insert into nowhere values (1)")
 end
 try
@@ -3556,9 +3571,9 @@ try
 if it fails with why
     say why
 end
-say mysql's query_one(db, "select count(*) as n from moth_people")
+say mysql's query_one(db, "select count(*) as n from folio_people")
 try
-    mysql's execute(db, "insert into moth_people (id, name) values (?, ?)", list of 1, "again")
+    mysql's execute(db, "insert into folio_people (id, name) values (?, ?)", list of 1, "again")
 if it fails with why
     say why
 end
@@ -3567,41 +3582,41 @@ try
 if it fails with why
     say why
 end
-mysql's run_script(db, "drop table moth_people; drop table moth_many")
+mysql's run_script(db, "drop table folio_people; drop table folio_many")
 # a user of mysql_native_password, where the server has it
 set native to yes
 try
-    mysql's run_script(db, "drop user if exists 'moth_native'@'%'; create user 'moth_native'@'%' identified with mysql_native_password by 'native-test'")
+    mysql's run_script(db, "drop user if exists 'folio_native'@'%'; create user 'folio_native'@'%' identified with mysql_native_password by 'native-test'")
 if it fails
     set native to no
 end
 set parts to mysql's my_url_options(url)
 if native
-    set item "user" of parts to "moth_native"
+    set item "user" of parts to "folio_native"
     set item "password" of parts to "native-test"
     set item "database" of parts to nothing
     set native_db to mysql's connect(parts)
     say mysql's query_one(native_db, "select current_user() as who")
     mysql's close(native_db)
-    mysql's run_script(db, "drop user 'moth_native'@'%'")
+    mysql's run_script(db, "drop user 'folio_native'@'%'")
 else
     say "mysql_native_password: not on this server"
 end
 # a user of sha256_password, where the server has it: its password RSA-encrypted, as there's no TLS
 set sha256 to yes
 try
-    mysql's run_script(db, "drop user if exists 'moth_sha256'@'%'; create user 'moth_sha256'@'%' identified with sha256_password by 'sha256-test'")
+    mysql's run_script(db, "drop user if exists 'folio_sha256'@'%'; create user 'folio_sha256'@'%' identified with sha256_password by 'sha256-test'")
 if it fails
     set sha256 to no
 end
 if sha256
-    set item "user" of parts to "moth_sha256"
+    set item "user" of parts to "folio_sha256"
     set item "password" of parts to "sha256-test"
     set item "database" of parts to nothing
     set sha256_db to mysql's connect(parts)
     say mysql's query_one(sha256_db, "select current_user() as who")
     mysql's close(sha256_db)
-    mysql's run_script(db, "drop user 'moth_sha256'@'%'")
+    mysql's run_script(db, "drop user 'folio_sha256'@'%'")
 else
     say "sha256_password: not on this server"
 end
@@ -3624,10 +3639,10 @@ if it fails
 end
 mysql's close(db)
 say "done"
-`, [process.env.MOTH_MYSQL_URL]);
+`, [process.env.FOLIO_MYSQL_URL]);
   assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
-  const native = '(dictionary where "who" is "moth_native@%")';
-  const sha256 = '(dictionary where "who" is "moth_sha256@%")';
+  const native = '(dictionary where "who" is "folio_native@%")';
+  const sha256 = '(dictionary where "who" is "folio_sha256@%")';
   const missing = { "mysql_native_password: not on this server": native, "sha256_password: not on this server": sha256 };
   assert.deepEqual(ran.lines.map((line) => missing[line] ?? line), [
     "connected, secure: no",
@@ -3635,70 +3650,70 @@ say "done"
     "1",
     "1",
     "(dictionary where \"name\" is \"Sam\", \"age\" is 20, \"score\" is 1.5, \"small\" is 0.5, \"ok\" is 1, \"data\" is (3 bytes: 0, 255, 10), \"doc\" is (dictionary where \"pets\" is [\"cat\"]), \"born\" is \"2006-01-02\", \"at\" is \"2026-11-04 10:15:00.250000\", \"dur\" is \"-26:03:04\", \"price\" is 12.5, \"big\" is 9007199254740991)",
-    "(dictionary where \"name\" is \"Robert'); drop table moth_people; --\", \"age\" is nothing, \"score\" is nothing, \"small\" is nothing, \"ok\" is 0, \"data\" is nothing, \"doc\" is nothing, \"born\" is nothing, \"at\" is nothing, \"dur\" is nothing, \"price\" is nothing, \"big\" is nothing)",
+    "(dictionary where \"name\" is \"Robert'); drop table folio_people; --\", \"age\" is nothing, \"score\" is nothing, \"small\" is nothing, \"ok\" is 0, \"data\" is nothing, \"doc\" is nothing, \"born\" is nothing, \"at\" is nothing, \"dur\" is nothing, \"price\" is nothing, \"big\" is nothing)",
     "(dictionary where \"name\" is \"Zoë 😀\", \"age\" is -7, \"score\" is -0.25, \"small\" is nothing, \"ok\" is nothing, \"data\" is (0 bytes), \"doc\" is [1, \"two\"], \"born\" is nothing, \"at\" is nothing, \"dur\" is \"12:30:00\", \"price\" is 99999999.99, \"big\" is 0)",
     "(dictionary where \"n\" is 2, \"total\" is -7)",
     "nothing",
     "(record with rows [(dictionary where \"id\" is 1, \"name\" is \"Sam\")], count 1, columns [\"id\", \"name\"], last_id 0)",
     "1000 1001000",
-    "MySQL said: Table 'moth.nowhere' doesn't exist (1146, 42S02)",
+    "MySQL said: Table 'folio.nowhere' doesn't exist (1146, 42S02)",
     "(dictionary where \"n\" is 3)",
-    "MySQL said: Duplicate entry '1' for key 'moth_people.PRIMARY' (1062, 23000)",
+    "MySQL said: Duplicate entry '1' for key 'folio_people.PRIMARY' (1062, 23000)",
     "the SQL has 2 ?s, and 1 values were given",
-    "(dictionary where \"who\" is \"moth_native@%\")",
-    "(dictionary where \"who\" is \"moth_sha256@%\")",
+    "(dictionary where \"who\" is \"folio_native@%\")",
+    "(dictionary where \"who\" is \"folio_sha256@%\")",
     ...[1, 2, 3, 4, 5, 6].map((k) => `MySQL said: Access denied for user 'nobody${k}'`),
     "TLS required, and the server's certificate can't be checked: refused",
     "done",
   ]);
 });
 
-// tools/redis.moth against Redis: an ACL user of its own logging in, values that end, numbers, lists, hashes,
+// tools/redis.folio against Redis: an ACL user of its own logging in, values that end, numbers, lists, hashes,
 // bytes, 100 commands pipelined, MULTI and EXEC, SCAN, errors, publishing to a subscriber (by channel and by
 // pattern, and waiting for none in time), RESP3, and a password it won't take
-test("tools/redis.moth runs commands on a real Redis, pipelined, subscribed, and in RESP3", { skip: live("MOTH_REDIS_URL") }, () => {
-  const ran = companyRun(String.raw`use "redis.moth" as redis
+test("tools/redis.folio runs commands on a real Redis, pipelined, subscribed, and in RESP3", { skip: live("FOLIO_REDIS_URL") }, () => {
+  const ran = companyRun(String.raw`use "redis.folio" as redis
 
 set url to item 1 of arguments
 set admin to redis's connect_url(url)
-redis's command(admin, list of "ACL", "SETUSER", "moth_test", "on", ">moth-test", "~*", "&*", "+@all")
+redis's command(admin, list of "ACL", "SETUSER", "folio_test", "on", ">folio-test", "~*", "&*", "+@all")
 set parts to redis's redis_url(url)
-set r to redis's connect_url("redis://moth_test:moth-test@" + host of parts + ":" + port of parts + "/1")
-redis's delete(r, list of "moth:greeting", "moth:count", "moth:jobs", "moth:user", "moth:bin", "moth:temp", "moth:n")
-redis's put(r, "moth:greeting", "héllo 😀")
-say redis's get(r, "moth:greeting")
-say redis's get(r, "moth:missing")
-say redis's exists(r, "moth:greeting") " " redis's exists(r, "moth:missing")
-redis's put_for(r, "moth:temp", "x", 100)
-set left to redis's time_left(r, "moth:temp")
+set r to redis's connect_url("redis://folio_test:folio-test@" + host of parts + ":" + port of parts + "/1")
+redis's delete(r, list of "folio:greeting", "folio:count", "folio:jobs", "folio:user", "folio:bin", "folio:temp", "folio:n")
+redis's put(r, "folio:greeting", "héllo 😀")
+say redis's get(r, "folio:greeting")
+say redis's get(r, "folio:missing")
+say redis's exists(r, "folio:greeting") " " redis's exists(r, "folio:missing")
+redis's put_for(r, "folio:temp", "x", 100)
+set left to redis's time_left(r, "folio:temp")
 say left is at least 90 and left is at most 100
-say redis's time_left(r, "moth:greeting") " " redis's time_left(r, "moth:missing")
-say redis's expire(r, "moth:greeting", 1000) " " redis's expire(r, "moth:missing", 10)
-say redis's increment(r, "moth:count") " " redis's increment(r, "moth:count") " " redis's increment(r, "moth:count", 10)
-say redis's push(r, "moth:jobs", "b") " " redis's push(r, "moth:jobs", list of "c", "d") " " redis's push_front(r, "moth:jobs", "a")
-say redis's list_items(r, "moth:jobs") " " redis's list_length(r, "moth:jobs")
-say redis's pop(r, "moth:jobs") " " redis's pop_back(r, "moth:jobs") " " redis's list_items(r, "moth:jobs")
-say redis's pop_waiting(r, (list of "moth:empty", "moth:jobs"), 1)
-say redis's hash_put(r, "moth:user", "name", "Sam") " " redis's hash_put(r, "moth:user", "age", 20)
-say redis's hash_get(r, "moth:user", "name") " " redis's hash_get(r, "moth:user", "nothing")
-say redis's hash_all(r, "moth:user")
-say redis's hash_remove(r, "moth:user", "age") " " redis's hash_all(r, "moth:user")
+say redis's time_left(r, "folio:greeting") " " redis's time_left(r, "folio:missing")
+say redis's expire(r, "folio:greeting", 1000) " " redis's expire(r, "folio:missing", 10)
+say redis's increment(r, "folio:count") " " redis's increment(r, "folio:count") " " redis's increment(r, "folio:count", 10)
+say redis's push(r, "folio:jobs", "b") " " redis's push(r, "folio:jobs", list of "c", "d") " " redis's push_front(r, "folio:jobs", "a")
+say redis's list_items(r, "folio:jobs") " " redis's list_length(r, "folio:jobs")
+say redis's pop(r, "folio:jobs") " " redis's pop_back(r, "folio:jobs") " " redis's list_items(r, "folio:jobs")
+say redis's pop_waiting(r, (list of "folio:empty", "folio:jobs"), 1)
+say redis's hash_put(r, "folio:user", "name", "Sam") " " redis's hash_put(r, "folio:user", "age", 20)
+say redis's hash_get(r, "folio:user", "name") " " redis's hash_get(r, "folio:user", "nothing")
+say redis's hash_all(r, "folio:user")
+say redis's hash_remove(r, "folio:user", "age") " " redis's hash_all(r, "folio:user")
 set block to 256 bytes
 for each k from 1 to 256
     set byte k of block to k - 1
 end
-redis's put(r, "moth:bin", block)
-say redis's get_bytes(r, "moth:bin") is block
+redis's put(r, "folio:bin", block)
+say redis's get_bytes(r, "folio:bin") is block
 set incrs to empty list
 for each k from 1 to 100
-    add (list of "INCR", "moth:n") to incrs
+    add (list of "INCR", "folio:n") to incrs
 end
 set replies to redis's pipeline(r, incrs)
 say length of replies " " item 100 of replies
-say redis's transaction(r, list of (list of "INCR", "moth:n"), (list of "GET", "moth:n"), (list of "DEL", "moth:n"))
-say (redis's keys_like(r, "moth:*") in order)
+say redis's transaction(r, list of (list of "INCR", "folio:n"), (list of "GET", "folio:n"), (list of "DEL", "folio:n"))
+say (redis's keys_like(r, "folio:*") in order)
 try
-    redis's increment(r, "moth:greeting")
+    redis's increment(r, "folio:greeting")
 if it fails with why
     say why
 end
@@ -3708,35 +3723,35 @@ if it fails with why
     say item 1 of split why by ","
 end
 # publishing and subscribing, on a connection of its own
-set listener to redis's connect_url("redis://moth_test:moth-test@" + host of parts + ":" + port of parts)
-redis's subscribe(listener, list of "moth:news", "moth:other")
-say redis's publish(r, "moth:news", "hello") " " redis's publish(r, "moth:nobody", "x")
+set listener to redis's connect_url("redis://folio_test:folio-test@" + host of parts + ":" + port of parts)
+redis's subscribe(listener, list of "folio:news", "folio:other")
+say redis's publish(r, "folio:news", "hello") " " redis's publish(r, "folio:nobody", "x")
 say redis's next_message(listener)
 say redis's next_message(listener, 200)
-redis's subscribe_like(listener, "moth:p.*")
-redis's publish(r, "moth:p.one", "patterned")
+redis's subscribe_like(listener, "folio:p.*")
+redis's publish(r, "folio:p.one", "patterned")
 say redis's next_message(listener, 5000)
 redis's unsubscribe(listener)
 say redis's command(listener, list of "PING")
 redis's close(listener)
 # RESP3: maps as dictionaries
-set three to redis's connect_url("redis://moth_test:moth-test@" + host of parts + ":" + port of parts + "/1")
+set three to redis's connect_url("redis://folio_test:folio-test@" + host of parts + ":" + port of parts + "/1")
 set hello to redis's use_resp3(three)
 say item "proto" of hello
-say redis's command(three, list of "HGETALL", "moth:user")
-say redis's command(three, list of "EXISTS", "moth:user")
+say redis's command(three, list of "HGETALL", "folio:user")
+say redis's command(three, list of "EXISTS", "folio:user")
 redis's close(three)
 try
-    redis's connect_url("redis://moth_test:wrong@" + host of parts + ":" + port of parts)
+    redis's connect_url("redis://folio_test:wrong@" + host of parts + ":" + port of parts)
 if it fails with why
     say why
 end
-redis's delete(r, list of "moth:greeting", "moth:count", "moth:jobs", "moth:user", "moth:bin", "moth:temp")
+redis's delete(r, list of "folio:greeting", "folio:count", "folio:jobs", "folio:user", "folio:bin", "folio:temp")
 redis's close(r)
-redis's command(admin, list of "ACL", "DELUSER", "moth_test")
+redis's command(admin, list of "ACL", "DELUSER", "folio_test")
 redis's close(admin)
 say "done"
-`, [process.env.MOTH_REDIS_URL]);
+`, [process.env.FOLIO_REDIS_URL]);
   assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
   assert.deepEqual(ran.lines, [
     "héllo 😀",
@@ -3749,7 +3764,7 @@ say "done"
     "1 3 4",
     "[\"a\", \"b\", \"c\", \"d\"] 4",
     "a d [\"b\", \"c\"]",
-    "(record with key \"moth:jobs\", value \"b\")",
+    "(record with key \"folio:jobs\", value \"b\")",
     "1 1",
     "Sam nothing",
     "(dictionary where \"name\" is \"Sam\", \"age\" is \"20\")",
@@ -3757,13 +3772,13 @@ say "done"
     "yes",
     "100 100",
     "[101, \"101\", 1]",
-    "[\"moth:bin\", \"moth:count\", \"moth:greeting\", \"moth:jobs\", \"moth:temp\", \"moth:user\"]",
+    "[\"folio:bin\", \"folio:count\", \"folio:greeting\", \"folio:jobs\", \"folio:temp\", \"folio:user\"]",
     "Redis said ERR value is not an integer or out of range",
     "Redis said ERR unknown command 'NOSUCHCOMMAND'",
     "1 0",
-    "(record with channel \"moth:news\", message \"hello\", pattern nothing)",
+    "(record with channel \"folio:news\", message \"hello\", pattern nothing)",
     "nothing",
-    "(record with channel \"moth:p.one\", message \"patterned\", pattern \"moth:p.*\")",
+    "(record with channel \"folio:p.one\", message \"patterned\", pattern \"folio:p.*\")",
     "PONG",
     "3",
     "(dictionary where \"name\" is \"Sam\")",
@@ -3773,16 +3788,16 @@ say "done"
   ]);
 });
 
-// tools/s3.moth against MinIO: a bucket made, objects of text, 300 KB of bytes and a key with spaces, a + and a
+// tools/s3.folio against MinIO: a bucket made, objects of text, 300 KB of bytes and a key with spaces, a + and a
 // ü put, got, listed and looked at, presigned URLs to GET and PUT (and one changed, which MinIO turns down),
 // deleted, a wrong secret, and the bucket removed
-test("tools/s3.moth puts, gets, lists and deletes on a real MinIO, and makes presigned URLs", { skip: live("MOTH_S3_URL") }, () => {
-  const where = new URL(process.env.MOTH_S3_URL);
-  const ran = companyRun(String.raw`use "s3.moth" as s3
-use "http.moth" as http
+test("tools/s3.folio puts, gets, lists and deletes on a real MinIO, and makes presigned URLs", { skip: live("FOLIO_S3_URL") }, () => {
+  const where = new URL(process.env.FOLIO_S3_URL);
+  const ran = companyRun(String.raw`use "s3.folio" as s3
+use "http.folio" as http
 
 set store to s3's client(item 1 of arguments, "us-east-1", item 2 of arguments, item 3 of arguments)
-set bucket to "moth-test"
+set bucket to "folio-test"
 try
     s3's create_bucket(store, bucket)
 if it fails with why
@@ -3856,12 +3871,12 @@ say "done"
   ]);
 });
 
-// tools/oauth.moth signing in for real: a provider of the test's own (Node's), which checks PKCE's verifier
+// tools/oauth.folio signing in for real: a provider of the test's own (Node's), which checks PKCE's verifier
 // against the challenge in the address the program gave, and the test as the browser, going back to the
 // program's own server on 127.0.0.1: first with a state it never sent, which the program turns down and waits
 // on, then with the code; tokens refreshed (one refresh token revoked); the program's own tokens with its
 // secret in HTTP Basic and in the form; and a sign-in the person said no to
-test("tools/oauth.moth signs a person in with PKCE and a server of its own, and gets and refreshes tokens", { skip }, async () => {
+test("tools/oauth.folio signs a person in with PKCE and a server of its own, and gets and refreshes tokens", { skip }, async () => {
   const challenges = [];
   const strict = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
   const provider = createServer((req, res) => {
@@ -3876,13 +3891,13 @@ test("tools/oauth.moth signs a person in with PKCE and a server of its own, and 
       if (req.url !== "/token" || req.method !== "POST" || req.headers["content-type"] !== "application/x-www-form-urlencoded") return reply(404, {});
       if (form.grant_type === "authorization_code") {
         const challenge = createHash("sha256").update(form.code_verifier ?? "").digest("base64url");
-        if (form.code === "the-code" && form.client_id === "moth-app" && challenge === challenges.at(-1) && /^http:\/\/127\.0\.0\.1:\d+\/callback$/.test(form.redirect_uri)) {
+        if (form.code === "the-code" && form.client_id === "folio-app" && challenge === challenges.at(-1) && /^http:\/\/127\.0\.0\.1:\d+\/callback$/.test(form.redirect_uri)) {
           return reply(200, { access_token: "at1", token_type: "Bearer", expires_in: 3600, refresh_token: "rt1", scope: "openid email" });
         }
         return reply(400, { error: "invalid_grant", error_description: "PKCE didn't match" });
       }
       if (form.grant_type === "refresh_token") {
-        return form.refresh_token === "rt1" && form.client_id === "moth-app" ? reply(200, { access_token: "at2", expires_in: 30 }) : reply(400, { error: "invalid_grant", error_description: "that refresh token was revoked" });
+        return form.refresh_token === "rt1" && form.client_id === "folio-app" ? reply(200, { access_token: "at2", expires_in: 30 }) : reply(400, { error: "invalid_grant", error_description: "that refresh token was revoked" });
       }
       if (form.grant_type === "client_credentials") {
         if (req.headers.authorization === `Basic ${Buffer.from(`svc:${strict("shh: it's a secret")}`).toString("base64")}` && form.scope === "reports.read") return reply(200, { access_token: "svc-basic", token_type: "Bearer" });
@@ -3893,15 +3908,15 @@ test("tools/oauth.moth signs a person in with PKCE and a server of its own, and 
     });
   });
   await new Promise((resolve) => provider.listen(0, "127.0.0.1", resolve));
-  const dir = mkdtempSync(join(tmpdir(), "moth-oauth-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-oauth-"));
   try {
     const files = {};
-    for (const name of readdirSync(new URL("./tools/", import.meta.url)).filter((f) => f.endsWith(".moth"))) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of readdirSync(new URL("./tools/", import.meta.url)).filter((f) => f.endsWith(".folio"))) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(String.raw`use "oauth.moth" as oauth
+    writeFileSync(exe, machine(String.raw`use "oauth.folio" as oauth
 
 set base to item 1 of arguments
-set app to oauth's provider(base + "/authorize", base + "/token", "moth-app")
+set app to oauth's provider(base + "/authorize", base + "/token", "folio-app")
 set open_browser of app to no
 set port of app to number of item 2 of arguments
 set item "access_type" of extra of app to "offline"
@@ -3927,7 +3942,7 @@ if it fails with why
     say why
 end
 say "done"
-`, { target, name: "p.moth", allow: ["--allow-libraries"], files }));
+`, { target, name: "p.folio", allow: ["--allow-libraries"], files }));
     if (target === "linux") chmodSync(exe, 0o755);
     const running = spawn(exe, [`http://127.0.0.1:${provider.address().port}`, String(25000 + (process.pid % 2000))], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
@@ -3945,7 +3960,7 @@ say "done"
     };
     const first = await nth(1);
     const q = Object.fromEntries(first.searchParams);
-    assert.deepEqual([first.pathname, q.response_type, q.client_id, q.scope, q.code_challenge_method, q.access_type, q.state.length, q.code_challenge.length], ["/authorize", "code", "moth-app", "openid email", "S256", "offline", 22, 43]);
+    assert.deepEqual([first.pathname, q.response_type, q.client_id, q.scope, q.code_challenge_method, q.access_type, q.state.length, q.code_challenge.length], ["/authorize", "code", "folio-app", "openid email", "S256", "offline", 22, 43]);
     challenges.push(q.code_challenge);
     const back = (url, fields) => fetch(`${url}?${new URLSearchParams(fields)}`).then(async (r) => [r.status, await r.text()]);
     assert.deepEqual(await back(q.redirect_uri, { state: "not the one", code: "stolen" }), [400, "This sign-in wasn't asked for here: its state isn't the one sent."]);
@@ -3974,9 +3989,9 @@ say "done"
   }
 });
 
-// tools/system.moth: files, folders and the environment, the same on Windows and Linux
-test("tools/system.moth copies, moves and removes files and folders, and reads the environment", { skip }, () => {
-  const ran = libraryRun(String.raw`use "system.moth" as system
+// tools/system.folio: files, folders and the environment, the same on Windows and Linux
+test("tools/system.folio copies, moves and removes files and folders, and reads the environment", { skip }, () => {
+  const ran = libraryRun(String.raw`use "system.folio" as system
 write "hello" to "a.txt"
 say system's is_file("a.txt") " " system's is_folder("a.txt") " " system's exists("nope")
 say system's file_size("a.txt")
@@ -3998,10 +4013,10 @@ end
 system's remove_folder("x/y")
 system's remove_folder("x")
 say system's exists("x")
-system's set_environment("MOTH_TRY", "é value")
-say system's environment("MOTH_TRY")
-system's set_environment("MOTH_TRY", nothing)
-say system's environment("MOTH_TRY")
+system's set_environment("FOLIO_TRY", "é value")
+say system's environment("FOLIO_TRY")
+system's set_environment("FOLIO_TRY", nothing)
+say system's environment("FOLIO_TRY")
 set here to system's current_folder()
 system's make_folder("inner")
 system's change_folder("inner")
@@ -4030,16 +4045,16 @@ remove the file "a.txt"`, ["--allow-libraries", "--allow-read", "--allow-write"]
     + "there is no file called 'nope'\ncan't move 'nope' to 'nowhere'\ncan't go into the folder 'nope'\n", "", 0]);
 });
 
-// tools/sockets.moth: a connection from a task of the program's own to it, by name, lines with and without \r,
+// tools/sockets.folio: a connection from a task of the program's own to it, by name, lines with and without \r,
 // a reply after the task says it has no more to send, a message, waiting too long, each mistake, and 300 KB
-test("tools/sockets.moth connects, listens, and sends lines, bytes and messages, on Windows and Linux", { skip }, () => {
-  const ran = libraryRun(String.raw`use "sockets.moth" as net
+test("tools/sockets.folio connects, listens, and sends lines, bytes and messages, on Windows and Linux", { skip }, () => {
+  const ran = libraryRun(String.raw`use "sockets.folio" as net
 set listener to net's listen(0)
 set port to net's port_of(listener)
 say port is greater than 0
 to client with port
     set c to net's connect("localhost", port)
-    net's send(c, "hello moth" + (list of 13) as bytes as text + "\nsecond line\nlast, without an end")
+    net's send(c, "hello folio" + (list of 13) as bytes as text + "\nsecond line\nlast, without an end")
     net's finish_sending(c)
     set reply to net's receive_all(c)
     net's close(c)
@@ -4103,15 +4118,15 @@ say length of got
 say got is wait for job
 net's close(c)
 net's close(wide)`);
-  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["yes\n127.0.0.1\nhello moth\nsecond line\nlast, without an end\nnothing\nHELLO BACK é\nping é\n127.0.0.1\nyes\ncan't receive a message: nothing came in time, or it was bigger than 100 bytes\ncan't connect to 127.0.0.1 port 1: nothing answered there\ncan't find no-such-host.invalid on the network\na port is a whole number from 0 to 65535, not 70000\n300000\nyes\n", "", 0]);
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["yes\n127.0.0.1\nhello folio\nsecond line\nlast, without an end\nnothing\nHELLO BACK é\nping é\n127.0.0.1\nyes\ncan't receive a message: nothing came in time, or it was bigger than 100 bytes\ncan't connect to 127.0.0.1 port 1: nothing answered there\ncan't find no-such-host.invalid on the network\na port is a whole number from 0 to 65535, not 70000\n300000\nyes\n", "", 0]);
 });
 
-// tools/sockets.moth over IPv6: a listener on ::1 and a connection to it, one on :: that takes IPv4 too, and
+// tools/sockets.folio over IPv6: a listener on ::1 and a connection to it, one on :: that takes IPv4 too, and
 // ready(): nothing yet, a connection waiting on the second of two listeners, bytes to receive, and an end; and a
 // name with two addresses, the one that answers found soon
 const HAS_IPV6 = Object.values(networkInterfaces()).flat().some((i) => i.address === "::1");
-test("tools/sockets.moth listens and connects over IPv6, and says which of many have something", { skip: skip || (!HAS_IPV6 && "this computer has no ::1") }, () => {
-  const ran = libraryRun(String.raw`use "sockets.moth" as net
+test("tools/sockets.folio listens and connects over IPv6, and says which of many have something", { skip: skip || (!HAS_IPV6 && "this computer has no ::1") }, () => {
+  const ran = libraryRun(String.raw`use "sockets.folio" as net
 
 # IPv6, this computer's own address
 set six to net's listen_on("::1", 0)
@@ -4189,13 +4204,13 @@ say (wait for job) is less than 1.5
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["::1\n::1\nover six\nsix back\n::ffff:127.0.0.1\nfour\nsent\n0\n1\nyes\n1\nknock\n1\n0\n127.0.0.1\nyes\n", "", 0]);
 });
 
-// tools/secrets.moth: the system's random bytes, two draws of which differ, and as many as asked for; tokens in
+// tools/secrets.folio: the system's random bytes, two draws of which differ, and as many as asked for; tokens in
 // hex and for addresses; numbers below n, each seen often in 600; a choice, a shuffle, secrets compared; and
 // each mistake
-// tools/crypto.moth (DESIGN §100): encrypt and decrypt with a key from the system's randomness, a fresh nonce
+// tools/crypto.folio (DESIGN §100): encrypt and decrypt with a key from the system's randomness, a fresh nonce
 // each time, a wrong key found out, and a key from a password
-test("tools/crypto.moth encrypts with AES-GCM and a fresh nonce, and finds out a wrong key", { skip }, () => {
-  const ran = libraryRun(`use "crypto.moth" as crypto
+test("tools/crypto.folio encrypts with AES-GCM and a fresh nonce, and finds out a wrong key", { skip }, () => {
+  const ran = libraryRun(`use "crypto.folio" as crypto
 set key to crypto's new_key()
 say length of key
 set sealed to crypto's encrypt(key, "meet at noon é")
@@ -4211,8 +4226,8 @@ say length of crypto's key_from_password("pw", crypto's new_salt(), 10)`);
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["32\n43\nmeet at noon é\nno\nthe message was changed, or the key is wrong\n32\n", "", 0]);
 });
 
-test("tools/secrets.moth gives random bytes, tokens and numbers no one can guess, on Windows and Linux", { skip }, () => {
-  const ran = libraryRun(String.raw`use "secrets.moth" as secrets
+test("tools/secrets.folio gives random bytes, tokens and numbers no one can guess, on Windows and Linux", { skip }, () => {
+  const ran = libraryRun(String.raw`use "secrets.folio" as secrets
 set a to secrets's random_bytes(16)
 set b to secrets's random_bytes(16)
 say length of a
@@ -4277,15 +4292,15 @@ end
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["16\nno\n0\n100000\n16\nyes\n22\nyes\nyes\n0\nyes\nonly\n[1, 2, 3, 4, 5]\nyes\nno\nno\nbelow needs a whole number from 1 to 2^48, not 0\nbelow needs a whole number from 1 to 2^48, not 2.5\nbelow needs a whole number from 1 to 2^48, not 281474976710657\nchoice needs something to choose from: the list is empty\nrandom_bytes needs a whole number of bytes from 0 up, not -1\n", "", 0]);
 });
 
-// tools/http.moth, asking server.moth, which a task of the program's runs: GET, PUT with a header of its own,
+// tools/http.folio, asking server.folio, which a task of the program's runs: GET, PUT with a header of its own,
 // POST of a record as JSON, PATCH of bytes, DELETE and HEAD; JSON read; redirects after 302, 303 and 307, and
 // to another host, which isn't told the Authorization; a body squeezed with gzip; a 404, and checking it;
 // redirects that never end; encoding and forms; a body in chunks; and each mistake
-test("tools/http.moth asks servers with any method, follows redirects, and reads chunked and gzipped bodies", { skip }, () => {
+test("tools/http.folio asks servers with any method, follows redirects, and reads chunked and gzipped bodies", { skip }, () => {
   const port = 21000 + (process.pid % 2000);
-  const ran = libraryRun(`use "http.moth" as http
-use "server.moth" as web
-use "zip.moth" as zip
+  const ran = libraryRun(`use "http.folio" as http
+use "server.folio" as web
+use "zip.folio" as zip
 
 set port to ${port}
 set base to "http://127.0.0.1:" + port
@@ -4367,7 +4382,7 @@ if it fails with why
     say why
 end
 say http's encoded("a b&c=d/é") + " " + http's decoded("a+b%26c%3Dd%2F%C3%A9")
-say http's form_of(dictionary where "q" is "moth lang", "n" is 2)
+say http's form_of(dictionary where "q" is "folio lang", "n" is 2)
 say http's http_unchunked(("5" + http's http_line_end + "hello" + http's http_line_end + "6;x=y" + http's http_line_end + " world" + http's http_line_end + "0" + http's http_line_end + http's http_line_end) as bytes, "x") as text
 for each bad in list of "ftp://example.com/", "http:///nohost", "http://[::1/x"
     try
@@ -4385,15 +4400,15 @@ http's get(base + "/stop")
 wait for job
 say "done"
 `);
-  assert.deepEqual([ran.stdout, ran.stderr, ran.status], [`200 OK <h1>Hello</h1> text/html; charset=utf-8\nPUT a body é | text/plain; charset=utf-8 | mine | nobody | one two\nPOST {\"name\":\"Sam\"} | application/json | nothing | nobody | json\nPATCH hi | none | nothing | nobody | bytes\nDELETE  | none | nothing | nobody | gone\n200 0\n(dictionary where \"name\" is \"Sam\", \"scores\" is [1, 2, 3])\nGET  | none | nothing | nobody | after302 at http://127.0.0.1:${port}/echo?q=after302\nGET  | none | nothing | nobody | after303\nPOST kept | text/plain; charset=utf-8 | nothing | nobody | after307\nGET  | none | nothing | nobody | far\nsqueezed é, squeezed é, squeezed é 37\n404 nothing at /missing\nthe server said 404 Not Found to http://127.0.0.1:${port}/missing\ntoo many redirects, from http://127.0.0.1:${port}/loop\na%20b%26c%3Dd%2F%C3%A9 a b&c=d/é\nq=moth%20lang&n=2\nhello world\nhttp.moth asks http:// and https:// addresses, not ftp://example.com/\n'http:///nohost' has no host\n'http://[::1/x' has a [ with no ]\ncan't connect to 127.0.0.1 port 1: nothing answered there\ndone\n`, `listening on http://127.0.0.1:${port}/
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], [`200 OK <h1>Hello</h1> text/html; charset=utf-8\nPUT a body é | text/plain; charset=utf-8 | mine | nobody | one two\nPOST {\"name\":\"Sam\"} | application/json | nothing | nobody | json\nPATCH hi | none | nothing | nobody | bytes\nDELETE  | none | nothing | nobody | gone\n200 0\n(dictionary where \"name\" is \"Sam\", \"scores\" is [1, 2, 3])\nGET  | none | nothing | nobody | after302 at http://127.0.0.1:${port}/echo?q=after302\nGET  | none | nothing | nobody | after303\nPOST kept | text/plain; charset=utf-8 | nothing | nobody | after307\nGET  | none | nothing | nobody | far\nsqueezed é, squeezed é, squeezed é 37\n404 nothing at /missing\nthe server said 404 Not Found to http://127.0.0.1:${port}/missing\ntoo many redirects, from http://127.0.0.1:${port}/loop\na%20b%26c%3Dd%2F%C3%A9 a b&c=d/é\nq=folio%20lang&n=2\nhello world\nhttp.folio asks http:// and https:// addresses, not ftp://example.com/\n'http:///nohost' has no host\n'http://[::1/x' has a [ with no ]\ncan't connect to 127.0.0.1 port 1: nothing answered there\ndone\n`, `listening on http://127.0.0.1:${port}/
 `, 0]);
 });
 
-// tools/websocket.moth: an echo server in a task of the program's, and the program connecting to it: text, a
+// tools/websocket.folio: an echo server in a task of the program's, and the program connecting to it: text, a
 // ping, 70,000 bytes (a 64-bit length), 300 letters (a 16-bit one), and closing, which the server sees with its
 // code; sending after it's closed, and an address that isn't ws://
-test("tools/websocket.moth carries messages both ways, as client and server", { skip }, () => {
-  const ran = libraryRun(String.raw`use "websocket.moth" as ws
+test("tools/websocket.folio carries messages both ways, as client and server", { skip }, () => {
+  const ran = libraryRun(String.raw`use "websocket.folio" as ws
 
 set listener to ws's listen(0)
 set port to ws's port_of(listener)
@@ -4452,15 +4467,15 @@ end
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["(record with kind \"text\", data \"HELLO É\")\nbinary yes\n300\n/chat?room=1\ntext hello é\nbytes 70000\ntext xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nclosed 1000\ncan't send on a WebSocket that's closed\na WebSocket's address starts with ws:// or wss://, not http://127.0.0.1:1\n", "", 0]);
 });
 
-// and Node's own WebSocket client, as a browser's, asking a server of Moth's: text, bytes, 200,000 letters, a close
-test("a WebSocket server of Moth's talks to Node's WebSocket client, as a browser's", { skip: skip || (typeof WebSocket !== "function" && "this Node has no WebSocket") }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-ws-"));
+// and Node's own WebSocket client, as a browser's, asking a server of Folio's: text, bytes, 200,000 letters, a close
+test("a WebSocket server of Folio's talks to Node's WebSocket client, as a browser's", { skip: skip || (typeof WebSocket !== "function" && "this Node has no WebSocket") }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-ws-"));
   const port = 22000 + (process.pid % 2000);
   try {
     const files = {};
-    for (const name of ["websocket.moth", "sockets.moth", "hash.moth", "base64.moth", "secrets.moth"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of ["websocket.folio", "sockets.folio", "hash.folio", "base64.folio", "secrets.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     const exe = executable(dir, "ws");
-    writeFileSync(exe, machine(`use "websocket.moth" as ws
+    writeFileSync(exe, machine(`use "websocket.folio" as ws
 set listener to ws's listen(${port})
 say "listening" to the error output
 set c to ws's accept(listener)
@@ -4480,7 +4495,7 @@ repeat while yes
         ws's send(c, data of m)
     end
 end
-`, { target, name: "ws.moth", files, allow: ["--allow-libraries"] }));
+`, { target, name: "ws.folio", files, allow: ["--allow-libraries"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const running = spawn(exe, [], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
@@ -4507,18 +4522,18 @@ end
   }
 });
 
-// tools/email.moth reading mail: a message it made, read back, with its encoded words, a name in quotes, HTML and
+// tools/email.folio reading mail: a message it made, read back, with its encoded words, a name in quotes, HTML and
 // files; one another program wrote, in quoted-printable and Latin-1 with Q words and folded headers; a POP3
 // server and an IMAP server of the test's own, in tasks: counting, getting, searching, marking, removing, and
 // a password each won't take
-test("tools/email.moth reads messages in MIME, and mailboxes over POP3 and IMAP", { skip }, () => {
-  const ran = libraryRun(String.raw`use "email.moth" as mail
-use "sockets.moth" as net
+test("tools/email.folio reads messages in MIME, and mailboxes over POP3 and IMAP", { skip }, () => {
+  const ran = libraryRun(String.raw`use "email.folio" as mail
+use "sockets.folio" as net
 
 set crlf to (list of 13, 10) as bytes as text
 
 # a message made, then read back
-set m to mail's message("Sam Pudke <sam@example.com>", (list of "you@example.com", "\"Them, Two\" <them@example.com>"), "Héllo from Moth, a subject long enough for two encoded words ✓", "Line one\n.dot line\nLine three, é")
+set m to mail's message("Sam Pudke <sam@example.com>", (list of "you@example.com", "\"Them, Two\" <them@example.com>"), "Héllo from Folio, a subject long enough for two encoded words ✓", "Line one\n.dot line\nLine three, é")
 set cc of m to list of "cc@example.com"
 set html of m to "<p>Hi <b>there</b></p>"
 mail's attach_bytes(m, "notes é.txt", "some notes\n", "text/plain")
@@ -4681,14 +4696,14 @@ end
 wait for job
 say "done"
 `);
-  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["Sam Pudke <sam@example.com>\n[\"you@example.com\", \"\\\"Them, Two\\\" <them@example.com>\"]\n[\"cc@example.com\"]\nHéllo from Moth, a subject long enough for two encoded words ✓\nLine one\n.dot line\nLine three, é\n<p>Hi <b>there</b></p>\nnotes é.txt text/plain 11\ndata.bin application/octet-stream 5\nsome notes\n\nyes\nAndré <andre@example.com>\n[\"a@example.com\", \"b@example.com\"]\ncafé au lait ✓\nCafé crème, a line that goes on and on.\n\n2\nFirst | one\n.two\nHéllo from Moth, a subject long enough for two encoded words ✓\n[\"USER sam\", \"PASS secret\", \"STAT\", \"RETR 1\", \"RETR 2\", \"DELE 1\", \"QUIT\"]\nthe mail server said no to logging in: -ERR wrong password\nPASS wrong\n[\"INBOX\", \"Archive\"]\n3\n[4, 9, 12]\nHéllo from Moth, a subject long enough for two encoded words ✓\n2\nm8 LOGIN \"sam\" \"se\\\"cret\"\nm9 LIST \"\" \"*\"\nm10 SELECT \"INBOX\"\nm11 UID SEARCH UNSEEN\nm12 UID FETCH 9 BODY.PEEK[]\nm13 UID STORE 9 +FLAGS (\\Seen)\nm14 LOGOUT\nthe mail server said no to logging in: NO wrong password\ndone\n", "", 0]);
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["Sam Pudke <sam@example.com>\n[\"you@example.com\", \"\\\"Them, Two\\\" <them@example.com>\"]\n[\"cc@example.com\"]\nHéllo from Folio, a subject long enough for two encoded words ✓\nLine one\n.dot line\nLine three, é\n<p>Hi <b>there</b></p>\nnotes é.txt text/plain 11\ndata.bin application/octet-stream 5\nsome notes\n\nyes\nAndré <andre@example.com>\n[\"a@example.com\", \"b@example.com\"]\ncafé au lait ✓\nCafé crème, a line that goes on and on.\n\n2\nFirst | one\n.two\nHéllo from Folio, a subject long enough for two encoded words ✓\n[\"USER sam\", \"PASS secret\", \"STAT\", \"RETR 1\", \"RETR 2\", \"DELE 1\", \"QUIT\"]\nthe mail server said no to logging in: -ERR wrong password\nPASS wrong\n[\"INBOX\", \"Archive\"]\n3\n[4, 9, 12]\nHéllo from Folio, a subject long enough for two encoded words ✓\n2\nm8 LOGIN \"sam\" \"se\\\"cret\"\nm9 LIST \"\" \"*\"\nm10 SELECT \"INBOX\"\nm11 UID SEARCH UNSEEN\nm12 UID FETCH 9 BODY.PEEK[]\nm13 UID STORE 9 +FLAGS (\\Seen)\nm14 LOGOUT\nthe mail server said no to logging in: NO wrong password\ndone\n", "", 0]);
 });
 
-// tools/log.moth: levels, a name, a format of its own, lines added to a file, and on the error output, with the
-// time where it's asked for; and system.moth adding to the end of a file
-test("tools/log.moth writes what happened, at the levels asked for, to the error output or a file", { skip }, () => {
-  const ran = libraryRun(String.raw`use "log.moth" as log
-use "system.moth" as system
+// tools/log.folio: levels, a name, a format of its own, lines added to a file, and on the error output, with the
+// time where it's asked for; and system.folio adding to the end of a file
+test("tools/log.folio writes what happened, at the levels asked for, to the error output or a file", { skip }, () => {
+  const ran = libraryRun(String.raw`use "log.folio" as log
+use "system.folio" as system
 
 log's set_format("%level% %name%%message%")
 log's debug("not shown: below the level")
@@ -4727,10 +4742,10 @@ system's remove_file("app.log")
   assert.deepEqual([ran.stdout, ran.stderr.replace(/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\|/, "(now)|"), ran.status], ["ERROR db: to the file\nCRITICAL db: and another, é\n\n[\"INFO started\", \"DEBUG now shown\", \"WARNING db: slow\", \"ERROR db: to the file\", \"CRITICAL db: and another, é\", \"WARNING back on the error output\"]\n19\nERROR timed\nthere's no level called 'loud': debug, info, warning, error and critical are\n4\n", "INFO started\nDEBUG now shown\nWARNING db: slow\nWARNING back on the error output\n(now)|ERROR|timed\n", 0]);
 });
 
-// tools/zones.moth: offsets in nine zones at nine moments, around summer time's edges, south of the equator,
+// tools/zones.folio: offsets in nine zones at nine moments, around summer time's edges, south of the equator,
 // at :45 past, far ahead (from the zone's rule, on Linux) and in 1900, as Node's own zones (ICU's) have them;
 // times in a zone, a time summer time skips and one it has twice, and a zone that isn't there
-test("tools/zones.moth knows the world's time zones, as Node's own do", { skip }, () => {
+test("tools/zones.folio knows the world's time zones, as Node's own do", { skip }, () => {
   const zones = ["Asia/Kolkata", "America/New_York", "Europe/London", "Australia/Sydney", "America/Sao_Paulo", "Asia/Kathmandu", "Pacific/Chatham", "Europe/Berlin", "UTC"];
   const moments = [946684800, 1277942400, 1772953199, 1772953200, 1793512799, 1793512800, 2224713600, 1790000000, -2174428800];
   const offset = (zone, m) => {
@@ -4738,7 +4753,7 @@ test("tools/zones.moth knows the world's time zones, as Node's own do", { skip }
       .formatToParts(new Date(m * 1000)).map((p) => [p.type, p.value]));
     return Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second) / 1000 - m;
   };
-  let source = 'use "zones.moth" as zones\n';
+  let source = 'use "zones.folio" as zones\n';
   const want = [];
   for (const z of zones) for (const m of moments) {
     source += `say zones's offset_at("${z}", ${m})\n`;
@@ -4871,7 +4886,7 @@ say divided(-7, 2)
 `);
   assert.deepEqual([division.stdout, division.stderr, division.status], ["(record with quotient 3, rest 2)\n(record with quotient -3, rest -1)\n", "", 0]);
   if (!C_COMPILER) return;
-  const dir = mkdtempSync(join(tmpdir(), "moth-byvalue-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-byvalue-"));
   try {
     writeFileSync(join(dir, "bv.c"), C_SOURCE);
     const built = spawnSync(C_COMPILER, ["-shared", "-fPIC", "-O2", "-o", join(dir, "libbv.so"), join(dir, "bv.c")], { encoding: "utf8" });
@@ -4921,7 +4936,7 @@ try
 if it fails with why
     say why
 end
-`, { target, name: "p.moth", allow: ["--allow-libraries"] }));
+`, { target, name: "p.folio", allow: ["--allow-libraries"] }));
     chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "" });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["(record with x 11.5, y 22)\n25\n(record with a 42, b 2.5)\n7.5\n6\n(record with a 1, b 20, c 300)\n(record with c 10, s -600)\n(record with f -2.25, g 1.5)\n623\n(record with quotient 3, rest 2)\n(record with x 2, y 4)\n(record with x 1, y 2)\n'vlen2' needs input 1 to be a record (a vec2), not nothing\n", "", 0]);
@@ -4994,10 +5009,10 @@ say "done"
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["[\"thread 1: 20000100000\", \"thread 2: 20000100000\", \"thread 3: 20000100000\"]\n40\ndone\n", "", 0]);
 });
 
-// tools/cores.moth: a list's items done by copies of the program, as one part and as one part a core, the same;
+// tools/cores.folio: a list's items done by copies of the program, as one part and as one part a core, the same;
 // more parts than items; none; a part that fails, which says what its copy said; and no files left behind
-test("tools/cores.moth does a list's items on every core at once, in copies of the program", { skip }, () => {
-  const ran = libraryRun(String.raw`use "cores.moth" as cores
+test("tools/cores.folio does a list's items on every core at once, in copies of the program", { skip }, () => {
+  const ran = libraryRun(String.raw`use "cores.folio" as cores
 to primes_below with n
     set found to 0
     for each k from 2 to n - 1
@@ -5043,16 +5058,16 @@ end
 say every_way is less than one_way * 4 # not a test of speed: the parts ran, and gave back`, ["--allow-libraries", "--allow-read", "--allow-write"]);
   const lines = ran.stdout.split("\n");
   assert.equal(lines.slice(0, 5).join("\n") + "\n", "[25997, 26800, 27608, 28404, 29182, 29977, 30757, 31522]\nyes\nyes\n[4, 8]\n[]\n", ran.stdout + ran.stderr);
-  assert.match(lines.slice(5).join("\n"), /^part 1 of 2 failed: p\.moth:21:18: can't divide by zero\n[^]*in 'falls_over'[^]*\nyes\n$/);
+  assert.match(lines.slice(5).join("\n"), /^part 1 of 2 failed: p\.folio:21:18: can't divide by zero\n[^]*in 'falls_over'[^]*\nyes\n$/);
   assert.deepEqual([ran.stderr, ran.status], ["", 0]);
 });
 
-// tools/cores.moth with no work_here line (DESIGN §101): each copy runs the program to its own each_at_once,
+// tools/cores.folio with no work_here line (DESIGN §101): each copy runs the program to its own each_at_once,
 // told what the ones before gave: two in a row, one in a loop, records, calls inside a part and inside one done
 // here, a part's mistake inside the program's own try, one that failed with calls inside it, a copy that came to
 // another each_at_once, and no files left
-test("tools/cores.moth needs no work_here: a copy runs the program to its own each_at_once", { skip }, () => {
-  const ran = libraryRun(String.raw`use "cores.moth" as cores
+test("tools/cores.folio needs no work_here: a copy runs the program to its own each_at_once", { skip }, () => {
+  const ran = libraryRun(String.raw`use "cores.folio" as cores
 to doubled with n
     return n * 2
 end
@@ -5106,7 +5121,7 @@ if it fails with why
 end
 set left to 0
 for each name in read the folder "."
-    if ".moth-cores" is in name
+    if ".folio-cores" is in name
         set left to left + 1
     end
 end
@@ -5127,10 +5142,10 @@ part 1 of 2 failed: its copy of the program came to this each_at_once with pair_
 `, "", 0]);
 });
 
-// tools/tasks.moth: the program started again in the background, with inputs Windows' command line must quote
+// tools/tasks.folio: the program started again in the background, with inputs Windows' command line must quote
 // and Linux's must not, asked while it runs, waited for, stopped, and a program that isn't there
-test("tools/tasks.moth runs programs in the background, and says what they said and ended with", { skip }, () => {
-  const ran = libraryRun(String.raw`use "tasks.moth" as tasks
+test("tools/tasks.folio runs programs in the background, and says what they said and ended with", { skip }, () => {
+  const ran = libraryRun(String.raw`use "tasks.folio" as tasks
 if length of arguments is at least 1
     set what to item 1 of arguments
     if what is "count"
@@ -5184,26 +5199,26 @@ end`);
     + `done yet: no\nstopped: yes, ${stopped}\n${missing}\n`, "", 0]);
 });
 
-// tools/server.moth: a web server of the program's, on Windows' and Linux's own sockets, asked by another program
-// of Moth's, which reads and sends to it as it would to any site
-test("tools/server.moth answers a program's requests with what its handler gives", { skip }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-server-"));
+// tools/server.folio: a web server of the program's, on Windows' and Linux's own sockets, asked by another program
+// of Folio's, which reads and sends to it as it would to any site
+test("tools/server.folio answers a program's requests with what its handler gives", { skip }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-server-"));
   const port = 21000 + (process.pid % 2000);
-  const files = { "server.moth": readFileSync(new URL("./tools/server.moth", import.meta.url), "utf8") };
+  const files = { "server.folio": readFileSync(new URL("./tools/server.folio", import.meta.url), "utf8") };
   const build = (name, source, allow) => {
     const exe = executable(dir, name);
-    writeFileSync(exe, machine(source, { target, name: `${name}.moth`, allow, files }));
+    writeFileSync(exe, machine(source, { target, name: `${name}.folio`, allow, files }));
     if (target === "linux") chmodSync(exe, 0o755);
     return exe;
   };
   writeFileSync(join(dir, "page.txt"), "a file's words");
-  const server = build("site", `use "server.moth" as web
+  const server = build("site", `use "server.folio" as web
 set visits to 0
 to answer with request
     add 1 to visits
     set p to path of request
     if p is "/"
-        return "<h1>Hello from Moth</h1>"
+        return "<h1>Hello from Folio</h1>"
     else if p is "/hello"
         return "Hello, " + item "name" of query of request + "! " + length of keys of query of request
     else if p is "/json"
@@ -5248,7 +5263,7 @@ say read site + "/stop"`, ["--allow-net"]);
     const asked = spawnSync(client, [], { cwd: dir, encoding: "utf8", input: "" });
     const code = await ended;
     assert.deepEqual([asked.stdout, asked.stderr, asked.status], [
-      "<h1>Hello from Moth</h1>\nHello, Sam Lee! 2\n" + '(dictionary where "visits" is 3, "method" is "GET", "agent" is yes)\n'
+      "<h1>Hello from Folio</h1>\nHello, Sam Lee! 2\n" + '(dictionary where "visits" is 3, "method" is "GET", "agent" is yes)\n'
       + "SHOUT THIS ✓\na file's words\n"
       + `can't read 'http://127.0.0.1:${port}/missing': the site answered 404\n`
       + `can't read 'http://127.0.0.1:${port}/broken': the site answered 500\n`
@@ -5260,7 +5275,7 @@ say read site + "/stop"`, ["--allow-net"]);
   }
 });
 
-// tools/server.moth's connections (DESIGN §123), on raw sockets, so what's checked is what goes over the wire:
+// tools/server.folio's connections (DESIGN §123), on raw sockets, so what's checked is what goes over the wire:
 // each says something, in pieces with pauses if it likes, and gets back everything until the server closes it,
 // or until it has waited `patience` ms for more; reading nothing for `readLate` ms, and then, with `stalls`,
 // stopping for each in turn after each 2 MB it reads
@@ -5323,13 +5338,13 @@ function answers(text) {
   return made;
 }
 
-test("tools/server.moth keeps connections open, answers requests sent together in order, and keeps its time and size limits", { skip }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-server-"));
+test("tools/server.folio keeps connections open, answers requests sent together in order, and keeps its time and size limits", { skip }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-server-"));
   const port = 22000 + (process.pid % 2000);
   let running;
   try {
     const exe = executable(dir, "site");
-    writeFileSync(exe, machine(`use "server.moth" as web
+    writeFileSync(exe, machine(`use "server.folio" as web
 set lines to empty list
 for each i from 1 to 400000
     add "0123456789abcdefghijklmnopqrstu" to lines
@@ -5356,7 +5371,7 @@ web's set_idle_timeout(400)
 web's set_most_bytes(100000)
 web's set_most_requests(3)
 web's serve(${port}, answer)
-say "stopped"`, { target, name: "site.moth", allow: ["--allow-libraries"], files: { "server.moth": here("tools/server.moth") } }));
+say "stopped"`, { target, name: "site.folio", allow: ["--allow-libraries"], files: { "server.folio": here("tools/server.folio") } }));
     if (target === "linux") chmodSync(exe, 0o755);
     running = spawn(exe, [], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
@@ -5426,14 +5441,14 @@ say "stopped"`, { target, name: "site.moth", allow: ["--allow-libraries"], files
   }
 });
 
-// tools/server.moth on workers (DESIGN §124): a handler that works for a second and a half holds up only its own
+// tools/server.folio on workers (DESIGN §124): a handler that works for a second and a half holds up only its own
 // worker, while the others answer
-test("tools/server.moth answers on workers, so a slow handler holds up only its own", { skip }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-server-"));
+test("tools/server.folio answers on workers, so a slow handler holds up only its own", { skip }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-server-"));
   const port = 22000 + ((process.pid + 900) % 2000);
   try {
     const exe = executable(dir, "site");
-    writeFileSync(exe, machine(`use "server.moth" as web
+    writeFileSync(exe, machine(`use "server.folio" as web
 set seen to 0
 to answer with request
     add 1 to seen
@@ -5446,7 +5461,7 @@ to answer with request
     end
     return "seen " + seen
 end
-web's serve_on_workers(${port}, answer, 3)`, { target, name: "site.moth", allow: ["--allow-libraries"], files: { "server.moth": here("tools/server.moth") } }));
+web's serve_on_workers(${port}, answer, 3)`, { target, name: "site.folio", allow: ["--allow-libraries"], files: { "server.folio": here("tools/server.folio") } }));
     if (target === "linux") chmodSync(exe, 0o755);
     const running = spawn(exe, [], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
     const ended = new Promise((resolve) => running.on("exit", resolve));
@@ -5472,18 +5487,18 @@ web's serve_on_workers(${port}, answer, 3)`, { target, name: "site.moth", allow:
   }
 });
 
-// apps/guestbook (docs/guestbook.md): a web app with a SQLite database, built by moth.exe from its own folder with
+// apps/guestbook (docs/guestbook.md): a web app with a SQLite database, built by folio.exe from its own folder with
 // the standard library's server, SQLite, HTTP, dates and text: its own tests, then signed and read over HTTP, a
 // script given as a name shown as text, an entry with no name refused, the entries as JSON, a 404, and its file
-test("apps/guestbook: a web app with a database, built by moth.exe, tested, then signed and read over HTTP", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, async () => {
-  const { dir, exe } = mothExe();
+test("apps/guestbook: a web app with a database, built by folio.exe, tested, then signed and read over HTTP", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, async () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "guestbook");
   mkdirSync(sub);
-  for (const name of ["guestbook.moth", "book.moth", "book.test.moth"]) writeFileSync(join(sub, name), here(`apps/guestbook/${name}`));
+  for (const name of ["guestbook.folio", "book.folio", "book.test.folio"]) writeFileSync(join(sub, name), here(`apps/guestbook/${name}`));
   const allow = ["--allow-libraries", "--allow-read", "--allow-write"];
-  const tested = spawnSync(exe, ["test", "book.test.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const tested = spawnSync(exe, ["test", "book.test.folio", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([tested.stdout.split("\n").at(-2), tested.status], ["4 passed", 0], tested.stdout + tested.stderr);
-  const built = spawnSync(exe, ["build", "guestbook.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const built = spawnSync(exe, ["build", "guestbook.folio", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.equal(built.status, 0, built.stdout + built.stderr);
   const port = 23000 + (process.pid % 2000);
   const running = spawn(executable(sub, "guestbook"), [String(port)], { cwd: sub, stdio: ["ignore", "pipe", "pipe"] });
@@ -5515,18 +5530,18 @@ test("apps/guestbook: a web app with a database, built by moth.exe, tested, then
   assert.match(out, /^The guestbook is at http:\/\/localhost:\d+\/ \(Ctrl\+C stops it\)\n/);
 });
 
-// apps/recipes (DESIGN §145): a site of pages made by page.moth, served by server.moth and kept in SQLite, built by
-// moth.exe from its own folder: its own tests, then its pages over HTTP, a search, a recipe added with a form and
+// apps/recipes (DESIGN §145): a site of pages made by page.folio, served by server.folio and kept in SQLite, built by
+// folio.exe from its own folder: its own tests, then its pages over HTTP, a search, a recipe added with a form and
 // shown at the address it was sent to, one refused with what was written kept, the recipes as JSON, and a 404
-test("apps/recipes: a site of page.moth pages with a form and a database, built by moth.exe, tested, then used over HTTP", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, async () => {
-  const { dir, exe } = mothExe();
+test("apps/recipes: a site of page.folio pages with a form and a database, built by folio.exe, tested, then used over HTTP", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, async () => {
+  const { dir, exe } = folioExe();
   const sub = join(dir, "recipes");
   mkdirSync(sub);
-  for (const name of ["recipes.moth", "kitchen.moth", "kitchen.test.moth"]) writeFileSync(join(sub, name), here(`apps/recipes/${name}`));
+  for (const name of ["recipes.folio", "kitchen.folio", "kitchen.test.folio"]) writeFileSync(join(sub, name), here(`apps/recipes/${name}`));
   const allow = ["--allow-libraries", "--allow-read", "--allow-write"];
-  const tested = spawnSync(exe, ["test", "kitchen.test.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const tested = spawnSync(exe, ["test", "kitchen.test.folio", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([tested.stdout.split("\n").at(-2), tested.status], ["4 passed", 0], tested.stdout + tested.stderr);
-  const built = spawnSync(exe, ["build", "recipes.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const built = spawnSync(exe, ["build", "recipes.folio", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.equal(built.status, 0, built.stdout + built.stderr);
   const port = 23000 + ((process.pid + 300) % 2000);
   const running = spawn(executable(sub, "recipes"), [String(port)], { cwd: sub, stdio: ["ignore", "pipe", "pipe"] });
@@ -5562,7 +5577,7 @@ test("apps/recipes: a site of page.moth pages with a form and a database, built 
   assert.match(out, /^The recipe box is at http:\/\/localhost:\d+\/ \(Ctrl\+C stops it\)\n/);
 });
 
-// tools/server.moth with HTTPS: a certificate made for the test by the openssl command, OpenSSL 3's libraries
+// tools/server.folio with HTTPS: a certificate made for the test by the openssl command, OpenSSL 3's libraries
 // (Linux's own; on Windows, each beside the program in turn: Python's, built with Visual C++, and Git's, built with
 // MinGW, which once found no randomness when its libraries were looked for only in the program's folder), and
 // Node's https, which trusts that certificate alone, asking: a page, a body in chunks and one with its length, a
@@ -5577,18 +5592,18 @@ const SSL_SETS = target !== "windows" ? [null] : (() => {
     .filter((set) => set.dir && set.names.every((n) => existsSync(join(set.dir, n))));
 })();
 const httpsSkip = skip || (!OPENSSL ? "there's no openssl command" : SSL_SETS.length === 0 ? "there's no OpenSSL 3 here" : false);
-test("tools/server.moth answers with HTTPS through OpenSSL, and reads bodies in chunks", { skip: httpsSkip }, async () => {
+test("tools/server.folio answers with HTTPS through OpenSSL, and reads bodies in chunks", { skip: httpsSkip }, async () => {
   for (const [k, set] of SSL_SETS.entries()) await servesHttps(set, 23000 + ((process.pid + 700 * k) % 2000));
 });
 async function servesHttps(set, port) {
-  const dir = mkdtempSync(join(tmpdir(), "moth-https-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-https-"));
   try {
     const made = spawnSync(OPENSSL, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "key.pem"), "-out", join(dir, "cert.pem"),
       "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=IP:127.0.0.1,DNS:localhost"], { encoding: "utf8" });
     assert.equal(made.status, 0, made.stderr);
     if (set) for (const n of set.names) writeFileSync(join(dir, n), readFileSync(join(set.dir, n)));
     const exe = executable(dir, "site");
-    writeFileSync(exe, machine(`use "server.moth" as web
+    writeFileSync(exe, machine(`use "server.folio" as web
 to answer with request
     set p to path of request
     if p is "/"
@@ -5609,7 +5624,7 @@ for each pair in list of (list of "nowhere.pem", "key.pem"), (list of "cert.pem"
     end
 end
 web's serve_secure(${port}, answer, "cert.pem", "key.pem")
-say "stopped"`, { target, name: "site.moth", allow: ["--allow-libraries", "--allow-read"], files: { "server.moth": readFileSync(new URL("./tools/server.moth", import.meta.url), "utf8") } }));
+say "stopped"`, { target, name: "site.folio", allow: ["--allow-libraries", "--allow-read"], files: { "server.folio": readFileSync(new URL("./tools/server.folio", import.meta.url), "utf8") } }));
     if (target === "linux") chmodSync(exe, 0o755);
     const running = spawn(exe, [], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
@@ -5643,20 +5658,20 @@ say "stopped"`, { target, name: "site.moth", allow: ["--allow-libraries", "--all
   }
 }
 
-// tools/sockets.moth's secure connections, with OpenSSL as server.moth's HTTPS test has it: a task of the
+// tools/sockets.folio's secure connections, with OpenSSL as server.folio's HTTPS test has it: a task of the
 // program's connects to it by name, not trusting the certificate, then trusting it, by name and by address; a
 // connection made secure after it began, as STARTTLS does, and one for the wrong name; a secure connection's
 // bytes OpenSSL has already read count as ready; and each mistake
-test("tools/sockets.moth makes connections secure, as client and server, through OpenSSL", { skip: httpsSkip }, () => {
+test("tools/sockets.folio makes connections secure, as client and server, through OpenSSL", { skip: httpsSkip }, () => {
   for (const set of SSL_SETS) {
-    const dir = mkdtempSync(join(tmpdir(), "moth-tls-"));
+    const dir = mkdtempSync(join(tmpdir(), "folio-tls-"));
     try {
       const made = spawnSync(OPENSSL, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "key.pem"), "-out", join(dir, "cert.pem"),
         "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=IP:127.0.0.1,DNS:localhost"], { encoding: "utf8" });
       assert.equal(made.status, 0, made.stderr);
       if (set) for (const n of set.names) writeFileSync(join(dir, n), readFileSync(join(set.dir, n)));
       const exe = executable(dir, "p");
-      writeFileSync(exe, machine(String.raw`use "sockets.moth" as net
+      writeFileSync(exe, machine(String.raw`use "sockets.folio" as net
 
 # secure: not trusted yet, then trusted, by name and by address
 set tl to net's listen(0)
@@ -5767,7 +5782,7 @@ if it fails with why
     say why
 end
 say "done"
-`, { target, name: "p.moth", allow: ["--allow-libraries", "--allow-read"], files: { "sockets.moth": readFileSync(new URL("./tools/sockets.moth", import.meta.url), "utf8") } }));
+`, { target, name: "p.folio", allow: ["--allow-libraries", "--allow-read"], files: { "sockets.folio": readFileSync(new URL("./tools/sockets.folio", import.meta.url), "utf8") } }));
       if (target === "linux") chmodSync(exe, 0o755);
       // on Linux, on one core too, where a task's thread once went back to the next task's stack (DESIGN §85)
       const runs = [[exe, []]];
@@ -5782,25 +5797,25 @@ say "done"
   }
 });
 
-// tools/email.moth: a message sent through a mail server of the program's own, in a task, over sockets.moth:
+// tools/email.folio: a message sent through a mail server of the program's own, in a task, over sockets.folio:
 // after STARTTLS, logged in with PLAIN, to three addresses (one bcc'd), with a subject in encoded words, a name
 // in quotes, text with a line that starts with a dot, a page of HTML and three files; then secure from the
 // start, logged in with LOGIN; a password it won't take, a server with no STARTTLS, and messages it can't
 // write. Python's email module reads the message back as it was made, where there's a Python
 const PYTHON = ["python3", "python"].find((c) => spawnSync(c, ["--version"], { encoding: "utf8" }).status === 0);
-test("tools/email.moth sends mail over SMTP, secure and logged in, with HTML and files", { skip: httpsSkip }, () => {
+test("tools/email.folio sends mail over SMTP, secure and logged in, with HTML and files", { skip: httpsSkip }, () => {
   const set = SSL_SETS[0];
-  const dir = mkdtempSync(join(tmpdir(), "moth-mail-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-mail-"));
   try {
     const made = spawnSync(OPENSSL, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "key.pem"), "-out", join(dir, "cert.pem"),
       "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=IP:127.0.0.1,DNS:localhost"], { encoding: "utf8" });
     assert.equal(made.status, 0, made.stderr);
     if (set) for (const n of set.names) writeFileSync(join(dir, n), readFileSync(join(set.dir, n)));
     const files = {};
-    for (const name of ["email.moth", "sockets.moth", "dates.moth", "hash.moth", "base64.moth"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of ["email.folio", "sockets.folio", "dates.folio", "hash.folio", "base64.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(String.raw`use "email.moth" as mail
-use "sockets.moth" as net
+    writeFileSync(exe, machine(String.raw`use "email.folio" as mail
+use "sockets.folio" as net
 
 set crlf to (list of 13, 10) as bytes as text
 
@@ -5880,7 +5895,7 @@ set port to net's port_of(listener)
 set s to mail's server("localhost", port)
 set trust of s to "cert.pem"
 mail's log_in(s, "sam", "secret")
-set m to mail's message("Sam Pudke <sam@example.com>", "you@example.com", "Héllo from Moth, with a subject long enough to go over two encoded words ✓", "Line one\n.a line with a dot first\nLine three, é")
+set m to mail's message("Sam Pudke <sam@example.com>", "you@example.com", "Héllo from Folio, with a subject long enough to go over two encoded words ✓", "Line one\n.a line with a dot first\nLine three, é")
 set cc of m to list of "\"Them, Two\" <them@example.com>"
 set bcc of m to list of "hidden@example.com"
 set html of m to "<p>Hi <b>there</b></p>"
@@ -5940,18 +5955,18 @@ if it fails with why
     say why
 end
 say mail's base64_of("")
-say mail's base64_of("M") + " " + mail's base64_of("Mo") + " " + mail's base64_of("Mot") + " " + mail's base64_of("Moth ✓")
-say mail's bytes_of_base64(mail's base64_of("Moth ✓")) as text
-`, { target, name: "p.moth", allow: ["--allow-libraries", "--allow-read"], files }));
+say mail's base64_of("M") + " " + mail's base64_of("Mo") + " " + mail's base64_of("Mot") + " " + mail's base64_of("Folio ✓")
+say mail's bytes_of_base64(mail's base64_of("Folio ✓")) as text
+`, { target, name: "p.folio", allow: ["--allow-libraries", "--allow-read"], files }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "", timeout: 60000 });
     assert.equal(ran.stderr, "");
     assert.match(ran.stdout, /\nDate: (Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d\d (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d\d:\d\d:\d\d \+0000\n/);
     const seen = new Map();
     let said = ran.stdout.replace(/^Date: .*$/m, "Date: (now)").replace(/<[0-9a-f]{24}@example\.com>/g, "<(id)@example.com>")
-      .replace(/=_moth_[0-9a-f]{24}/g, (b) => (seen.has(b) || seen.set(b, `=_moth_(${seen.size + 1})`), seen.get(b)));
-    said = said.replace(/(filename="cert\.pem"\nContent-Transfer-Encoding: base64\n\n)[A-Za-z0-9+/=\n]+?(\n--=_moth_)/, "$1(the certificate)$2");
-    assert.equal(said, "EHLO localhost\nSTARTTLS\nEHLO localhost\nAUTH PLAIN AHNhbQBzZWNyZXQ=\nMAIL FROM:<sam@example.com>\nRCPT TO:<you@example.com>\nRCPT TO:<them@example.com>\nRCPT TO:<hidden@example.com>\nDATA\nQUIT\n--\nFrom: Sam Pudke <sam@example.com>\nTo: you@example.com\nCc: \"Them, Two\" <them@example.com>\nSubject: =?UTF-8?B?SMOpbGxvIGZyb20gTW90aCwgd2l0aCBhIHN1YmplY3QgbG9uZyBlbm91Z2gg?=\n =?UTF-8?B?dG8gZ28gb3ZlciB0d28gZW5jb2RlZCB3b3JkcyDinJM=?=\nDate: (now)\nMessage-ID: <(id)@example.com>\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary=\"=_moth_(1)\"\n\n--=_moth_(1)\nContent-Type: multipart/alternative; boundary=\"=_moth_(2)\"\n\n--=_moth_(2)\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: base64\n\nTGluZSBvbmUNCi5hIGxpbmUgd2l0aCBhIGRvdCBmaXJzdA0KTGluZSB0aHJlZSwgw6k=\n--=_moth_(2)\nContent-Type: text/html; charset=UTF-8\nContent-Transfer-Encoding: 7bit\n\n<p>Hi <b>there</b></p>\n--=_moth_(2)--\n--=_moth_(1)\nContent-Type: text/plain\nContent-Disposition: attachment; filename*=UTF-8''notes%20%C3%A9.txt\nContent-Transfer-Encoding: base64\n\nc29tZSBub3Rlcwo=\n--=_moth_(1)\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"data.bin\"\nContent-Transfer-Encoding: base64\n\nAAEC+v8=\n--=_moth_(1)\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"cert.pem\"\nContent-Transfer-Encoding: base64\n\n(the certificate)\n--=_moth_(1)--\n==\nEHLO localhost\nAUTH LOGIN\n(logged in as sam with secret)\nMAIL FROM:<sam@example.com>\nRCPT TO:<a@example.com>\nRCPT TO:<b@example.com>\nDATA\n==\nthe mail server said no to logging in: 535 5.7.8 bad credentials\nEHLO localhost\nthe mail server 127.0.0.1 doesn't offer STARTTLS: set security of the server to \"tls\" for one that's secure from the start, or \"none\" to send in the clear\nEHLO localhost\na message's addresses, subject and headers can't have a line end in them\n'sam' isn't an email address\na message needs an address to go to\n\nTQ== TW8= TW90 TW90aCDinJM=\nMoth ✓\n");
+      .replace(/=_folio_[0-9a-f]{24}/g, (b) => (seen.has(b) || seen.set(b, `=_folio_(${seen.size + 1})`), seen.get(b)));
+    said = said.replace(/(filename="cert\.pem"\nContent-Transfer-Encoding: base64\n\n)[A-Za-z0-9+/=\n]+?(\n--=_folio_)/, "$1(the certificate)$2");
+    assert.equal(said, "EHLO localhost\nSTARTTLS\nEHLO localhost\nAUTH PLAIN AHNhbQBzZWNyZXQ=\nMAIL FROM:<sam@example.com>\nRCPT TO:<you@example.com>\nRCPT TO:<them@example.com>\nRCPT TO:<hidden@example.com>\nDATA\nQUIT\n--\nFrom: Sam Pudke <sam@example.com>\nTo: you@example.com\nCc: \"Them, Two\" <them@example.com>\nSubject: =?UTF-8?B?SMOpbGxvIGZyb20gTW90aCwgd2l0aCBhIHN1YmplY3QgbG9uZyBlbm91Z2gg?=\n =?UTF-8?B?dG8gZ28gb3ZlciB0d28gZW5jb2RlZCB3b3JkcyDinJM=?=\nDate: (now)\nMessage-ID: <(id)@example.com>\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary=\"=_folio_(1)\"\n\n--=_folio_(1)\nContent-Type: multipart/alternative; boundary=\"=_folio_(2)\"\n\n--=_folio_(2)\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: base64\n\nTGluZSBvbmUNCi5hIGxpbmUgd2l0aCBhIGRvdCBmaXJzdA0KTGluZSB0aHJlZSwgw6k=\n--=_folio_(2)\nContent-Type: text/html; charset=UTF-8\nContent-Transfer-Encoding: 7bit\n\n<p>Hi <b>there</b></p>\n--=_folio_(2)--\n--=_folio_(1)\nContent-Type: text/plain\nContent-Disposition: attachment; filename*=UTF-8''notes%20%C3%A9.txt\nContent-Transfer-Encoding: base64\n\nc29tZSBub3Rlcwo=\n--=_folio_(1)\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"data.bin\"\nContent-Transfer-Encoding: base64\n\nAAEC+v8=\n--=_folio_(1)\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"cert.pem\"\nContent-Transfer-Encoding: base64\n\n(the certificate)\n--=_folio_(1)--\n==\nEHLO localhost\nAUTH LOGIN\n(logged in as sam with secret)\nMAIL FROM:<sam@example.com>\nRCPT TO:<a@example.com>\nRCPT TO:<b@example.com>\nDATA\n==\nthe mail server said no to logging in: 535 5.7.8 bad credentials\nEHLO localhost\nthe mail server 127.0.0.1 doesn't offer STARTTLS: set security of the server to \"tls\" for one that's secure from the start, or \"none\" to send in the clear\nEHLO localhost\na message's addresses, subject and headers can't have a line end in them\n'sam' isn't an email address\na message needs an address to go to\n\nTQ== TW8= TW90 Rm9saW8g4pyT\nFolio ✓\n");
     assert.equal(ran.status, 0);
     if (PYTHON) {
       const message = ran.stdout.split("\n--\n")[1].split("\n==\n")[0].split("\n").join("\r\n");
@@ -5963,7 +5978,7 @@ say mail's bytes_of_base64(mail's base64_of("Moth ✓")) as text
         "parts += [a.get_filename() + ' ' + a.get_content_type() + ' ' + a.get_payload(decode=True).hex() for a in m.iter_attachments()]",
         "sys.stdout.buffer.write('\\n'.join(parts).encode('utf8'))"].join("\n")], { input: message, encoding: "utf8" });
       assert.equal(read.status, 0, read.stderr);
-      assert.deepEqual(read.stdout.split("\n"), ["Héllo from Moth, with a subject long enough to go over two encoded words ✓", "Sam Pudke <sam@example.com>",
+      assert.deepEqual(read.stdout.split("\n"), ["Héllo from Folio, with a subject long enough to go over two encoded words ✓", "Sam Pudke <sam@example.com>",
         "you@example.com", "\"Them, Two\" <them@example.com>", "None", "[]", "[]", "Line one\r", ".a line with a dot first\r", "Line three, é",
         "<p>Hi <b>there</b></p>", `notes é.txt text/plain ${Buffer.from("some notes\n").toString("hex")}`, "data.bin application/octet-stream 000102faff",
         `cert.pem application/octet-stream ${readFileSync(join(dir, "cert.pem")).toString("hex")}`]);
@@ -5973,11 +5988,11 @@ say mail's bytes_of_base64(mail's base64_of("Moth ✓")) as text
   }
 });
 
-// tools/windows.moth, Windows' own controls for a program of Moth's: a window, hidden here, that drives itself
+// tools/windows.folio, Windows' own controls for a program of Folio's: a window, hidden here, that drives itself
 // from a timer, sending its controls what a click or typing sends them, and pressing its menu's keys with Ctrl
 // held as this thread sees it
-test("tools/windows.moth makes Windows' own controls, menus and keys call a program's functions", { skip: target === "windows" ? skip : "Windows only" }, () => {
-  const ran = libraryRun(`use "windows.moth" as ui
+test("tools/windows.folio makes Windows' own controls, menus and keys call a program's functions", { skip: target === "windows" ? skip : "Windows only" }, () => {
+  const ran = libraryRun(`use "windows.folio" as ui
 use the library "user32"
     SetKeyboardState(bytes) gives yes or no
 end
@@ -6090,19 +6105,19 @@ for each line in log
 end`);
   const [, width, height] = /resized (\d+) (\d+)/.exec(ran.stdout) ?? [];
   assert.deepEqual([ran.stdout.replace(/resized \d+ \d+/, "resized"), ran.stderr, ran.status], [
-    "windows.moth doesn't know the key 'Bogus' in 'Ctrl+Bogus'\n'Ctrl+Shift' has no key to press, only ones to hold\n"
+    "windows.folio doesn't know the key 'Bogus' in 'Ctrl+Bogus'\n'Ctrl+Shift' has no key to press, only ones to hold\n"
     + "changed Sam\ngreet Sam\nticked yes\nis ticked yes\nbanana at 2 of 3\nsize large\nnow 2, 1\nopen\n"
     + '["one", "two"]\nresized\nsaved\nreloaded\nchanged Sams\nclosing\n', "", 0]);
   assert.ok(width > 400 && height > 250, `${width} by ${height}`);
 });
 
-// tools/linux.moth, GTK's own controls, with windows.moth's functions: the same window, driven by its own timer
+// tools/linux.folio, GTK's own controls, with windows.folio's functions: the same window, driven by its own timer
 // through GTK's functions for a click, typing and choosing, its menu's keys pressed through its accelerators.
 // It needs GTK 3 and a display (CI's comes from Xvfb).
 const gtkHere = ["/usr/lib/x86_64-linux-gnu/libgtk-3.so.0", "/usr/lib64/libgtk-3.so.0", "/usr/lib/libgtk-3.so.0"].some((f) => existsSync(f));
 const onGtk = target !== "linux" ? "Linux only" : !gtkHere ? "GTK 3 isn't installed" : !process.env.DISPLAY ? "there's no display" : skip;
-test("tools/linux.moth makes GTK's own controls, menus and keys call a program's functions", { skip: onGtk }, () => {
-  const ran = libraryRun(`use "linux.moth" as ui
+test("tools/linux.folio makes GTK's own controls, menus and keys call a program's functions", { skip: onGtk }, () => {
+  const ran = libraryRun(`use "linux.folio" as ui
 set log to empty list
 set step to 0
 set resizes to 0
@@ -6198,15 +6213,15 @@ for each line in log
 end
 say "resized " + (resizes is greater than 0)`, ["--allow-libraries"], { NO_AT_BRIDGE: "1" });
   assert.deepEqual([ran.stdout, ran.status], [
-    "linux.moth doesn't know the key 'Bogus' in 'Ctrl+Bogus'\n'Ctrl+Shift' has no key to press, only ones to hold\n"
+    "linux.folio doesn't know the key 'Bogus' in 'Ctrl+Bogus'\n'Ctrl+Shift' has no key to press, only ones to hold\n"
     + "changed Sam\ngreet Sam\nticked yes\nis ticked yes\nbanana at 2 of 3\nsize large\nnow 2, 1\nchose cherry\nopen\n"
     + '["one", "two"]\nDriven again\nsaved\nkeys yes\nreloaded\nclosing\nresized yes\n', 0], ran.stderr);
 });
 
-// tools/ui.moth: windows.moth on Windows and linux.moth on Linux, through the same functions
+// tools/ui.folio: windows.folio on Windows and linux.folio on Linux, through the same functions
 const onUi = target === "windows" ? skip : onGtk;
-test("tools/ui.moth uses the system's own controls, on Windows and on Linux", { skip: onUi }, () => {
-  const ran = libraryRun(`use "ui.moth" as ui
+test("tools/ui.folio uses the system's own controls, on Windows and on Linux", { skip: onUi }, () => {
+  const ran = libraryRun(`use "ui.folio" as ui
 set w to ui's window("Both", 300, 200)
 set name to ui's text_box(w, 10, 10, 200, 26)
 set tick to ui's checkbox(w, "Dark", 10, 40, 100, 24, nothing)
@@ -6230,7 +6245,7 @@ say "done"`, ["--allow-libraries"], { NO_AT_BRIDGE: "1" });
   assert.deepEqual([ran.stdout, ran.status], ["Sam yes banana apple 2\ndone\n", 0], ran.stderr);
 });
 
-// Progress bars, pictures, tabs, tables and drawings, the same in windows.moth and linux.moth: a window of each
+// Progress bars, pictures, tabs, tables and drawings, the same in windows.folio and linux.folio: a window of each
 // kind, driven by its own timer, with what a person does done through the system's own calls (on Windows, a
 // tab chosen with TCM_SETCURFOCUS, a row with LVM_SETITEMSTATE, a click and a paint as their messages; on Linux,
 // GTK's own calls for a tab and a row, and a paint as GTK asks for it)
@@ -6247,7 +6262,7 @@ to paint with canvas
     ui's colour(canvas, 30, 90, 200)
     ui's line(canvas, 100, 20, 190, 100)
     ui's colour(canvas, 0, 0, 0)
-    ui's words(canvas, "Drawn by Moth", 95, 100)
+    ui's words(canvas, "Drawn by Folio", 95, 100)
 end
 to clicked_at with x, y
     add "clicked " + x + " " + y to log
@@ -6309,8 +6324,8 @@ end`;
 const moreSaid = (click) => `${click}painted yes\ntab People\nnow tab 2\nchosen ["Ana", 31, "Lisbon"] of 3\nrow ["Bo", 7, "Oslo"]\n`
   + "rows 0 nothing\nback to tab 1\ncan't show 'no such picture.png': it isn't there, or isn't a picture\n";
 
-test("tools/windows.moth makes progress bars, pictures, tabs, tables and drawings", { skip: target === "windows" ? skip : "Windows only" }, () => {
-  const ran = libraryRun(moreControls("windows.moth", {
+test("tools/windows.folio makes progress bars, pictures, tabs, tables and drawings", { skip: target === "windows" ? skip : "Windows only" }, () => {
+  const ran = libraryRun(moreControls("windows.folio", {
     click: "ui's postmessagew(handle of board, 513, 0, 20 + 30 * 65536)",
     paint: "ui's sendmessagew(handle of board, 15, 0, 0)",
     tab: "ui's sendmessagew(handle of pages, 4912, 1, 0)",
@@ -6321,8 +6336,8 @@ test("tools/windows.moth makes progress bars, pictures, tabs, tables and drawing
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], [moreSaid("clicked 20 30\n"), "", 0]);
 });
 
-test("tools/linux.moth makes progress bars, pictures, tabs, tables and drawings", { skip: onGtk }, () => {
-  const ran = libraryRun(moreControls("linux.moth", {
+test("tools/linux.folio makes progress bars, pictures, tabs, tables and drawings", { skip: onGtk }, () => {
+  const ran = libraryRun(moreControls("linux.folio", {
     click: "set clicks to 0",
     paint: "ui's redraw(board)",
     tab: "ui's gtk_notebook_set_current_page(handle of pages, 1)",
@@ -6333,10 +6348,10 @@ test("tools/linux.moth makes progress bars, pictures, tabs, tables and drawings"
   assert.deepEqual([ran.stdout, ran.status], [moreSaid(""), 0], ran.stderr);
 });
 
-// tools/game.moth: a game that plays itself, its frames driven by its own timer, a key pressed and let go and
+// tools/game.folio: a game that plays itself, its frames driven by its own timer, a key pressed and let go and
 // the mouse moved and clicked as the system's own messages would (on Linux, GTK's own call for a key), a
 // picture drawn, a sound played, and how many frames a second
-const gameSource = (system, press, release, mouse) => `use "game.moth" as game
+const gameSource = (system, press, release, mouse) => `use "game.folio" as game
 use "${system}" as direct
 set log to empty list
 set x to 0
@@ -6371,7 +6386,7 @@ to update with seconds
         ${mouse}
     else if frame is 62
         add "frames a second at least 30: " + (60 / (the clock - start_clock) is at least 30) to log
-        ${system === "windows.moth" ? "direct's sendmessagew(b, 15, 0, 0)" : "add 0 to painted"}
+        ${system === "windows.folio" ? "direct's sendmessagew(b, 15, 0, 0)" : "add 0 to painted"}
     else if frame is 64
         game's stop_game()
     end
@@ -6385,7 +6400,7 @@ to show with canvas
     game's words(canvas, "frame " + frame, 10, 10)
 end
 set w to game's window("Game", 320, 240)
-${system === "windows.moth" ? "direct's showwindow(handle of w, 0)" : ""}
+${system === "windows.folio" ? "direct's showwindow(handle of w, 0)" : ""}
 set picture to game's image("mandelbrot.png")
 add "picture " + width of picture + " by " + height of picture to log
 game's on_key(pressed)
@@ -6408,15 +6423,15 @@ function silentWav() {
   head.writeUInt16LE(1, 32); head.writeUInt16LE(8, 34); head.write("data", 36); head.writeUInt32LE(data.length, 40);
   return Buffer.concat([head, data]);
 }
-test("tools/game.moth plays a game: frames, keys held, the mouse, pictures and sounds, on Windows", { skip: target === "windows" ? skip : "Windows only" }, () => {
-  const ran = libraryRun(gameSource("windows.moth", "direct's postmessagew(b, 256, 39, 0)", "direct's postmessagew(b, 257, 39, 0)",
+test("tools/game.folio plays a game: frames, keys held, the mouse, pictures and sounds, on Windows", { skip: target === "windows" ? skip : "Windows only" }, () => {
+  const ran = libraryRun(gameSource("windows.folio", "direct's postmessagew(b, 256, 39, 0)", "direct's postmessagew(b, 257, 39, 0)",
     "direct's postmessagew(b, 512, 0, 30 + 40 * 65536)\n        direct's postmessagew(b, 513, 1, 30 + 40 * 65536)\n        direct's postmessagew(b, 514, 0, 30 + 40 * 65536)"),
     ["--allow-libraries", "--allow-read"]);
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["picture 720 by 480\npressed Right\nheld no\nstopped yes\nclicked 30 40\n"
     + "frames a second at least 30: yes\npainted yes, yes frames\n", "", 0]);
 });
-test("tools/game.moth plays a game: frames, keys held, pictures and sounds, on Linux", { skip: onGtk }, () => {
-  const ran = libraryRun(gameSource("linux.moth", "direct's gtk_test_widget_send_key(b, 65363, 0)", "add 0 to x_after", "add 0 to x_after"),
+test("tools/game.folio plays a game: frames, keys held, pictures and sounds, on Linux", { skip: onGtk }, () => {
+  const ran = libraryRun(gameSource("linux.folio", "direct's gtk_test_widget_send_key(b, 65363, 0)", "add 0 to x_after", "add 0 to x_after"),
     ["--allow-libraries", "--allow-read"], { NO_AT_BRIDGE: "1", GDK_BACKEND: "x11", GDK_CORE_DEVICE_EVENTS: "1" }); // GTK's test keys: X11's core events
   assert.deepEqual([ran.stdout, ran.status], ["picture 720 by 480\npressed Right\nheld no\nstopped yes\n"
     + "frames a second at least 30: yes\npainted yes, yes frames\n", 0], ran.stderr);
@@ -6424,25 +6439,25 @@ test("tools/game.moth plays a game: frames, keys held, pictures and sounds, on L
 
 test("only a program that reads can go online, and only it imports WinHTTP", () => {
   const imports = (bytes) => Buffer.from(bytes).includes(Buffer.from("WINHTTP.dll"));
-  assert.ok(!imports(machine('say "hello"\nwrite "x" to "out.txt"\n', { target: "windows", name: "w.moth", allow: ["--allow-all"] })));
-  assert.ok(imports(machine('say read "notes.txt"\n', { target: "windows", name: "r.moth" })));
-  const reads = (source) => machine(source, { target: "linux", name: "r.moth" });
+  assert.ok(!imports(machine('say "hello"\nwrite "x" to "out.txt"\n', { target: "windows", name: "w.folio", allow: ["--allow-all"] })));
+  assert.ok(imports(machine('say read "notes.txt"\n', { target: "windows", name: "r.folio" })));
+  const reads = (source) => machine(source, { target: "linux", name: "r.folio" });
   assert.ok(!Buffer.from(reads('say "hello"\n')).includes(Buffer.from("%{http_code}")));
   assert.ok(Buffer.from(reads('say read bytes "notes.txt"\n')).includes(Buffer.from("%{http_code}")));
 });
 
-// A program's picture as its window shows it, drawn into a file instead (MOTH_PICTURE) after the events
-// MOTH_EVENTS lists, and what it printed; and the colour, as "#rrggbb", at a place in the picture's own
+// A program's picture as its window shows it, drawn into a file instead (FOLIO_PICTURE) after the events
+// FOLIO_EVENTS lists, and what it printed; and the colour, as "#rrggbb", at a place in the picture's own
 // numbers: (0, 0) in the middle, y going up, unless it stopped at a mistake.
 const onlyWindows = target === "windows" ? false : "Windows only";
 function picture(source, events = "") {
-  const dir = mkdtempSync(join(tmpdir(), "moth-picture-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-picture-"));
   try {
     const exe = join(dir, "p.exe");
-    writeFileSync(exe, machine(source, { target, name: "p.moth" }));
+    writeFileSync(exe, machine(source, { target, name: "p.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const file = join(dir, "p.bmp");
-    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, MOTH_PICTURE: file, MOTH_EVENTS: events } });
+    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, FOLIO_PICTURE: file, FOLIO_EVENTS: events } });
     if (!existsSync(file)) return { at: null, stdout: ran.stdout, stderr: ran.stderr, status: ran.status }; // it stopped at a mistake
     const bmp = readFileSync(file);
     assert.deepEqual([bmp.toString("latin1", 0, 2), bmp.readInt32LE(18), bmp.readInt32LE(22), bmp.length], ["BM", 500, -500, 54 + 500 * 500 * 4]);
@@ -6468,7 +6483,7 @@ pen color "Lime"
 pen width 10
 move forward 200
 pen color "white"
-draw "Moth" at -200, 150 size 40
+draw "Folio" at -200, 150 size 40
 say "drawn"`);
   assert.equal(stdout, "drawn\n");
   assert.equal(at(-75, -75), "#ff0000"); // the box
@@ -6610,7 +6625,7 @@ test("an app's handlers get keys, clicks, drags and timers, and say and fail as 
     let stderr = "";
     let status = 0;
     try {
-      const app = run(source, (line) => (stdout += `${line}\n`), { file: "p.moth" });
+      const app = run(source, (line) => (stdout += `${line}\n`), { file: "p.folio" });
       const timers = app.waits.flatMap((wait, i) => (wait.event === "every" ? [i] : []));
       for (const event of events.split(";")) {
         const [what, ...rest] = event.split(" ");
@@ -6620,8 +6635,8 @@ test("an app's handlers get keys, clicks, drags and timers, and say and fail as 
       }
       status = app.stopped ?? 0;
     } catch (err) {
-      if (!(err instanceof MothError)) throw err;
-      stderr = `p.moth:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
+      if (!(err instanceof FolioError)) throw err;
+      stderr = `p.folio:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
       status = 1;
     }
     const got = picture(source, events);
@@ -6634,10 +6649,10 @@ test("an app's handlers get keys, clicks, drags and timers, and say and fail as 
 });
 
 test("a question that asks for a drawing, asked away from a terminal, is answered as any question is", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     const exe = executable(dir, "pad");
-    writeFileSync(exe, machine(`set answer to ask "Draw a digit"\nsay "got " + answer\nmove forward 5`, { target, name: "pad.moth" }));
+    writeFileSync(exe, machine(`set answer to ask "Draw a digit"\nsay "got " + answer\nmove forward 5`, { target, name: "pad.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "10,20 30,40;50,60\n" });
     assert.deepEqual({ stdout: got.stdout, status: got.status }, { stdout: "Draw a digit 10,20 30,40;50,60\ngot 10,20 30,40;50,60\n", status: 0 });
@@ -6647,25 +6662,25 @@ test("a question that asks for a drawing, asked away from a terminal, is answere
 });
 
 // Saving and loading, the clock and waiting, and putting things in order, with files allowed: machine code, with
-// the JavaScript engine's moment as MOTH_NOW (so a wait takes no time), says and fails as that engine does
+// the JavaScript engine's moment as FOLIO_NOW (so a wait takes no time), says and fails as that engine does
 test("machine code saves, loads, waits and puts things in order as the JavaScript engine does", { skip }, () => {
   for (const [source] of SAVING) {
     let stdout = "";
     let stderr = "";
     let status = 0;
     try {
-      run(source, (line) => (stdout += `${line}\n`), { file: "p.moth", disk: memoryDisk() });
+      run(source, (line) => (stdout += `${line}\n`), { file: "p.folio", disk: memoryDisk() });
     } catch (err) {
-      if (!(err instanceof MothError)) throw err;
-      stderr = `p.moth:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
+      if (!(err instanceof FolioError)) throw err;
+      stderr = `p.folio:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
       status = 1;
     }
-    const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+    const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
     try {
       const exe = executable(dir, "p");
-      writeFileSync(exe, machine(source, { target, name: "p.moth", allow: ["--allow-read", "--allow-write"] }));
+      writeFileSync(exe, machine(source, { target, name: "p.folio", allow: ["--allow-read", "--allow-write"] }));
       if (target === "linux") chmodSync(exe, 0o755);
-      const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, MOTH_NOW: String(FAKE_NOW), MOTH_SEED: "1" } });
+      const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, FOLIO_NOW: String(FAKE_NOW), FOLIO_SEED: "1" } });
       assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout, stderr, status }, source);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -6675,10 +6690,10 @@ test("machine code saves, loads, waits and puts things in order as the JavaScrip
 
 // The real clock: the time of day, as the system says it, and a wait that really waits
 test("machine code reads the real clock, and really waits", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
   try {
     const exe = executable(dir, "clock");
-    writeFileSync(exe, machine('say the date " " the time\nsay the clock\nwait 300 milliseconds\nsay the clock', { target, name: "clock.moth" }));
+    writeFileSync(exe, machine('say the date " " the time\nsay the clock\nwait 300 milliseconds\nsay the clock', { target, name: "clock.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const before = Date.now();
     const got = spawnSync(exe, [], { encoding: "utf8" });
@@ -6699,20 +6714,20 @@ test("machine code reads the real clock, and really waits", { skip }, () => {
 test("machine code reads pictures, and stops at a broken one as the JavaScript engine does", { skip }, () => {
   const files = [...handmadeBroken().map(([bytes]) => bytes), ...brokenPictures(1).slice(0, 60), ...pngCases(1).map((c) => c.bytes), ...bmpCases(1).map((c) => c.bytes)];
   for (const source of ['draw picture "x.png" at 0, 0\nsay "drawn"', 'draw picture read bytes "x.png" at 0, 0 size 3 by 4\nsay "drawn"']) {
-    const dir = mkdtempSync(join(tmpdir(), "moth-machine-"));
+    const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
     try {
       const exe = executable(dir, "p");
-      writeFileSync(exe, machine(source, { target, name: "p.moth", allow: ["--allow-read"] }));
+      writeFileSync(exe, machine(source, { target, name: "p.folio", allow: ["--allow-read"] }));
       if (target === "linux") chmodSync(exe, 0o755);
       files.forEach((bytes, i) => {
         let stdout = "";
         let stderr = "";
         let status = 0;
         try {
-          run(source, (line) => (stdout += `${line}\n`), { file: "p.moth", disk: memoryDisk({ "x.png": bytes }) });
+          run(source, (line) => (stdout += `${line}\n`), { file: "p.folio", disk: memoryDisk({ "x.png": bytes }) });
         } catch (err) {
-          if (!(err instanceof MothError)) throw err;
-          stderr = `p.moth:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n`;
+          if (!(err instanceof FolioError)) throw err;
+          stderr = `p.folio:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n`;
           status = 1;
         }
         writeFileSync(join(dir, "x.png"), bytes);
@@ -6727,16 +6742,16 @@ test("machine code reads pictures, and stops at a broken one as the JavaScript e
 
 // and the window draws each one's pixels as they are, over the background where they can be seen through
 test("a picture from a file is drawn pixel for pixel, blended where it's see-through", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-picture-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-picture-"));
   try {
     const exe = join(dir, "p.exe");
-    writeFileSync(exe, machine('draw picture "c" at -100, -100', { target, name: "p.moth", allow: ["--allow-read"] }));
+    writeFileSync(exe, machine('draw picture "c" at -100, -100', { target, name: "p.folio", allow: ["--allow-read"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const back = [0x0b, 0x11, 0x22];
     for (const [i, c] of [...pngCases(1), ...bmpCases(1)].entries()) {
       writeFileSync(join(dir, "c"), c.bytes);
       const file = join(dir, "p.bmp");
-      spawnSync(exe, [], { cwd: dir, env: { ...process.env, MOTH_PICTURE: file } });
+      spawnSync(exe, [], { cwd: dir, env: { ...process.env, FOLIO_PICTURE: file } });
       const bmp = readFileSync(file);
       for (let y = 0; y < c.height; y++) {
         for (let x = 0; x < c.width; x++) {
@@ -6755,12 +6770,12 @@ test("a picture from a file is drawn pixel for pixel, blended where it's see-thr
 
 // ---------- buttons and text boxes ----------
 
-// What an app says, fails and exits with on the JavaScript engine, given events as MOTH_EVENTS lists them:
+// What an app says, fails and exits with on the JavaScript engine, given events as FOLIO_EVENTS lists them:
 // "type hello" types into a text box, as app.send("type", ["hello"]) does.
 function appOnEngine(source, events) {
   let [stdout, stderr, status] = ["", "", 0];
   try {
-    const app = run(source, (line) => (stdout += `${line}\n`), { file: "p.moth" });
+    const app = run(source, (line) => (stdout += `${line}\n`), { file: "p.folio" });
     const timers = app.waits.flatMap((wait, i) => (wait.event === "every" ? [i] : []));
     for (const event of events.split(";")) {
       const [what, ...rest] = event.split(" ");
@@ -6770,8 +6785,8 @@ function appOnEngine(source, events) {
     }
     status = app.stopped ?? 0;
   } catch (err) {
-    if (!(err instanceof MothError)) throw err;
-    stderr = `p.moth:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
+    if (!(err instanceof FolioError)) throw err;
+    stderr = `p.folio:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
     status = 1;
   }
   return { stdout, stderr, status };
@@ -6836,7 +6851,7 @@ end
 every 2 seconds
     say "tock"
 end`, "tick 0;click 5 5;tick 1;tick 0"], // each tick its own timer's, never a button's
-  [here("apps/todo.moth"), "click -100 210;type Buy milk;key enter;type Call Sam;click 20 210;type x;key backspace;click 0 0;type nope;click 100 210;click -100 210;type Walk;key enter;key enter"],
+  [here("apps/todo.folio"), "click -100 210;type Buy milk;key enter;type Call Sam;click 20 210;type x;key backspace;click 0 0;type nope;click 100 210;click -100 210;type Walk;key enter;key enter"],
 ];
 
 test("buttons and text boxes in the window take clicks and typing as app.send does on the JavaScript engine", { skip }, () => {
@@ -6875,9 +6890,9 @@ end`, "click 0 10;type WWWW;click 0 -50");
   assert.equal(count(-32, -20, 6, 24, (c) => c !== "#ffffff"), 0); // the box that lost it has none after its text
 });
 
-test("apps/todo.moth builds, adds what's typed to its list, and draws it", { skip }, () => {
+test("apps/todo.folio builds, adds what's typed to its list, and draws it", { skip }, () => {
   const events = "click -100 210;type Buy milk;key enter;type Call Sam;click 20 210";
-  const { at, stdout } = picture(here("apps/todo.moth"), events);
+  const { at, stdout } = picture(here("apps/todo.folio"), events);
   assert.equal(stdout, "To do: Buy milk\nTo do: Call Sam\n");
   const blue = (y0, y1) => {
     let n = 0;
@@ -6893,10 +6908,10 @@ test("apps/todo.moth builds, adds what's typed to its list, and draws it", { ski
 
 // ---------- checkboxes, text areas and lists ----------
 
-// moth.test.js's program with each of them (DESIGN §40), and another whose list's items change after it's
+// folio.test.js's program with each of them (DESIGN §40), and another whose list's items change after it's
 // drawn and whose picture is drawn again; "scroll x y rows" is a wheel, as app.send("scroll", ...) has it
 const CONTROLS = "set fruits to list of \"apple\", \"banana\", \"cherry\", \"date\", \"elderberry\", \"fig\", \"grape\", \"kiwi\"\nto show\n    clear\n    draw checkbox \"Dark\" at -200, 200\n    draw text area \"Notes\" at -200, 50 size 250 by 100\n    draw list \"Fruits\" showing fruits at 100, 0 size 150 by 96\n    draw button \"Save\" at -200, 0\n    draw button \"Deep\" at -100, 0\nend\nto deep with n\n    if n is 0\n        return 0\n    end\n    return deep(n - 1)\nend\nshow()\ntick the checkbox \"Dark\"\nsay \"at the start \" the checkbox \"Dark\" is ticked \" \" the choice in the list \"Fruits\"\nwhen the checkbox \"Dark\" is clicked\n    say \"dark \" the checkbox \"Dark\" is ticked \" \" the checkbox \"Dark\" is not ticked\n    show()\nend\nwhen an item is chosen in the list \"Fruits\" with fruit\n    say \"chose \" fruit \" \" the choice in the list \"Fruits\"\n    show()\nend\nwhen the button \"Save\" is clicked\n    say \"notes [\" the text in the text area \"Notes\" \"]\"\n    clear the text area \"Notes\"\nend\nwhen the button \"Deep\" is clicked\n    say \"deep \" deep(5000)\nend\nwhen the mouse is clicked with x and y\n    say \"click \" x \" \" y\nend\nwhen a key is pressed with key\n    say \"key \" key\nend";
-// dropdowns and sliders (DESIGN §42), as moth.test.js has them
+// dropdowns and sliders (DESIGN §42), as folio.test.js has them
 const CONTROLS_MORE = "set sizes to list of \"small\", \"medium\", \"large\", \"huge\", \"giant\", \"titanic\", \"cosmic\"\nto show\n    clear\n    draw dropdown \"Size\" showing sizes at -200, 150\n    draw slider \"Volume\" from 0 to 10 at -200, 50\n    draw button \"Show\" at 100, 150\n    draw button \"Deep\" at 100, 100\nend\nto deep with n\n    if n is 0\n        return the value of the slider \"Volume\"\n    end\n    return deep(n - 1)\nend\nshow()\nset the slider \"Volume\" to 7\nsay \"start \" (the value of the slider \"Volume\") \" \" (the choice in the dropdown \"Size\")\nwhen an item is chosen in the dropdown \"Size\" with size\n    say \"size \" size \" \" the choice in the dropdown \"Size\"\n    show()\nend\nwhen the slider \"Volume\" is moved with v\n    say \"volume \" v \" \" the value of the slider \"Volume\"\n    show()\nend\nwhen the button \"Show\" is clicked\n    say \"show \" (the value of the slider \"Volume\") \" \" (the choice in the dropdown \"Size\")\nend\nwhen the button \"Deep\" is clicked\n    say \"deep \" deep(5000)\n    set the slider \"Volume\" to 99\n    say \"set \" the value of the slider \"Volume\"\nend\nwhen a key is pressed with key\n    say \"key \" key\nend\nwhen the mouse is clicked with x and y\n    say \"click \" x \" \" y\nend";
 const CONTROL_EVENTS = [
   [CONTROLS, "click -195 205;click -150 100;type Hello;key enter;type world;key backspace;click 110 90;key down;click -95 15;key down;key down;key down;scroll 110 50 10;scroll 0 -200 3;key up;key x;click -195 15;click 110 2;click 0 -200;key y;click -150 100;key enter;key enter;type z"],
@@ -6938,9 +6953,9 @@ test("checkboxes, text areas and lists are drawn as the playground draws them", 
   assert.ok(count(after, 108, 160, 4, 20, (c) => c === "#ffffff") > 10, "the chosen item's text, in white");
 });
 
-// moth.test.js's editing app (DESIGN §41): the cursor, Shift's selecting, Ctrl+A and Ctrl+X, a drag, a text
+// folio.test.js's editing app (DESIGN §41): the cursor, Shift's selecting, Ctrl+A and Ctrl+X, a drag, a text
 // area's lines, and keys with Shift or Ctrl with nothing focused. The clipboard is the window's, and isn't
-// touched while the events come from MOTH_EVENTS.
+// touched while the events come from FOLIO_EVENTS.
 const EDITOR = "draw text box \"Name\" at -200, 100\ndraw text area \"Notes\" at -200, -100 size 200 by 68\ndraw button \"Show\" at 100, 100\ndraw button \"Deep\" at 100, 50\nto deep with n\n    if n is 0\n        return the text in the text area \"Notes\"\n    end\n    return deep(n - 1)\nend\nwhen the button \"Show\" is clicked\n    say \"[\" + the text in the text box \"Name\" + \"] [\" + the text in the text area \"Notes\" + \"]\"\nend\nwhen the button \"Deep\" is clicked\n    say \"deep \" + deep(5000)\nend\nwhen a key is pressed with key\n    say \"key \" + key\nend\nwhen enter is pressed in the text box \"Name\" with words\n    say \"enter \" + words\nend";
 const EDIT_EVENTS = "key shift+left;key ctrl+a;click -150 110;type Hello world;key left;key left;key left;key left;key left;key shift+left;key shift+left;key shift+left;key shift+left;key shift+left;key shift+left;type Big ;click 100 110;key home;key shift+end;key ctrl+x;type abcdefghijklmnopqrstuvwxyz;click -162 110;type _;key delete;click 100 110;key ctrl+a;key backspace;type xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;key enter;key right;key shift+home;key ctrl+c;key ctrl+v;type ab;click 100 110;click -190 -40;type one\ntwo\nthree\nfour;key up;key up;key shift+up;type !;click 100 110;key enter;key end;key shift+right;key shift+down;type ?;click 100 110;click -170 -60;drag -140 -80;drag -120 -80;type <>;click 100 110;click 105 60;key down;key down;key end;type Z;key up;key up;key up;key up;key home;key delete;click 100 110;click 0 -200;key shift+down;key ctrl+z;key up;click -190 -40;key ctrl+a;type 1\n2\n3\n4\n5;key up;key up;key up;click 100 110";
 
@@ -6956,9 +6971,9 @@ test("the cursor, selecting and editing in the window are as app.send has them o
 });
 
 // ---------- sound ----------
-// With MOTH_SOUND=file.wav, a program's sounds go into that file instead of to the speakers: byte for byte the
+// With FOLIO_SOUND=file.wav, a program's sounds go into that file instead of to the speakers: byte for byte the
 // WAV soundWav makes of the sounds the JavaScript engine played, and whole up to a mistake. Away from a
-// terminal, with no MOTH_SOUND, a program is silent, and says and fails just the same.
+// terminal, with no FOLIO_SOUND, a program is silent, and says and fails just the same.
 const SOUND_PROGRAMS = [
   'say "start"\nplay note "C" for 0.5 seconds\nplay a beep\nplay note 440 for 100 milliseconds\nsay "end"',
   'for each n in list of "C", "C#", "Db", "D4", "d#3", "Eb5", "E", "F", "f#", "G", "G#", "Ab", "A", "A#", "Bb", "B", "Cb4", "B#4", "c0", "B9", "rest", "REST", "a", "bb", "Cb0", "B#9"\n    play note n for 10 milliseconds\nend',
@@ -6987,7 +7002,7 @@ function soundsOnEngine(source, name) {
   try {
     run(source, (line) => (stdout += `${line}\n`), { file: name, printError: (line) => (stderr += `${line}\n`), exit: (code) => (status = code), play: (sound) => played.push(sound) });
   } catch (err) {
-    if (!(err instanceof MothError)) throw err;
+    if (!(err instanceof FolioError)) throw err;
     stderr += `${name}:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
     status = 1;
   }
@@ -7008,16 +7023,16 @@ function pitchOf(samples, from = 441) {
   return (ups * 44100) / (last - first);
 }
 
-test("machine code makes the sounds the JavaScript engine makes: MOTH_SOUND gets the same WAV, up to the same mistakes", { skip }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-sound-"));
+test("machine code makes the sounds the JavaScript engine makes: FOLIO_SOUND gets the same WAV, up to the same mistakes", { skip }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-sound-"));
   try {
     SOUND_PROGRAMS.forEach((source, i) => {
-      const name = `s${i}.moth`;
+      const name = `s${i}.folio`;
       const want = soundsOnEngine(source, name);
       const exe = executable(dir, `s${i}`);
       writeFileSync(exe, machine(source, { target, name }));
       if (target === "linux") chmodSync(exe, 0o755);
-      const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, MOTH_SOUND: `s${i}.wav` } });
+      const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, FOLIO_SOUND: `s${i}.wav` } });
       assert.deepEqual({ stdout: ran.stdout, stderr: ran.stderr, status: ran.status }, { stdout: want.stdout, stderr: want.stderr, status: want.status }, source);
       assert.ok(Buffer.from(soundWav(want.played)).equals(readFileSync(join(dir, `s${i}.wav`))), `the WAV of ${source}`);
       const silent = spawnSync(exe, [], { cwd: dir, encoding: "utf8" }); // away from a terminal: no sound, and the same words
@@ -7040,8 +7055,8 @@ test("machine code makes the sounds the JavaScript engine makes: MOTH_SOUND gets
   }
 });
 
-// An app's handlers, sent MOTH_EVENTS with MOTH_PICTURE as the picture tests do, make their sounds as each
-// event comes, into MOTH_SOUND's file; one that stops the program ends its sounds there too.
+// An app's handlers, sent FOLIO_EVENTS with FOLIO_PICTURE as the picture tests do, make their sounds as each
+// event comes, into FOLIO_SOUND's file; one that stops the program ends its sounds there too.
 test("an app's handlers make their sounds as its events come, and only a program that makes a sound has it in it", { skip }, () => {
   const source = 'set n to 0\nwhen a key is pressed with key\n    add 1 to n\n    play note key for n * 100 milliseconds\n    if key is "c"\n        stop the program with 2\n    end\nend\nevery 1 second\n    play a beep\nend\nplay note "rest" for 1 second';
   const events = "key e;tick 0;key g;key c;key d";
@@ -7053,19 +7068,19 @@ test("an app's handlers make their sounds as its events come, and only a program
     else app.handle(1);
   }
   assert.equal(played.length, 5);
-  const dir = mkdtempSync(join(tmpdir(), "moth-sound-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-sound-"));
   try {
     const exe = join(dir, "app.exe");
-    const bytes = machine(source, { target, name: "app.moth" });
+    const bytes = machine(source, { target, name: "app.folio" });
     writeFileSync(exe, bytes);
     if (target === "linux") chmodSync(exe, 0o755);
-    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, MOTH_PICTURE: join(dir, "app.bmp"), MOTH_EVENTS: events, MOTH_SOUND: "app.wav" } });
+    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, FOLIO_PICTURE: join(dir, "app.bmp"), FOLIO_EVENTS: events, FOLIO_SOUND: "app.wav" } });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["", "", 2]);
     assert.ok(Buffer.from(soundWav(played)).equals(readFileSync(join(dir, "app.wav"))));
     if (target === "windows") { // winmm.dll, which plays sounds, only goes into a program that makes one
       const imports = (b) => Buffer.from(b).includes("WINMM.dll");
       assert.ok(imports(bytes));
-      assert.ok(!imports(machine('say "quiet"\nmove forward 10', { target, name: "q.moth" })));
+      assert.ok(!imports(machine('say "quiet"\nmove forward 10', { target, name: "q.folio" })));
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -7077,10 +7092,10 @@ test("an app's handlers make their sounds as its events come, and only a program
 // an empty folder in PATH isn't the one the program runs in; and a .bat or .cmd file, which cmd.exe runs, gets
 // no argument that cmd.exe would read as part of a command
 test("on Windows a program takes its DLLs and the programs it starts only from where the system keeps them", { skip: onlyWindows }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-places-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-places-"));
   try {
-    writeFileSync(join(dir, "whoami.exe"), machine('say "not the real whoami"', { target, name: "w.moth" }));
-    writeFileSync(join(dir, "elsewhere.exe"), machine('say "only here"', { target, name: "e.moth" }));
+    writeFileSync(join(dir, "whoami.exe"), machine('say "not the real whoami"', { target, name: "w.folio" }));
+    writeFileSync(join(dir, "elsewhere.exe"), machine('say "only here"', { target, name: "e.folio" }));
     for (const dll of ["winmm.dll", "winhttp.dll", "gdiplus.dll"]) { // any DLL that isn't the real one stops a program that loads it
       writeFileSync(join(dir, dll), readFileSync(join(process.env.SystemRoot, "System32", "version.dll")));
     }
@@ -7111,7 +7126,7 @@ for each argument in list of "a & echo INJECTED", "50%", "x\\"y"
 end
 say output of (run program "./SHOW.BAT" with (list of "fine") keeping its output)`;
     const exe = join(dir, "p.exe");
-    writeFileSync(exe, machine(source, { target, name: "p.moth", allow: ["--allow-run", "--allow-net"] }));
+    writeFileSync(exe, machine(source, { target, name: "p.folio", allow: ["--allow-run", "--allow-net"] }));
     const whoami = spawnSync(join(process.env.SystemRoot, "System32", "whoami.exe"), [], { encoding: "utf8" }).stdout.replaceAll("\r", "");
     const PATH = `${process.env.SystemRoot}\\System32;;${process.env.PATH}`;
     const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, PATH } });
@@ -7171,15 +7186,15 @@ test("machine code sends to sites and reads them with headers, as vm.js says", {
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const dir = mkdtempSync(join(tmpdir(), "moth-send-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-send-"));
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
     const exe = executable(dir, "send");
     for (const [allow, want] of [
       [["--allow-net"], { stdout: `${SEND_SAYS.join("\n").replaceAll("BASE", base)}\n`, stderr: "", status: 0 }],
-      [[], { stdout: "", stderr: `send.moth:3:5: can't send to '${base}/echo': this program isn't allowed to go online (start it with --allow-net)\nsay send (record with name "Sam", n 3, ok yes) to base + "/echo"\n    ^\n`, status: 1 }],
+      [[], { stdout: "", stderr: `send.folio:3:5: can't send to '${base}/echo': this program isn't allowed to go online (start it with --allow-net)\nsay send (record with name "Sam", n 3, ok yes) to base + "/echo"\n    ^\n`, status: 1 }],
     ]) {
-      writeFileSync(exe, machine(SEND_SOURCE, { target, name: "send.moth", allow }));
+      writeFileSync(exe, machine(SEND_SOURCE, { target, name: "send.folio", allow }));
       if (target === "linux") chmodSync(exe, 0o755);
       const got = await runWhileServing(exe, [base], dir);
       assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, want, allow.join(" "));
@@ -7191,7 +7206,7 @@ test("machine code sends to sites and reads them with headers, as vm.js says", {
 });
 
 // Tasks: functions a program starts, each run on a thread of its own, taking turns with the program at running
-// Moth (DESIGN §62). What a program with tasks says must be what the JavaScript engine says, which runs each
+// Folio (DESIGN §62). What a program with tasks says must be what the JavaScript engine says, which runs each
 // task when it's started; what only threads show, a task working while the program waits, is said as yes or
 // no, and is yes on both.
 const TASK_PROGRAMS = [
@@ -7223,7 +7238,7 @@ function tasksOnEngine(source, name) {
   try {
     run(source, (line) => (stdout += `${line}\n`), { file: name, disk: memoryDisk(), printError: (line) => (stderr += `${line}\n`), exit: (code) => (status = code) });
   } catch (err) {
-    if (!(err instanceof MothError)) throw err;
+    if (!(err instanceof FolioError)) throw err;
     stderr += `${name}:${err.line}:${err.col}: ${err.reason}\n${excerpt(source, err)}\n${err.trail.length ? `${describeTrail(err.trail)}\n` : ""}`;
     status = 1;
   }
@@ -7232,10 +7247,10 @@ function tasksOnEngine(source, name) {
 
 // A program with tasks, built and run in a folder of its own
 function taskRun(source, { allow = ["--allow-read", "--allow-write"], files, env = {} } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), "moth-tasks-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-tasks-"));
   try {
     const exe = executable(dir, "p");
-    writeFileSync(exe, machine(source, { target, name: "p.moth", allow, files }));
+    writeFileSync(exe, machine(source, { target, name: "p.folio", allow, files }));
     if (target === "linux") chmodSync(exe, 0o755);
     const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "", timeout: 60_000, env: { ...process.env, ...env } });
     return { stdout: got.stdout, stderr: got.stderr, status: got.status };
@@ -7245,22 +7260,22 @@ function taskRun(source, { allow = ["--allow-read", "--allow-write"], files, env
 }
 
 test("tasks run alongside the program, share its names, and say, fail and give back what the JavaScript engine has them do", { skip }, () => {
-  for (const source of TASK_PROGRAMS) assert.deepEqual(taskRun(source), tasksOnEngine(source, "p.moth"), source);
+  for (const source of TASK_PROGRAMS) assert.deepEqual(taskRun(source), tasksOnEngine(source, "p.folio"), source);
 });
 
 test("a program with no tasks has no threads in it, and one with tasks takes its turns from the system", () => {
-  const plain = Buffer.from(machine("say 1", { target: "windows", name: "p.moth" })).toString("latin1");
-  const tasks = Buffer.from(machine("to f\n    return 1\nend\nsay wait for (start f())", { target: "windows", name: "p.moth" })).toString("latin1");
+  const plain = Buffer.from(machine("say 1", { target: "windows", name: "p.folio" })).toString("latin1");
+  const tasks = Buffer.from(machine("to f\n    return 1\nend\nsay wait for (start f())", { target: "windows", name: "p.folio" })).toString("latin1");
   assert.ok(!plain.includes("CreateThread") && tasks.includes("CreateThread") && tasks.includes("CreateSemaphoreW"));
 });
 
 // What a task waits on, a line typed, a program it runs, a library's function: the turn goes to the others meanwhile
 test("a task works while the program waits for a line typed", { skip }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), "moth-tasks-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-tasks-"));
   try {
     const exe = executable(dir, "p");
     const source = "set ticks to 0\nto count_on\n    repeat 2000000 times\n        add 1 to ticks\n    end\n    return ticks\nend\nset job to start count_on()\nset name to ask \"Name?\"\nsay \"when \" name \" answered, the task had counted to \" ticks\nsay wait for job";
-    writeFileSync(exe, machine(source, { target, name: "p.moth" }));
+    writeFileSync(exe, machine(source, { target, name: "p.folio" }));
     if (target === "linux") chmodSync(exe, 0o755);
     const said = await new Promise((resolve, reject) => {
       const child = spawn(exe, [], { cwd: dir });
@@ -7313,10 +7328,10 @@ say wait for q`, { allow: ["--allow-libraries"] });
   assert.deepEqual(library, { stdout: "main counted to 3000000 while C slept: yes\nslept in C\n(16 bytes: 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0)\n", stderr: "", status: 0 });
 });
 
-// `has ended` (DESIGN §94), and sync.moth's lock, queue and flag with tasks that really wait: three tasks each
+// `has ended` (DESIGN §94), and sync.folio's lock, queue and flag with tasks that really wait: three tasks each
 // adding 20 to a total they read, wait and write back, which without the lock loses most of them
-test("a task can be asked whether it has ended, and sync.moth's locks, queues and flags keep tasks in step", { skip }, () => {
-  const ran = taskRun(`use "sync.moth" as sync
+test("a task can be asked whether it has ended, and sync.folio's locks, queues and flags keep tasks in step", { skip }, () => {
+  const ran = taskRun(`use "sync.folio" as sync
 to nap with ms
     wait ms milliseconds
     return ms
@@ -7375,13 +7390,13 @@ try
 if it fails with why
     say why
 end
-say 5 has ended`, { files: { "sync.moth": readFileSync(new URL("./tools/sync.moth", import.meta.url), "utf8") } });
+say 5 has ended`, { files: { "sync.folio": readFileSync(new URL("./tools/sync.folio", import.meta.url), "utf8") } });
   assert.deepEqual(ran, { stdout: "no\n300\nyes\n[20, 20, 20] 60\n1275\nno\nyes\nsaw it\nnothing came in 40 milliseconds\n",
-    stderr: "p.moth:60:7: 'has ended' needs a task, as 'start' gives, not a number\nsay 5 has ended\n      ^\n", status: 1 });
+    stderr: "p.folio:60:7: 'has ended' needs a task, as 'start' gives, not a number\nsay 5 has ended\n      ^\n", status: 1 });
 });
 
 // Workers (DESIGN §124): calls on threads of their own, each with a copy of the program's memory, so they run
-// Moth at the same moment. What a program with workers says must be what the JavaScript engine says, which runs
+// Folio at the same moment. What a program with workers says must be what the JavaScript engine says, which runs
 // each worker when it's started, on copies all the same.
 const WORKER_PROGRAMS = [
   // eight at once, each making far more than it keeps, so each collector runs while the others work; records,
@@ -7402,14 +7417,14 @@ const WORKER_PROGRAMS = [
 ];
 
 test("workers run on threads of their own, with copies, and say, fail and give back what the JavaScript engine has them do", { skip }, () => {
-  for (const source of WORKER_PROGRAMS) assert.deepEqual(taskRun(source), tasksOnEngine(source, "p.moth"), source);
+  for (const source of WORKER_PROGRAMS) assert.deepEqual(taskRun(source), tasksOnEngine(source, "p.folio"), source);
 });
 
 // What only threads show: two workers that each wait for the other to write a file, which they can do only at
-// the same moment; one that's still working when it's asked; and a worker's tasks, with sync.moth's lock,
+// the same moment; one that's still working when it's asked; and a worker's tasks, with sync.folio's lock,
 // which keeps them in step inside it
 test("workers run at the same moment as the program and each other", { skip }, () => {
-  const ran = taskRun(`use "sync.moth" as sync
+  const ran = taskRun(`use "sync.folio" as sync
 to meet with mine, theirs
     write "here" to mine
     set waited to 0
@@ -7455,7 +7470,7 @@ to three_tasks with times
 end
 say wait for (start three_tasks(15) on another core) " " shared
 say sync's wait_for_all(list of (start nap(20) on another core), (start nap(10) on another core))`,
-  { files: { "sync.moth": readFileSync(new URL("./tools/sync.moth", import.meta.url), "utf8") } });
+  { files: { "sync.folio": readFileSync(new URL("./tools/sync.folio", import.meta.url), "utf8") } });
   assert.deepEqual(ran, { stdout: "a.txt met b.txt\nb.txt met a.txt\nno\n300\nyes\n45 0\n[20, 10]\n", stderr: "", status: 0 });
 });
 
@@ -7491,17 +7506,17 @@ say together / alone`);
 
 test("a program with workers takes its threads and its workers' memory from the system, on Windows as on Linux", () => {
   const source = "to f\n    return 1\nend\nsay wait for (start f() on another core)";
-  const windows = Buffer.from(machine(source, { target: "windows", name: "p.moth" })).toString("latin1");
-  const plain = Buffer.from(machine("to f\n    return 1\nend\nsay wait for (start f())", { target: "windows", name: "p.moth" })).toString("latin1");
+  const windows = Buffer.from(machine(source, { target: "windows", name: "p.folio" })).toString("latin1");
+  const plain = Buffer.from(machine("to f\n    return 1\nend\nsay wait for (start f())", { target: "windows", name: "p.folio" })).toString("latin1");
   for (const name of ["CreateThread", "VirtualAlloc", "CreateEventW", "SetEvent", "ResetEvent", "WaitForSingleObject", "ExitThread", "SwitchToThread"]) {
     assert.ok(windows.includes(name), name);
   }
   assert.ok(!plain.includes("SwitchToThread"));
-  assert.ok(machine(source, { target: "linux", name: "p.moth" }).length > 0);
+  assert.ok(machine(source, { target: "linux", name: "p.folio" }).length > 0);
 });
 
 test("a window's timer ticks while a task works", { skip: onUi }, () => {
-  const ran = libraryRun(`use "ui.moth" as ui
+  const ran = libraryRun(`use "ui.folio" as ui
 set finished to no
 set ticks_while_working to 0
 to work
@@ -7528,24 +7543,24 @@ say wait for job`, ["--allow-libraries"], { NO_AT_BRIDGE: "1" });
   assert.deepEqual([ran.stdout, ran.status], ["the window's timer ran while the task worked: yes\n1250000025000000\n", 0], ran.stderr);
 });
 
-// The Moth shell (DESIGN §65): `moth` with nothing after it reads Moth an entry at a time, a block once its `end`
+// The Folio shell (DESIGN §65): `folio` with nothing after it reads Folio an entry at a time, a block once its `end`
 // is typed, each entry built and run as a program of its own with what the entries before it left: names'
 // values, functions as they were made (so a function's own names stay its own), files used, a value shown,
 // a mistake's trail naming the entries, and what can't be kept said; and it leaves no file behind.
-const SHELL_TYPED = "set x to 5\nx + 1\nto twice with n\n    return n * 2\nend\ntwice(x)\nto local_count\n    set count to 1\n    return count\nend\nset count to 5\nlocal_count()\ncount\nset xs to list of 1, 2\nadd twice(10) to xs\nxs\nfor each i from 1 to 3\n    set last to i * 10\nend\nlast\nuse \"helpers.moth\"\ntriple(last)\nto risky with n\n    return n / 0\nend\nrisky(2)\nx\nset f to twice\nf\n\"é😀\" + x\nif x is 5\n\n\nquit\n";
-test("moth.exe with nothing after it is the Moth shell, each entry a program with what the ones before it left", { skip }, () => {
-  const { exe } = mothExe();
-  const dir = mkdtempSync(join(tmpdir(), "moth-shell-"));
+const SHELL_TYPED = "set x to 5\nx + 1\nto twice with n\n    return n * 2\nend\ntwice(x)\nto local_count\n    set count to 1\n    return count\nend\nset count to 5\nlocal_count()\ncount\nset xs to list of 1, 2\nadd twice(10) to xs\nxs\nfor each i from 1 to 3\n    set last to i * 10\nend\nlast\nuse \"helpers.folio\"\ntriple(last)\nto risky with n\n    return n / 0\nend\nrisky(2)\nx\nset f to twice\nf\n\"é😀\" + x\nif x is 5\n\n\nquit\n";
+test("folio.exe with nothing after it is the Folio shell, each entry a program with what the ones before it left", { skip }, () => {
+  const { exe } = folioExe();
+  const dir = mkdtempSync(join(tmpdir(), "folio-shell-"));
   try {
-    writeFileSync(join(dir, "helpers.moth"), "to triple with n\n    return n * 3\nend\n");
+    writeFileSync(join(dir, "helpers.folio"), "to triple with n\n    return n * 3\nend\n");
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: SHELL_TYPED, timeout: 120_000 });
     const echoed = SHELL_TYPED.split("\n").slice(0, -1); // as each question is asked away from a terminal, the answer after it
-    const prompts = ["moth", "moth", "moth", "....", "....", "moth", "moth", "....", "....", "....", "moth", "moth", "moth", "moth",
-      "moth", "moth", "moth", "....", "....", "moth", "moth", "moth", "moth", "....", "....", "moth", "moth", "moth", "moth",
-      "moth", "moth", "....", "....", "moth"];
+    const prompts = ["folio", "folio", "folio", "....", "....", "folio", "folio", "....", "....", "....", "folio", "folio", "folio", "folio",
+      "folio", "folio", "folio", "....", "....", "folio", "folio", "folio", "folio", "....", "....", "folio", "folio", "folio", "folio",
+      "folio", "folio", "....", "....", "folio"];
     const shown = { 2: "6", 6: "10", 12: "1", 13: "5", 16: "[1, 2, 20]", 20: "30", 22: "90", 27: "5", 29: "nothing", 30: "é😀5",
       33: "(dropped what wasn't finished)" };
-    let stdout = "Moth shell. Type Moth code: a block runs once its 'end' is typed, and a value shows itself. 'quit' ends it.\n";
+    let stdout = "Folio shell. Type Folio code: a block runs once its 'end' is typed, and a value shows itself. 'quit' ends it.\n";
     echoed.forEach((line, i) => {
       stdout += `${prompts[i]}> ${line}\n`;
       if (shown[i + 1]) stdout += `${shown[i + 1]}\n`;
@@ -7554,10 +7569,10 @@ test("moth.exe with nothing after it is the Moth shell, each entry a program wit
     assert.equal(ran.stderr, "[16]:2:14: can't divide by zero\n    return n / 0\n             ^\n  in 'risky', called from [17], line 1\n" +
       "(f can't be kept for the next entry: 'save' can't save a function)\n");
     assert.equal(ran.status, 0);
-    assert.deepEqual(readdirSync(dir).sort(), ["helpers.moth"]);
+    assert.deepEqual(readdirSync(dir).sort(), ["helpers.folio"]);
     const wrong = spawnSync(exe, ["shell", "--allow-everything"], { cwd: dir, encoding: "utf8", input: "" });
     assert.deepEqual([wrong.status, wrong.stdout], [2, ""]);
-    assert.match(wrong.stderr, /^usage: moth /);
+    assert.match(wrong.stderr, /^usage: folio /);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -7690,177 +7705,177 @@ static void join_thread(thread_t t) { pthread_join(t, NULL); }
 #define THREAD_FN(name) static void *name(void *arg)
 #endif
 
-static void show(moth_value v) {
+static void show(folio_value v) {
   int64_t n;
   const char *s;
   const unsigned char *b;
-  switch (moth_kind(v)) {
-  case MOTH_NUMBER: printf("%g", moth_number_of(v)); break;
-  case MOTH_TEXT: s = moth_text_utf8(v, &n); printf("\"%.*s\"", (int)n, s); break;
-  case MOTH_YES_OR_NO: printf(moth_is_yes(v) ? "yes" : "no"); break;
-  case MOTH_NOTHING: printf("nothing"); break;
-  case MOTH_BYTES:
-    b = moth_bytes_data(v, &n);
+  switch (folio_kind(v)) {
+  case FOLIO_NUMBER: printf("%g", folio_number_of(v)); break;
+  case FOLIO_TEXT: s = folio_text_utf8(v, &n); printf("\"%.*s\"", (int)n, s); break;
+  case FOLIO_YES_OR_NO: printf(folio_is_yes(v) ? "yes" : "no"); break;
+  case FOLIO_NOTHING: printf("nothing"); break;
+  case FOLIO_BYTES:
+    b = folio_bytes_data(v, &n);
     printf("bytes");
     for (int64_t i = 0; i < n; i++) printf(" %d", b[i]);
     break;
-  case MOTH_FUNCTION: printf("a function"); break;
-  case MOTH_LIST:
+  case FOLIO_FUNCTION: printf("a function"); break;
+  case FOLIO_LIST:
     printf("[");
-    for (int64_t i = 0; i < moth_list_length(v); i++) {
-      moth_value item;
+    for (int64_t i = 0; i < folio_list_length(v); i++) {
+      folio_value item;
       if (i) printf(", ");
-      if (moth_list_item(&item, v, i)) printf("?");
+      if (folio_list_item(&item, v, i)) printf("?");
       else show(item);
-      moth_free(item);
+      folio_free(item);
     }
     printf("]");
     break;
-  case MOTH_DICTIONARY: {
-    moth_value keys, k, x;
-    moth_dictionary_keys(&keys, v);
+  case FOLIO_DICTIONARY: {
+    folio_value keys, k, x;
+    folio_dictionary_keys(&keys, v);
     printf("{");
-    for (int64_t i = 0; i < moth_list_length(keys); i++) {
-      moth_list_item(&k, keys, i);
-      moth_dictionary_get(&x, v, k);
+    for (int64_t i = 0; i < folio_list_length(keys); i++) {
+      folio_list_item(&k, keys, i);
+      folio_dictionary_get(&x, v, k);
       if (i) printf(", ");
       show(k); printf(": "); show(x);
-      moth_free(k); moth_free(x);
+      folio_free(k); folio_free(x);
     }
     printf("}");
-    moth_free(keys);
+    folio_free(keys);
     break;
   }
-  case MOTH_RECORD: {
-    moth_value names, values, k, x;
-    moth_record_names(&names, v);
-    moth_record_values(&values, v);
+  case FOLIO_RECORD: {
+    folio_value names, values, k, x;
+    folio_record_names(&names, v);
+    folio_record_values(&values, v);
     printf("(");
-    for (int64_t i = 0; i < moth_list_length(names); i++) {
-      moth_list_item(&k, names, i);
-      moth_list_item(&x, values, i);
+    for (int64_t i = 0; i < folio_list_length(names); i++) {
+      folio_list_item(&k, names, i);
+      folio_list_item(&x, values, i);
       if (i) printf(", ");
-      moth_text_utf8(k, &n);
-      printf("%.*s ", (int)n, moth_text_utf8(k, NULL)); show(x);
-      moth_free(k); moth_free(x);
+      folio_text_utf8(k, &n);
+      printf("%.*s ", (int)n, folio_text_utf8(k, NULL)); show(x);
+      folio_free(k); folio_free(x);
     }
     printf(")");
-    moth_free(names); moth_free(values);
+    folio_free(names); folio_free(values);
     break;
   }
-  default: printf("<kind %d>", moth_kind(v));
+  default: printf("<kind %d>", folio_kind(v));
   }
 }
 
-static void said(const char *what, int status, moth_value v) {
+static void said(const char *what, int status, folio_value v) {
   printf("%s -> %d ", what, status);
   show(v);
   printf("\n");
-  moth_free(v);
+  folio_free(v);
 }
 
-static moth_value text(const char *s) { moth_value v; moth_text(&v, s, -1); return v; }
+static folio_value text(const char *s) { folio_value v; folio_text(&v, s, -1); return v; }
 
 static volatile long failures = 0;
 THREAD_FN(worker) {
   for (int i = 0; i < 200; i++) {
-    moth_value r;
-    if (count_up(&r, moth_number(100))) failures++;
-    moth_free(r);
+    folio_value r;
+    if (count_up(&r, folio_number(100))) failures++;
+    folio_free(r);
   }
   return 0;
 }
 
 THREAD_FN(deep) {
-  moth_value r;
-  int status = depth(&r, moth_number(50000));
+  folio_value r;
+  int status = depth(&r, folio_number(50000));
   said("depth(50000), on a 256 KB stack", status, r);
-  status = depth(&r, moth_number(200000));
-  moth_value values, message;
-  moth_record_values(&values, r);
-  moth_list_item(&message, values, 0);
+  status = depth(&r, folio_number(200000));
+  folio_value values, message;
+  folio_record_values(&values, r);
+  folio_list_item(&message, values, 0);
   said("depth(200000)", status, message);
-  moth_free(values);
-  moth_free(r);
+  folio_free(values);
+  folio_free(r);
   return 0;
 }
 
 int main(void) {
-  moth_value r, a, b, list, d, f, inputs;
+  folio_value r, a, b, list, d, f, inputs;
   int status;
   setvbuf(stdout, NULL, _IONBF, 0);
-  printf("%s", moth_exports());
-  status = fib(&r, moth_number(20)); said("fib(20)", status, r);
+  printf("%s", folio_exports());
+  status = fib(&r, folio_number(20)); said("fib(20)", status, r);
   a = text("W\xc3\xb6rld \xf0\x9f\x98\x80");
   status = greet(&r, a); said("greet", status, r);
   status = greet(&r, a); said("greet", status, r);
-  moth_free(a);
-  moth_list(&list);
-  for (int i = 1; i <= 100; i++) moth_list_add(NULL, list, moth_number(i));
+  folio_free(a);
+  folio_list(&list);
+  for (int i = 1; i <= 100; i++) folio_list_add(NULL, list, folio_number(i));
   status = total_of(&r, list); said("total_of", status, r);
-  moth_free(list);
+  folio_free(list);
   double numbers[5] = { 1.5, 2.5, 3, -4, 1e100 }, back[5];
-  moth_numbers(&list, numbers, 5);
-  status = total_of(&r, list); said("total_of(moth_numbers)", status, r);
-  printf("moth_list_numbers -> %lld", (long long)moth_list_numbers(list, back, 5));
+  folio_numbers(&list, numbers, 5);
+  status = total_of(&r, list); said("total_of(folio_numbers)", status, r);
+  printf("folio_list_numbers -> %lld", (long long)folio_list_numbers(list, back, 5));
   for (int i = 0; i < 5; i++) printf(" %g", back[i]);
   printf("\n");
-  moth_free(list);
-  status = divide(&r, moth_number(1), moth_number(4)); said("divide(1, 4)", status, r);
-  status = divide(&r, moth_number(1), moth_number(0)); said("divide(1, 0)", status, r);
-  status = total_of(&r, moth_number(3)); said("total_of(3)", status, r);
+  folio_free(list);
+  status = divide(&r, folio_number(1), folio_number(4)); said("divide(1, 4)", status, r);
+  status = divide(&r, folio_number(1), folio_number(0)); said("divide(1, 0)", status, r);
+  status = total_of(&r, folio_number(3)); said("total_of(3)", status, r);
   status = doubled(&r, text("x")); said("doubled(\"x\")", status, r);
   status = fails_with_a_record(&r); said("fails_with_a_record", status, r);
-  moth_dictionary(&d);
-  a = text("a"); moth_dictionary_set(NULL, d, a, moth_number(1)); moth_free(a);
-  a = text("b"); moth_dictionary_set(NULL, d, a, moth_number(2)); moth_free(a);
-  moth_dictionary_set(NULL, d, moth_number(3), moth_yes_or_no(0));
+  folio_dictionary(&d);
+  a = text("a"); folio_dictionary_set(NULL, d, a, folio_number(1)); folio_free(a);
+  a = text("b"); folio_dictionary_set(NULL, d, a, folio_number(2)); folio_free(a);
+  folio_dictionary_set(NULL, d, folio_number(3), folio_yes_or_no(0));
   status = described(&r, d); said("described", status, r);
   status = echo(&r, d); said("echo(dictionary)", status, r);
-  status = moth_dictionary_get(&r, d, moth_number(9)); said("moth_dictionary_get(missing)", status, r);
-  status = moth_dictionary_set(&r, d, d, moth_nothing()); said("moth_dictionary_set(list key)", status, r);
-  moth_free(d);
-  status = point(&r, moth_number(3), moth_number(3)); said("point", status, r);
+  status = folio_dictionary_get(&r, d, folio_number(9)); said("folio_dictionary_get(missing)", status, r);
+  status = folio_dictionary_set(&r, d, d, folio_nothing()); said("folio_dictionary_set(list key)", status, r);
+  folio_free(d);
+  status = point(&r, folio_number(3), folio_number(3)); said("point", status, r);
   unsigned char raw[4] = { 0, 1, 254, 255 };
-  moth_bytes(&a, raw, 4);
+  folio_bytes(&a, raw, 4);
   status = reversed(&r, a); said("reversed(bytes)", status, r);
   status = echo(&r, a); said("echo(bytes)", status, r);
-  moth_free(a);
-  adder(&f, moth_number(10));
-  moth_list(&inputs);
-  moth_list_add(NULL, inputs, moth_number(5));
-  status = moth_call(&r, f, inputs); said("moth_call(adder(10), [5])", status, r);
-  moth_list_add(NULL, inputs, moth_number(6));
-  status = moth_call(&r, f, inputs); said("moth_call(adder(10), [5, 6])", status, r);
-  status = moth_call(&r, moth_number(3), inputs); said("moth_call(3, [])", status, r);
-  moth_free(inputs); moth_free(f);
-  status = moth_list_item(&r, moth_nothing(), 0); said("moth_list_item(past the end)", status, r);
-  said("moth_number(nan) is a number", 0, moth_number(0.0 / 0.0 * 0));
-  printf("kinds %d %d %d %d, yes %d %d %d\n", moth_kind(moth_number(1)), moth_kind(moth_nothing()), moth_kind(moth_yes_or_no(1)),
-    moth_kind(text("t")), moth_is_yes(moth_yes_or_no(1)), moth_is_yes(moth_yes_or_no(0)), moth_is_yes(moth_number(1)));
+  folio_free(a);
+  adder(&f, folio_number(10));
+  folio_list(&inputs);
+  folio_list_add(NULL, inputs, folio_number(5));
+  status = folio_call(&r, f, inputs); said("folio_call(adder(10), [5])", status, r);
+  folio_list_add(NULL, inputs, folio_number(6));
+  status = folio_call(&r, f, inputs); said("folio_call(adder(10), [5, 6])", status, r);
+  status = folio_call(&r, folio_number(3), inputs); said("folio_call(3, [])", status, r);
+  folio_free(inputs); folio_free(f);
+  status = folio_list_item(&r, folio_nothing(), 0); said("folio_list_item(past the end)", status, r);
+  said("folio_number(nan) is a number", 0, folio_number(0.0 / 0.0 * 0));
+  printf("kinds %d %d %d %d, yes %d %d %d\n", folio_kind(folio_number(1)), folio_kind(folio_nothing()), folio_kind(folio_yes_or_no(1)),
+    folio_kind(text("t")), folio_is_yes(folio_yes_or_no(1)), folio_is_yes(folio_yes_or_no(0)), folio_is_yes(folio_number(1)));
   a = text("kept twice");
-  moth_keep(&b, a);
-  moth_free(a);
-  churn(&r, moth_number(200000));
-  said("moth_keep", 0, b);
+  folio_keep(&b, a);
+  folio_free(a);
+  churn(&r, folio_number(200000));
+  said("folio_keep", 0, b);
 
-  moth_value held[100];
+  folio_value held[100];
   for (int i = 0; i < 100; i++) { char s[32]; sprintf(s, "held %d", i); held[i] = text(s); }
   thread_t t[8];
   for (int i = 0; i < 8; i++) t[i] = start_thread(worker, 0);
   for (int i = 0; i < 8; i++) join_thread(t[i]);
-  count_up(&r, moth_number(0));
-  printf("eight threads counted %g, with %ld failures\n", moth_number_of(r), failures);
+  count_up(&r, folio_number(0));
+  printf("eight threads counted %g, with %ld failures\n", folio_number_of(r), failures);
   join_thread(start_thread(deep, 262144));
-  status = churn(&r, moth_number(2000000)); said("churn", status, r);
+  status = churn(&r, folio_number(2000000)); said("churn", status, r);
   int bad = 0;
   for (int i = 0; i < 100; i++) {
-    char s[32]; int64_t n; moth_value e;
+    char s[32]; int64_t n; folio_value e;
     sprintf(s, "held %d", i);
-    const char *got = moth_text_utf8(held[i], &n);
+    const char *got = folio_text_utf8(held[i], &n);
     echo(&e, held[i]);
     if (n != (int64_t)strlen(s) || memcmp(got, s, (size_t)n) || e != held[i]) bad++;
-    moth_free(e); moth_free(held[i]);
+    folio_free(e); folio_free(held[i]);
   }
   printf("texts held through the collections: %d changed\n", bad);
   return 0;
@@ -7885,27 +7900,27 @@ fib(20) -> 0 6765
 greet -> 0 "Hello, Wörld 😀! (1)"
 greet -> 0 "Hello, Wörld 😀! (2)"
 total_of -> 0 5050
-total_of(moth_numbers) -> 0 1e+100
-moth_list_numbers -> 5 1.5 2.5 3 -4 1e+100
+total_of(folio_numbers) -> 0 1e+100
+folio_list_numbers -> 5 1.5 2.5 3 -4 1e+100
 divide(1, 4) -> 0 0.25
-divide(1, 0) -> 1 (message "can't divide 1 by 0", line 27, column 9, file "work.moth", value "can't divide 1 by 0")
-total_of(3) -> 1 (message "can only go through a list, text, dictionary or bytes, not a number", line 19, column 5, file "work.moth", value "can only go through a list, text, dictionary or bytes, not a number")
+divide(1, 0) -> 1 (message "can't divide 1 by 0", line 27, column 9, file "work.folio", value "can't divide 1 by 0")
+total_of(3) -> 1 (message "can only go through a list, text, dictionary or bytes, not a number", line 19, column 5, file "work.folio", value "can only go through a list, text, dictionary or bytes, not a number")
 doubled("x") -> 1 (message "'doubled' needs n to be a number, not text", line nothing, column nothing, file nothing, value "'doubled' needs n to be a number, not text")
-fails_with_a_record -> 1 (message "(record with code 7)", line 67, column 5, file "work.moth", value (code 7))
+fails_with_a_record -> 1 (message "(record with code 7)", line 67, column 5, file "work.folio", value (code 7))
 described -> 0 ["a=1", "b=2", "3=no"]
 echo(dictionary) -> 0 {"a": 1, "b": 2, 3: no}
-moth_dictionary_get(missing) -> 1 (message "the dictionary has no such key", line nothing, column nothing, file nothing, value "the dictionary has no such key")
-moth_dictionary_set(list key) -> 1 (message "a dictionary's key is text or a number", line nothing, column nothing, file nothing, value "a dictionary's key is text or a number")
+folio_dictionary_get(missing) -> 1 (message "the dictionary has no such key", line nothing, column nothing, file nothing, value "the dictionary has no such key")
+folio_dictionary_set(list key) -> 1 (message "a dictionary's key is text or a number", line nothing, column nothing, file nothing, value "a dictionary's key is text or a number")
 point -> 0 (x 3, y 3, on yes, none nothing)
 reversed(bytes) -> 0 [255, 254, 1, 0]
 echo(bytes) -> 0 bytes 0 1 254 255
-moth_call(adder(10), [5]) -> 0 15
-moth_call(adder(10), [5, 6]) -> 1 (message "'function on line 49' needs 1 input but got 2", line nothing, column nothing, file nothing, value "'function on line 49' needs 1 input but got 2")
-moth_call(3, []) -> 1 (message "moth_call needs a function", line nothing, column nothing, file nothing, value "moth_call needs a function")
-moth_list_item(past the end) -> 1 (message "moth_list_item needs a list", line nothing, column nothing, file nothing, value "moth_list_item needs a list")
-moth_number(nan) is a number -> 0 nan
+folio_call(adder(10), [5]) -> 0 15
+folio_call(adder(10), [5, 6]) -> 1 (message "'function on line 49' needs 1 input but got 2", line nothing, column nothing, file nothing, value "'function on line 49' needs 1 input but got 2")
+folio_call(3, []) -> 1 (message "folio_call needs a function", line nothing, column nothing, file nothing, value "folio_call needs a function")
+folio_list_item(past the end) -> 1 (message "folio_list_item needs a list", line nothing, column nothing, file nothing, value "folio_list_item needs a list")
+folio_number(nan) is a number -> 0 nan
 kinds 1 4 3 2, yes 1 0 0
-moth_keep -> 0 "kept twice"
+folio_keep -> 0 "kept twice"
 eight threads counted 160000, with 0 failures
 depth(50000), on a 256 KB stack -> 0 50000
 depth(200000) -> 1 "too much recursion: a function kept calling itself"
@@ -7913,13 +7928,13 @@ churn -> 0 2000
 texts held through the collections: 0 changed
 `;
 const LIBRARY_CC = ["gcc", "cc", "clang"].find((c) => spawnSync(c, ["--version"], { encoding: "utf8" }).status === 0);
-// builds work.moth as a library for this system beside a C program, and runs the program
+// builds work.folio as a library for this system beside a C program, and runs the program
 function libraryCall(source, cSource, name = "work") {
-  const dir = mkdtempSync(join(tmpdir(), "moth-shared-"));
+  const dir = mkdtempSync(join(tmpdir(), "folio-shared-"));
   try {
     const library = join(dir, target === "windows" ? `${name}.dll` : `lib${name}.so`);
-    writeFileSync(library, machine(source, { target, name: `${name}.moth`, library: true }));
-    writeFileSync(join(dir, `${name}.h`), machine(source, { target, name: `${name}.moth`, header: true }));
+    writeFileSync(library, machine(source, { target, name: `${name}.folio`, library: true }));
+    writeFileSync(join(dir, `${name}.h`), machine(source, { target, name: `${name}.folio`, header: true }));
     writeFileSync(join(dir, "main.c"), cSource);
     const exe = executable(dir, "main");
     // Linux: linked as C links to a shared library; Windows: gcc links straight to the DLL's exports
@@ -7944,15 +7959,15 @@ test("a library whose top level fails gives that mistake from each of its functi
 #include "work.h"
 int main(void) {
   for (int i = 0; i < 2; i++) {
-    moth_value r, values, message, line;
+    folio_value r, values, message, line;
     int64_t n;
-    int status = fine(&r, moth_number(4));
-    moth_record_values(&values, r);
-    moth_list_item(&message, values, 0);
-    moth_list_item(&line, values, 1);
-    const char *said = moth_text_utf8(message, &n);
-    printf("%d %.*s, on line %g\n", status, (int)n, said, moth_number_of(line));
-    moth_free(r); moth_free(values); moth_free(message);
+    int status = fine(&r, folio_number(4));
+    folio_record_values(&values, r);
+    folio_list_item(&message, values, 0);
+    folio_list_item(&line, values, 1);
+    const char *said = folio_text_utf8(message, &n);
+    printf("%d %.*s, on line %g\n", status, (int)n, said, folio_number_of(line));
+    folio_free(r); folio_free(values); folio_free(message);
   }
   return 0;
 }
@@ -7963,24 +7978,24 @@ int main(void) {
 test("what a library can't do is a mistake when it's built", { skip }, () => {
   const refused = (source) => {
     try {
-      machine(source, { target, name: "work.moth", library: true });
+      machine(source, { target, name: "work.folio", library: true });
     } catch (err) {
       return `${err.line}:${err.col}: ${err.reason}`;
     }
     return "built";
   };
   assert.equal(refused("to f with x\n    stop the program with 3\nend\n"), "2:5: a library can't stop the program it's in: give back what it gives, or fail with a mistake");
-  assert.equal(refused("to f\n    return 1\nend\nset job to start f()\n"), "4:12: a library can't start tasks yet: one call runs Moth at a time, and a task would outlive it");
+  assert.equal(refused("to f\n    return 1\nend\nset job to start f()\n"), "4:12: a library can't start tasks yet: one call runs Folio at a time, and a task would outlive it");
   assert.equal(refused("to f\n    return 1\nend\nset w to start f() on another core\n"), "4:10: a library can't start workers yet");
   assert.equal(refused("move forward 10\n"), "1:1: a library can't draw, or show a window");
-  assert.equal(refused("to moth_thing\n    return 1\nend\n"), "1:1: a library's own functions are called moth_..., so one of the program's can't be called 'moth_thing'");
+  assert.equal(refused("to folio_thing\n    return 1\nend\n"), "1:1: a library's own functions are called folio_..., so one of the program's can't be called 'folio_thing'");
   assert.equal(refused("to fine\n    return 1\nend\n"), "built");
 });
 
 // A Windows DLL, read as Windows reads it: what it exports, in the order GetProcAddress looks by, each in its
 // code; every 8-byte address it has, listed to be moved, and each pointing inside it; and what it imports
 test("a library for Windows is a DLL that exports the program's functions and can be loaded anywhere", { skip }, () => {
-  const dll = Buffer.from(machine(LIBRARY_PROGRAM, { target: "windows", name: "work.moth", library: true }));
+  const dll = Buffer.from(machine(LIBRARY_PROGRAM, { target: "windows", name: "work.folio", library: true }));
   const pe = dll.readUInt32LE(0x3c);
   assert.equal(dll.toString("latin1", pe, pe + 4), "PE\0\0");
   const sectionCount = dll.readUInt16LE(pe + 6);
@@ -8014,7 +8029,7 @@ test("a library for Windows is a DLL that exports the program's functions and ca
     assert.ok(code >= sections[0].rva && code < sections[0].rva + sections[0].size);
   }
   assert.deepEqual(exported, [...exported].sort());
-  for (const name of ["fib", "greet", "echo", "depth", "moth_text", "moth_free", "moth_number", "moth_kind", "moth_list_numbers", "moth_exports", "moth_call"]) {
+  for (const name of ["fib", "greet", "echo", "depth", "folio_text", "folio_free", "folio_number", "folio_kind", "folio_list_numbers", "folio_exports", "folio_call"]) {
     assert.ok(exported.includes(name), name);
   }
   const [relocsAt, relocsSize] = directory(5);
@@ -8040,28 +8055,28 @@ test("a library for Windows is a DLL that exports the program's functions and ca
   for (const name of ["AcquireSRWLockExclusive", "ReleaseSRWLockExclusive", "VirtualAlloc", "GetStdHandle"]) assert.ok(imported.includes(name), name);
 });
 
-test("moth build --library writes a library and its header, beside the file", { skip: skip || (!LIBRARY_CC && "no C compiler") }, () => {
-  const { exe } = mothExe();
-  const dir = mkdtempSync(join(tmpdir(), "moth-build-library-"));
+test("folio build --library writes a library and its header, beside the file", { skip: skip || (!LIBRARY_CC && "no C compiler") }, () => {
+  const { exe } = folioExe();
+  const dir = mkdtempSync(join(tmpdir(), "folio-build-library-"));
   try {
-    writeFileSync(join(dir, "fast.moth"), "to plus with a, b\n    return a + b\nend\n");
-    const built = spawnSync(exe, ["build", "fast.moth", "--library"], { cwd: dir, encoding: "utf8" });
+    writeFileSync(join(dir, "fast.folio"), "to plus with a, b\n    return a + b\nend\n");
+    const built = spawnSync(exe, ["build", "fast.folio", "--library"], { cwd: dir, encoding: "utf8" });
     const library = target === "windows" ? "fast.dll" : "libfast.so";
     assert.equal(built.stderr, "");
-    assert.match(built.stdout, new RegExp(`^compiled fast\\.moth to a library for ${target === "windows" ? "Windows" : "Linux"} -> ${library.replace(".", "\\.")} \\([0-9,]+ bytes\\), declared for C in fast\\.h\\n$`));
-    assert.match(readFileSync(join(dir, "fast.h"), "utf8"), /\nint plus\(moth_value \*result, moth_value a, moth_value b\);\n/);
-    writeFileSync(join(dir, "main.c"), `#include <stdio.h>\n#include "fast.h"\nint main(void) {\n  moth_value r;\n  int s = plus(&r, moth_number(2), moth_number(40));\n  printf("%d %g\\n", s, moth_number_of(r));\n  return 0;\n}\n`);
+    assert.match(built.stdout, new RegExp(`^compiled fast\\.folio to a library for ${target === "windows" ? "Windows" : "Linux"} -> ${library.replace(".", "\\.")} \\([0-9,]+ bytes\\), declared for C in fast\\.h\\n$`));
+    assert.match(readFileSync(join(dir, "fast.h"), "utf8"), /\nint plus\(folio_value \*result, folio_value a, folio_value b\);\n/);
+    writeFileSync(join(dir, "main.c"), `#include <stdio.h>\n#include "fast.h"\nint main(void) {\n  folio_value r;\n  int s = plus(&r, folio_number(2), folio_number(40));\n  printf("%d %g\\n", s, folio_number_of(r));\n  return 0;\n}\n`);
     const linking = target === "windows" ? [join(dir, library)] : [`-L${dir}`, "-lfast", "-Wl,-rpath,$ORIGIN"];
     const made = spawnSync(LIBRARY_CC, ["-o", executable(dir, "main"), join(dir, "main.c"), ...linking], { encoding: "utf8" });
     assert.equal(made.status, 0, made.stderr);
     const ran = spawnSync(executable(dir, "main"), [], { cwd: dir, encoding: "utf8" });
     assert.deepEqual([ran.stdout.replace("\r\n", "\n"), ran.status], ["0 42\n", 0]);
     mkdirSync(join(dir, "out"));
-    const into = spawnSync(exe, ["build", "fast.moth", "--library", "--into", "out", "--target", "windows"], { cwd: dir, encoding: "utf8" });
+    const into = spawnSync(exe, ["build", "fast.folio", "--library", "--into", "out", "--target", "windows"], { cwd: dir, encoding: "utf8" });
     assert.equal(into.status, 0, into.stderr);
     assert.deepEqual(readdirSync(join(dir, "out")).sort(), ["fast.dll", "fast.h"]);
     for (const flags of [["--library", "--installer"], ["--into", "out"], ["--library", "--into"]]) {
-      const wrong = spawnSync(exe, ["build", "fast.moth", ...flags], { cwd: dir, encoding: "utf8" });
+      const wrong = spawnSync(exe, ["build", "fast.folio", ...flags], { cwd: dir, encoding: "utf8" });
       assert.equal(wrong.status, 2, flags.join(" "));
     }
   } finally {

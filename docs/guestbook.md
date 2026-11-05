@@ -1,17 +1,17 @@
-# Building a web app in Moth: a guestbook
+# Building a web app in Folio: a guestbook
 
-This walks through [`apps/guestbook`](../apps/guestbook), a small web app written in Moth: a page where
+This walks through [`apps/guestbook`](../apps/guestbook), a small web app written in Folio: a page where
 people leave a message, kept in a SQLite database, with the messages as JSON too. It's about 160 lines, and
-`moth build` turns it into one program of 1.3 MB that needs nothing installed, on Windows or Linux.
+`folio build` turns it into one program of 1.3 MB that needs nothing installed, on Windows or Linux.
 
 <p align="center"><img src="guestbook.png" width="640" alt="The guestbook in a browser: a form with a name and a message, a button that says Sign the guestbook, and three messages from Ada, Alan and Grace"></p>
 
 ## Run it
 
-[Download Moth](https://github.com/samyyy2423/moth/releases/latest), then, in `apps/guestbook`:
+[Download Folio](https://github.com/samyyy2423/folio/releases/latest), then, in `apps/guestbook`:
 
 ```text
-moth build guestbook.moth --allow-libraries --allow-read --allow-write
+folio build guestbook.folio --allow-libraries --allow-read --allow-write
 guestbook.exe                 (./guestbook on Linux)
 ```
 
@@ -21,13 +21,13 @@ and read and write files (its database).
 
 ## Two files
 
-- [`book.moth`](../apps/guestbook/book.moth) does the guestbook's own work: the database, the page, and what
+- [`book.folio`](../apps/guestbook/book.folio) does the guestbook's own work: the database, the page, and what
   each request does. It never touches the network, so it can be tested without one.
-- [`guestbook.moth`](../apps/guestbook/guestbook.moth) serves it, in 20 lines.
+- [`guestbook.folio`](../apps/guestbook/guestbook.folio) serves it, in 20 lines.
 
-Everything else comes from Moth's standard library, which is built into `moth`: `server.moth` for the web
-server, `sqlite.moth` for the database, `http.moth` for reading a form, `dates.moth` for the time, and
-`text.moth` for patterns.
+Everything else comes from Folio's standard library, which is built into `folio`: `server.folio` for the web
+server, `sqlite.folio` for the database, `http.folio` for reading a form, `dates.folio` for the time, and
+`text.folio` for patterns.
 
 ## The database
 
@@ -142,8 +142,8 @@ end
 ## Serving it
 
 ```
-use "server.moth" as web
-use "book.moth" as book
+use "server.folio" as web
+use "book.folio" as book
 
 set guestbook_port to 8080
 if length of arguments is at least 1
@@ -165,12 +165,12 @@ and `serve_secure` answers with HTTPS.
 
 ## Testing it
 
-[`book.test.moth`](../apps/guestbook/book.test.moth) tests the guestbook with no network: reading forms,
+[`book.test.folio`](../apps/guestbook/book.test.folio) tests the guestbook with no network: reading forms,
 escaping, every refusal, the SQL injection above, and each address, by calling `answer_with` with a request
 made by hand.
 
 ```text
-moth test book.test.moth --allow-libraries --allow-read --allow-write
+folio test book.test.folio --allow-libraries --allow-read --allow-write
 ✓ test_form_fields
 ✓ test_html_of
 ✓ test_signing
@@ -178,15 +178,15 @@ moth test book.test.moth --allow-libraries --allow-read --allow-write
 4 passed
 ```
 
-Moth's own test suite goes further: it builds the guestbook with `moth.exe`, runs it, and signs it and reads
+Folio's own test suite goes further: it builds the guestbook with `folio.exe`, runs it, and signs it and reads
 it over HTTP, as a browser would.
 
-Writing those tests found a bug in Moth itself: in `text.moth`, a pattern like `^\s+|\s+$` didn't match
+Writing those tests found a bug in Folio itself: in `text.folio`, a pattern like `^\s+|\s+$` didn't match
 its first part when its last part repeated, so names kept their spaces at the start. It's fixed, with a test.
 
 ## Make it yours
 
 - Let people delete their own messages, or show 20 at a time with a link to the next 20.
 - Answer with HTTPS: `web's serve_secure(443, answer, "cert.pem", "key.pem")`.
-- `moth build guestbook.moth --installer` makes a setup program that installs it like any other app.
-- Or start from the [Learn Moth](https://samyyy2423.github.io/moth/learn.html) lessons, and come back.
+- `folio build guestbook.folio --installer` makes a setup program that installs it like any other app.
+- Or start from the [Learn Folio](https://samyyy2423.github.io/folio/learn.html) lessons, and come back.

@@ -1,31 +1,31 @@
-# Moth in Helix (DESIGN §108): put this in your languages.toml (~/.config/helix/languages.toml, or
-# %AppData%\helix\languages.toml on Windows), and queries/moth/highlights.scm in runtime/queries/moth/ beside
+# Folio in Helix (DESIGN §108): put this in your languages.toml (~/.config/helix/languages.toml, or
+# %AppData%\helix\languages.toml on Windows), and queries/folio/highlights.scm in runtime/queries/folio/ beside
 # it; then `hx --grammar fetch` and `hx --grammar build` build the colours' grammar. See editors/README.md.
 
 [[language]]
-name = "moth"
-scope = "source.moth"
-file-types = ["moth"]
-roots = ["moth.packages"]
+name = "folio"
+scope = "source.folio"
+file-types = ["folio"]
+roots = ["folio.packages"]
 comment-token = "#"
 indent = { tab-width = 4, unit = "    " }
-language-servers = ["moth"]
+language-servers = ["folio"]
 
-[language-server.moth]
-command = "moth"
+[language-server.folio]
+command = "folio"
 args = ["lsp"]
 
 [[grammar]]
-name = "moth"
-source = { git = "https://github.com/samyyy2423/moth", rev = "0d4281a42eceee521ad953d832bb759fbfb38369", subpath = "editors/tree-sitter-moth" }
+name = "folio"
+source = { git = "https://github.com/samyyy2423/folio", rev = "0d4281a42eceee521ad953d832bb759fbfb38369", subpath = "editors/tree-sitter-folio" }
 
-# Moth's debugger (see editors/README.md): Node.js runs the debug adapter on `moth debug`. Take the # off these
+# Folio's debugger (see editors/README.md): Node.js runs the debug adapter on `folio debug`. Take the # off these
 # lines, and put where this repository is in args.
 # [language.debugger]
-# name = "moth"
+# name = "folio"
 # transport = "stdio"
 # command = "node"
-# args = ["/path/to/moth/editors/vscode/debug-adapter.js"]
+# args = ["/path/to/folio/editors/vscode/debug-adapter.js"]
 #
 # [[language.debugger.templates]]
 # name = "launch"

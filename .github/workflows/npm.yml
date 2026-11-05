@@ -1,4 +1,4 @@
-# Publishes mothlang to npm when a release is published (docs/npm-package.md), made by npm/make-package.mjs
+# Publishes foliolang to npm when a release is published (docs/npm-package.md), made by npm/make-package.mjs
 # from the release's own source, with npm's provenance: a signed record of the workflow and commit it came from.
 name: npm
 

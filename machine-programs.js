@@ -1,4 +1,4 @@
-// Random programs made only from the part of Moth that machine.moth turns into machine code: numbers
+// Random programs made only from the part of Folio that machine.folio turns into machine code: numbers
 // chosen to be awkward (0.1, numbers 15 digits can't tell apart, 2^53, tiny and huge ones), yes, no and
 // nothing where a number should be, text and lists in half of them, every comparison, the loops, and
 // functions that call each other. Most finish; some stop at a mistake on purpose. The seed is fixed, so a
@@ -50,7 +50,7 @@ function bitCases() {
 // Programs written by hand for what is easy to get wrong: how numbers show, 15-digit comparisons, every
 // mistake the machine code can make, and long trails of calls.
 export const MACHINE_CASES = [
-  // random numbers: run with MOTH_SEED=1, the seed the JavaScript engine's tests use, so they're the same ones
+  // random numbers: run with FOLIO_SEED=1, the seed the JavaScript engine's tests use, so they're the same ones
   "set counts to list of 0, 0, 0, 0, 0, 0\nrepeat 6000 times\n    set d to random number from 1 to 6\n    set item d of counts to item d of counts + 1\nend\nsay counts\nfor each i from 1 to 5\n    say random number from -1000000000000 to 1000000000000\nend\nsay random number from 0 - 0 to 0\nsay random number from 2.9999999999999996 to 3\nsay random number from 0.1 * 30 to 0.1 * 30\nto roll with sides\n    return random number from 1 to sides\nend\nset rolls to empty list\nrepeat 20 times\n    add roll(20) to rolls\nend\nsay rolls",
   "say random number from 1 to \"6\"",
   "say random number from nothing to 1",
@@ -138,7 +138,7 @@ export const MACHINE_CASES = [
   // a try around one, and a mistake after it goes back to doubles
   "set total to 0\ntry\n    for each i from 1 to 10\n        add i to total\n    end\n    say 1 / (total - 55)\nif it fails with why\n    say why \" \" total\nend\nset k to 0\nrepeat while k is not 10\n    add 3 to k\n    if k is greater than 20\n        stop\n    end\nend\nsay k\nset m to 5\nfor each i from 1 to 3\n    set m to 0 - m * 2\nend\nsay m\nset n to 0\nfor each i from 1 to 3\n    set n to n * (0 - i)\nend\nsay n \" \" 1 / (n + 1)",
   // text and lists: joined, compared, counted, indexed, gone through, and their mistakes
-  "set name to \"Moth\"\nsay \"Hi, \" + name + \"!\"\nsay name \" is \" 4 \" letters\"\nsay length of name\nset t to \"\"\nfor each i from 1 to 5\n    add i to t\n    add \",\" to t\nend\nsay t\nsay length of t\nsay \"a\" + 1 + 2\nsay 1 + 2 + \"a\"\nsay nothing + \"x\"\nsay \"x\" + yes\nsay \"é😀\" + \"ok\"\nsay length of \"é😀ok\"\nsay \"abc\" is \"abc\"\nsay \"abc\" is \"abd\"\nsay \"abc\" is less than \"abd\"\nsay \"b\" is greater than \"abc\"\nsay \"\" is less than \"a\"\nsay \"Zebra\" is less than \"apple\"\nsay \"😀\" is greater than \"￿\"\nsay \"x\" is in \"fox\"\nsay \"ox\" is in \"fox\"\nsay \"\" is in \"fox\"\nsay \"fx\" is in \"fox\"\nsay item 2 of \"héllo\"\nsay item 1 of \"😀a\"\nfor each c in \"héllo😀\"\n    say c\nend",
+  "set name to \"Folio\"\nsay \"Hi, \" + name + \"!\"\nsay name \" is \" 5 \" letters\"\nsay length of name\nset t to \"\"\nfor each i from 1 to 5\n    add i to t\n    add \",\" to t\nend\nsay t\nsay length of t\nsay \"a\" + 1 + 2\nsay 1 + 2 + \"a\"\nsay nothing + \"x\"\nsay \"x\" + yes\nsay \"é😀\" + \"ok\"\nsay length of \"é😀ok\"\nsay \"abc\" is \"abc\"\nsay \"abc\" is \"abd\"\nsay \"abc\" is less than \"abd\"\nsay \"b\" is greater than \"abc\"\nsay \"\" is less than \"a\"\nsay \"Zebra\" is less than \"apple\"\nsay \"😀\" is greater than \"￿\"\nsay \"x\" is in \"fox\"\nsay \"ox\" is in \"fox\"\nsay \"\" is in \"fox\"\nsay \"fx\" is in \"fox\"\nsay item 2 of \"héllo\"\nsay item 1 of \"😀a\"\nfor each c in \"héllo😀\"\n    say c\nend",
   "set fruits to list of \"apple\", \"pear\"\nadd \"mango\" to fruits\nsay fruits\nsay length of fruits\nsay item 2 of fruits\nset item 1 of fruits to \"kiwi\"\nsay fruits\nfor each f in fruits\n    say f\nend\nset numbers to list of 1, 2.5, 0.1 + 0.2, nothing, yes, \"a\\\"b\\c\"\nsay numbers\nsay empty list\nset l to empty list\nfor each i from 1 to 10\n    add i * i to l\nend\nsay l\nsay length of l\nsay 49 is in l\nsay 50 is in l\nsay (list of 1, 2) is (list of 1, 2)\nsay (list of 1, 2) is (list of 1, 3)\nsay (list of 1, list of 2, 3) is (list of 1, list of 2, 3)\nset nested to list of 1, (list of 2, (list of 3))\nsay nested\nset me to list of 1\nadd me to me\nsay me\nsay me is me\nsay item (0.1 * 30) of l\nset total to 0\nfor each n in l\n    add n to total\nend\nsay total\nset copy to list of 1, 2, 3\nfor each x in copy\n    add x to copy\nend\nsay copy\nsay \"list: \" + fruits\nsay \"a\\tb\\nc\"\nsay list of \"a\\tb\\nc\", \"\\u\"",
   "set l to list of 1, 2, 3\nsay item 4 of l",
   "set l to list of 1, 2, 3\nsay item 0 of l",
@@ -389,7 +389,7 @@ export const MACHINE_CASES = [
   ["to greet with name, greeting or \"Hello\", mark or \"!\"\n    say greeting \", \" name mark\nend\ngreet(\"Sam\")\ngreet(\"Ana\", \"Hi\")\ngreet \"Bo\", \"Hey\", \"?\"\nto pad with xs or list of 0, -1\n    add 9 to xs\n    return xs\nend\nsay pad()\nsay pad()\nsay pad(list of 1)", "Hello, Sam!\nHi, Ana!\nHey, Bo?\n[0, -1, 9]\n[0, -1, 9]\n[1, 9]"],
   ["set double to function with x gives x * 2\nsay double(21)\nto apply with f, v\n    return f(v)\nend\nsay apply(function with n gives n + 1, 41)\nset seven to function gives 7\nsay seven()\nto make_adder with k\n    return function with x gives x + k\nend\nset add5 to make_adder(5)\nsay add5(10)\nset adder to function with a gives function with b gives a + b\nset add2 to adder(2)\nsay add2(3)\nset fs to list of (function with a, b gives a + b), (function with a and b gives a * b)\nfor each f in fs\n    say f(3, 4)\nend\nsay double\nset function to 1\nsay function + 1", "42\n42\n7\n15\n5\n7\n12\n<function function on line 1>\n2"],
   ["set xs to list of 1, 2, 3, 4\nsay list of x * x for each x in xs\nsay list of x for each x in xs where x is greater than 2\nset x to \"kept\"\nsay list of x + 1 for each x in xs\nsay x\nsay list of (list of x * y for each y in xs) for each x in list of 1, 2\nset total to 0\nfor each n in list of n * 10 for each n in xs\n    set total to total + n\nend\nsay total\nsay list of x for each x in xs where x is greater than 9\nset even to function with m gives m is divisible by 2\nsay list of c for each c in \"a1b2\" where not (c is in \"0123456789\")\nsay list of n for each n in xs where even(n)\nset own to list of 1\nfor each k in own\n    say k\nend", "[1, 4, 9, 16]\n[3, 4]\n[2, 3, 4, 5]\nkept\n[[1, 2, 3, 4], [2, 4, 6, 8]]\n100\n[]\n[\"a\", \"b\"]\n[2, 4]\n1"],
-  ["say 2 to the power of 0.5", "line 1: 'to the power of' needs a whole number, not 0.5: math.moth's power(x, y) takes any"],
+  ["say 2 to the power of 0.5", "line 1: 'to the power of' needs a whole number, not 0.5: math.folio's power(x, y) takes any"],
   ["say 0 to the power of -1", "line 1: can't raise 0 to a power below 0"],
   ["say 2 to the power of \"3\"", "line 1: 'to the power of' needs a number, not text"],
   ["say items 1 to 2 of 5", "line 1: can only take items of a list, text or bytes, not a number"],
@@ -400,7 +400,7 @@ export const MACHINE_CASES = [
   ["to f with a or 1\n    return a\nend\nsay f(1, 2)", "line 4: 'f' needs 1 input but got 2"],
   ["say list of 10 / x for each x in list of 2, 0", "line 1: can't divide by zero"],
   ["set f to function with x gives\nsay f(1)", "line 2: expected a value but found 'say'"],
-  ["say list of x for each in list of 1", "line 1: 'in' is a Moth word, so it can't be used as a variable name"],
+  ["say list of x for each in list of 1", "line 1: 'in' is a Folio word, so it can't be used as a variable name"],
   ["set f to function with x gives x\nsay f()", "line 2: 'f' needs 1 input but got 0"],
   // rounding, from a number as it's shown, and what's left over, with the divisor's sign
   "for each x in list of 2.5, -2.5, 2.4, -2.4, 0.5, -0.5, 0.49, -0.49, 7, -7, 0.1 * 30, 2.9999999999999996, 1 / 3\n    say x \": \" x rounded down \" \" x rounded up \" \" x rounded\nend\nset big to 2 to the power of 60\nsay big rounded is big\nsay (0 - 0.3) rounded\nsay (0 - 0.3) rounded up\nset rounded to 4\nsay rounded rounded\nsay 10 / 4 rounded down\nsay (10 / 4) rounded down",

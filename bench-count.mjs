@@ -1,21 +1,21 @@
 // Counts the instructions a program's machine code runs, and where: in each of the program's functions, in
 // main, and in each routine of the runtime. Needs Linux and valgrind (callgrind). Timing a short run of
 // machine code varies by 10% and more from run to run; the count is the same every time, so it shows what a
-// change to machine.moth did, a few thousand instructions at a time.
+// change to machine.folio did, a few thousand instructions at a time.
 //
-//     node bench-count.mjs program.moth [arguments...]          the top 25 places
-//     node bench-count.mjs --top 60 program.moth                   more of them
-//     node bench-count.mjs moth.moth build compiler.moth           moth, as bootstrap.mjs makes it, at work
+//     node bench-count.mjs program.folio [arguments...]          the top 25 places
+//     node bench-count.mjs --top 60 program.folio                   more of them
+//     node bench-count.mjs folio.folio build compiler.folio           folio, as bootstrap.mjs makes it, at work
 //
-// The program is built by machine.moth on Node.js, as bootstrap.mjs builds moth, with two changes that
+// The program is built by machine.folio on Node.js, as bootstrap.mjs builds folio, with two changes that
 // don't touch its code: the program keeps a 4 GB heap rather than 64 GB, which valgrind can't give it, and
-// machine.moth's assembler is kept, for where each function and routine starts. Instructions in the cold
+// machine.folio's assembler is kept, for where each function and routine starts. Instructions in the cold
 // code, after the last routine, are counted as "cold code". Runs in the folder it's started in.
 import { readFileSync, writeFileSync, chmodSync, mkdtempSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
-import { compileToJs } from "./moth.js";
+import { compileToJs } from "./folio.js";
 
 const args = process.argv.slice(2);
 let top = 25;
@@ -24,30 +24,30 @@ if (args[0] === "--top") {
   args.splice(0, 2);
 }
 const [program, ...rest] = args;
-if (!program) throw new Error("usage: node bench-count.mjs [--top n] program.moth [arguments...]");
+if (!program) throw new Error("usage: node bench-count.mjs [--top n] program.folio [arguments...]");
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 const field = (r, k) => (r instanceof Map ? r.get(k) : r[k]);
 
 const heap = "set gc_heap_size to 68719476736";
 const before = "\n    emit_runtime(st)\n";
-let machine = here("machine.moth");
-if (!machine.includes(heap) || !machine.includes(before)) throw new Error("machine.moth has changed: bench-count.mjs needs a look");
+let machine = here("machine.folio");
+if (!machine.includes(heap) || !machine.includes(before)) throw new Error("machine.folio has changed: bench-count.mjs needs a look");
 machine = "set kept_states to empty list\n" + machine.replace(heap, "set gc_heap_size to 4294967296").replace(before, "\n    add st to kept_states" + before);
-const made = compileToJs(machine, { files: (name) => (name === "compiler.moth" ? here("compiler.moth") : undefined), file: "machine.moth" });
+const made = compileToJs(machine, { files: (name) => (name === "compiler.folio" ? here("compiler.folio") : undefined), file: "machine.folio" });
 const values = made.run(console.log, undefined, Infinity);
 const named = (name) => values[made.names.indexOf(name) - 1];
 
 let bytes;
-if (basename(program) === "moth.moth") {
-  const line = here("bootstrap.mjs").split("\n").find((l) => l.startsWith("const files = {")); // the files bootstrap.mjs gives moth
+if (basename(program) === "folio.folio") {
+  const line = here("bootstrap.mjs").split("\n").find((l) => l.startsWith("const files = {")); // the files bootstrap.mjs gives folio
   const files = [...line.matchAll(/"([^"]+)": here\(/g)].map((m) => m[1]);
-  bytes = named("compile_shipping").fn.run(here("moth.moth"), files, files.map(here), "linux", "moth.moth",
-    ["--allow-read", "--allow-write", "--allow-run"], null, null, ["moth-debugger.moth"], [Uint8Array.from(readFileSync(new URL("./moth-debugger.moth", import.meta.url)))]);
+  bytes = named("compile_shipping").fn.run(here("folio.folio"), files, files.map(here), "linux", "folio.folio",
+    ["--allow-read", "--allow-write", "--allow-run"], null, null, ["folio-debugger.folio"], [Uint8Array.from(readFileSync(new URL("./folio-debugger.folio", import.meta.url)))]);
 } else {
   bytes = named("compile_machine").fn.run(readFileSync(program, "utf8"), [], [], "linux", basename(program));
 }
 
-// where each function and routine starts: machine.moth's own labels, the program's functions by name
+// where each function and routine starts: machine.folio's own labels, the program's functions by name
 const st = named("kept_states").at(-1); // the state of the last time it wrote the program
 const asm = field(st, "a");
 const hot = field(asm, "hot");
@@ -71,7 +71,7 @@ const placeOf = (address) => {
   return found;
 };
 
-const dir = mkdtempSync(join(tmpdir(), "moth-count-"));
+const dir = mkdtempSync(join(tmpdir(), "folio-count-"));
 try {
   const exe = join(dir, "program");
   writeFileSync(exe, Uint8Array.from(bytes));

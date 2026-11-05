@@ -1,12 +1,12 @@
 // The cookbook, the examples and the exercises (DESIGN §135): the pages are what make-guides.mjs makes of
 // guides/, every recipe says what its page says it does (or, where it needs a site, a server or a library,
-// has no problem moth check finds), every example runs, and every exercise's tests pass with its example
+// has no problem folio check finds), every example runs, and every exercise's tests pass with its example
 // solution and fail with the file a learner starts from.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { guides, recipes, examples, sayOf, problemsOf } from "./make-guides.mjs";
-import { test as testMoth } from "./moth.js";
+import { test as testFolio } from "./folio.js";
 
 test("docs/cookbook/ and docs/examples.html are what make-guides.mjs makes of guides/", () => {
   for (const [file, html] of Object.entries(guides())) {
@@ -53,13 +53,13 @@ test("every exercise's tests pass with its example solution, and fail with the f
     const snake = slug.replaceAll("-", "_");
     const read = (file) => readFileSync(new URL(`${slug}/${file}`, root), "utf8");
     const meta = JSON.parse(read(".meta/config.json"));
-    assert.deepEqual(meta.files, { solution: [`${snake}.moth`], test: [`${snake}.test.moth`], example: [".meta/example.moth"] }, slug);
+    assert.deepEqual(meta.files, { solution: [`${snake}.folio`], test: [`${snake}.test.folio`], example: [".meta/example.folio"] }, slug);
     assert.match(read(".docs/instructions.md"), /^# /, `${slug}'s instructions`);
-    const tests = read(`${snake}.test.moth`);
-    const run = (solution) => testMoth(tests, { files: (name) => (name === `${snake}.moth` ? solution : undefined) });
-    const withExample = run(read(".meta/example.moth"));
+    const tests = read(`${snake}.test.folio`);
+    const run = (solution) => testFolio(tests, { files: (name) => (name === `${snake}.folio` ? solution : undefined) });
+    const withExample = run(read(".meta/example.folio"));
     assert.ok(withExample.length > 0, slug);
     assert.deepEqual(withExample.filter((r) => r.error).map((r) => `${r.name}: ${r.error.message}`), [], `${slug} with its example`);
-    assert.deepEqual(run(read(`${snake}.moth`)).filter((r) => !r.error).map((r) => r.name), [], `${slug}'s starting file passes a test`);
+    assert.deepEqual(run(read(`${snake}.folio`)).filter((r) => !r.error).map((r) => r.name), [], `${slug}'s starting file passes a test`);
   }
 });

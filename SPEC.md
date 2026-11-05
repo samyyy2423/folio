@@ -1,17 +1,17 @@
-# The Moth language
+# The Folio language
 
-This is the specification of Moth 1.x: what a Moth program means, and what every Moth 1 release does with
-it. It was written from what Moth does, from the parser in [`moth.js`](moth.js), the checks and messages in
+This is the specification of Folio 1.x: what a Folio program means, and what every Folio 1 release does with
+it. It was written from what Folio does, from the parser in [`folio.js`](folio.js), the checks and messages in
 [`vm.js`](vm.js), and [README.md](README.md) and [DESIGN.md](DESIGN.md), and it is held to them: where this
-document and moth disagree, one of them has a bug, and the next release fixes it.
+document and folio disagree, one of them has a bug, and the next release fixes it.
 
 ## How to read this
 
 - Everything here is **guaranteed** for every 1.x release, as [VERSIONING.md](VERSIONING.md) promises,
-  unless it is marked as an **implementation detail**. An implementation detail is how moth does
+  unless it is marked as an **implementation detail**. An implementation detail is how folio does
   something today; it can change in any release, and a program shouldn't depend on it.
-- **moth** is the command (`moth.exe` on Windows, `moth` on Linux), whose compiler, `machine.moth`, makes a
-  program into machine code. **The playground** runs Moth in a browser on engines written in JavaScript.
+- **folio** is the command (`folio.exe` on Windows, `folio` on Linux), whose compiler, `machine.folio`, makes a
+  program into machine code. **The playground** runs Folio in a browser on engines written in JavaScript.
   Both follow this document; where they can't do the same thing, it says so.
 - Grammar is written like this:
 
@@ -44,15 +44,15 @@ document and moth disagree, one of them has a bug, and the next release fixes it
 
 ### 1.1 Characters
 
-A Moth file is text in UTF-8. Every control character (U+0000 to U+0020, so tabs, carriage returns and
+A Folio file is text in UTF-8. Every control character (U+0000 to U+0020, so tabs, carriage returns and
 line feeds too) counts as a space, except that a line feed ends a line. So a file with Windows line ends
 (`\r\n`) means the same as one with `\n`.
 
 Outside text and comments, a program is made of words, numbers, text, the symbols `+ - * / ( ) ,` and `'s`.
 Any other character is a mistake, said where it is. For the characters people type out of habit from other
-languages, the mistake says what Moth writes instead:
+languages, the mistake says what Folio writes instead:
 
-| Written | Moth says |
+| Written | Folio says |
 |:--|:--|
 | `=` | to store a value write 'set x to 5', to compare write 'x is 5' |
 | `!` | write 'is not' |
@@ -77,7 +77,7 @@ set colours to list of "red", "green",
     "blue"                        # one statement
 ```
 
-`moth tidy` indents a line that carries a statement on by 4 more spaces than the statement's first line.
+`folio tidy` indents a line that carries a statement on by 4 more spaces than the statement's first line.
 Two statements on one line are a mistake ("expected a new line").
 
 ### 1.3 Words and names
@@ -139,7 +139,7 @@ A text that isn't closed on its line, or a `{` whose value has no `}`, is a mist
 
 A statement that holds others (`if`, `repeat`, `for each`, `to`, `try`, `when`, `every`, `kind`, `match`
 and `use the library`) ends its first line there, holds statements on the lines after it, and ends with
-`end` on a line of its own. Indenting doesn't change what a program means, but `moth tidy` writes 4 spaces
+`end` on a line of its own. Indenting doesn't change what a program means, but `folio tidy` writes 4 spaces
 for each block a statement is in. A block that reaches the end of the file is a mistake that names the
 line it started on ("'if' from line 3 is missing its 'end'").
 
@@ -209,7 +209,7 @@ itself is compared without going round for ever.
 
 ## 3. Numbers
 
-A number is a 64-bit floating-point number (IEEE 754 binary64), as in most languages. **What Moth adds is
+A number is a 64-bit floating-point number (IEEE 754 binary64), as in most languages. **What Folio adds is
 that it works to 15 significant digits**, like a spreadsheet: `0.1 + 0.2` is `0.3`.
 
 ### 3.1 The arithmetic
@@ -252,7 +252,7 @@ two whole numbers it's exact; otherwise it's 0 whenever `a is divisible by b`, a
 rounded down)`.
 
 `x to the power of n` takes a whole n (to 15 digits) and multiplies x by itself, squaring as it goes, so
-it's the same on every engine. `0 to the power of` a negative number is a mistake. math.moth's `power(x,
+it's the same on every engine. `0 to the power of` a negative number is a mistake. math.folio's `power(x,
 y)` takes any y.
 
 ### 3.4 Bits
@@ -639,7 +639,7 @@ A call must give a function as many inputs as it has, counting the ones it can l
   `with xs as a list of numbers` as `a list`; that the record is one the kind dog made, or that every item is
   a number, isn't checked when the program runs. A function's `gives` (`gives a number`, `gives nothing`,
   `gives a dog or nothing`) isn't checked when it runs either. They say what the code means, for people and for
-  the checker (`moth check`, the playground's Problems and the editors), which says where the code goes
+  the checker (`folio check`, the playground's Problems and the editors), which says where the code goes
   against them before it runs. A program means the same with them or without them.
 - **Inputs left out.** `with name, greeting or "Hello"`: after `or`, a value written out (a number, text,
   yes, no, nothing, or a list of them), which each call that leaves the input out gets afresh. Every input
@@ -773,7 +773,7 @@ or a copy of bytes. `byte n of b` is `item n of b`. `set byte n of b to v` needs
 `ask for n bytes` gives the input's next n bytes, as bytes: it waits for them, but not for a line's end, and
 gives fewer if the input ends first, and none once it has ended. Both read the same input, so a line `ask`
 reads is gone for `ask for`, and the other way round. n is a whole number from 0, as `n bytes` takes. Only a
-program moth builds reads its input so; on the playground's engines it's a mistake.
+program folio builds reads its input so; on the playground's engines it's a mistake.
 `choose a file to open` (or `to save`) gives the file chosen, or nothing.
 
 ### 8.7 Files, folders, sites and programs
@@ -808,7 +808,7 @@ They're the time where the program runs, in its time zone.
 
 ### 8.12 The language's own functions
 
-`with ... decimals` and a kind's `shown` are written in Moth, in the language's own functions, which the
+`with ... decimals` and a kind's `shown` are written in Folio, in the language's own functions, which the
 program carries when it uses them. Their names start with `the language's`, which no program can write.
 
 ## 9. Mistakes
@@ -817,7 +817,7 @@ program carries when it uses them. Their names start with `the language's`, whic
 
 - **While the program is read.** A mistake in how a program is written (a word in the wrong place, a block
   with no `end`, a name used as a reserved word, a `use` of a file that isn't there) is found before
-  anything runs. `moth build` makes no program, `moth run` runs nothing, and both end with 1.
+  anything runs. `folio build` makes no program, `folio run` runs nothing, and both end with 1.
 - **While it runs.** Anything this document calls a mistake when it runs (dividing by zero, an item that
   isn't there, a value of the wrong kind, a `fail with`, a refusal of section 11) stops the statement and
   goes to the nearest `try` around it, in this function or any that called it. With none, the program ends.
@@ -829,7 +829,7 @@ went wrong, the line itself, and a `^` under the spot; then, for one inside func
 there, innermost first:
 
 ```text
-report.moth:2:24: can't divide by zero
+report.folio:2:24: can't divide by zero
     return total of xs / length of xs
                        ^
   in 'average', called from line 5
@@ -854,18 +854,18 @@ Every mistake that happens while a program runs, `fail with` and the refusals of
 
 ### 10.1 use
 
-- `use "shapes.moth"` reads that file and puts its code where the `use` is, its names in with the
+- `use "shapes.folio"` reads that file and puts its code where the `use` is, its names in with the
   program's, where they can collide.
-- `use "math.moth" as math` keeps the file's names to itself, as if it ran alone: the program reaches them
+- `use "math.folio" as math` keeps the file's names to itself, as if it ran alone: the program reaches them
   as `math's sqrt(2)`, and the file's functions' variables are theirs.
 - A file is found from the folder of the file that uses it. It must be in the program's folder or a folder
   inside it: a name that starts at the top of a disk (`/x`, `C:x`) or goes up (`../x`) is a mistake, and so
   is a link inside the folder that leads out of it.
-- If the file isn't there, moth looks in the **standard library** it carries (section 10.3), for the name
+- If the file isn't there, folio looks in the **standard library** it carries (section 10.3), for the name
   in quotes, from any file: the program, a package, or a file either uses.
 - A file is read once for each name it's used as, and once without one; two files that use each other are
   a mistake.
-- `use the package "json" as json` is `packages/json/json.moth`, from the program's folder, wherever the
+- `use the package "json" as json` is `packages/json/json.folio`, from the program's folder, wherever the
   `use` is written. A package's name is letters, digits, `-`, `_` and `.`.
 
 ### 10.2 use the library
@@ -876,12 +876,12 @@ use the library "user32"
 end
 ```
 
-Calls a C library's functions, in a program `moth build` makes, on Windows or Linux. Each line names a
+Calls a C library's functions, in a program `folio build` makes, on Windows or Linux. Each line names a
 function, what it takes and what it `gives`: `a number` (double), `a float`, `a whole number` (int), `a
 long whole number` (64 bits), `a byte`, `a signed byte`, `a short whole number`, `an unsigned short whole
 number`, `an unsigned whole number`, `an unsigned long whole number`, `a pointer` (a whole number, nothing
 or bytes), `text` (UTF-8), `wide text` (wchar_t), `bytes` (the program's memory, for C to fill) and `yes or
-no` (an int). A name Moth has for its own goes in quotes: `"remove" as remove_file(text)`. `structure point
+no` (an int). A name Folio has for its own goes in quotes: `"remove" as remove_file(text)`. `structure point
 with x as a whole number, y as a whole number` makes `a point`, a record C sees as its struct, and `a point
 by value` passes it as itself; `callback compare(a pointer, a pointer) gives a whole number` makes `a
 compare`, a function of the program's that C calls. At most 16 inputs each. A library is found by its name
@@ -890,26 +890,26 @@ Linux `"sqlite3"` is libsqlite3.so (or `.so.0` to `.so.9`). It needs `--allow-li
 
 ### 10.3 The standard library
 
-moth carries these files, so `use "json.moth"` works in any folder: `math.moth`, and from `tools/`:
+folio carries these files, so `use "json.folio"` works in any folder: `math.folio`, and from `tools/`:
 `base64`, `big`, `charts`, `collections`, `cores`, `crypto`, `dates`, `email`, `fractions`, `game`, `hash`,
 `http`, `images`, `installer`, `json`, `jwt`, `linux`, `lists`, `log`, `mysql`, `oauth`, `options`,
 `postgres`, `redis`, `s3`, `secrets`, `server`, `sets`, `sockets`, `sqlite`, `stats`, `sync`, `system`,
 `tasks`, `text`, `toml`, `ui`, `websocket`, `windows`, `wire`, `xml`, `yaml`, `zip` and `zones`, each
-`.moth`. A file of the same name beside the file that uses it is used instead: beside the program for the
+`.folio`. A file of the same name beside the file that uses it is used instead: beside the program for the
 program, and in a package's folder for the package. Each
 file's own comments say what its functions do; [VERSIONING.md](VERSIONING.md) says which of them are kept.
 
 ### 10.4 Packages
 
-A package is a Git repository of Moth files whose main file is named after it. moth runs the system's
+A package is a Git repository of Folio files whose main file is named after it. folio runs the system's
 `git` to fetch them.
 
-- **`moth.packages`**, in the folder moth runs in, lists a program's packages, a line each: its name, where
+- **`folio.packages`**, in the folder folio runs in, lists a program's packages, a line each: its name, where
   it comes from, and the full commit it's at, with spaces between. Where it comes from is an address, a
   site's short form (`github.com/someone/thing`, which is `https://github.com/someone/thing`; also
   `gitlab.com/`, `codeberg.org/` and `bitbucket.org/`), or a folder; with `@` and a tag, branch or commit
   after its last part, it was asked for at that version. A line that starts with `#` is a comment.
-- **`moth.sums`**, beside it, has the SHA-256 of each package's files at that commit: a line each, the
+- **`folio.sums`**, beside it, has the SHA-256 of each package's files at that commit: a line each, the
   package's name, the commit and `sha256:` and 64 hex digits. The sum is worked out as `sha256sum` writes
   one: for each file in the package's folder but Git's own (any `.git` folder or file), in the order of its
   path's bytes, with `/` between its parts, its SHA-256 in hex, two spaces, its path and a line end; and the
@@ -920,36 +920,36 @@ A package is a Git repository of Moth files whose main file is named after it. m
       | LC_ALL=C sort | xargs sha256sum | sha256sum
   ```
 
-- **Checking out.** moth checks a package's files out as they are in the repository, whatever the system or
+- **Checking out.** folio checks a package's files out as they are in the repository, whatever the system or
   the person's own git settings: line ends as they were committed (or as the repository's own
   `.gitattributes` says, the same everywhere), and a symbolic link as a small file holding where it points.
   So a package's files, and their sum, are the same on Windows and Linux.
-- `moth add <where> [name]` fetches a package into `packages/<name>`, lists it with its commit and writes its
-  sum, and then the packages its own `moth.packages` lists, at their commits, unless one of that name is
-  here already, each checked against the sum its own `moth.sums` has for it, if it has one. A name alone
+- `folio add <where> [name]` fetches a package into `packages/<name>`, lists it with its commit and writes its
+  sum, and then the packages its own `folio.packages` lists, at their commits, unless one of that name is
+  here already, each checked against the sum its own `folio.sums` has for it, if it has one. A name alone
   (no `/`, `\` or `:`, and no folder of that name here) is a package in the package index.
-- `moth get` makes `packages/` match the list: each package fetched, or moved to its commit, and its files
-  checked against `moth.sums`. A package whose files aren't what its sum says is a mistake: if it was there
+- `folio get` makes `packages/` match the list: each package fetched, or moved to its commit, and its files
+  checked against `folio.sums`. A package whose files aren't what its sum says is a mistake: if it was there
   already, the files that changed are named and left as they are; if it was just fetched, it isn't kept. A
   package with no sum yet is fetched again and its sum written down.
-- `moth update [name]` checks a package's files, moves it to the newest commit where it comes from (a
+- `folio update [name]` checks a package's files, moves it to the newest commit where it comes from (a
   branch's, if it was asked for at one; one asked for at a tag or a commit stays there) and writes the new
   commit and sum down.
-- `--signed`, after `moth add`, `get` or `update`, takes only a package whose commit, or the tag it was
+- `--signed`, after `folio add`, `get` or `update`, takes only a package whose commit, or the tag it was
   asked for at if that's a signed tag at that commit, has a signature `git verify-commit` or `git
   verify-tag` accepts: one made by a key in the person's GPG keyring, or in the file
   `gpg.ssh.allowedSignersFile` names for SSH signatures. A newest commit that isn't signed isn't taken.
-- `moth remove <name>` takes a package's folder and lines away; `moth packages` lists them.
+- `folio remove <name>` takes a package's folder and lines away; `folio packages` lists them.
 - **The package index** is a JSON file: `{"packages": {"thing": {"repository": "github.com/someone/thing",
   "about": "..."}}, "advisories": [...]}`. By default it's
-  `https://raw.githubusercontent.com/samyyy2423/moth-packages/main/index.json`, read with `curl`; `--index`
-  gives another, an address or a file. `moth search [words]` lists its packages, or those with every word
+  `https://raw.githubusercontent.com/samyyy2423/folio-packages/main/index.json`, read with `curl`; `--index`
+  gives another, an address or a file. `folio search [words]` lists its packages, or those with every word
   in their name or what they're about.
 - **Advisories.** Each is a JSON object about one package: `package` (its name in the index) or
-  `repository`; `id`, `severity`, `about` and `link`, which `moth audit` shows; and which commits it's about:
+  `repository`; `id`, `severity`, `about` and `link`, which `folio audit` shows; and which commits it's about:
   `commits`, a list of commits (all of one, or its first 7 or more hex digits), and `introduced` and `fixed`,
   each a commit, for the commits from `introduced` on (`"0"`, or none, for from the first) that aren't from
-  `fixed` on. One with none of those is about every commit. `moth audit` checks each package moth.packages
+  `fixed` on. One with none of those is about every commit. `folio audit` checks each package folio.packages
   lists against them, matching where it comes from in lower case without `https://`, `.git` or a `/` at its
   end, and says which are about the commits they're at. It ends with 0 if none are, and 1 if one is, or if a
   package whose history it needs isn't fetched.
@@ -987,22 +987,22 @@ waits for it and gives the number it ended with; with `keeping its output` after
 Linux in PATH, and on Windows in System32, then Windows' folder, then PATH, never beside the program or in
 the folder it runs from. On Windows, an argument to a `.bat` or `.cmd` file can't hold `" % ^ & | < > !` or
 a line break, since cmd.exe would read those as part of a command. `say ... to the error output`, `stop the
-program`, `run program` and `remove the file` only work in a program `moth build` makes; in the playground,
+program`, `run program` and `remove the file` only work in a program `folio build` makes; in the playground,
 starting a program is a mistake that says so.
 
 ### 11.4 Asking first, and the flags
 
-A program moth makes **asks before it reads a file, writes one, goes online, starts another program or uses
+A program folio makes **asks before it reads a file, writes one, goes online, starts another program or uses
 a library**, as Deno does. At a terminal the person is asked, once for each file, site, program or library:
 
 ```text
-moth: let this program read 'notes.txt'? (y = yes, a = yes to all, n = no)
+folio: let this program read 'notes.txt'? (y = yes, a = yes to all, n = no)
 ```
 
 Anywhere else (in a script, a service, a pipe), the answer is no. A no is a mistake a `try` can catch:
 `can't read 'notes.txt': this program isn't allowed to read files (start it with --allow-read)`.
 
-The flags given to `moth build` are built into the program, and `moth run`, `debug`, `profile`,
+The flags given to `folio build` are built into the program, and `folio run`, `debug`, `profile`,
 `coverage`, `test`, `notebook` and the shell take them too, before the file:
 
 | Flag | Lets the program |
@@ -1020,7 +1020,7 @@ leads out of it, aren't in `data`. A web address written in an odd way (`a.com@b
 no host.
 
 **What this protects against, and what it doesn't**, is in [SECURITY.md](SECURITY.md). In short: the flags
-keep a Moth program to what it was allowed; a C library, and a program it starts, can do anything.
+keep a Folio program to what it was allowed; a C library, and a program it starts, can do anything.
 
 ### 11.5 Standard input, output and error
 
@@ -1030,11 +1030,11 @@ program with` gave, or with 1 for a mistake.
 
 ### 11.6 The command's release version
 
-`moth --version` and `moth version`, with no other arguments, write `moth MAJOR.MINOR.PATCH` and a
+`folio --version` and `folio version`, with no other arguments, write `folio MAJOR.MINOR.PATCH` and a
 newline to the standard output, write nothing to the standard error, and end with 0. The version is the
-release version from `package.json`, built into moth when it is made; no file beside the installed program
+release version from `package.json`, built into folio when it is made; no file beside the installed program
 or in the current folder is needed. Extra arguments are wrong usage, reported on the standard error with
-exit code 2. `moth build app.moth --version 1.2.0` still sets the built program's version.
+exit code 2. `folio build app.folio --version 1.2.0` still sets the built program's version.
 
 ## 12. Apps
 
@@ -1048,7 +1048,7 @@ when enter is pressed in the text box "Name" with words
 when the checkbox "Dark" is clicked
 when an item is chosen in the list "Fruits" with fruit     # or in the dropdown
 when the slider "Volume" is moved with volume
-when the page is used with what           # the page page.moth shows: what was done on it
+when the page is used with what           # the page page.folio shows: what was done on it
 every 100 milliseconds                    # or any amount of time above 0
 ```
 
@@ -1061,7 +1061,7 @@ The controls of section 6.16 are drawn where they're placed and found by their l
 line of up to 40 letters and a text area 2,000; a slider's value is a whole number, kept between its ends;
 `the choice in the list` is nothing until there is one.
 
-`when the page is used` is for the page `page.moth` shows on the web, in the playground and in a page `moth
+`when the page is used` is for the page `page.folio` shows on the web, in the playground and in a page `folio
 build --web` makes. Its one value is a dictionary: the "type" of what was done (`"click"`, `"change"`, or
 `"enter"` for Enter in a text box), the "name" of what was used, its "value", and "values", every text box's,
 checkbox's and dropdown's value on the page by its name (text, or yes or no for a checkbox). Anywhere else it
@@ -1086,7 +1086,7 @@ the worker. A worker's own tasks and workers are numbered from 1. No more than 6
 be working with nothing having waited for them; starting another is a mistake. A program ends its workers, as
 it ends its tasks, before it ends, and so does a worker.
 
-**Implementation detail:** in a program moth builds, tasks take turns: one runs Moth at a time, and lets the
+**Implementation detail:** in a program folio builds, tasks take turns: one runs Folio at a time, and lets the
 others run every so often and whenever it waits (for input, a program, a site, a window, a C function or
 `wait`), so a task keeps a program from waiting but doesn't make a sum faster on more cores. Workers run at
 the same moment, each a thread with a copy of the program's memory, on as many cores as there are; a worker's
@@ -1094,11 +1094,11 @@ tasks take turns among themselves. In the playground, a task or a worker runs to
 
 ## 14. Implementation details
 
-These are how Moth works today. Any release can change them.
+These are how Folio works today. Any release can change them.
 
-- **The engines.** moth makes x86-64 machine code for Windows and Linux; the playground runs a bytecode
+- **The engines.** folio makes x86-64 machine code for Windows and Linux; the playground runs a bytecode
   virtual machine, a JIT to JavaScript, and WebAssembly. They're tested to say, draw, write and fail alike.
-- **The words of a mistake** (section 9.2) and of moth's own messages, and what `moth check` warns about.
+- **The words of a mistake** (section 9.2) and of folio's own messages, and what `folio check` warns about.
 - **Limits.** How deep functions can call themselves (100,000 calls on the playground's engines; in machine
   code, as far as the stack goes), how deeply code can be nested, how long a program can run in the
   playground before it's stopped (it's given a number of steps), and how big a value can be.
@@ -1112,7 +1112,7 @@ These are how Moth works today. Any release can change them.
   everywhere.
 - **The playground.** Its files last for one run; only sites that let any page read them can be read;
   answering a question runs the program again from the start; it can't start programs or use libraries.
-- **The bytes `moth build` makes**, which are the same for the same source and moth, but change between
+- **The bytes `folio build` makes**, which are the same for the same source and folio, but change between
   releases.
-- **The text of `moth.packages` and `moth.sums`'s comment lines**, which moth writes again when it changes
+- **The text of `folio.packages` and `folio.sums`'s comment lines**, which folio writes again when it changes
   them.

@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "rna_transcription.moth"
+      "rna_transcription.folio"
     ],
     "test": [
-      "rna_transcription.test.moth"
+      "rna_transcription.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Turn a DNA strand into its RNA complement."

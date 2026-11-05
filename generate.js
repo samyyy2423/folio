@@ -1,5 +1,5 @@
-// Random Moth programs, made from the grammar: every one can be read, and most run into a mistake
-// somewhere, on purpose. The tests run them on all three engines, through the compiler written in Moth,
+// Random Folio programs, made from the grammar: every one can be read, and most run into a mistake
+// somewhere, on purpose. The tests run them on all three engines, through the compiler written in Folio,
 // the checker and the formatter, which must all agree. The seed is fixed, so a failure always reproduces.
 
 const NUMBERS = ["0", "1", "2", "3", "-1", "2.5", "10", "255", "256", "0x10", "0b11", "1000000", "0.1", "9007199254740991"];

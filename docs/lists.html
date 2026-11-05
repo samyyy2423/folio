@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>lists.moth · Moth's standard library</title>
+  <title>lists.folio · Folio's standard library</title>
   <meta name="description" content="Lists, as Python's itertools and functools work through them.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>lists</em>.moth</h1>
+      <h1><em>lists</em>.folio</h1>
       <p>Lists, as Python's itertools and functools work through them.</p>
-      <p class="use"><code>use "lists.moth" as lists</code></p>
+      <p class="use"><code>use "lists.folio" as lists</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="lists.moth's functions">
+    <nav class="toc" aria-label="lists.folio's functions">
       <h2>23 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#chunks">chunks</a></li><li><a href="#windows">windows</a></li><li><a href="#paired">paired</a></li><li><a href="#numbered">numbered</a></li><li><a href="#flattened">flattened</a></li><li><a href="#product">product</a></li><li><a href="#permutations">permutations</a></li><li><a href="#combinations">combinations</a></li><li><a href="#running_totals">running_totals</a></li><li><a href="#total">total</a></li><li><a href="#folded">folded</a></li><li><a href="#mapped">mapped</a></li><li><a href="#kept_by">kept_by</a></li><li><a href="#dropped_by">dropped_by</a></li><li><a href="#split_by">split_by</a></li><li><a href="#taken_while">taken_while</a></li><li><a href="#dropped_while">dropped_while</a></li><li><a href="#every_one">every_one</a></li><li><a href="#some_one">some_one</a></li><li><a href="#sorted_by">sorted_by</a></li><li><a href="#smallest_by">smallest_by</a></li><li><a href="#largest_by">largest_by</a></li><li><a href="#repeated">repeated</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Lists, as Python's itertools and functools work through them: in chunks and windows, paired, numbered, flattened, every way of choosing and ordering them, running totals, folded into one, sorted by what a function says, and split by it. In Moth alone, so it works everywhere. Each gives a new list. (A list given before another input goes in brackets, or <code>list of</code> takes that input as one of its own.)</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <p>Lists, as Python's itertools and functools work through them: in chunks and windows, paired, numbered, flattened, every way of choosing and ordering them, running totals, folded into one, sorted by what a function says, and split by it. In Folio alone, so it works everywhere. Each gives a new list. (A list given before another input goes in brackets, or <code>list of</code> takes that input as one of its own.)</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's chunks((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>), <span class="n">2</span>)     <span class="c"># [[1, 2], [3, 4], [5]]</span>
 <span class="k">say</span> lists's windows((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>), <span class="n">2</span>)       <span class="c"># [[1, 2], [2, 3], [3, 4]]</span>
 <span class="k">say</span> lists's paired((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="s">&quot;b&quot;</span>)   <span class="c"># [[1, &quot;a&quot;], [2, &quot;b&quot;]] (zip)</span>
@@ -84,9 +84,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to chunks with things, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L27">lists.moth line 27</a></p>
+          <p class="written">Written <code>to chunks with things, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L27">lists.folio line 27</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's chunks((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>), <span class="n">2</span>)     <span class="c"># [[1, 2], [3, 4], [5]]</span></code></pre><pre class="says"><code>[[1, 2], [3, 4], [5]]</code></pre></div>
         </section>
         <section class="fn" id="windows">
@@ -96,9 +96,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to windows with things, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L45">lists.moth line 45</a></p>
+          <p class="written">Written <code>to windows with things, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L45">lists.folio line 45</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's windows((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>), <span class="n">2</span>)       <span class="c"># [[1, 2], [2, 3], [3, 4]]</span></code></pre><pre class="says"><code>[[1, 2], [2, 3], [3, 4]]</code></pre></div>
         </section>
         <section class="fn" id="paired">
@@ -108,9 +108,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>first_things</code></li><li><code>second_things</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to paired with first_things, second_things</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L65">lists.moth line 65</a></p>
+          <p class="written">Written <code>to paired with first_things, second_things</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L65">lists.folio line 65</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's paired((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="s">&quot;b&quot;</span>)   <span class="c"># [[1, &quot;a&quot;], [2, &quot;b&quot;]] (zip)</span></code></pre><pre class="says"><code>[[1, &quot;a&quot;], [2, &quot;b&quot;]]</code></pre></div>
         </section>
         <section class="fn" id="numbered">
@@ -120,9 +120,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to numbered with things</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L78">lists.moth line 78</a></p>
+          <p class="written">Written <code>to numbered with things</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L78">lists.folio line 78</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's numbered(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="s">&quot;b&quot;</span>)             <span class="c"># [[1, &quot;a&quot;], [2, &quot;b&quot;]] (enumerate)</span></code></pre><pre class="says"><code>[[1, &quot;a&quot;], [2, &quot;b&quot;]]</code></pre></div>
         </section>
         <section class="fn" id="flattened">
@@ -132,9 +132,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>lists_of</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to flattened with lists_of</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L87">lists.moth line 87</a></p>
+          <p class="written">Written <code>to flattened with lists_of</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L87">lists.folio line 87</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's flattened(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="k">list</span> <span class="k">of</span> <span class="n">3</span>)</code></pre><pre class="says"><code>[1, 2, 3]</code></pre></div>
         </section>
         <section class="fn" id="product">
@@ -144,9 +144,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>first_things</code></li><li><code>second_things</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to product with first_things, second_things</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L99">lists.moth line 99</a></p>
+          <p class="written">Written <code>to product with first_things, second_things</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L99">lists.folio line 99</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's product((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;x&quot;</span>, <span class="s">&quot;y&quot;</span>)   <span class="c"># [[1, &quot;x&quot;], [1, &quot;y&quot;], [2, &quot;x&quot;], [2, &quot;y&quot;]]</span></code></pre><pre class="says"><code>[[1, &quot;x&quot;], [1, &quot;y&quot;], [2, &quot;x&quot;], [2, &quot;y&quot;]]</code></pre></div>
         </section>
         <section class="fn" id="permutations">
@@ -156,9 +156,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to permutations with things, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L110">lists.moth line 110</a></p>
+          <p class="written">Written <code>to permutations with things, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L110">lists.folio line 110</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's permutations((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), <span class="n">2</span>)     <span class="c"># each ordering of 2 of them</span></code></pre><pre class="says"><code>[[1, 2], [1, 3], [2, 1], [2, 3], [3, 1], [3, 2]]</code></pre></div>
         </section>
         <section class="fn" id="combinations">
@@ -168,9 +168,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to combinations with things, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L143">lists.moth line 143</a></p>
+          <p class="written">Written <code>to combinations with things, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L143">lists.folio line 143</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's combinations((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), <span class="n">2</span>)     <span class="c"># each choice of 2, in order</span></code></pre><pre class="says"><code>[[1, 2], [1, 3], [2, 3]]</code></pre></div>
         </section>
         <section class="fn" id="running_totals">
@@ -180,9 +180,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>numbers</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to running_totals with numbers</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L165">lists.moth line 165</a></p>
+          <p class="written">Written <code>to running_totals with numbers</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L165">lists.folio line 165</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's running_totals(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)        <span class="c"># [1, 3, 6] (accumulate)</span></code></pre><pre class="says"><code>[1, 3, 6]</code></pre></div>
         </section>
         <section class="fn" id="total">
@@ -192,9 +192,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>numbers</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to total with numbers</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L176">lists.moth line 176</a></p>
+          <p class="written">Written <code>to total with numbers</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L176">lists.folio line 176</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">set</span> numbers <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>
 <span class="k">say</span> lists's <span class="k">total</span>(numbers)</code></pre><pre class="says"><code>15</code></pre></div>
         </section>
@@ -205,9 +205,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>combine</code></li><li><code>start</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to folded with things, combine, start</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L185">lists.moth line 185</a></p>
+          <p class="written">Written <code>to folded with things, combine, start</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L185">lists.folio line 185</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> adding <span class="k">with</span> a, b
     <span class="k">return</span> a + b
 <span class="k">end</span>
@@ -221,9 +221,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>change</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to mapped with things, change</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L194">lists.moth line 194</a></p>
+          <p class="written">Written <code>to mapped with things, change</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L194">lists.folio line 194</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> doubled <span class="k">with</span> n
     <span class="k">return</span> n * <span class="n">2</span>
 <span class="k">end</span>
@@ -237,9 +237,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to kept_by with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L203">lists.moth line 203</a></p>
+          <p class="written">Written <code>to kept_by with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L203">lists.folio line 203</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_even <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> <span class="k">divisible</span> <span class="k">by</span> <span class="n">2</span>
 <span class="k">end</span>
@@ -253,9 +253,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to dropped_by with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L214">lists.moth line 214</a></p>
+          <p class="written">Written <code>to dropped_by with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L214">lists.folio line 214</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_even <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> <span class="k">divisible</span> <span class="k">by</span> <span class="n">2</span>
 <span class="k">end</span>
@@ -269,9 +269,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to split_by with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L225">lists.moth line 225</a></p>
+          <p class="written">Written <code>to split_by with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L225">lists.folio line 225</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_even <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> <span class="k">divisible</span> <span class="k">by</span> <span class="n">2</span>
 <span class="k">end</span>
@@ -285,9 +285,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to taken_while with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L239">lists.moth line 239</a></p>
+          <p class="written">Written <code>to taken_while with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L239">lists.folio line 239</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_small <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> less <span class="k">than</span> <span class="n">3</span>
 <span class="k">end</span>
@@ -301,9 +301,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to dropped_while with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L251">lists.moth line 251</a></p>
+          <p class="written">Written <code>to dropped_while with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L251">lists.folio line 251</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_small <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> less <span class="k">than</span> <span class="n">3</span>
 <span class="k">end</span>
@@ -317,9 +317,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to every_one with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L266">lists.moth line 266</a></p>
+          <p class="written">Written <code>to every_one with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L266">lists.folio line 266</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_even <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> <span class="k">divisible</span> <span class="k">by</span> <span class="n">2</span>
 <span class="k">end</span>
@@ -332,9 +332,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>test</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to some_one with things, test</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L276">lists.moth line 276</a></p>
+          <p class="written">Written <code>to some_one with things, test</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L276">lists.folio line 276</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> is_even <span class="k">with</span> n
     <span class="k">return</span> n <span class="k">is</span> <span class="k">divisible</span> <span class="k">by</span> <span class="n">2</span>
 <span class="k">end</span>
@@ -348,9 +348,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>key_of</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sorted_by with things, key_of</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L286">lists.moth line 286</a></p>
+          <p class="written">Written <code>to sorted_by with things, key_of</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L286">lists.folio line 286</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> length_of <span class="k">with</span> words
     <span class="k">return</span> <span class="k">length</span> <span class="k">of</span> words
 <span class="k">end</span>
@@ -364,9 +364,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>key_of</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to smallest_by with things, key_of</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L302">lists.moth line 302</a></p>
+          <p class="written">Written <code>to smallest_by with things, key_of</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L302">lists.folio line 302</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> length_of <span class="k">with</span> words
     <span class="k">return</span> <span class="k">length</span> <span class="k">of</span> words
 <span class="k">end</span>
@@ -380,9 +380,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>things</code></li><li><code>key_of</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to largest_by with things, key_of</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L319">lists.moth line 319</a></p>
+          <p class="written">Written <code>to largest_by with things, key_of</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L319">lists.folio line 319</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">to</span> length_of <span class="k">with</span> words
     <span class="k">return</span> <span class="k">length</span> <span class="k">of</span> words
 <span class="k">end</span>
@@ -396,9 +396,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li><li><code>times_given</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to repeated with x, times_given</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/lists.moth#L336">lists.moth line 336</a></p>
+          <p class="written">Written <code>to repeated with x, times_given</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/lists.folio#L336">lists.folio line 336</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.moth&quot;</span> <span class="k">as</span> lists
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;lists.folio&quot;</span> <span class="k">as</span> lists
 <span class="k">say</span> lists's repeated(<span class="s">&quot;x&quot;</span>, <span class="n">3</span>)</code></pre><pre class="says"><code>[&quot;x&quot;, &quot;x&quot;, &quot;x&quot;]</code></pre></div>
         </section>
       </section>
@@ -406,14 +406,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

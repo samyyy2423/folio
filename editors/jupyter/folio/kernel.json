@@ -1,0 +1,6 @@
+{
+  "argv": ["python", "{resource_dir}/folio_kernel.py", "-f", "{connection_file}"],
+  "display_name": "Folio",
+  "language": "folio",
+  "interrupt_mode": "signal"
+}

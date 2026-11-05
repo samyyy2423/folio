@@ -1,4 +1,4 @@
-The glyph tables in machine.moth, which a program built for Linux draws its
+The glyph tables in machine.folio, which a program built for Linux draws its
 text with, are drawn from DejaVu Sans and DejaVu Sans Mono
 (https://dejavu-fonts.github.io/), whose licence follows. A program that has
 them carries this notice too.

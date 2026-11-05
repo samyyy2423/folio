@@ -1,0 +1,752 @@
+# The debugger `folio debug` builds into a program (DESIGN §59). Before each line of the program, and of the
+# files it uses, runs, the program asks `wants` whether to stop there; when it does, `here` says which line
+# it is and takes commands, typed or from the input, until one says to go on. When a mistake is found, it's
+# told where, and what the line could see (`failing`), and after the mistake's report it stops there
+# (`failed`), so what went wrong can be looked at before the program ends (DESIGN §93).
+
+set program_name to "" # the program's own file, for saying where a line is
+set sources to empty dictionary # each file's lines, by its name ("" for the program's own)
+set mode to "step" # stop at the next line (step), the next one no deeper in calls (next), the next one out of
+# this call (out), or only at a breakpoint (go)
+set deep to 0 # how many calls were in progress at the line it stopped at
+set breaks to empty dictionary # the breakpoints, each "file:line"
+set calls to empty list # the calls in progress, outermost first: the line each was made on
+set last to nothing # the line before this one: its file, line and function
+set level to 0 # how many calls were in progress then
+set went_wrong to nothing # where the last mistake was found, and what was there, for after its report
+set commands_over to no # whether the input has ended, so there's no one to ask
+
+# Before the program's first line: its name, and each file's name and text
+to start with name, file_names, texts, statement_lines
+    set program_name to name
+    for each k from 1 to length of file_names
+        set lines to split item k of texts by "\n"
+        if length of lines is greater than 1 and item (length of lines) of lines is "" # what the last line ends with
+            set lines to all_but_last(lines)
+        end
+        set item (item k of file_names) of sources to lines
+    end
+end
+
+# a line, as a person finds it: the file's name and the line's number
+to place_name with file, line
+    if file is ""
+        return program_name + ":" + line
+    end
+    return file + ":" + line
+end
+
+# the function a line is in, said after its place
+to in_function with fn
+    if fn is ""
+        return ""
+    end
+    return ", in '" + fn + "'"
+end
+
+# what a line holds, as written, without a Windows line end
+to line_of with file, line
+    if not (file is in sources)
+        return ""
+    end
+    set lines to item file of sources
+    if line is less than 1 or line is greater than length of lines
+        return ""
+    end
+    set text to item line of lines
+    set made to ""
+    for each k from 1 to length of text
+        if k is less than length of text or byte 1 of (item k of text as bytes) is not 13 # 13: a carriage return
+            add item k of text to made
+        end
+    end
+    return made
+end
+
+to unindented with text
+    set made to ""
+    set started to no
+    for each c in text
+        if started or (c is not " " and c is not "\t")
+            set started to yes
+            add c to made
+        end
+    end
+    return made
+end
+
+to all_but_last with items
+    set made to empty list
+    for each k from 1 to length of items - 1
+        add item k of items to made
+    end
+    return made
+end
+
+# `calls`, kept up to date from how many calls are in progress at each line: one more than at the line
+# before, and that line made the call
+to follow with line, file, depth, fn
+    repeat while depth is greater than level
+        add last to calls
+        add 1 to level
+    end
+    repeat while depth is less than level and length of calls is greater than 0
+        set calls to all_but_last(calls)
+        set level to level - 1
+    end
+    set level to depth
+    set last to record with file file, line line, fn fn
+end
+
+# once the program has ended, however it ended: nothing more to do (the profiler, in the debugger's place, says
+# what it found)
+to finish
+end
+
+# a mistake found, before its report: where, and what the line could see, kept (a `try` may catch it, and the
+# program go on)
+to failing with line, file, depth, fn, names, values, given
+    follow(line, file, depth, fn)
+    set went_wrong to record with line line, file file, depth depth, fn fn, names names, values values, given given
+end
+
+# after the report of a mistake that ends the program: stopped where it was found, and commands until one
+# goes on, which ends it
+to failed
+    if went_wrong is nothing or commands_over
+        return nothing
+    end
+    set w to went_wrong
+    say "stopped at the mistake, at " place_name(file of w, line of w) in_function(fn of w) ": " unindented(line_of(file of w, line of w))
+    repeat while yes
+        set said to nothing
+        try
+            set said to ask "(folio)"
+        if it fails
+            return nothing
+        end
+        set words to words_of(said)
+        set command to ""
+        if length of words is at least 1
+            set command to lowercase of item 1 of words
+        end
+        if command is "show" or command is "p" or command is "print"
+            show_command(said, words, names of w, values of w, given of w)
+        else if command is "vars" or command is "v"
+            if written_count(names of w) is 0
+                say "no variables here"
+            end
+            for each name in names of w
+                if written(name)
+                    say_value(name, names of w, values of w, given of w)
+                end
+            end
+        else if command is "where" or command is "w"
+            say_calls(line of w, file of w, fn of w)
+        else if command is "list" or command is "l"
+            say_lines(file of w, line of w)
+        else if command is "help" or command is "h" or command is "?" or command is ""
+            say "the program has stopped at its mistake: show x or show x + 1 (p), vars (v), where (w) and list (l) look at it, and"
+            say "anything else ends it"
+        else
+            return nothing
+        end
+    end
+end
+
+# when the program's lines stop for now, and it waits for what happens next, as an app between its handlers:
+# nothing to do (the profiler counts that time as waiting)
+to waits
+end
+
+# whether to stop at this line, before it runs
+to wants with line, file, depth, fn
+    follow(line, file, depth, fn)
+    if mode is "step" or (file + ":" + line) is in breaks
+        return yes
+    end
+    if mode is "next"
+        return depth is at most deep
+    end
+    if mode is "out"
+        return depth is less than deep
+    end
+    return no
+end
+
+# a value as it's written in Folio: text in quotes, as `say` shows it inside a list
+to shown with value
+    set whole to "" + (list of value)
+    set made to ""
+    for each k from 2 to length of whole - 1
+        add item k of whole to made
+    end
+    return made
+end
+
+# the words of a command, without the spaces between them
+to words_of with said
+    set made to empty list
+    for each w in split said by " "
+        if w is not ""
+            add w to made
+        end
+    end
+    return made
+end
+
+# `break 12`, at a line of this file, or `break math.folio 12`: "file:line", or nothing if it isn't one
+to break_place with words, file
+    set named to file
+    set written to nothing
+    if length of words is 2
+        set written to item 2 of words
+    else if length of words is 3
+        set named to item 2 of words
+        set written to item 3 of words
+        if named is program_name
+            set named to ""
+        end
+    end
+    if written is nothing
+        return nothing
+    end
+    try
+        set line to number of written
+    if it fails
+        return nothing
+    end
+    return named + ":" + line
+end
+
+# what a "file:line" says, as place_name does
+to break_name with key
+    set parts to split key by ":"
+    set line to item (length of parts) of parts
+    set file to ""
+    for each k from 1 to length of parts - 1
+        if k is greater than 1
+            add ":" to file
+        end
+        add item k of parts to file
+    end
+    if file is ""
+        return program_name + ":" + line
+    end
+    return file + ":" + line
+end
+
+to say_value with name, names, values, given
+    for each k from 1 to length of names
+        if item k of names is name
+            if item k of given
+                say name " is " shown(item k of values)
+            else
+                say name " has no value yet"
+            end
+            return nothing
+        end
+    end
+    say "there's no '" name "' here"
+end
+
+to say_lines with file, line
+    set first to line - 3
+    if first is less than 1
+        set first to 1
+    end
+    set past to line + 3
+    for each n from first to past
+        set text to line_of(file, n)
+        if file is in sources and n is at most length of item file of sources
+            if n is line
+                say "-> " n "  " text
+            else
+                say "   " n "  " text
+            end
+        end
+    end
+end
+
+to say_calls with line, file, fn
+    say "  " place_name(file, line) in_function(fn)
+    set k to length of calls
+    repeat while k is at least 1
+        set made_at to item k of calls
+        if made_at is nothing
+            say "  (called from outside the program)"
+        else
+            say "  " place_name(file of made_at, line of made_at) in_function(fn of made_at)
+        end
+        set k to k - 1
+    end
+end
+
+to say_help
+    say "step (s)        run this line, and stop at the next one, in a call it makes too"
+    say "next (n)        run this line, and stop at the next one here or after"
+    say "out (o)         run on, and stop once this call is over"
+    say "go (g)          run on, and stop only at a breakpoint"
+    say "break 12 (b)    stop at line 12 of this file; break math.folio 12 for another"
+    say "clear 12        take that breakpoint away; breaks lists them"
+    say "show x (p)      what x holds, or a sum of what they hold: show x + 1, show item 2 of xs, show rex's age"
+    say "vars (v)        every variable, and what it holds"
+    say "where (w)       this line, and the calls in progress"
+    say "list (l)        the lines around this one"
+    say "quit (q)        end the program here"
+end
+
+# Stopped before this line runs: what it is, then commands until one goes on. `names` are the variables the
+# line can see, `values` what they hold, and `given` whether each has a value yet.
+to here with line, file, depth, fn, names, values, given
+    set deep to depth
+    say place_name(file, line) in_function(fn) ": " unindented(line_of(file, line))
+    repeat while yes
+        set said to nothing
+        try
+            set said to ask "(folio)"
+        if it fails # the input ended: the program runs on, stopping nowhere
+            set mode to "go"
+            set breaks to empty dictionary
+            set commands_over to yes
+            return nothing
+        end
+        set words to words_of(said)
+        set command to ""
+        if length of words is at least 1
+            set command to lowercase of item 1 of words
+        end
+        if command is "step" or command is "s"
+            set mode to "step"
+            return nothing
+        else if command is "next" or command is "n"
+            set mode to "next"
+            return nothing
+        else if command is "out" or command is "o"
+            set mode to "out"
+            return nothing
+        else if command is "go" or command is "g" or command is "continue" or command is "c"
+            set mode to "go"
+            return nothing
+        else if command is "break" or command is "b"
+            set key to break_place(words, file)
+            if key is nothing
+                say "break needs a line's number: break 12, or break math.folio 12"
+            else
+                set item key of breaks to yes
+                say "breakpoint at " break_name(key)
+            end
+        else if command is "clear"
+            set key to break_place(words, file)
+            if key is nothing or not (key is in breaks)
+                say "there's no breakpoint there: breaks lists them"
+            else
+                remove key from breaks
+                say "breakpoint at " break_name(key) " taken away"
+            end
+        else if command is "breaks"
+            if length of breaks is 0
+                say "no breakpoints"
+            end
+            for each key in breaks
+                say "breakpoint at " break_name(key)
+            end
+        else if command is "show" or command is "p" or command is "print"
+            show_command(said, words, names, values, given)
+        else if command is "vars" or command is "v"
+            if written_count(names) is 0
+                say "no variables here"
+            end
+            for each name in names
+                if written(name)
+                    say_value(name, names, values, given)
+                end
+            end
+        else if command is "where" or command is "w"
+            say_calls(line, file, fn)
+        else if command is "list" or command is "l"
+            say_lines(file, line)
+        else if command is "quit" or command is "q"
+            stop the program with 0
+        else if command is "help" or command is "h" or command is "?" or command is ""
+            say_help()
+        else
+            say "I don't know '" command "': help says what I do"
+        end
+    end
+end
+
+# whether a name is one the program wrote, not one made for what a statement is written as (`the step on line 3`)
+to written with name
+    return not (" on line " is in name)
+end
+
+# how many of the names the program wrote
+to written_count with names
+    set n to 0
+    for each name in names
+        if written(name)
+            set n to n + 1
+        end
+    end
+    return n
+end
+
+# ---------- show, of a sum ----------
+
+# `show x`, or `show` a sum of the variables the line can see (`show total / count`, `show item 2 of xs`,
+# `show rex's age`): worked out here, from what each holds, as Folio works it out; a call can't be made
+to show_command with said, words, names, values, given
+    if length of words is 1
+        say "show needs a variable's name, or a sum of them: show x, show x + 1"
+        return nothing
+    end
+    if length of words is 2 and plain_name(item 2 of words)
+        say_value(lowercase of item 2 of words, names, values, given)
+        return nothing
+    end
+    set asked to after_command(said)
+    set worked to nothing
+    try
+        set worked to worked_out(asked, names, values, given)
+    if it fails with why
+        say "can't work out " asked ": " why
+        return nothing
+    end
+    say asked " is " shown(worked)
+end
+
+# whether it's a name alone, as a variable's is
+to plain_name with w
+    for each c in w
+        if not word_char(c)
+            return no
+        end
+    end
+    return yes
+end
+
+to word_char with c
+    return c is "_" or c is in "0123456789" or lowercase of c is not uppercase of c
+end
+
+# what was typed after the command's word, without the spaces around it
+to after_command with said
+    set chars to empty list
+    for each c in said
+        add c to chars
+    end
+    set k to 1
+    repeat while k is at most length of chars and item k of chars is " "
+        set k to k + 1
+    end
+    repeat while k is at most length of chars and item k of chars is not " "
+        set k to k + 1
+    end
+    repeat while k is at most length of chars and item k of chars is " "
+        set k to k + 1
+    end
+    set upto to length of chars
+    repeat while upto is at least k and item upto of chars is " "
+        set upto to upto - 1
+    end
+    set made to ""
+    for each j from k to upto
+        add item j of chars to made
+    end
+    return made
+end
+
+# the sum's value
+to worked_out with asked, names, values, given
+    set ev to record with tokens ev_tokens(asked), at 1, names names, values values, given given
+    set got to ev_or(ev)
+    if at of ev is at most length of tokens of ev
+        fail with "'" + value of item (at of ev) of tokens of ev + "' doesn't belong there"
+    end
+    return got
+end
+
+# the sum's pieces: numbers, text in quotes, words, and + - * / ( ) and 's, each a record with its kind and value
+to ev_tokens with asked
+    set chars to empty list
+    for each c in asked
+        add c to chars
+    end
+    add " " to chars
+    set made to empty list
+    set k to 1
+    set n to length of chars - 1
+    repeat while k is at most n
+        set c to item k of chars
+        if c is " " or c is "\t"
+            set k to k + 1
+        else if c is in "0123456789"
+            set piece to ""
+            repeat while item k of chars is in "0123456789."
+                add item k of chars to piece
+                set k to k + 1
+            end
+            add (record with kind "number", value number of piece) to made
+        else if c is "\""
+            set piece to ""
+            set k to k + 1
+            repeat while k is at most n and item k of chars is not "\""
+                add item k of chars to piece
+                set k to k + 1
+            end
+            if k is greater than n
+                fail with "its text has no closing quote"
+            end
+            set k to k + 1
+            add (record with kind "text", value piece) to made
+        else if word_char(c)
+            set piece to ""
+            repeat while word_char(item k of chars)
+                add item k of chars to piece
+                set k to k + 1
+            end
+            add (record with kind "word", value lowercase of piece) to made
+            if item k of chars is "'" and k + 1 is at most n
+                if lowercase of item (k + 1) of chars is "s" and not word_char(item (k + 2) of chars)
+                    add (record with kind "op", value "'s") to made
+                    set k to k + 2
+                end
+            end
+        else if c is in "+-*/(),"
+            add (record with kind "op", value c) to made
+            set k to k + 1
+        else
+            fail with "'" + c + "' isn't part of a sum show can work out"
+        end
+    end
+    return made
+end
+
+# whether the next piece is this word (or this op), and if so, past it
+to ev_take with ev, kind_of_it, wanted
+    if at of ev is greater than length of tokens of ev
+        return no
+    end
+    set piece to item (at of ev) of tokens of ev
+    if kind of piece is kind_of_it and value of piece is wanted
+        set at of ev to at of ev + 1
+        return yes
+    end
+    return no
+end
+
+# whether the piece this many on is this word, without taking it
+to ev_is_word with ev, ahead, wanted
+    set place to at of ev + ahead
+    if place is greater than length of tokens of ev
+        return no
+    end
+    set piece to item place of tokens of ev
+    return kind of piece is "word" and value of piece is wanted
+end
+
+to ev_or with ev
+    set got to ev_and(ev)
+    repeat while ev_take(ev, "word", "or")
+        set other to ev_and(ev)
+        set got to got or other
+    end
+    return got
+end
+
+to ev_and with ev
+    set got to ev_not(ev)
+    repeat while ev_take(ev, "word", "and")
+        set other to ev_not(ev)
+        set got to got and other
+    end
+    return got
+end
+
+to ev_not with ev
+    if ev_take(ev, "word", "not")
+        return not ev_not(ev)
+    end
+    return ev_compare(ev)
+end
+
+to ev_compare with ev
+    set left_side to ev_sum(ev)
+    if not ev_take(ev, "word", "is")
+        return left_side
+    end
+    set negated to ev_take(ev, "word", "not")
+    set op to "is"
+    for each phrase in list of (list of "greater", "than"), (list of "less", "than"), (list of "at", "least"), (list of "at", "most"), (list of "divisible", "by")
+        if op is "is" and ev_is_word(ev, 0, item 1 of phrase) and ev_is_word(ev, 1, item 2 of phrase)
+            set op to item 1 of phrase + " " + item 2 of phrase
+            set at of ev to at of ev + 2
+        end
+    end
+    if op is "is" and ev_take(ev, "word", "in")
+        set op to "in"
+    end
+    set right_side to ev_sum(ev)
+    set result to left_side is right_side
+    if op is "greater than"
+        set result to left_side is greater than right_side
+    else if op is "less than"
+        set result to left_side is less than right_side
+    else if op is "at least"
+        set result to left_side is at least right_side
+    else if op is "at most"
+        set result to left_side is at most right_side
+    else if op is "divisible by"
+        set result to left_side is divisible by right_side
+    else if op is "in"
+        set result to left_side is in right_side
+    end
+    if negated
+        return not result
+    end
+    return result
+end
+
+to ev_sum with ev
+    set got to ev_term(ev)
+    repeat while yes
+        if ev_take(ev, "op", "+")
+            set other to ev_term(ev)
+            set got to got + other
+        else if ev_take(ev, "op", "-")
+            set other to ev_term(ev)
+            set got to got - other
+        else
+            return got
+        end
+    end
+end
+
+to ev_term with ev
+    set got to ev_unary(ev)
+    repeat while yes
+        if ev_take(ev, "op", "*")
+            set other to ev_unary(ev)
+            set got to got * other
+        else if ev_take(ev, "op", "/")
+            set other to ev_unary(ev)
+            set got to got / other
+        else
+            return got
+        end
+    end
+end
+
+to ev_unary with ev
+    if ev_take(ev, "op", "-")
+        return 0 - ev_unary(ev)
+    end
+    for each built in list of "length", "keys", "uppercase", "lowercase", "number"
+        if ev_is_word(ev, 0, built) and ev_is_word(ev, 1, "of")
+            set at of ev to at of ev + 2
+            set inner to ev_unary(ev)
+            if built is "length"
+                return length of inner
+            else if built is "keys"
+                return keys of inner
+            else if built is "uppercase"
+                return uppercase of inner
+            else if built is "lowercase"
+                return lowercase of inner
+            end
+            return number of inner
+        end
+    end
+    if ev_take(ev, "word", "item")
+        set place to ev_sum(ev)
+        if not ev_take(ev, "word", "of")
+            fail with "'item' needs 'of' after where the item is"
+        end
+        set inner to ev_unary(ev)
+        return item place of inner
+    end
+    if at of ev is at most length of tokens of ev and ev_is_word(ev, 1, "of")
+        set piece to item (at of ev) of tokens of ev
+        if kind of piece is "word" and not (value of piece is in list of "yes", "no", "nothing")
+            set at of ev to at of ev + 2
+            return field_of(ev_unary(ev), value of piece)
+        end
+    end
+    return ev_postfix(ev)
+end
+
+to ev_postfix with ev
+    set got to ev_primary(ev)
+    repeat while ev_take(ev, "op", "'s")
+        if at of ev is greater than length of tokens of ev
+            fail with "'s needs a field's name after it"
+        end
+        set piece to item (at of ev) of tokens of ev
+        if kind of piece is not "word"
+            fail with "'s needs a field's name after it"
+        end
+        set at of ev to at of ev + 1
+        set got to field_of(got, value of piece)
+    end
+    return got
+end
+
+to ev_primary with ev
+    if at of ev is greater than length of tokens of ev
+        fail with "it ends too soon"
+    end
+    set piece to item (at of ev) of tokens of ev
+    set at of ev to at of ev + 1
+    if kind of piece is "number" or kind of piece is "text"
+        return value of piece
+    end
+    if kind of piece is "op" and value of piece is "("
+        set inner to ev_or(ev)
+        if not ev_take(ev, "op", ")")
+            fail with "a ( needs its )"
+        end
+        return inner
+    end
+    if kind of piece is not "word"
+        fail with "'" + value of piece + "' doesn't belong there"
+    end
+    if value of piece is "yes"
+        return yes
+    else if value of piece is "no"
+        return no
+    else if value of piece is "nothing"
+        return nothing
+    end
+    set wanted to value of piece
+    if at of ev + 1 is at most length of tokens of ev # `math's pi`: a file's name, if the line can see one
+        set next_piece to item (at of ev) of tokens of ev
+        set after_piece to item (at of ev + 1) of tokens of ev
+        if kind of next_piece is "op" and value of next_piece is "'s" and kind of after_piece is "word"
+            if (wanted + "'s " + value of after_piece) is in names of ev
+                set wanted to wanted + "'s " + value of after_piece
+                set at of ev to at of ev + 2
+            end
+        end
+    end
+    for each k from 1 to length of names of ev
+        if item k of names of ev is wanted
+            if not item k of given of ev
+                fail with "'" + wanted + "' has no value yet"
+            end
+            return item k of values of ev
+        end
+    end
+    fail with "there's no '" + wanted + "' here"
+end
+
+# a record's field, or a dictionary's key, by its name
+to field_of with holder, field_name
+    set found to nothing
+    try
+        set found to item field_name of (json from (holder as json))
+    if it fails
+        fail with "there's no '" + field_name + "' in that to see"
+    end
+    return found
+end

@@ -1,5 +1,5 @@
 name: An idea
-description: Something Moth could do, say more clearly, or have in its standard library
+description: Something Folio could do, say more clearly, or have in its standard library
 labels: [enhancement]
 body:
   - type: textarea
@@ -12,8 +12,8 @@ body:
   - type: textarea
     id: reads
     attributes:
-      label: How it might read in Moth
-      description: A few lines of Moth as you'd like to write them. Moth should read like plain English.
+      label: How it might read in Folio
+      description: A few lines of Folio as you'd like to write them. Folio should read like plain English.
       render: text
   - type: dropdown
     id: kind

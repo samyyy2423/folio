@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>xml.moth · Moth's standard library</title>
+  <title>xml.folio · Folio's standard library</title>
   <meta name="description" content="Reads XML into records, and writes them back.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>xml</em>.moth</h1>
+      <h1><em>xml</em>.folio</h1>
       <p>Reads XML into records, and writes them back.</p>
-      <p class="use"><code>use "xml.moth" as xml</code></p>
+      <p class="use"><code>use "xml.folio" as xml</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="xml.moth's functions">
+    <nav class="toc" aria-label="xml.folio's functions">
       <h2>8 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#parse">parse</a></li><li><a href="#element">element</a></li><li><a href="#text_node">text_node</a></li><li><a href="#text_of">text_of</a></li><li><a href="#first_named">first_named</a></li><li><a href="#all_named">all_named</a></li><li><a href="#attribute">attribute</a></li><li><a href="#written">written</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
           <p>Reads XML into records, and writes them back. An element is a record with kind &quot;element&quot;, its name, its attributes (a dictionary, in the order they're written) and what's in it, in order: other elements, and text, each a record with kind &quot;text&quot; and the text.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> feed <span class="k">to</span> xml's parse(<span class="k">read</span> <span class="s">&quot;feed.xml&quot;</span>)
 <span class="k">for</span> <span class="k">each</span> entry <span class="k">in</span> xml's all_named(feed, <span class="s">&quot;item&quot;</span>)
     <span class="k">say</span> xml's text_of(xml's first_named(entry, <span class="s">&quot;title&quot;</span>))
@@ -73,9 +73,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>text</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to parse with text</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L21">xml.moth line 21</a></p>
+          <p class="written">Written <code>to parse with text</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L21">xml.folio line 21</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> a <span class="k">to</span> xml's parse(<span class="s">&quot;&lt;a x=\&quot;1\&quot; y='two'&gt;&lt;b&gt;hi&lt;/b&gt;&lt;b/&gt;text &amp;amp; more&lt;/a&gt;&quot;</span>)
 <span class="k">say</span> a</code></pre><pre class="says"><code>(record with kind &quot;element&quot;, name &quot;a&quot;, attributes (dictionary where &quot;x&quot; is &quot;1&quot;, &quot;y&quot; is &quot;two&quot;), children [(record with kind &quot;element&quot;, name &quot;b&quot;, attributes (empty dictionary), children [(record with kind &quot;text&quot;, text &quot;hi&quot;)]), (record with kind &quot;element&quot;, name &quot;b&quot;, attributes (empty dictionary), children []), (record with kind &quot;text&quot;, text &quot;text &amp; more&quot;)])</code></pre></div>
         </section>
@@ -86,9 +86,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>name</code></li><li><code>attributes</code></li><li><code>inside</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to element with name, attributes, inside</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L329">xml.moth line 329</a></p>
+          <p class="written">Written <code>to element with name, attributes, inside</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L329">xml.folio line 329</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> made <span class="k">to</span> xml's element(<span class="s">&quot;p&quot;</span>, (<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;class&quot;</span> <span class="k">is</span> <span class="s">&quot;a \&quot;b\&quot; &amp; c&quot;</span>), (<span class="k">list</span> <span class="k">of</span> xml's text_node(<span class="s">&quot;1 &lt; 2 &amp; 3 &gt; 2&quot;</span>), xml's element(<span class="s">&quot;br&quot;</span>, <span class="k">empty</span> <span class="k">dictionary</span>, <span class="k">empty</span> <span class="k">list</span>)))
 <span class="k">say</span> made</code></pre><pre class="says"><code>(record with kind &quot;element&quot;, name &quot;p&quot;, attributes (dictionary where &quot;class&quot; is &quot;a \&quot;b\&quot; &amp; c&quot;), children [(record with kind &quot;text&quot;, text &quot;1 &lt; 2 &amp; 3 &gt; 2&quot;), (record with kind &quot;element&quot;, name &quot;br&quot;, attributes (empty dictionary), children [])])</code></pre></div>
         </section>
@@ -99,9 +99,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_node with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L334">xml.moth line 334</a></p>
+          <p class="written">Written <code>to text_node with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L334">xml.folio line 334</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> made <span class="k">to</span> xml's element(<span class="s">&quot;p&quot;</span>, (<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;class&quot;</span> <span class="k">is</span> <span class="s">&quot;a \&quot;b\&quot; &amp; c&quot;</span>), (<span class="k">list</span> <span class="k">of</span> xml's text_node(<span class="s">&quot;1 &lt; 2 &amp; 3 &gt; 2&quot;</span>), xml's element(<span class="s">&quot;br&quot;</span>, <span class="k">empty</span> <span class="k">dictionary</span>, <span class="k">empty</span> <span class="k">list</span>)))
 <span class="k">say</span> made</code></pre><pre class="says"><code>(record with kind &quot;element&quot;, name &quot;p&quot;, attributes (dictionary where &quot;class&quot; is &quot;a \&quot;b\&quot; &amp; c&quot;), children [(record with kind &quot;text&quot;, text &quot;1 &lt; 2 &amp; 3 &gt; 2&quot;), (record with kind &quot;element&quot;, name &quot;br&quot;, attributes (empty dictionary), children [])])</code></pre></div>
         </section>
@@ -112,9 +112,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>e</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_of with e</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L339">xml.moth line 339</a></p>
+          <p class="written">Written <code>to text_of with e</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L339">xml.folio line 339</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> a <span class="k">to</span> xml's parse(<span class="s">&quot;&lt;a x=\&quot;1\&quot; y='two'&gt;&lt;b&gt;hi&lt;/b&gt;&lt;b/&gt;text &amp;amp; more&lt;/a&gt;&quot;</span>)
 <span class="k">say</span> xml's text_of(<span class="k">item</span> <span class="n">1</span> <span class="k">of</span> children <span class="k">of</span> a)</code></pre><pre class="says"><code>hi</code></pre></div>
         </section>
@@ -125,9 +125,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>e</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to first_named with e, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L356">xml.moth line 356</a></p>
+          <p class="written">Written <code>to first_named with e, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L356">xml.folio line 356</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> doc <span class="k">to</span> xml's parse(<span class="s">&quot;&lt;feed&gt;&lt;item&gt;&lt;title&gt;One&lt;/title&gt;&lt;/item&gt;&lt;item&gt;&lt;title&gt;Two &lt;i&gt;2&lt;/i&gt;&lt;/title&gt;&lt;/item&gt;&lt;group&gt;&lt;item&gt;&lt;title&gt;Three&lt;/title&gt;&lt;/item&gt;&lt;/group&gt;&lt;/feed&gt;&quot;</span>)
 <span class="k">say</span> xml's first_named(doc, <span class="s">&quot;title&quot;</span>)</code></pre><pre class="says"><code>nothing</code></pre></div>
         </section>
@@ -138,9 +138,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>e</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to all_named with e, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L366">xml.moth line 366</a></p>
+          <p class="written">Written <code>to all_named with e, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L366">xml.folio line 366</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> doc <span class="k">to</span> xml's parse(<span class="s">&quot;&lt;feed&gt;&lt;item&gt;&lt;title&gt;One&lt;/title&gt;&lt;/item&gt;&lt;item&gt;&lt;title&gt;Two &lt;i&gt;2&lt;/i&gt;&lt;/title&gt;&lt;/item&gt;&lt;group&gt;&lt;item&gt;&lt;title&gt;Three&lt;/title&gt;&lt;/item&gt;&lt;/group&gt;&lt;/feed&gt;&quot;</span>)
 <span class="k">say</span> <span class="k">length</span> <span class="k">of</span> xml's all_named(doc, <span class="s">&quot;title&quot;</span>)</code></pre><pre class="says"><code>3</code></pre></div>
         </section>
@@ -151,9 +151,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>e</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to attribute with e, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L384">xml.moth line 384</a></p>
+          <p class="written">Written <code>to attribute with e, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L384">xml.folio line 384</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> a <span class="k">to</span> xml's parse(<span class="s">&quot;&lt;a x=\&quot;1\&quot; y='two'&gt;&lt;b&gt;hi&lt;/b&gt;&lt;b/&gt;text &amp;amp; more&lt;/a&gt;&quot;</span>)
 <span class="k">say</span> xml's attribute(a, <span class="s">&quot;x&quot;</span>)</code></pre><pre class="says"><code>1</code></pre></div>
         </section>
@@ -164,9 +164,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>e</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to written with e</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xml.moth#L394">xml.moth line 394</a></p>
+          <p class="written">Written <code>to written with e</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xml.folio#L394">xml.folio line 394</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.moth&quot;</span> <span class="k">as</span> xml
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xml.folio&quot;</span> <span class="k">as</span> xml
 <span class="k">set</span> made <span class="k">to</span> xml's element(<span class="s">&quot;p&quot;</span>, (<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;class&quot;</span> <span class="k">is</span> <span class="s">&quot;a \&quot;b\&quot; &amp; c&quot;</span>), (<span class="k">list</span> <span class="k">of</span> xml's text_node(<span class="s">&quot;1 &lt; 2 &amp; 3 &gt; 2&quot;</span>), xml's element(<span class="s">&quot;br&quot;</span>, <span class="k">empty</span> <span class="k">dictionary</span>, <span class="k">empty</span> <span class="k">list</span>)))
 <span class="k">set</span> text <span class="k">to</span> xml's written(made)
 <span class="k">say</span> text</code></pre><pre class="says"><code>&lt;p class=&quot;a &amp;quot;b&amp;quot; &amp;amp; c&quot;&gt;1 &amp;lt; 2 &amp;amp; 3 &amp;gt; 2&lt;br/&gt;&lt;/p&gt;</code></pre></div>
@@ -176,14 +176,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

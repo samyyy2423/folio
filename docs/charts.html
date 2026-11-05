@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>charts.moth · Moth's standard library</title>
+  <title>charts.folio · Folio's standard library</title>
   <meta name="description" content="Charts written to files, as matplotlib's savefig makes them.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>charts</em>.moth</h1>
+      <h1><em>charts</em>.folio</h1>
       <p>Charts written to files, as matplotlib's savefig makes them.</p>
-      <p class="use"><code>use "charts.moth" as charts</code></p>
+      <p class="use"><code>use "charts.folio" as charts</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="charts.moth's functions">
+    <nav class="toc" aria-label="charts.folio's functions">
       <h2>7 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#bar_chart">bar_chart</a></li><li><a href="#line_chart">line_chart</a></li><li><a href="#parts_chart">parts_chart</a></li><li><a href="#sized">sized</a></li><li><a href="#save">save</a></li><li><a href="#svg_of">svg_of</a></li><li><a href="#png_of">png_of</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Charts written to files, as matplotlib's savefig makes them: bars, lines, and one bar split into its parts, as SVG (sharp at any size, for pages and documents; each mark says its value when the mouse is on it) or as PNG, from labels and numbers. In Moth alone, so it works everywhere.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <p>Charts written to files, as matplotlib's savefig makes them: bars, lines, and one bar split into its parts, as SVG (sharp at any size, for pages and documents; each mark says its value when the mouse is on it) or as PNG, from labels and numbers. In Folio alone, so it works everywhere.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> months <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Jan&quot;</span>, <span class="s">&quot;Feb&quot;</span>, <span class="s">&quot;Mar&quot;</span>, <span class="s">&quot;Apr&quot;</span>
 <span class="k">set</span> sales <span class="k">to</span> charts's bar_chart(<span class="s">&quot;Sales by month&quot;</span>, months, <span class="k">list</span> <span class="k">of</span> <span class="n">120</span>, <span class="n">95</span>, <span class="n">140</span>, <span class="n">160</span>)
 charts's save(sales, <span class="s">&quot;sales.svg&quot;</span>)                     <span class="c"># or &quot;sales.png&quot;, by the name's end</span>
@@ -73,9 +73,9 @@ charts's save(charts's parts_chart(<span class="s">&quot;Where it went&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>title</code></li><li><code>labels</code></li><li><code>values</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bar_chart with title, labels, values</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L229">charts.moth line 229</a></p>
+          <p class="written">Written <code>to bar_chart with title, labels, values</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L229">charts.folio line 229</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> <span class="k">chart</span> <span class="k">to</span> charts's sized(charts's bar_chart(<span class="s">&quot;Up&quot;</span>, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="s">&quot;b&quot;</span>), <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="n">160</span>, <span class="n">120</span>)
 <span class="k">say</span> <span class="k">chart</span></code></pre><pre class="says"><code>(record with kind &quot;bars&quot;, title &quot;Up&quot;, labels [&quot;a&quot;, &quot;b&quot;], series [(record with name &quot;Up&quot;, values [1, 2])], width 160, height 120)</code></pre></div>
         </section>
@@ -86,9 +86,9 @@ charts's save(charts's parts_chart(<span class="s">&quot;Where it went&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>title</code></li><li><code>labels</code></li><li><code>values</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to line_chart with title, labels, values</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L235">charts.moth line 235</a></p>
+          <p class="written">Written <code>to line_chart with title, labels, values</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L235">charts.folio line 235</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> months <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Jan&quot;</span>, <span class="s">&quot;Feb&quot;</span>, <span class="s">&quot;Mar&quot;</span>, <span class="s">&quot;Apr&quot;</span>
 <span class="k">set</span> both <span class="k">to</span> <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;2025&quot;</span> <span class="k">is</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">120</span>, <span class="n">95</span>, <span class="n">140</span>, <span class="n">160</span>), <span class="s">&quot;2026&quot;</span> <span class="k">is</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">130</span>, <span class="n">120</span>, <span class="n">150</span>, <span class="n">180</span>)
 charts's save(charts's line_chart(<span class="s">&quot;Sales&quot;</span>, months, both), <span class="s">&quot;sales-lines.png&quot;</span>)   <span class="c"># a line for each</span></code></pre></div>
@@ -100,9 +100,9 @@ charts's save(charts's line_chart(<span class="s">&quot;Sales&quot;</span>, mont
             <div><h4>Inputs</h4><ul class="inputs"><li><code>title</code></li><li><code>labels</code></li><li><code>values</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to parts_chart with title, labels, values</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L240">charts.moth line 240</a></p>
+          <p class="written">Written <code>to parts_chart with title, labels, values</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L240">charts.folio line 240</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> parts <span class="k">to</span> charts's svg_of(charts's parts_chart(<span class="s">&quot;Split&quot;</span>, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;A&quot;</span>, <span class="s">&quot;B&quot;</span>), <span class="k">list</span> <span class="k">of</span> <span class="n">3</span>, <span class="n">1</span>))
 <span class="k">say</span> parts</code></pre><pre class="says"><code>&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;720&quot; height=&quot;200&quot; viewBox=&quot;0 0 720 200&quot; font-family=&quot;DejaVu Sans, Verdana, sans-serif&quot;&gt;
 &lt;title&gt;Split&lt;/title&gt;
@@ -126,9 +126,9 @@ charts's save(charts's line_chart(<span class="s">&quot;Sales&quot;</span>, mont
             <div><h4>Inputs</h4><ul class="inputs"><li><code>chart</code></li><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sized with chart, width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L259">charts.moth line 259</a></p>
+          <p class="written">Written <code>to sized with chart, width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L259">charts.folio line 259</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> <span class="k">chart</span> <span class="k">to</span> charts's sized(charts's bar_chart(<span class="s">&quot;Up&quot;</span>, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="s">&quot;b&quot;</span>), <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="n">160</span>, <span class="n">120</span>)
 <span class="k">say</span> <span class="k">chart</span></code></pre><pre class="says"><code>(record with kind &quot;bars&quot;, title &quot;Up&quot;, labels [&quot;a&quot;, &quot;b&quot;], series [(record with name &quot;Up&quot;, values [1, 2])], width 160, height 120)</code></pre></div>
         </section>
@@ -139,9 +139,9 @@ charts's save(charts's line_chart(<span class="s">&quot;Sales&quot;</span>, mont
             <div><h4>Inputs</h4><ul class="inputs"><li><code>chart</code></li><li><code>path</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to save with chart, path</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L264">charts.moth line 264</a></p>
+          <p class="written">Written <code>to save with chart, path</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L264">charts.folio line 264</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> months <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Jan&quot;</span>, <span class="s">&quot;Feb&quot;</span>, <span class="s">&quot;Mar&quot;</span>, <span class="s">&quot;Apr&quot;</span>
 <span class="k">set</span> sales <span class="k">to</span> charts's bar_chart(<span class="s">&quot;Sales by month&quot;</span>, months, <span class="k">list</span> <span class="k">of</span> <span class="n">120</span>, <span class="n">95</span>, <span class="n">140</span>, <span class="n">160</span>)
 charts's save(sales, <span class="s">&quot;sales.svg&quot;</span>)                     <span class="c"># or &quot;sales.png&quot;, by the name's end</span></code></pre></div>
@@ -153,9 +153,9 @@ charts's save(sales, <span class="s">&quot;sales.svg&quot;</span>)              
             <div><h4>Inputs</h4><ul class="inputs"><li><code>chart</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to svg_of with chart</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L675">charts.moth line 675</a></p>
+          <p class="written">Written <code>to svg_of with chart</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L675">charts.folio line 675</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> parts <span class="k">to</span> charts's svg_of(charts's parts_chart(<span class="s">&quot;Split&quot;</span>, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;A&quot;</span>, <span class="s">&quot;B&quot;</span>), <span class="k">list</span> <span class="k">of</span> <span class="n">3</span>, <span class="n">1</span>))
 <span class="k">say</span> parts</code></pre><pre class="says"><code>&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;720&quot; height=&quot;200&quot; viewBox=&quot;0 0 720 200&quot; font-family=&quot;DejaVu Sans, Verdana, sans-serif&quot;&gt;
 &lt;title&gt;Split&lt;/title&gt;
@@ -179,9 +179,9 @@ charts's save(sales, <span class="s">&quot;sales.svg&quot;</span>)              
             <div><h4>Inputs</h4><ul class="inputs"><li><code>chart</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to png_of with chart</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/charts.moth#L905">charts.moth line 905</a></p>
+          <p class="written">Written <code>to png_of with chart</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/charts.folio#L905">charts.folio line 905</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.moth&quot;</span> <span class="k">as</span> charts
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;charts.folio&quot;</span> <span class="k">as</span> charts
 <span class="k">set</span> <span class="k">chart</span> <span class="k">to</span> charts's sized(charts's bar_chart(<span class="s">&quot;Up&quot;</span>, (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="s">&quot;b&quot;</span>), <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>), <span class="n">160</span>, <span class="n">120</span>)
 <span class="k">set</span> drawn <span class="k">to</span> images's image_from(charts's png_of(<span class="k">chart</span>))
 <span class="k">say</span> drawn</code></pre></div>
@@ -191,14 +191,14 @@ charts's save(sales, <span class="s">&quot;sales.svg&quot;</span>)              
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "difference_of_squares.moth"
+      "difference_of_squares.folio"
     ],
     "test": [
-      "difference_of_squares.test.moth"
+      "difference_of_squares.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "The square of a sum, the sum of squares, and the difference."

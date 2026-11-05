@@ -1,6 +1,6 @@
 # Publishing the VS Code extension
 
-The VS Code extension, [`editors/vscode`](../editors/vscode), is published as **samyyy2423.moth** in two places:
+The VS Code extension, [`editors/vscode`](../editors/vscode), is published as **samyyy2423.folio** in two places:
 
 - the [Visual Studio Marketplace](https://marketplace.visualstudio.com/vscode), where VS Code itself finds
   extensions;
@@ -14,10 +14,10 @@ After that, publishing is: change the version, merge, press Run workflow.
 
 ## When to publish the first time
 
-The extension's hovers, completion, Go to Definition into other files and its debugger need `moth lsp` and the
-`moth debug` the debug adapter speaks, which came after Moth 1.11.0. With 1.11.0, Run and Build work, and the
+The extension's hovers, completion, Go to Definition into other files and its debugger need `folio lsp` and the
+`folio debug` the debug adapter speaks, which came after Folio 1.11.0. With 1.11.0, Run and Build work, and the
 outline and Go to Definition find the file's own functions by their lines. So publish the extension after the
-next Moth release, or with it, so that people who download Moth get a moth the extension can use fully.
+next Folio release, or with it, so that people who download Folio get a folio the extension can use fully.
 
 ## 1. The Marketplace publisher, samyyy2423
 
@@ -40,7 +40,7 @@ The Marketplace takes a personal access token (PAT) from Azure DevOps, made with
    organization, make one: any name will do, as it's only needed to make the token.
 2. Open **User settings** (the icon at the top right, by your picture), then **Personal access tokens**.
 3. Choose **New Token**, and fill it in:
-   - **Name:** `Moth extension publishing`;
+   - **Name:** `Folio extension publishing`;
    - **Organization:** **All accessible organizations**. A token for one organization makes publishing fail
      with *401 Unauthorized*;
    - **Expiration:** as long as it allows (note the date: when it ends, make a new one and replace the secret);
@@ -64,7 +64,7 @@ It should say *The Personal Access Token verification succeeded for the publishe
 2. At <https://open-vsx.org>, choose the account icon at the top right and log in with GitHub.
 3. Open your **Settings** (your picture, then Settings), choose **Log in with Eclipse**, and allow it. Then
    **Show Publisher Agreement**, read it to the end, and choose **Agree**.
-4. In Settings, **Access Tokens**, choose **Generate New Token**, describe it as `Moth extension publishing`, and
+4. In Settings, **Access Tokens**, choose **Generate New Token**, describe it as `Folio extension publishing`, and
    copy the token. It's shown only once.
 5. Make the `samyyy2423` namespace, which is the `publisher` in package.json. In a terminal, give the token to
    ovsx in `OVSX_PAT`, typed in where it isn't shown or kept in your shell's history:
@@ -92,7 +92,7 @@ It should say *The Personal Access Token verification succeeded for the publishe
 
 ## 4. The repository's secrets
 
-On GitHub, in **samyyy2423/moth**, open **Settings**, **Secrets and variables**, **Actions**, and choose **New
+On GitHub, in **samyyy2423/folio**, open **Settings**, **Secrets and variables**, **Actions**, and choose **New
 repository secret** for each:
 
 | Name | Secret |
@@ -114,18 +114,18 @@ place and leaves a notice saying which it didn't.
 
    with the new version: the next patch (0.1.1) for fixes, the next minor (0.2.0) for something new. It changes
    `package.json` and `package-lock.json`, and makes no commit and no tag. Neither place takes a version it already
-   has. The first time, 0.1.0, as it is, needs no change. The extension's version is its own, apart from Moth's.
+   has. The first time, 0.1.0, as it is, needs no change. The extension's version is its own, apart from Folio's.
 2. **Say what changed** at the top of [`editors/vscode/CHANGELOG.md`](../editors/vscode/CHANGELOG.md), which the
    Marketplace shows on its Changelog tab.
 3. **Merge it** into `main` through a pull request, as every change is.
 4. **Run the workflow.** On GitHub, open **Actions**, choose **publish the VS Code extension**, then **Run
    workflow**, with the branch `main`, and **Run workflow** again. It runs only from `main`.
 5. **Watch it.** The first job packs, checks and tests the extension (a few minutes), and keeps the `.vsix` with
-   the run, as **moth-vscode-extension**. The second publishes it. The run's summary has a notice for a place it
+   the run, as **folio-vscode-extension**. The second publishes it. The run's summary has a notice for a place it
    skipped.
 6. **Check it.** The Marketplace checks a new version for a few minutes before it shows:
-   <https://marketplace.visualstudio.com/items?itemName=samyyy2423.moth>, and
-   <https://open-vsx.org/extension/samyyy2423/moth>. In VS Code, the Extensions view finds it as *Moth*.
+   <https://marketplace.visualstudio.com/items?itemName=samyyy2423.folio>, and
+   <https://open-vsx.org/extension/samyyy2423/folio>. In VS Code, the Extensions view finds it as *Folio*.
 
 ## After December 1, 2026: Trusted Publishing
 
@@ -133,7 +133,7 @@ With Trusted Publishing, the Marketplace trusts this workflow, run from this rep
 so there's nothing to make, keep or renew.
 
 1. At <https://marketplace.visualstudio.com/manage>, open the `samyyy2423` publisher, choose **Trusted
-   Publishing**, and make a policy: owner `samyyy2423`, repository `moth`, workflow `publish-extension.yml`, and
+   Publishing**, and make a policy: owner `samyyy2423`, repository `folio`, workflow `publish-extension.yml`, and
    no environment.
 2. In the repository's **Settings**, **Secrets and variables**, **Actions**, on the **Variables** tab, add
    `VSCE_TRUSTED_PUBLISHING` with the value `true`, and delete the `VSCE_PAT` secret, which the workflow uses

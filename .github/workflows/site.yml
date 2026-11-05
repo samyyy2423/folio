@@ -1,4 +1,4 @@
-# Moth's website (site/, DESIGN §148), built with Next.js and published to GitHub Pages. For it to be what Pages
+# Folio's website (site/, DESIGN §148), built with Next.js and published to GitHub Pages. For it to be what Pages
 # serves, the repository's Settings > Pages > Source must be "GitHub Actions".
 name: Website
 

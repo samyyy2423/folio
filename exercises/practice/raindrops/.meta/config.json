@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "raindrops.moth"
+      "raindrops.folio"
     ],
     "test": [
-      "raindrops.test.moth"
+      "raindrops.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Turn a number into raindrop sounds by what it divides by."

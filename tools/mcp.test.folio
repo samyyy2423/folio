@@ -1,0 +1,131 @@
+use "mcp.folio" as mcp
+
+to add_up with given
+    return item "a" of given + item "b" of given
+end
+
+to fails_always with given
+    fail with "the sky fell"
+end
+
+to listing with given
+    return list of 1, "two"
+end
+
+to notes_today with address
+    return "buy milk"
+end
+
+to greeting_prompt with given
+    return "Say hello to " + item "name" of given
+end
+
+# a server with a tool of each sort, a resource and a prompt
+to made
+    set s to mcp's server("calculator", "1.0.0")
+    set two to dictionary where "a" is "number: the first", "b" is "number"
+    mcp's tool(s, "add", "Adds two numbers", two, add_up)
+    mcp's tool(s, "fail", "Always fails", nothing, fails_always)
+    set how to dictionary where "how" is "text or nothing"
+    mcp's tool(s, "list", "Gives a list", how, listing)
+    mcp's resource(s, "notes://today", "Today", "Today's notes", "text/plain", notes_today)
+    set who to dictionary where "name" is "text: who"
+    mcp's prompt(s, "greet", "Greets someone", who, greeting_prompt)
+    return s
+end
+
+# the reply to a request, as a dictionary
+to asked with s, request
+    return json from mcp's answer(s, request as json)
+end
+
+to test_initialize
+    set reply to asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 1, "method" is "initialize", "params" is (dictionary where "protocolVersion" is "2025-03-26"))
+    expect item "id" of reply is 1
+    set result to item "result" of reply
+    expect item "protocolVersion" of result is "2025-03-26"
+    expect item "name" of item "serverInfo" of result is "calculator"
+    expect keys of item "capabilities" of result is list of "tools", "resources", "prompts"
+end
+
+to test_a_version_it_doesnt_know_gets_its_newest
+    set reply to asked(made(), dictionary where "jsonrpc" is "2.0", "id" is "a", "method" is "initialize", "params" is (dictionary where "protocolVersion" is "1999-01-01"))
+    expect item "protocolVersion" of item "result" of reply is "2025-06-18"
+    expect item "id" of reply is "a"
+end
+
+to test_notifications_have_no_reply
+    expect mcp's answer(made(), "\{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\"}") is nothing
+end
+
+to test_tools_list
+    set tools to item "tools" of item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 2, "method" is "tools/list")
+    expect length of tools is 3
+    set add_tool to item 1 of tools
+    expect item "name" of add_tool is "add"
+    set schema to item "inputSchema" of add_tool
+    expect item "type" of schema is "object"
+    expect item "required" of schema is list of "a", "b"
+    expect item "description" of item "a" of item "properties" of schema is "the first"
+    expect item "type" of item "b" of item "properties" of schema is "number"
+    expect item "required" of item "inputSchema" of item 3 of tools is empty list
+    expect item "properties" of item "inputSchema" of item 2 of tools is empty dictionary
+end
+
+to test_tools_call
+    set params to dictionary where "name" is "add", "arguments" is (dictionary where "a" is 2, "b" is 3)
+    set result to item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 3, "method" is "tools/call", "params" is params)
+    expect item "isError" of result is no
+    expect item "content" of result is list of (dictionary where "type" is "text", "text" is "5")
+end
+
+to test_a_tool_that_gives_a_list_gives_json
+    set params to dictionary where "name" is "list", "arguments" is empty dictionary
+    set result to item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 4, "method" is "tools/call", "params" is params)
+    expect item "text" of item 1 of item "content" of result is "[1,\"two\"]"
+end
+
+to test_a_tools_mistake_is_its_error
+    set params to dictionary where "name" is "fail", "arguments" is empty dictionary
+    set result to item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 5, "method" is "tools/call", "params" is params)
+    expect item "isError" of result is yes
+    expect item "text" of item 1 of item "content" of result is "the sky fell"
+end
+
+to test_unknown_tools_and_methods
+    set params to dictionary where "name" is "nope"
+    set reply to asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 6, "method" is "tools/call", "params" is params)
+    expect item "code" of item "error" of reply is -32602
+    set reply to asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 7, "method" is "sampling/whatever")
+    expect item "code" of item "error" of reply is -32601
+    expect not ("result" is in reply)
+end
+
+to test_what_isnt_json
+    set reply to json from mcp's answer(made(), "\{not json")
+    expect item "code" of item "error" of reply is -32700
+    expect item "id" of reply is nothing
+end
+
+to test_resources
+    set listed to item "resources" of item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 8, "method" is "resources/list")
+    expect item "uri" of item 1 of listed is "notes://today"
+    expect item "mimeType" of item 1 of listed is "text/plain"
+    set params to dictionary where "uri" is "notes://today"
+    set read_back to item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 9, "method" is "resources/read", "params" is params)
+    expect item "text" of item 1 of item "contents" of read_back is "buy milk"
+end
+
+to test_prompts
+    set listed to item "prompts" of item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 10, "method" is "prompts/list")
+    expect item "arguments" of item 1 of listed is list of (dictionary where "name" is "name", "required" is yes, "description" is "who")
+    set params to dictionary where "name" is "greet", "arguments" is (dictionary where "name" is "Ada")
+    set got to item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 11, "method" is "prompts/get", "params" is params)
+    set message to item 1 of item "messages" of got
+    expect item "role" of message is "user"
+    expect item "text" of item "content" of message is "Say hello to Ada"
+end
+
+to test_ping
+    expect item "result" of asked(made(), dictionary where "jsonrpc" is "2.0", "id" is 12, "method" is "ping") is empty dictionary
+end

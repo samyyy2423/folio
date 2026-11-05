@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import MothMark from "@/components/MothMark";
+import FolioMark from "@/components/FolioMark";
 import { Highlighted } from "@/components/CodeView";
 import Footer from "@/components/Footer";
 import { BASE, RELEASES, playgroundLink } from "@/lib/site";
@@ -79,7 +79,7 @@ function Curtain({ onDone }) {
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-    fetch(`${BASE}/moth.wasm`).then(async (response) => {
+    fetch(`${BASE}/folio.wasm`).then(async (response) => {
       const total = Number(response.headers.get("content-length")) || 1_700_000;
       const reader = response.body?.getReader();
       if (!reader) return void (target = 100);
@@ -96,7 +96,7 @@ function Curtain({ onDone }) {
   }, [onDone]);
   return (
     <div className="curtain" ref={curtain} aria-hidden="true">
-      <p className="what"><MothMark />Loading Folio&apos;s compiler, written in Folio</p>
+      <p className="what"><FolioMark />Loading Folio&apos;s compiler, written in Folio</p>
       <p className="count">{String(count).padStart(3, "0")}</p>
     </div>
   );
@@ -251,7 +251,7 @@ function Board() {
   });
   return (
     <div className="board" ref={board}>
-      <div className="board-top"><span><MothMark />hello.folio · departures</span><span suppressHydrationWarning>{time}</span></div>
+      <div className="board-top"><span><FolioMark />hello.folio · departures</span><span suppressHydrationWarning>{time}</span></div>
       <div className="board-scroll">
         <div className="board-grid" role="table" aria-label="Where hello.folio runs, and how">
           <div className="board-head" role="row"><span role="columnheader">Via</span><span role="columnheader">To</span><span role="columnheader">As</span></div>
@@ -278,7 +278,7 @@ export default function Home({ lessons, gallery }) {
   useEffect(() => {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     let first = false;
-    try { first = !sessionStorage.getItem("moth-curtain"); sessionStorage.setItem("moth-curtain", "1"); } catch {}
+    try { first = !sessionStorage.getItem("folio-curtain"); sessionStorage.setItem("folio-curtain", "1"); } catch {}
     if (first && !reduced) setCurtain(true);
     else setReady(true);
   }, []);

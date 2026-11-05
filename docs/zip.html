@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>zip.moth · Moth's standard library</title>
-  <meta name="description" content="Squeezes bytes smaller and back, as gzip and .zip files do, in Moth alone: DEFLATE (RFC 1951), gzip (RFC 1952) and zip archives.">
+  <title>zip.folio · Folio's standard library</title>
+  <meta name="description" content="Squeezes bytes smaller and back, as gzip and .zip files do, in Folio alone: DEFLATE (RFC 1951), gzip (RFC 1952) and zip archives.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>zip</em>.moth</h1>
-      <p>Squeezes bytes smaller and back, as gzip and .zip files do, in Moth alone: DEFLATE (RFC 1951), gzip (RFC 1952) and zip archives.</p>
-      <p class="use"><code>use "zip.moth" as zip</code></p>
+      <h1><em>zip</em>.folio</h1>
+      <p>Squeezes bytes smaller and back, as gzip and .zip files do, in Folio alone: DEFLATE (RFC 1951), gzip (RFC 1952) and zip archives.</p>
+      <p class="use"><code>use "zip.folio" as zip</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="zip.moth's functions">
+    <nav class="toc" aria-label="zip.folio's functions">
       <h2>7 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#crc32">crc32</a></li><li><a href="#inflate">inflate</a></li><li><a href="#deflate">deflate</a></li><li><a href="#gzip">gzip</a></li><li><a href="#gunzip">gunzip</a></li><li><a href="#zipped">zipped</a></li><li><a href="#unzipped">unzipped</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Squeezes bytes smaller and back, as gzip and .zip files do, in Moth alone: DEFLATE (RFC 1951), gzip (RFC 1952) and zip archives. Each takes text or bytes and gives bytes.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <p>Squeezes bytes smaller and back, as gzip and .zip files do, in Folio alone: DEFLATE (RFC 1951), gzip (RFC 1952) and zip archives. Each takes text or bytes and gives bytes.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">write</span> zip's gzip(<span class="k">read</span> <span class="s">&quot;notes.txt&quot;</span>) <span class="k">to</span> <span class="s">&quot;notes.txt.gz&quot;</span>
 <span class="k">say</span> zip's gunzip(<span class="k">read</span> <span class="k">bytes</span> <span class="s">&quot;notes.txt.gz&quot;</span>) <span class="k">as</span> text
 <span class="k">write</span> zip's zipped(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a.txt&quot;</span>, <span class="s">&quot;b.txt&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;one&quot;</span>, <span class="s">&quot;two&quot;</span>) <span class="k">to</span> <span class="s">&quot;both.zip&quot;</span>
@@ -72,9 +72,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to crc32 with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L53">zip.moth line 53</a></p>
+          <p class="written">Written <code>to crc32 with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L53">zip.folio line 53</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">say</span> zip's crc32(<span class="s">&quot;123456789&quot;</span>)</code></pre><pre class="says"><code>3421780262</code></pre></div>
         </section>
         <section class="fn" id="inflate">
@@ -84,9 +84,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to inflate with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L277">zip.moth line 277</a></p>
+          <p class="written">Written <code>to inflate with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L277">zip.folio line 277</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">set</span> stored <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">12</span>, <span class="n">0</span>, <span class="n">243</span>, <span class="n">255</span>, <span class="n">115</span>, <span class="n">116</span>, <span class="n">111</span>, <span class="n">114</span>, <span class="n">101</span>, <span class="n">100</span>, <span class="n">32</span>, <span class="n">98</span>, <span class="n">121</span>, <span class="n">116</span>, <span class="n">101</span>, <span class="n">115</span>
 <span class="k">say</span> zip's inflate(stored <span class="k">as</span> <span class="k">bytes</span>) <span class="k">as</span> text</code></pre><pre class="says"><code>stored bytes</code></pre></div>
         </section>
@@ -97,9 +97,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to deflate with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L590">zip.moth line 590</a></p>
+          <p class="written">Written <code>to deflate with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L590">zip.folio line 590</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">set</span> every_byte <span class="k">to</span> <span class="k">empty</span> <span class="k">list</span>
 <span class="k">say</span> zip's deflate(every_byte <span class="k">as</span> <span class="k">bytes</span>)</code></pre><pre class="says"><code>(2 bytes: 3, 0)</code></pre></div>
         </section>
@@ -110,9 +110,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to gzip with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L790">zip.moth line 790</a></p>
+          <p class="written">Written <code>to gzip with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L790">zip.folio line 790</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">say</span> zip's gzip(<span class="n">70000</span> <span class="k">bytes</span>)</code></pre><pre class="says"><code>(102 bytes: 31, 139, 8, 0, 0, 0, 0, 0, 0, 255, 237, 193, 49, 1, 0, 0, 0, 194, 32, 251, 167, 182, 196, 78, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 238, 220, 200, 169, 166, 112, 17, 1, 0)</code></pre></div>
         </section>
         <section class="fn" id="gunzip">
@@ -122,9 +122,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to gunzip with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L819">zip.moth line 819</a></p>
+          <p class="written">Written <code>to gunzip with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L819">zip.folio line 819</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">set</span> hello <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">31</span>, <span class="n">139</span>, <span class="n">8</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">2</span>, <span class="n">10</span>, <span class="n">203</span>, <span class="n">72</span>, <span class="n">205</span>, <span class="n">201</span>, <span class="n">201</span>, <span class="n">231</span>, <span class="n">2</span>, <span class="n">0</span>, <span class="n">32</span>, <span class="n">48</span>, <span class="n">58</span>, <span class="n">54</span>, <span class="n">6</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>
 <span class="k">say</span> zip's gunzip(hello <span class="k">as</span> <span class="k">bytes</span>) <span class="k">as</span> text</code></pre><pre class="says"><code>hello
 </code></pre></div>
@@ -136,9 +136,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>names</code></li><li><code>contents</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to zipped with names, contents</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L866">zip.moth line 866</a></p>
+          <p class="written">Written <code>to zipped with names, contents</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L866">zip.folio line 866</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">say</span> zip's unzipped(zip's zipped(<span class="k">empty</span> <span class="k">list</span>, <span class="k">empty</span> <span class="k">list</span>))</code></pre><pre class="says"><code>(empty dictionary)</code></pre></div>
         </section>
         <section class="fn" id="unzipped">
@@ -148,9 +148,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to unzipped with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/zip.moth#L937">zip.moth line 937</a></p>
+          <p class="written">Written <code>to unzipped with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/zip.folio#L937">zip.folio line 937</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.moth&quot;</span> <span class="k">as</span> zip
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;zip.folio&quot;</span> <span class="k">as</span> zip
 <span class="k">say</span> zip's unzipped(zip's zipped(<span class="k">empty</span> <span class="k">list</span>, <span class="k">empty</span> <span class="k">list</span>))</code></pre><pre class="says"><code>(empty dictionary)</code></pre></div>
         </section>
       </section>
@@ -158,14 +158,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

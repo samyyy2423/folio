@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "pangram.moth"
+      "pangram.folio"
     ],
     "test": [
-      "pangram.test.moth"
+      "pangram.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Say whether a sentence uses every letter of the alphabet."

@@ -1,11 +1,11 @@
 # Numbers, statistics and a chart
 
-`stats.moth` has what Python's statistics module has, and `charts.moth` draws bars and lines to SVG or PNG.
+`stats.folio` has what Python's statistics module has, and `charts.folio` draws bars and lines to SVG or PNG.
 A week of temperatures, summed up and drawn:
 
-```moth
-use "stats.moth" as stats
-use "charts.moth" as charts
+```folio
+use "stats.folio" as stats
+use "charts.folio" as charts
 
 set days to list of "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 set temperatures to list of 12.5, 14, 13.2, 17.8, 19.4, 21, 18.6
@@ -33,10 +33,10 @@ warmest 21°C, on Sat
 drew week.svg
 ```
 
-Numbers in Moth are decimals compared to 15 digits, as a spreadsheet keeps them, so money adds up as it
+Numbers in Folio are decimals compared to 15 digits, as a spreadsheet keeps them, so money adds up as it
 should:
 
-```moth
+```folio
 set prices to list of 0.1, 0.2, 19.99
 set total to 0
 for each p in prices

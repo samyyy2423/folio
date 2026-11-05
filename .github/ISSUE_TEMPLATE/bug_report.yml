@@ -16,7 +16,7 @@ body:
   - type: textarea
     id: said
     attributes:
-      label: What Moth said or did
+      label: What Folio said or did
       description: The output or the mistake, word for word.
       render: text
     validations:
@@ -33,10 +33,10 @@ body:
       label: Where you ran it
       options:
         - The playground in a browser
-        - moth run
-        - A program moth build made
-        - The Moth shell or a notebook
-        - An editor (moth lsp or the debugger)
+        - folio run
+        - A program folio build made
+        - The Folio shell or a notebook
+        - An editor (folio lsp or the debugger)
         - Somewhere else (say below)
     validations:
       required: true
@@ -44,7 +44,7 @@ body:
     id: system
     attributes:
       label: System and version
-      description: For example "Windows 11, Moth 1.11.0", or the browser for the playground.
+      description: For example "Windows 11, Folio 1.11.0", or the browser for the playground.
     validations:
       required: true
   - type: textarea

@@ -24,5 +24,5 @@ test("every page the docs generators made is cut into its parts, with its links 
   }
   const { libraries, functions } = libraryCounts(pages);
   assert.ok(libraries > 40 && functions > 500, `${libraries} libraries, ${functions} functions`);
-  assert.match(pages.examples.body, /href="\/moth\/playground#code=/);
+  assert.match(pages.examples.body, /href="\/folio\/playground#code=/);
 });

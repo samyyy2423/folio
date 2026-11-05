@@ -1,18 +1,18 @@
-# Moth exercises
+# Folio exercises
 
-Twenty small problems to practise Moth with, from `hello-world` up, each with tests to make pass. They're in
-[Exercism](https://exercism.org)'s track format, so they can become a Moth track there one day; for now, they
+Twenty small problems to practise Folio with, from `hello-world` up, each with tests to make pass. They're in
+[Exercism](https://exercism.org)'s track format, so they can become a Folio track there one day; for now, they
 work on their own.
 
 ## How to do one
 
-1. [Install Moth](../README.md#start-in-a-minute), and copy an exercise's folder, `practice/leap` say.
+1. [Install Folio](../README.md#start-in-a-minute), and copy an exercise's folder, `practice/leap` say.
 2. Read its `.docs/instructions.md`.
-3. Run `moth test` in the folder. Every test fails at first: the file to write, `leap.moth`, has only the
+3. Run `folio test` in the folder. Every test fails at first: the file to write, `leap.folio`, has only the
    functions' first lines.
-4. Write the functions in `leap.moth` until every test passes.
+4. Write the functions in `leap.folio` until every test passes.
 
-`.meta/example.moth` is one way to do it, kept for the tests that check the exercises themselves: try not to
+`.meta/example.folio` is one way to do it, kept for the tests that check the exercises themselves: try not to
 look until yours passes.
 
 | Exercise | What it practises |
@@ -38,5 +38,5 @@ look until yours passes.
 | sieve | a dictionary as a set, without dividing |
 | luhn | going from the right |
 
-Each exercise's tests are run with its example solution, and with its starting file, every time Moth changes
+Each exercise's tests are run with its example solution, and with its starting file, every time Folio changes
 (`guides.test.js`), so the exercises keep working as the language grows.

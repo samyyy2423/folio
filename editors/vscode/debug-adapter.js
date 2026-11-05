@@ -1,26 +1,26 @@
-// Moth's debugger, `moth debug`, for any editor that speaks the Debug Adapter Protocol (DESIGN §109): VS Code runs
+// Folio's debugger, `folio debug`, for any editor that speaks the Debug Adapter Protocol (DESIGN §109): VS Code runs
 // it inside the extension, and Neovim (nvim-dap), Helix and JetBrains' IDEs (LSP4IJ) start it as a program:
 //
 //     node debug-adapter.js
 //
-// It starts `moth debug` on the program, which builds the debugger into it (moth-debugger.moth), and says the
+// It starts `folio debug` on the program, which builds the debugger into it (folio-debugger.folio), and says the
 // debugger's commands for the editor's requests: step, next, out and go; break and clear; where, vars and show.
-// The debugger answers on the program's own output, after which it asks for the next command with "(moth)"; a
+// The debugger answers on the program's own output, after which it asks for the next command with "(folio)"; a
 // command it reads is said back after that, as any answer is when the input isn't a terminal. What the program
-// says between a command that runs it and the line it stops at, the last before "(moth)", is the program's own
-// output. It needs nothing but Node.js and moth.
+// says between a command that runs it and the line it stops at, the last before "(folio)", is the program's own
+// output. It needs nothing but Node.js and folio.
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const PROMPT = "(moth) "; // what ask says, the space after its question included
-// where the debugger stopped: `prog.moth:5, in 'bump': add 1 to count`, or after a mistake that ends the program,
-// `stopped at the mistake, at prog.moth:12, in 'risky': fail with "none left"`
+const PROMPT = "(folio) "; // what ask says, the space after its question included
+// where the debugger stopped: `prog.folio:5, in 'bump': add 1 to count`, or after a mistake that ends the program,
+// `stopped at the mistake, at prog.folio:12, in 'risky': fail with "none left"`
 const STOPPED = /^(stopped at the mistake, at )?(.+?):(\d+)(?:, in '(.*?)')?: (.*)$/;
 const FRAME = /^ {2}(.+?):(\d+)(?:, in '(.*)')?$/; // a line `where` says
 const QUIET = 200; // how long the program says nothing before what it said so far is shown, in milliseconds
 
-class MothDebugSession {
+class FolioDebugSession {
   // `send` takes each message for the editor: responses and events
   constructor(send) {
     this.send = send;
@@ -30,7 +30,7 @@ class MothDebugSession {
     this.program = ""; // the program's file's name, as the debugger names it
     this.text = ""; // what the program has said that's not dealt with yet
     this.running = false; // whether the program runs on, after go, step, next or out, or hasn't stopped yet
-    this.waiting = null; // what's to happen when the debugger next asks "(moth)": resolves with what came before
+    this.waiting = null; // what's to happen when the debugger next asks "(folio)": resolves with what came before
     this.echo = null; // the command the debugger will say back first
     this.wanted = new Map(); // the breakpoints the editor has set, each file's lines, by the debugger's name for it
     this.set = new Map(); // the ones the debugger has
@@ -85,7 +85,7 @@ class MothDebugSession {
         this.begin();
         return null;
       case "threads":
-        return { threads: [{ id: 1, name: path.basename(this.program) || "moth" }] };
+        return { threads: [{ id: 1, name: path.basename(this.program) || "folio" }] };
       case "stackTrace":
         return this.stackTrace(args);
       case "scopes":
@@ -107,18 +107,18 @@ class MothDebugSession {
         this.resume("out");
         return null;
       case "pause":
-        throw new Error("moth debug stops only at a line it's told to: set a breakpoint there");
+        throw new Error("folio debug stops only at a line it's told to: set a breakpoint there");
       case "disconnect":
       case "terminate":
         this.stop();
         return null;
       default:
-        throw new Error(`moth debug doesn't do ${command}`);
+        throw new Error(`folio debug doesn't do ${command}`);
     }
   }
 
-  // `program` the file, `args` its arguments, `allow` the --allow flags, `mothPath` moth, `stopOnEntry`
-  launch({ program, args = [], allow = [], mothPath = "moth", stopOnEntry = false }) {
+  // `program` the file, `args` its arguments, `allow` the --allow flags, `folioPath` folio, `stopOnEntry`
+  launch({ program, args = [], allow = [], folioPath = "folio", stopOnEntry = false }) {
     if (!program) throw new Error("say which program to debug: \"program\": \"${file}\"");
     this.folder = path.dirname(path.resolve(program));
     this.program = path.basename(program);
@@ -126,8 +126,8 @@ class MothDebugSession {
     return new Promise((resolve, reject) => {
       let child;
       try {
-        // a group of its own, so the program moth starts can be ended with it (see stop)
-        child = spawn(mothPath, ["debug", ...allow, this.program, ...args], { cwd: this.folder, windowsHide: true, detached: process.platform !== "win32" });
+        // a group of its own, so the program folio starts can be ended with it (see stop)
+        child = spawn(folioPath, ["debug", ...allow, this.program, ...args], { cwd: this.folder, windowsHide: true, detached: process.platform !== "win32" });
         this.launchedAt = Date.now();
       } catch (err) {
         return reject(err);
@@ -141,7 +141,7 @@ class MothDebugSession {
       child.stdin.on("error", () => {}); // a program that has ended: its exit says so
       child.on("error", (err) => {
         this.ended = true;
-        reject(new Error(err.code === "ENOENT" ? `there's no ${mothPath}: install moth, or say where it is with "mothPath"` : err.message));
+        reject(new Error(err.code === "ENOENT" ? `there's no ${folioPath}: install folio, or say where it is with "folioPath"` : err.message));
       });
       child.on("spawn", () => resolve(null));
       child.on("close", (code) => this.exited(code)); // once all it said has been read, too
@@ -237,9 +237,9 @@ class MothDebugSession {
     throw new Error(said.replace(/^can't work out .*?: /, ""));
   }
 
-  // The program ended: by `quit` while it's stopped, as moth then takes away the program it built. While it
-  // runs, it can't be told anything, so moth and the program are ended, and the program moth built (prog-debug
-  // beside prog.moth, prog-debug.exe on Windows) is taken away here, if this session made it.
+  // The program ended: by `quit` while it's stopped, as folio then takes away the program it built. While it
+  // runs, it can't be told anything, so folio and the program are ended, and the program folio built (prog-debug
+  // beside prog.folio, prog-debug.exe on Windows) is taken away here, if this session made it.
   stop() {
     if (!this.child || this.ended) return;
     if (!this.running && !this.waiting) {
@@ -256,12 +256,12 @@ class MothDebugSession {
       this.child.kill("SIGKILL");
     }
     this.child.once("close", () => {
-      const built = path.join(this.folder, `${this.program.replace(/\.moth$/i, "")}-debug${process.platform === "win32" ? ".exe" : ""}`);
+      const built = path.join(this.folder, `${this.program.replace(/\.folio$/i, "")}-debug${process.platform === "win32" ? ".exe" : ""}`);
       setTimeout(() => {
         try {
           if (fs.statSync(built).mtimeMs >= this.launchedAt - 1000) fs.rmSync(built, { force: true });
         } catch {
-          // it isn't there: moth took it away, or never made it
+          // it isn't there: folio took it away, or never made it
         }
       }, process.platform === "win32" ? 500 : 0); // Windows lets go of a program's file a moment after it ends
     });
@@ -318,7 +318,7 @@ class MothDebugSession {
       return;
     }
     if (!this.running) return;
-    // While it runs, each line is shown as it comes, but for the last: that may be where it stops, if "(moth)"
+    // While it runs, each line is shown as it comes, but for the last: that may be where it stops, if "(folio)"
     // comes next. What's left is shown once the program has said nothing for a moment.
     const lines = this.text.split("\n");
     if (lines.length > 2) {
@@ -333,7 +333,7 @@ class MothDebugSession {
     }, QUIET);
   }
 
-  // what came before "(moth)" after a command that ran the program: what it said, then where it stopped
+  // what came before "(folio)" after a command that ran the program: what it said, then where it stopped
   stopped(said) {
     this.running = false;
     const lines = said.split("\n");
@@ -367,7 +367,7 @@ class MothDebugSession {
 // ---------- as a program of its own: the protocol on the input and output ----------
 
 function serve(input, output) {
-  const session = new MothDebugSession((message) => {
+  const session = new FolioDebugSession((message) => {
     const body = Buffer.from(JSON.stringify(message), "utf8");
     output.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`, "ascii"), body]));
   });
@@ -395,4 +395,4 @@ function serve(input, output) {
 
 if (require.main === module) serve(process.stdin, process.stdout);
 
-module.exports = { MothDebugSession, serve };
+module.exports = { FolioDebugSession, serve };

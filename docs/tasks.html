@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>tasks.moth · Moth's standard library</title>
+  <title>tasks.folio · Folio's standard library</title>
   <meta name="description" content="Work in the background, on Windows and Linux.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>tasks</em>.moth</h1>
+      <h1><em>tasks</em>.folio</h1>
       <p>Work in the background, on Windows and Linux.</p>
-      <p class="use"><code>use "tasks.moth" as tasks</code></p>
+      <p class="use"><code>use "tasks.folio" as tasks</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="tasks.moth's functions">
+    <nav class="toc" aria-label="tasks.folio's functions">
       <h2>9 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#start">start</a></li><li><a href="#start_self">start_self</a></li><li><a href="#own_program">own_program</a></li><li><a href="#done">done</a></li><li><a href="#wait_for">wait_for</a></li><li><a href="#output_of">output_of</a></li><li><a href="#code_of">code_of</a></li><li><a href="#stop_task">stop_task</a></li><li><a href="#pause">pause</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
           <p>Work in the background, on Windows and Linux: another program, started and left to run while this one goes on, whose output and the number it ends with are there when it's done. A slow job of this program's own can be one too: <a href="#start_self">start_self</a> starts this same program with other arguments, which it can look at to do the job.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">1</span> <span class="k">and</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="s">&quot;count&quot;</span>
     <span class="k">set</span> <span class="k">total</span> <span class="k">to</span> <span class="n">0</span>                        <span class="c"># the job, in the program started in the background</span>
     <span class="k">for</span> <span class="k">each</span> i <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">100000000</span>
@@ -86,9 +86,9 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
             <div><h4>Inputs</h4><ul class="inputs"><li><code>program</code></li><li><code>inputs</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start with program, inputs</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L79">tasks.moth line 79</a></p>
+          <p class="written">Written <code>to start with program, inputs</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L79">tasks.folio line 79</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">set</span> zipping <span class="k">to</span> tasks's <span class="k">start</span>(<span class="s">&quot;zip&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;-r&quot;</span>, <span class="s">&quot;backup.zip&quot;</span>, <span class="s">&quot;notes&quot;</span>)   <span class="c"># another program</span></code></pre></div>
         </section>
         <section class="fn" id="start_self">
@@ -98,9 +98,9 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
             <div><h4>Inputs</h4><ul class="inputs"><li><code>inputs</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start_self with inputs</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L87">tasks.moth line 87</a></p>
+          <p class="written">Written <code>to start_self with inputs</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L87">tasks.folio line 87</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">set</span> job <span class="k">to</span> tasks's start_self(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;count&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="own_program">
@@ -110,9 +110,9 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to own_program</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L92">tasks.moth line 92</a></p>
+          <p class="written">Written <code>to own_program</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L92">tasks.folio line 92</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">say</span> tasks's own_program()                   <span class="c"># where this program is</span></code></pre></div>
         </section>
         <section class="fn" id="done">
@@ -122,9 +122,9 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
             <div><h4>Inputs</h4><ul class="inputs"><li><code>task</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to done with task</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L108">tasks.moth line 108</a></p>
+          <p class="written">Written <code>to done with task</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L108">tasks.folio line 108</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">1</span> <span class="k">and</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="s">&quot;count&quot;</span>
     <span class="k">set</span> <span class="k">total</span> <span class="k">to</span> <span class="n">0</span>                        <span class="c"># the job, in the program started in the background</span>
     <span class="k">for</span> <span class="k">each</span> i <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">100000000</span>
@@ -152,9 +152,9 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
             <div><h4>Inputs</h4><ul class="inputs"><li><code>task</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to wait_for with task</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L142">tasks.moth line 142</a></p>
+          <p class="written">Written <code>to wait_for with task</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L142">tasks.folio line 142</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">set</span> zipping <span class="k">to</span> tasks's <span class="k">start</span>(<span class="s">&quot;zip&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;-r&quot;</span>, <span class="s">&quot;backup.zip&quot;</span>, <span class="s">&quot;notes&quot;</span>)   <span class="c"># another program</span>
 tasks's wait_for(zipping)</code></pre></div>
         </section>
@@ -165,9 +165,9 @@ tasks's wait_for(zipping)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>task</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to output_of with task</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L167">tasks.moth line 167</a></p>
+          <p class="written">Written <code>to output_of with task</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L167">tasks.folio line 167</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">set</span> job <span class="k">to</span> tasks's start_self(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;count&quot;</span>)
 <span class="k">say</span> <span class="s">&quot;the total is &quot;</span> + tasks's output_of(job)</code></pre></div>
         </section>
@@ -178,9 +178,9 @@ tasks's wait_for(zipping)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>task</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to code_of with task</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L187">tasks.moth line 187</a></p>
+          <p class="written">Written <code>to code_of with task</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L187">tasks.folio line 187</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">set</span> zipping <span class="k">to</span> tasks's <span class="k">start</span>(<span class="s">&quot;zip&quot;</span>, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;-r&quot;</span>, <span class="s">&quot;backup.zip&quot;</span>, <span class="s">&quot;notes&quot;</span>)   <span class="c"># another program</span>
 <span class="k">say</span> tasks's code_of(zipping)                <span class="c"># 0 when it went well</span></code></pre></div>
         </section>
@@ -191,9 +191,9 @@ tasks's wait_for(zipping)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>task</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to stop_task with task</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L192">tasks.moth line 192</a></p>
+          <p class="written">Written <code>to stop_task with task</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L192">tasks.folio line 192</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">set</span> job <span class="k">to</span> tasks's start_self(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;count&quot;</span>)
 tasks's stop_task(job)                      <span class="c"># ended now, if it hasn't ended yet</span></code></pre></div>
         </section>
@@ -204,9 +204,9 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
             <div><h4>Inputs</h4><ul class="inputs"><li><code>milliseconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to pause with milliseconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/tasks.moth#L205">tasks.moth line 205</a></p>
+          <p class="written">Written <code>to pause with milliseconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/tasks.folio#L205">tasks.folio line 205</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.moth&quot;</span> <span class="k">as</span> tasks
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;tasks.folio&quot;</span> <span class="k">as</span> tasks
 <span class="k">if</span> <span class="k">length</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="k">at</span> <span class="k">least</span> <span class="n">1</span> <span class="k">and</span> <span class="k">item</span> <span class="n">1</span> <span class="k">of</span> <span class="k">arguments</span> <span class="k">is</span> <span class="s">&quot;count&quot;</span>
     <span class="k">set</span> <span class="k">total</span> <span class="k">to</span> <span class="n">0</span>                        <span class="c"># the job, in the program started in the background</span>
     <span class="k">for</span> <span class="k">each</span> i <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">100000000</span>
@@ -232,14 +232,14 @@ tasks's stop_task(job)                      <span class="c"># ended now, if it h
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

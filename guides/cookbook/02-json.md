@@ -1,10 +1,10 @@
 # Read, change and write JSON
 
-`json's parse` turns JSON into Moth's own values: an object becomes a dictionary, an array a list, true and
+`json's parse` turns JSON into Folio's own values: an object becomes a dictionary, an array a list, true and
 false yes and no, and null nothing. `as json` turns any of them back.
 
-```moth
-use "json.moth" as json
+```folio
+use "json.folio" as json
 
 set order to json's parse("\{\"id\": 7, \"items\": [\{\"name\": \"tea\", \"price\": 3.5}, \{\"name\": \"cake\", \"price\": 4.25}]}")
 set total to 0
@@ -25,8 +25,8 @@ order 7 costs 7.75
 
 A mistake in the JSON is a `fail with` that says where it is, so `try` can catch it:
 
-```moth
-use "json.moth" as json
+```folio
+use "json.folio" as json
 
 try
     set data to json's parse("\{\"name\": \"Sam\",}")

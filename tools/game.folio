@@ -1,0 +1,174 @@
+# Games, on Windows and Linux: a window drawn again about 60 times a second, what's held on the keyboard, where
+# the mouse is, pictures and sounds. On ui.folio, so it needs windows.folio, linux.folio and ui.folio beside it,
+# and is built with --allow-libraries (and --allow-read for pictures and sounds that aren't built in).
+#
+#   use "game.folio" as game
+#   set x to 100
+#   to update with seconds                  # how long since the last frame, about a 60th of a second
+#       if game's key_down("Right")
+#           set x to x + 200 * seconds
+#       end
+#   end
+#   to show with canvas
+#       game's colour(canvas, 20, 20, 40)
+#       game's rectangle(canvas, 0, 0, 640, 480)
+#       game's draw_image(canvas, ship, x, 200)
+#   end
+#   game's window("Space", 640, 480)
+#   set ship to game's image("ship.png")
+#   game's run_game(update, show)
+#
+# And in update, or show:
+#
+#   if game's mouse_down()                  # where it is: mouse_x() and mouse_y()
+#       game's circle(canvas, game's mouse_x(), game's mouse_y(), 10)
+#   end
+#   game's line(canvas, 0, 400, 640, 400)
+#   game's draw_image_sized(canvas, ship, 300, 200, 64, 48)
+#   game's sound("boom.wav")
+#   say game's frames()                     # so far
+#   game's stop_game()                      # the window closed, which ends run_game
+#
+# update is called first, then show, each frame. on_key's handler is given each key as it's pressed, and
+# on_click's where the mouse was clicked; stop_game closes the window, which ends run_game.
+
+use "ui.folio" as ui
+
+set game_window to nothing
+set game_board to nothing # the drawing that is the whole window
+set game_update to nothing
+set game_draw to nothing
+set game_last to 0
+set game_frames to 0
+
+# the game's window, `width` by `height`, and the drawing in it
+to window with title, width, height
+    set game_window to ui's window(title, width, height)
+    set game_board to ui's drawing(game_window, 0, 0, width, height, game_paint)
+    ui's focus(game_board)
+    return game_window
+end
+
+# the drawing, for what ui.folio does with one
+to board
+    return game_board
+end
+
+to game_paint with canvas
+    if game_draw is not nothing
+        set drawer to game_draw
+        drawer(canvas)
+    end
+end
+
+to game_tick
+    set now_seconds to the clock
+    set step to now_seconds - game_last
+    set game_last to now_seconds
+    if step is greater than 0.25 # after the program was held up: a frame, not a leap
+        set step to 0.25
+    end
+    set game_frames to game_frames + 1
+    if game_update is not nothing
+        set updater to game_update
+        updater(step)
+    end
+    ui's redraw(game_board)
+end
+
+# the frames, until the window is closed
+to run_game with update, show
+    set game_update to update
+    set game_draw to show
+    set game_last to the clock
+    ui's timer(game_window, 16, game_tick)
+    ui's redraw(game_board)
+    ui's run()
+end
+
+# the game's window closed, which ends run_game
+to stop_game
+    ui's close(game_window)
+end
+
+# how many frames there have been
+to frames
+    return game_frames
+end
+
+# whether a key is held down in the game's window: "Left", "Right", "Up", "Down", "Space", "Enter", "Escape",
+# "Shift", "Ctrl", "Alt", "Tab", "Backspace", "Delete", a letter, a digit, or F1 to F12
+to key_down with name
+    return ui's key_down(game_board, name)
+end
+
+# a handler for each key pressed in the game's window, given the key's name, as key_down knows them
+to on_key with handler
+    ui's on_key(game_board, handler)
+end
+
+# a handler for a click in the game's window, given where: x and y
+to on_click with handler
+    ui's on_click(game_board, handler)
+end
+
+# how far across the window the mouse was last, in pixels from its left
+to mouse_x
+    return ui's mouse_x(game_board)
+end
+
+# how far down the window the mouse was last, in pixels from its top
+to mouse_y
+    return ui's mouse_y(game_board)
+end
+
+# whether the mouse's button is down in the window
+to mouse_down
+    return ui's mouse_down(game_board)
+end
+
+# a picture from a file, or one built in, and its width and height
+to image with file
+    return ui's load_image(file)
+end
+
+# a picture image() gave drawn with its top left at x, y, at its own size
+to draw_image with canvas, picture, x, y
+    ui's draw_image(canvas, picture, x, y)
+end
+
+# a picture image() gave drawn with its top left at x, y, made `width` by `height`
+to draw_image_sized with canvas, picture, x, y, width, height
+    ui's draw_image_sized(canvas, picture, x, y, width, height)
+end
+
+# a WAV file played while the game goes on
+to sound with file
+    ui's play_sound(file)
+end
+
+# what's drawn next is this colour: red, green and blue, each from 0 to 255
+to colour with canvas, red, green, blue
+    ui's colour(canvas, red, green, blue)
+end
+
+# a filled rectangle, its top left at x, y, `width` by `height`, in the colour chosen last
+to rectangle with canvas, x, y, width, height
+    ui's rectangle(canvas, x, y, width, height)
+end
+
+# a filled circle, its middle at x, y, so many pixels across from the middle to the edge, in the colour chosen
+# last
+to circle with canvas, x, y, radius
+    ui's circle(canvas, x, y, radius)
+end
+
+# a line from x1, y1 to x2, y2, in the colour chosen last
+to line with canvas, x1, y1, x2, y2
+    ui's line(canvas, x1, y1, x2, y2)
+end
+
+# words with their top left at x, y, in the system's own font
+to words with canvas, text, x, y
+    ui's words(canvas, text, x, y)
+end

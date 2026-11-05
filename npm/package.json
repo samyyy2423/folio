@@ -1,22 +1,22 @@
 {
-  "name": "mothlang",
+  "name": "foliolang",
   "version": "0.0.0",
-  "description": "Moth, the programming language that reads like plain English, from JavaScript: run Moth programs and call their functions",
+  "description": "Folio, the programming language that reads like plain English, from JavaScript: run Folio programs and call their functions",
   "type": "module",
-  "main": "./mothlang.js",
-  "types": "./mothlang.d.ts",
+  "main": "./foliolang.js",
+  "types": "./foliolang.d.ts",
   "exports": {
     ".": {
-      "types": "./mothlang.d.ts",
-      "default": "./mothlang.js"
+      "types": "./foliolang.d.ts",
+      "default": "./foliolang.js"
     }
   },
   "bin": {
-    "mothlang": "bin/mothlang.js"
+    "foliolang": "bin/foliolang.js"
   },
   "files": [
-    "mothlang.js",
-    "mothlang.d.ts",
+    "foliolang.js",
+    "foliolang.d.ts",
     "bin/",
     "engine/",
     "lib/",
@@ -32,13 +32,13 @@
   "author": "Samyak Pudke",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/samyyy2423/moth.git",
+    "url": "git+https://github.com/samyyy2423/folio.git",
     "directory": "npm"
   },
-  "homepage": "https://samyyy2423.github.io/moth/",
-  "bugs": "https://github.com/samyyy2423/moth/issues",
+  "homepage": "https://samyyy2423.github.io/folio/",
+  "bugs": "https://github.com/samyyy2423/folio/issues",
   "keywords": [
-    "moth",
+    "folio",
     "programming-language",
     "plain-english",
     "compiler",

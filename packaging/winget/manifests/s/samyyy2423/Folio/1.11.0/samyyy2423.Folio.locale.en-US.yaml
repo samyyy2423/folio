@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
+
+PackageIdentifier: samyyy2423.Folio
+PackageVersion: 1.11.0
+PackageLocale: en-US
+Publisher: Samyak Pudke
+PublisherUrl: https://github.com/samyyy2423
+PublisherSupportUrl: https://github.com/samyyy2423/folio/issues
+Author: Samyak Pudke
+PackageName: Folio
+PackageUrl: https://github.com/samyyy2423/folio
+License: Apache-2.0
+LicenseUrl: https://github.com/samyyy2423/folio/blob/v1.11.0/LICENSE
+Copyright: Copyright 2026 Samyak Pudke
+ShortDescription: A programming language that reads like plain English.
+Description: |-
+  Folio is a programming language that reads like plain English: small enough to learn in an afternoon, with a compiler written in Folio itself that makes Windows and Linux programs as fast as C. folio runs a program, builds it into a program of its own, and has a shell, a debugger, tests, packages, a language server and a standard library from web servers and databases to pictures and encryption. It is one file, with nothing else to install.
+Moniker: folio
+Tags:
+- compiler
+- education
+- english
+- language
+- plain-english
+- programming-language
+ReleaseNotesUrl: https://github.com/samyyy2423/folio/releases/tag/v1.11.0
+Documentations:
+- DocumentLabel: Learn Folio
+  DocumentUrl: https://samyyy2423.github.io/folio/learn.html
+- DocumentLabel: The language
+  DocumentUrl: https://github.com/samyyy2423/folio/blob/v1.11.0/SPEC.md
+ManifestType: defaultLocale
+ManifestVersion: 1.28.0

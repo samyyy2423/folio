@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>base64.moth · Moth's standard library</title>
+  <title>base64.folio · Folio's standard library</title>
   <meta name="description" content="Bytes as text and back, as Python's base64 module has them.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,37 +27,37 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>base64</em>.moth</h1>
+      <h1><em>base64</em>.folio</h1>
       <p>Bytes as text and back, as Python's base64 module has them.</p>
-      <p class="use"><code>use "base64.moth" as b64</code></p>
+      <p class="use"><code>use "base64.folio" as b64</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="base64.moth's functions">
+    <nav class="toc" aria-label="base64.folio's functions">
       <h2>6 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#base64_of">base64_of</a></li><li><a href="#bytes_of_base64">bytes_of_base64</a></li><li><a href="#url_base64_of">url_base64_of</a></li><li><a href="#bytes_of_url_base64">bytes_of_url_base64</a></li><li><a href="#base32_of">base32_of</a></li><li><a href="#bytes_of_base32">bytes_of_base32</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Bytes as text and back, as Python's base64 module has them: base64 (RFC 4648), its URL-safe kind, with - and _ for + and /, and base32, which authenticator apps' secrets are written in. In Moth alone, so it works everywhere. Each takes text (its UTF-8) or bytes, and gives text; each way back gives bytes, passing over what isn't its alphabet (line ends, spaces, = at the end), as Python's does by default.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
-<span class="k">say</span> b64's base64_of(<span class="s">&quot;Moth ✓&quot;</span>)                 <span class="c"># TW90aCDinJM=</span>
-<span class="k">say</span> b64's bytes_of_base64(<span class="s">&quot;TW90aCDinJM=&quot;</span>) <span class="k">as</span> text
+          <p>Bytes as text and back, as Python's base64 module has them: base64 (RFC 4648), its URL-safe kind, with - and _ for + and /, and base32, which authenticator apps' secrets are written in. In Folio alone, so it works everywhere. Each takes text (its UTF-8) or bytes, and gives text; each way back gives bytes, passing over what isn't its alphabet (line ends, spaces, = at the end), as Python's does by default.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
+<span class="k">say</span> b64's base64_of(<span class="s">&quot;Folio ✓&quot;</span>)                 <span class="c"># Rm9saW8g4pyT</span>
+<span class="k">say</span> b64's bytes_of_base64(<span class="s">&quot;Rm9saW8g4pyT&quot;</span>) <span class="k">as</span> text
 <span class="k">say</span> b64's url_base64_of(some <span class="k">bytes</span>)           <span class="c"># no + or /, so it can go in an address</span>
 <span class="k">say</span> b64's base32_of(<span class="s">&quot;hello&quot;</span>)                  <span class="c"># NBSWY3DP</span></code></pre></div>
       </section>
@@ -70,10 +70,10 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to base64_of with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth#L22">base64.moth line 22</a></p>
+          <p class="written">Written <code>to base64_of with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio#L22">base64.folio line 22</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
-<span class="k">say</span> b64's base64_of(<span class="s">&quot;Moth ✓&quot;</span>)                 <span class="c"># TW90aCDinJM=</span></code></pre><pre class="says"><code>TW90aCDinJM=</code></pre></div>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
+<span class="k">say</span> b64's base64_of(<span class="s">&quot;Folio ✓&quot;</span>)                 <span class="c"># Rm9saW8g4pyT</span></code></pre><pre class="says"><code>Rm9saW8g4pyT</code></pre></div>
         </section>
         <section class="fn" id="bytes_of_base64">
           <h3><a href="#bytes_of_base64"><code>b64's bytes_of_base64(words)</code></a></h3>
@@ -82,10 +82,10 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of_base64 with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth#L27">base64.moth line 27</a></p>
+          <p class="written">Written <code>to bytes_of_base64 with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio#L27">base64.folio line 27</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
-<span class="k">say</span> b64's bytes_of_base64(<span class="s">&quot;TW90aCDinJM=&quot;</span>) <span class="k">as</span> text</code></pre><pre class="says"><code>Moth ✓</code></pre></div>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
+<span class="k">say</span> b64's bytes_of_base64(<span class="s">&quot;Rm9saW8g4pyT&quot;</span>) <span class="k">as</span> text</code></pre><pre class="says"><code>Folio ✓</code></pre></div>
         </section>
         <section class="fn" id="url_base64_of">
           <h3><a href="#url_base64_of"><code>b64's url_base64_of(data)</code></a></h3>
@@ -94,9 +94,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to url_base64_of with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth#L32">base64.moth line 32</a></p>
+          <p class="written">Written <code>to url_base64_of with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio#L32">base64.folio line 32</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
 <span class="k">set</span> block <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">251</span>, <span class="n">255</span>, <span class="n">191</span>, <span class="n">0</span>) <span class="k">as</span> <span class="k">bytes</span>
 <span class="k">say</span> b64's url_base64_of(block)</code></pre><pre class="says"><code>-_-_AA==</code></pre></div>
         </section>
@@ -107,9 +107,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of_url_base64 with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth#L37">base64.moth line 37</a></p>
+          <p class="written">Written <code>to bytes_of_url_base64 with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio#L37">base64.folio line 37</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
 <span class="k">say</span> b64's bytes_of_url_base64(<span class="s">&quot;-_-_AA==&quot;</span>)</code></pre><pre class="says"><code>(4 bytes: 251, 255, 191, 0)</code></pre></div>
         </section>
         <section class="fn" id="base32_of">
@@ -119,9 +119,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to base32_of with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth#L114">base64.moth line 114</a></p>
+          <p class="written">Written <code>to base32_of with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio#L114">base64.folio line 114</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
 <span class="k">say</span> b64's base32_of(<span class="s">&quot;hello&quot;</span>)                  <span class="c"># NBSWY3DP</span></code></pre><pre class="says"><code>NBSWY3DP</code></pre></div>
         </section>
         <section class="fn" id="bytes_of_base32">
@@ -131,9 +131,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of_base32 with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/base64.moth#L140">base64.moth line 140</a></p>
+          <p class="written">Written <code>to bytes_of_base32 with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/base64.folio#L140">base64.folio line 140</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.moth&quot;</span> <span class="k">as</span> b64
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;base64.folio&quot;</span> <span class="k">as</span> b64
 <span class="k">say</span> b64's bytes_of_base32(<span class="s">&quot;mzxw6ytboi&quot;</span>) <span class="k">as</span> text</code></pre><pre class="says"><code>foobar</code></pre></div>
         </section>
       </section>
@@ -141,14 +141,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

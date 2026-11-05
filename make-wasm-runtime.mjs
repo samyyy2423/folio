@@ -1,4 +1,4 @@
-// Writes wasm-runtime.moth, the part of the WebAssembly runtime that wasm-runtime.js holds, as wasm.moth reads it:
+// Writes wasm-runtime.folio, the part of the WebAssembly runtime that wasm-runtime.js holds, as wasm.folio reads it:
 // the same cleaned text wasm.js assembles, so the two back ends make the same bytes.
 //
 //     node make-wasm-runtime.mjs
@@ -6,13 +6,13 @@ import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { RUNTIME } from "./wasm-runtime.js";
 
-// text as a Moth literal: \ " and { escaped, line ends as \n
+// text as a Folio literal: \ " and { escaped, line ends as \n
 const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n")}"`;
 
-export function wasmRuntimeMoth() {
+export function wasmRuntimeFolio() {
   const out = [
     "# Made by make-wasm-runtime.mjs from wasm-runtime.js: the part of the WebAssembly runtime written once, as text",
-    "# both back ends assemble (see wasm_shared_declare in wasm.moth). Don't change it by hand: change wasm-runtime.js,",
+    "# both back ends assemble (see wasm_shared_declare in wasm.folio). Don't change it by hand: change wasm-runtime.js,",
     "# then run node make-wasm-runtime.mjs.",
     "",
     "to wasm_runtime_source",
@@ -35,6 +35,6 @@ export function wasmRuntimeMoth() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  writeFileSync(new URL("./wasm-runtime.moth", import.meta.url), wasmRuntimeMoth());
-  console.log("wrote wasm-runtime.moth");
+  writeFileSync(new URL("./wasm-runtime.folio", import.meta.url), wasmRuntimeFolio());
+  console.log("wrote wasm-runtime.folio");
 }

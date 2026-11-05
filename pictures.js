@@ -1,5 +1,5 @@
 // Pictures from files, for `draw picture "cat.png" at x, y`: PNG and BMP files made into pixels here, by
-// Moth's own code, so every engine and the playground get the same pixels and the same mistakes. machine.moth
+// Folio's own code, so every engine and the playground get the same pixels and the same mistakes. machine.folio
 // has the same decoder in machine code, written step for step as this one, so a broken file is broken in the
 // same place, for the same reason, there too (see DESIGN §37).
 //
@@ -50,7 +50,7 @@ export function decodePicture(data, name, error) {
   const tooBig = () => error(`${subject} ${is} too big to draw: more than ${MOST_PIXELS.toLocaleString("en")} pixels (4096 by 4096)`);
   if (data.length >= 8 && PNG_SIGNATURE.every((b, i) => data[i] === b)) return png(data, (reason) => broken("PNG", reason), tooBig);
   if (data.length >= 2 && data[0] === 66 && data[1] === 77) { // BM
-    return bmp(data, (reason) => broken("BMP", reason), tooBig, () => error(`${subject} ${is} a kind of BMP Moth can't read`));
+    return bmp(data, (reason) => broken("BMP", reason), tooBig, () => error(`${subject} ${is} a kind of BMP Folio can't read`));
   }
   return error(`${subject} ${isnt} a PNG or BMP picture`);
 }

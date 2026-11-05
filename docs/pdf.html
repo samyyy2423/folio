@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>pdf.moth · Moth's standard library</title>
-  <meta name="description" content="PDF files, made in Moth alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours, and text wrapped to a width, as those fonts measure it.">
+  <title>pdf.folio · Folio's standard library</title>
+  <meta name="description" content="PDF files, made in Folio alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours, and text wrapped to a width, as those fonts measure it.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>pdf</em>.moth</h1>
-      <p>PDF files, made in Moth alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours, and text wrapped to a width, as those fonts measure it.</p>
-      <p class="use"><code>use "pdf.moth" as pdf</code></p>
+      <h1><em>pdf</em>.folio</h1>
+      <p>PDF files, made in Folio alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours, and text wrapped to a width, as those fonts measure it.</p>
+      <p class="use"><code>use "pdf.folio" as pdf</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="pdf.moth's functions">
+    <nav class="toc" aria-label="pdf.folio's functions">
       <h2>14 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#width_of">width_of</a></li><li><a href="#document">document</a></li><li><a href="#letter">letter</a></li><li><a href="#document_sized">document_sized</a></li><li><a href="#page">page</a></li><li><a href="#text">text</a></li><li><a href="#paragraph">paragraph</a></li><li><a href="#colour">colour</a></li><li><a href="#line_width">line_width</a></li><li><a href="#line">line</a></li><li><a href="#box">box</a></li><li><a href="#filled_box">filled_box</a></li><li><a href="#bytes_of">bytes_of</a></li><li><a href="#save">save</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>PDF files, made in Moth alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours, and text wrapped to a width, as those fonts measure it. A page's corner is its bottom left, and lengths are in points, 72 to an inch: an A4 page is 595 wide and 842 high.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <p>PDF files, made in Folio alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours, and text wrapped to a width, as those fonts measure it. A page's corner is its bottom left, and lengths are in points, 72 to an inch: an A4 page is 595 wide and 842 high.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's text(page, <span class="n">72</span>, <span class="n">770</span>, <span class="s">&quot;Invoice 42&quot;</span>, <span class="s">&quot;Helvetica-Bold&quot;</span>, <span class="n">24</span>)
@@ -74,9 +74,9 @@ pdf's save(doc, <span class="s">&quot;invoice.pdf&quot;</span>)</code></pre></di
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li><li><code>font</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to width_of with words, font, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L60">pdf.moth line 60</a></p>
+          <p class="written">Written <code>to width_of with words, font, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L60">pdf.folio line 60</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">say</span> pdf's width_of(<span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Helvetica&quot;</span>, <span class="n">12</span>)</code></pre><pre class="says"><code>27.336</code></pre></div>
         </section>
         <section class="fn" id="document">
@@ -86,9 +86,9 @@ pdf's save(doc, <span class="s">&quot;invoice.pdf&quot;</span>)</code></pre></di
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to document</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L94">pdf.moth line 94</a></p>
+          <p class="written">Written <code>to document</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L94">pdf.folio line 94</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">say</span> doc</code></pre><pre class="says"><code>(record with width 595, height 842, pages [])</code></pre></div>
         </section>
@@ -99,9 +99,9 @@ pdf's save(doc, <span class="s">&quot;invoice.pdf&quot;</span>)</code></pre></di
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to letter</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L99">pdf.moth line 99</a></p>
+          <p class="written">Written <code>to letter</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L99">pdf.folio line 99</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's letter()
 <span class="k">say</span> doc</code></pre><pre class="says"><code>(record with width 612, height 792, pages [])</code></pre></div>
         </section>
@@ -112,9 +112,9 @@ pdf's save(doc, <span class="s">&quot;invoice.pdf&quot;</span>)</code></pre></di
             <div><h4>Inputs</h4><ul class="inputs"><li><code>width</code></li><li><code>height</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to document_sized with width, height</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L104">pdf.moth line 104</a></p>
+          <p class="written">Written <code>to document_sized with width, height</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L104">pdf.folio line 104</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 pdf's document_sized(<span class="k">width</span>, height)</code></pre></div>
         </section>
         <section class="fn" id="page">
@@ -124,9 +124,9 @@ pdf's document_sized(<span class="k">width</span>, height)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>doc</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to page with doc</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L109">pdf.moth line 109</a></p>
+          <p class="written">Written <code>to page with doc</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L109">pdf.folio line 109</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 <span class="k">say</span> page</code></pre><pre class="says"><code>(record with width 595, height 842, drawn [], fonts [])</code></pre></div>
@@ -138,9 +138,9 @@ pdf's document_sized(<span class="k">width</span>, height)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>x</code></li><li><code>y</code></li><li><code>words</code></li><li><code>font</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text with on, x, y, words, font, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L161">pdf.moth line 161</a></p>
+          <p class="written">Written <code>to text with on, x, y, words, font, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L161">pdf.folio line 161</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's text(page, <span class="n">72</span>, <span class="n">770</span>, <span class="s">&quot;Invoice 42&quot;</span>, <span class="s">&quot;Helvetica-Bold&quot;</span>, <span class="n">24</span>)</code></pre></div>
@@ -152,9 +152,9 @@ pdf's text(page, <span class="n">72</span>, <span class="n">770</span>, <span cl
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>x</code></li><li><code>y</code></li><li><code>width</code></li><li><code>words</code></li><li><code>font</code></li><li><code>size</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to paragraph with on, x, y, width, words, font, size</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L177">pdf.moth line 177</a></p>
+          <p class="written">Written <code>to paragraph with on, x, y, width, words, font, size</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L177">pdf.folio line 177</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's letter()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 <span class="k">set</span> below <span class="k">to</span> pdf's paragraph(page, <span class="n">72</span>, <span class="n">700</span>, <span class="n">100</span>, <span class="s">&quot;the quick brown fox jumps over the lazy dog again and again&quot;</span>, <span class="s">&quot;Helvetica&quot;</span>, <span class="n">12</span>)
@@ -167,9 +167,9 @@ pdf's text(page, <span class="n">72</span>, <span class="n">770</span>, <span cl
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>c</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to colour with on, c</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L236">pdf.moth line 236</a></p>
+          <p class="written">Written <code>to colour with on, c</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L236">pdf.folio line 236</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's colour(page, <span class="s">&quot;#1a5fb4&quot;</span>)</code></pre></div>
@@ -181,9 +181,9 @@ pdf's colour(page, <span class="s">&quot;#1a5fb4&quot;</span>)</code></pre></div
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>w</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to line_width with on, w</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L243">pdf.moth line 243</a></p>
+          <p class="written">Written <code>to line_width with on, w</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L243">pdf.folio line 243</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's text(page, <span class="n">72</span>, <span class="n">770.5</span>, <span class="s">&quot;Hi (there) \\ é&quot;</span>, <span class="s">&quot;Times-Bold&quot;</span>, <span class="n">24</span>)
@@ -198,9 +198,9 @@ pdf's line_width(page, <span class="n">0.25</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>x1</code></li><li><code>y1</code></li><li><code>x2</code></li><li><code>y2</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to line with on, x1, y1, x2, y2</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L248">pdf.moth line 248</a></p>
+          <p class="written">Written <code>to line with on, x1, y1, x2, y2</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L248">pdf.folio line 248</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's line(page, <span class="n">72</span>, <span class="n">760</span>, <span class="n">523</span>, <span class="n">760</span>)</code></pre></div>
@@ -212,9 +212,9 @@ pdf's line(page, <span class="n">72</span>, <span class="n">760</span>, <span cl
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>x</code></li><li><code>y</code></li><li><code>w</code></li><li><code>h</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to box with on, x, y, w, h</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L253">pdf.moth line 253</a></p>
+          <p class="written">Written <code>to box with on, x, y, w, h</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L253">pdf.folio line 253</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's text(page, <span class="n">72</span>, <span class="n">770.5</span>, <span class="s">&quot;Hi (there) \\ é&quot;</span>, <span class="s">&quot;Times-Bold&quot;</span>, <span class="n">24</span>)
@@ -231,9 +231,9 @@ pdf's <span class="k">box</span>(page, <span class="n">10</span>, <span class="n
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>x</code></li><li><code>y</code></li><li><code>w</code></li><li><code>h</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to filled_box with on, x, y, w, h</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L258">pdf.moth line 258</a></p>
+          <p class="written">Written <code>to filled_box with on, x, y, w, h</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L258">pdf.folio line 258</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> page <span class="k">to</span> pdf's page(doc)
 pdf's text(page, <span class="n">72</span>, <span class="n">770.5</span>, <span class="s">&quot;Hi (there) \\ é&quot;</span>, <span class="s">&quot;Times-Bold&quot;</span>, <span class="n">24</span>)
@@ -251,9 +251,9 @@ pdf's filled_box(page, <span class="n">1</span>, <span class="n">2</span>, <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>doc</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of with doc</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L310">pdf.moth line 310</a></p>
+          <p class="written">Written <code>to bytes_of with doc</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L310">pdf.folio line 310</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 <span class="k">set</span> written <span class="k">to</span> pdf's bytes_of(doc) <span class="k">as</span> text
 <span class="k">say</span> written</code></pre><pre class="says"><code>%PDF-1.4
@@ -282,9 +282,9 @@ startxref
             <div><h4>Inputs</h4><ul class="inputs"><li><code>doc</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to save with doc, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/pdf.moth#L315">pdf.moth line 315</a></p>
+          <p class="written">Written <code>to save with doc, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/pdf.folio#L315">pdf.folio line 315</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.moth&quot;</span> <span class="k">as</span> pdf
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;pdf.folio&quot;</span> <span class="k">as</span> pdf
 <span class="k">set</span> doc <span class="k">to</span> pdf's document()
 pdf's save(doc, <span class="s">&quot;invoice.pdf&quot;</span>)</code></pre></div>
         </section>
@@ -293,14 +293,14 @@ pdf's save(doc, <span class="s">&quot;invoice.pdf&quot;</span>)</code></pre></di
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>text.moth · Moth's standard library</title>
+  <title>text.folio · Folio's standard library</title>
   <meta name="description" content="Text: patterns to find, check and replace (regular expressions), numbers written with so many decimals or with commas, text padded to a width, and CSV, read and written.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,42 +27,42 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>text</em>.moth</h1>
+      <h1><em>text</em>.folio</h1>
       <p>Text: patterns to find, check and replace (regular expressions), numbers written with so many decimals or with commas, text padded to a width, and CSV, read and written.</p>
-      <p class="use"><code>use "text.moth" as text</code></p>
+      <p class="use"><code>use "text.folio" as text</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="text.moth's functions">
+    <nav class="toc" aria-label="text.folio's functions">
       <h2>13 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#matches">matches</a></li><li><a href="#contains_pattern">contains_pattern</a></li><li><a href="#find">find</a></li><li><a href="#find_all">find_all</a></li><li><a href="#replace_all">replace_all</a></li><li><a href="#split_by">split_by</a></li><li><a href="#number_text">number_text</a></li><li><a href="#grouped">grouped</a></li><li><a href="#grouped_with">grouped_with</a></li><li><a href="#padded_left">padded_left</a></li><li><a href="#padded_right">padded_right</a></li><li><a href="#csv_rows">csv_rows</a></li><li><a href="#csv_text">csv_text</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Text: patterns to find, check and replace (regular expressions), numbers written with so many decimals or with commas, text padded to a width, and CSV, read and written. In Moth alone, so it works everywhere.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
-<span class="k">say</span> text's matches(<span class="s">&quot;^[a-z]+@[a-z]+\\.com$&quot;</span>, <span class="s">&quot;sam@moth.com&quot;</span>)     <span class="c"># yes</span>
+          <p>Text: patterns to find, check and replace (regular expressions), numbers written with so many decimals or with commas, text padded to a width, and CSV, read and written. In Folio alone, so it works everywhere.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
+<span class="k">say</span> text's matches(<span class="s">&quot;^[a-z]+@[a-z]+\\.com$&quot;</span>, <span class="s">&quot;sam@folio.com&quot;</span>)     <span class="c"># yes</span>
 <span class="k">set</span> found <span class="k">to</span> text's find(<span class="s">&quot;(\\d+)-(\\d+)&quot;</span>, <span class="s">&quot;pages 12-40&quot;</span>)
 <span class="k">say</span> text <span class="k">of</span> found <span class="s">&quot; &quot;</span> <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> groups <span class="k">of</span> found                  <span class="c"># 12-40 40</span>
 <span class="k">say</span> text's replace_all(<span class="s">&quot;\\s+&quot;</span>, <span class="s">&quot;a   lot  of space&quot;</span>, <span class="s">&quot; &quot;</span>)          <span class="c"># a lot of space</span>
 <span class="k">say</span> text's number_text(<span class="n">3.14159</span>, <span class="n">2</span>) <span class="s">&quot; &quot;</span> text's grouped(<span class="n">1234567.5</span>)  <span class="c"># 3.14 1,234,567.5</span>
 <span class="k">say</span> text's csv_rows(<span class="s">&quot;name,age\nSam,20\n\&quot;Lee, Ana\&quot;,31&quot;</span>)          <span class="c"># [[&quot;name&quot;, &quot;age&quot;], ...]</span></code></pre></div>
-          <p>A pattern has: letters and digits for themselves; . any character but a new line; [abc], [a-z], [^0-9] a character of a set or not; \d a digit, \w a letter, digit or _, \s a space, tab or new line (\D, \W and \S none of those); \b where a word starts or ends; ^ and $ the start and the end; ( ) a group, which is kept, (?: ) one that isn't; | either side; * any number, + one or more, ? one or none, {2}, {2,} and {2,5} so many, each taking as many as it can, or as few with a ? after it. \ before any other character is that character. (?i) at the very start makes it not mind capitals. In Moth's own text, a \ is written \\.</p>
+          <p>A pattern has: letters and digits for themselves; . any character but a new line; [abc], [a-z], [^0-9] a character of a set or not; \d a digit, \w a letter, digit or _, \s a space, tab or new line (\D, \W and \S none of those); \b where a word starts or ends; ^ and $ the start and the end; ( ) a group, which is kept, (?: ) one that isn't; | either side; * any number, + one or more, ? one or none, {2}, {2,} and {2,5} so many, each taking as many as it can, or as few with a ? after it. \ before any other character is that character. (?i) at the very start makes it not mind capitals. In Folio's own text, a \ is written \\.</p>
           <p>A match is a record: its text, at (where it starts, from 1), size (how many characters), and groups (each group's text, or nothing for a group that took no part).</p>
       </section>
       <section class="fns">
@@ -74,10 +74,10 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pattern</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to matches with pattern, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L25">text.moth line 25</a></p>
+          <p class="written">Written <code>to matches with pattern, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L25">text.folio line 25</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
-<span class="k">say</span> text's matches(<span class="s">&quot;^[a-z]+@[a-z]+\\.com$&quot;</span>, <span class="s">&quot;sam@moth.com&quot;</span>)     <span class="c"># yes</span></code></pre><pre class="says"><code>yes</code></pre></div>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
+<span class="k">say</span> text's matches(<span class="s">&quot;^[a-z]+@[a-z]+\\.com$&quot;</span>, <span class="s">&quot;sam@folio.com&quot;</span>)     <span class="c"># yes</span></code></pre><pre class="says"><code>yes</code></pre></div>
         </section>
         <section class="fn" id="contains_pattern">
           <h3><a href="#contains_pattern"><code>text's contains_pattern(pattern, words)</code></a></h3>
@@ -86,9 +86,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pattern</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to contains_pattern with pattern, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L31">text.moth line 31</a></p>
+          <p class="written">Written <code>to contains_pattern with pattern, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L31">text.folio line 31</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's contains_pattern(<span class="s">&quot;^\\s*$&quot;</span>, <span class="s">&quot;   &quot;</span>)</code></pre><pre class="says"><code>yes</code></pre></div>
         </section>
         <section class="fn" id="find">
@@ -98,9 +98,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pattern</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to find with pattern, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L36">text.moth line 36</a></p>
+          <p class="written">Written <code>to find with pattern, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L36">text.folio line 36</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">set</span> found <span class="k">to</span> text's find(<span class="s">&quot;(\\d+)-(\\d+)&quot;</span>, <span class="s">&quot;pages 12-40, then 50-60&quot;</span>)
 <span class="k">say</span> found</code></pre><pre class="says"><code>(record with text &quot;12-40&quot;, at 7, size 5, groups [&quot;12&quot;, &quot;40&quot;])</code></pre></div>
         </section>
@@ -111,9 +111,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pattern</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to find_all with pattern, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L45">text.moth line 45</a></p>
+          <p class="written">Written <code>to find_all with pattern, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L45">text.folio line 45</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">set</span> all <span class="k">to</span> text's find_all(<span class="s">&quot;\\d+&quot;</span>, <span class="s">&quot;a1 b22 c333&quot;</span>)
 <span class="k">say</span> all</code></pre><pre class="says"><code>[(record with text &quot;1&quot;, at 2, size 1, groups []), (record with text &quot;22&quot;, at 5, size 2, groups []), (record with text &quot;333&quot;, at 9, size 3, groups [])]</code></pre></div>
         </section>
@@ -124,9 +124,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pattern</code></li><li><code>words</code></li><li><code>replacement</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to replace_all with pattern, words, replacement</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L75">text.moth line 75</a></p>
+          <p class="written">Written <code>to replace_all with pattern, words, replacement</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L75">text.folio line 75</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's replace_all(<span class="s">&quot;\\s+&quot;</span>, <span class="s">&quot;a   lot  of space&quot;</span>, <span class="s">&quot; &quot;</span>)          <span class="c"># a lot of space</span></code></pre><pre class="says"><code>a lot of space</code></pre></div>
         </section>
         <section class="fn" id="split_by">
@@ -136,9 +136,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pattern</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to split_by with pattern, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L87">text.moth line 87</a></p>
+          <p class="written">Written <code>to split_by with pattern, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L87">text.folio line 87</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's split_by(<span class="s">&quot;,\\s*&quot;</span>, <span class="s">&quot;a, b,c,   d&quot;</span>)</code></pre><pre class="says"><code>[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]</code></pre></div>
         </section>
         <section class="fn" id="number_text">
@@ -148,9 +148,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li><li><code>places</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to number_text with n, places</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L693">text.moth line 693</a></p>
+          <p class="written">Written <code>to number_text with n, places</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L693">text.folio line 693</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's number_text(<span class="n">3.14159</span>, <span class="n">2</span>) <span class="s">&quot; &quot;</span> text's grouped(<span class="n">1234567.5</span>)  <span class="c"># 3.14 1,234,567.5</span></code></pre><pre class="says"><code>3.14 1,234,567.5</code></pre></div>
         </section>
         <section class="fn" id="grouped">
@@ -160,9 +160,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to grouped with n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L751">text.moth line 751</a></p>
+          <p class="written">Written <code>to grouped with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L751">text.folio line 751</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's number_text(<span class="n">3.14159</span>, <span class="n">2</span>) <span class="s">&quot; &quot;</span> text's grouped(<span class="n">1234567.5</span>)  <span class="c"># 3.14 1,234,567.5</span></code></pre><pre class="says"><code>3.14 1,234,567.5</code></pre></div>
         </section>
         <section class="fn" id="grouped_with">
@@ -172,9 +172,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li><li><code>separator</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to grouped_with with n, separator</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L757">text.moth line 757</a></p>
+          <p class="written">Written <code>to grouped_with with n, separator</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L757">text.folio line 757</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's grouped_with(<span class="n">1234567</span>, <span class="s">&quot; &quot;</span>)</code></pre><pre class="says"><code>1 234 567</code></pre></div>
         </section>
         <section class="fn" id="padded_left">
@@ -184,9 +184,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li><li><code>width</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to padded_left with words, width</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L789">text.moth line 789</a></p>
+          <p class="written">Written <code>to padded_left with words, width</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L789">text.folio line 789</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's padded_left(<span class="n">42</span>, <span class="n">5</span>)</code></pre><pre class="says"><code>   42</code></pre></div>
         </section>
         <section class="fn" id="padded_right">
@@ -196,9 +196,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li><li><code>width</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to padded_right with words, width</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L798">text.moth line 798</a></p>
+          <p class="written">Written <code>to padded_right with words, width</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L798">text.folio line 798</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's padded_right(<span class="s">&quot;ab&quot;</span>, <span class="n">4</span>)</code></pre><pre class="says"><code>ab  </code></pre></div>
         </section>
         <section class="fn" id="csv_rows">
@@ -208,9 +208,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to csv_rows with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L810">text.moth line 810</a></p>
+          <p class="written">Written <code>to csv_rows with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L810">text.folio line 810</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's csv_rows(<span class="s">&quot;name,age\nSam,20\n\&quot;Lee, Ana\&quot;,31&quot;</span>)          <span class="c"># [[&quot;name&quot;, &quot;age&quot;], ...]</span></code></pre><pre class="says"><code>[[&quot;name&quot;, &quot;age&quot;], [&quot;Sam&quot;, &quot;20&quot;], [&quot;Lee, Ana&quot;, &quot;31&quot;]]</code></pre></div>
         </section>
         <section class="fn" id="csv_text">
@@ -220,9 +220,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>rows</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to csv_text with rows</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/text.moth#L861">text.moth line 861</a></p>
+          <p class="written">Written <code>to csv_text with rows</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/text.folio#L861">text.folio line 861</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.moth&quot;</span> <span class="k">as</span> text
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;text.folio&quot;</span> <span class="k">as</span> text
 <span class="k">say</span> text's csv_text(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;a&quot;</span>, <span class="n">1</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;b, c&quot;</span>, <span class="s">&quot;x\&quot;y&quot;</span>))</code></pre><pre class="says"><code>a,1
 &quot;b, c&quot;,&quot;x&quot;&quot;y&quot;
 </code></pre></div>
@@ -232,14 +232,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

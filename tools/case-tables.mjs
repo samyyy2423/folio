@@ -1,5 +1,5 @@
-// Writes the tables machine.moth's `uppercase of` and `lowercase of` use, between the two lines that mark
-// them in machine.moth, from what this Node.js's toUpperCase and toLowerCase do to every character past
+// Writes the tables machine.folio's `uppercase of` and `lowercase of` use, between the two lines that mark
+// them in machine.folio, from what this Node.js's toUpperCase and toLowerCase do to every character past
 // ASCII, so machine code changes case exactly as the JavaScript engine does:
 //
 //     node tools/case-tables.mjs
@@ -8,7 +8,7 @@
 // becomes more than one; and the cased and case-ignorable ranges decide whether a Σ ends a word.
 import { readFileSync, writeFileSync } from "node:fs";
 
-const file = new URL("../machine.moth", import.meta.url);
+const file = new URL("../machine.folio", import.meta.url);
 const START = "# ---------- Unicode's cases: made by tools/case-tables.mjs ----------";
 const END = "# ---------- the end of Unicode's cases ----------";
 
@@ -54,7 +54,7 @@ function ranges(re) {
 }
 
 // `set name to list of ...`, ten numbers to a line
-const moth = (name, numbers) => {
+const folio = (name, numbers) => {
   const lines = [];
   for (let i = 0; i < numbers.length; i += 10) lines.push(numbers.slice(i, i + 10).join(", "));
   return `set ${name} to list of ${lines.join(",\n    ")}`;
@@ -66,17 +66,17 @@ const block = [
   `# What \`uppercase of\` and \`lowercase of\` do to each character past ASCII, as JavaScript's toUpperCase and`,
   `# toLowerCase do (Unicode ${process.versions.unicode}): runs of a first character, a last, a step and what to add; special`,
   `# characters, each with how many it becomes and those; and the ranges of cased and case-ignorable ones.`,
-  moth("case_upper_runs", upper.runs),
-  moth("case_upper_special", upper.special),
-  moth("case_lower_runs", lower.runs),
-  moth("case_lower_special", lower.special),
-  moth("case_cased", ranges(/\p{Cased}/u)),
-  moth("case_ignorable", ranges(/\p{Case_Ignorable}/u)),
+  folio("case_upper_runs", upper.runs),
+  folio("case_upper_special", upper.special),
+  folio("case_lower_runs", lower.runs),
+  folio("case_lower_special", lower.special),
+  folio("case_cased", ranges(/\p{Cased}/u)),
+  folio("case_ignorable", ranges(/\p{Case_Ignorable}/u)),
   END,
 ].join("\n");
 
 const source = readFileSync(file, "utf8");
 const from = source.indexOf(START), to = source.indexOf(END);
-if (from < 0 || to < 0) throw new Error("machine.moth has no place marked for Unicode's cases");
+if (from < 0 || to < 0) throw new Error("machine.folio has no place marked for Unicode's cases");
 writeFileSync(file, source.slice(0, from) + block + source.slice(to + END.length));
-console.log(`Unicode ${process.versions.unicode}: ${upper.runs.length / 4} and ${lower.runs.length / 4} runs, written to machine.moth`);
+console.log(`Unicode ${process.versions.unicode}: ${upper.runs.length / 4} and ${lower.runs.length / 4} runs, written to machine.folio`);

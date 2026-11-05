@@ -1,7 +1,7 @@
 {
-  "name": "moth-site",
+  "name": "folio-site",
   "private": true,
-  "description": "Moth's website: the front page, the playground, the lessons and the docs, made with Next.js and GSAP",
+  "description": "Folio's website: the front page, the playground, the lessons and the docs, made with Next.js and GSAP",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {

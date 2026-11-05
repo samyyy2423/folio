@@ -1,6 +1,6 @@
-// WebAssembly's binary format, written byte by byte: just enough of an encoder for the Moth compiler in
-// wasm.js. It covers the GC types (structs, arrays, i31) that let a module keep Moth's values without a
-// memory of its own, and it keeps a readable listing of every function as it goes, for `moth wasm`.
+// WebAssembly's binary format, written byte by byte: just enough of an encoder for the Folio compiler in
+// wasm.js. It covers the GC types (structs, arrays, i31) that let a module keep Folio's values without a
+// memory of its own, and it keeps a readable listing of every function as it goes, for `folio wasm`.
 
 // ---------- numbers ----------
 

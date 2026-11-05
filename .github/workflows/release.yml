@@ -1,14 +1,14 @@
 name: release
 
 # Signs a release and adds what installs and checks it (DESIGN.md §131). When a release is published, with
-# moth-windows.exe, moth-linux and SHA256SUMS.txt made by hand, it:
+# folio-windows.exe, folio-linux and SHA256SUMS.txt made by hand, it:
 #
-#   - builds moth from the tag's source and checks the release's two programs are those bytes, and the fixed
+#   - builds folio from the tag's source and checks the release's two programs are those bytes, and the fixed
 #     point: each builds itself, and the other, byte for byte (on Linux and on Windows);
-#   - builds moth_<version>_amd64.deb, and the SBOM (CycloneDX), and winget's and Scoop's manifests;
+#   - builds folio_<version>_amd64.deb, and the SBOM (CycloneDX), and winget's and Scoop's manifests;
 #   - signs every file with Sigstore's cosign, keyless, as this workflow (a .sig, a .pem and a .sigstore.json
 #     bundle each), and adds GitHub's attestations: where each was built, and the SBOM of the programs;
-#   - pushes the image to ghcr.io/samyyy2423/moth as <version> and latest (not for a pre-release), attested
+#   - pushes the image to ghcr.io/samyyy2423/folio as <version> and latest (not for a pre-release), attested
 #     and signed;
 #   - uploads the .deb, the SBOM, the signatures, certificates and bundles to the release.
 #
@@ -40,7 +40,7 @@ concurrency:
 permissions: {}
 
 env:
-  IMAGE: ghcr.io/samyyy2423/moth
+  IMAGE: ghcr.io/samyyy2423/folio
   COSIGN_RELEASE: v2.6.5
   OIDC_ISSUER: https://token.actions.githubusercontent.com
 
@@ -95,14 +95,14 @@ jobs:
           if [ -n "$tag" ]; then
             prerelease=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)
           fi
-          tags="ghcr.io/samyyy2423/moth:$version"
-          [ "$prerelease" = true ] || tags="$tags,ghcr.io/samyyy2423/moth:latest"
+          tags="ghcr.io/samyyy2423/folio:$version"
+          [ "$prerelease" = true ] || tags="$tags,ghcr.io/samyyy2423/folio:latest"
           echo "dry-run=$dry" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
           echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
-          echo "### moth $version: $([ "$dry" = true ] && echo 'a dry run' || echo "the release $tag")" >> "$GITHUB_STEP_SUMMARY"
+          echo "### folio $version: $([ "$dry" = true ] && echo 'a dry run' || echo "the release $tag")" >> "$GITHUB_STEP_SUMMARY"
       - name: the release's files
         if: steps.run.outputs.tag != ''
         env:
@@ -110,27 +110,27 @@ jobs:
           TAG: ${{ steps.run.outputs.tag }}
         run: |
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release \
-            --pattern moth-linux --pattern moth-windows.exe --pattern SHA256SUMS.txt
+            --pattern folio-linux --pattern folio-windows.exe --pattern SHA256SUMS.txt
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt | cut -c1-10 > release/date
-      - name: build moth from the source, and check the fixed point (and the release's files)
+      - name: build folio from the source, and check the fixed point (and the release's files)
         run: |
           if [ -d release ]; then
             packaging/release-build.sh built release
             mkdir dist
-            cp release/moth-linux release/moth-windows.exe release/SHA256SUMS.txt dist/
+            cp release/folio-linux release/folio-windows.exe release/SHA256SUMS.txt dist/
           else
             packaging/release-build.sh dist
           fi
       - name: the .deb
         env:
           VERSION: ${{ steps.run.outputs.version }}
-        run: packaging/debian/build-deb.sh dist/moth-linux "$VERSION" dist
+        run: packaging/debian/build-deb.sh dist/folio-linux "$VERSION" dist
       - name: the SBOM
         run: node packaging/sbom.mjs dist "${{ steps.run.outputs.version }}" "$GITHUB_SHA"
       - name: winget's and Scoop's manifests for this version
         run: |
           date=$(cat release/date 2> /dev/null || date -u +%F)
-          sum=$(sha256sum dist/moth-windows.exe | cut -d ' ' -f 1)
+          sum=$(sha256sum dist/folio-windows.exe | cut -d ' ' -f 1)
           node packaging/manifests.mjs "${{ steps.run.outputs.version }}" "$sum" "$date" manifests
       - name: the sums the later jobs check what they're given against
         id: sums
@@ -148,7 +148,7 @@ jobs:
           path: manifests/
           if-no-files-found: error
 
-  # the Windows moth builds itself and the Linux moth byte for byte, and installs and runs from the .deb
+  # the Windows folio builds itself and the Linux folio byte for byte, and installs and runs from the .deb
   windows:
     needs: build
     runs-on: windows-latest
@@ -162,20 +162,20 @@ jobs:
         with:
           name: dist
           path: dist
-      - name: the Windows moth builds itself, and the Linux moth, into the same bytes
+      - name: the Windows folio builds itself, and the Linux folio, into the same bytes
         shell: pwsh
         run: |
-          $first = Join-Path $env:RUNNER_TEMP 'moth-first.exe'
-          Copy-Item dist\moth-windows.exe $first
-          $self = 'moth.moth', '--allow-read', '--allow-write', '--allow-run', '--include', 'moth-debugger.moth', '--include', 'package.json'
+          $first = Join-Path $env:RUNNER_TEMP 'folio-first.exe'
+          Copy-Item dist\folio-windows.exe $first
+          $self = 'folio.folio', '--allow-read', '--allow-write', '--allow-run', '--include', 'folio-debugger.folio', '--include', 'package.json'
           & $first build @self
-          if ($LASTEXITCODE) { throw 'moth.exe failed to build itself' }
+          if ($LASTEXITCODE) { throw 'folio.exe failed to build itself' }
           & $first build @self --target linux
-          if ($LASTEXITCODE) { throw 'moth.exe failed to build the Linux moth' }
-          foreach ($pair in @(@('moth.exe', 'dist\moth-windows.exe'), @('moth', 'dist\moth-linux'))) {
+          if ($LASTEXITCODE) { throw 'folio.exe failed to build the Linux folio' }
+          foreach ($pair in @(@('folio.exe', 'dist\folio-windows.exe'), @('folio', 'dist\folio-linux'))) {
             $made = (Get-FileHash $pair[0] -Algorithm SHA256).Hash
             $given = (Get-FileHash $pair[1] -Algorithm SHA256).Hash
-            if ($made -ne $given) { throw "moth-windows.exe built $($pair[0]) as $made, not $given" }
+            if ($made -ne $given) { throw "folio-windows.exe built $($pair[0]) as $made, not $given" }
             Write-Host "$($pair[0]): $made, the same bytes"
           }
 
@@ -205,17 +205,17 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           python -m pip install --quiet pyyaml==6.0.3 jsonschema==4.26.0 referencing==0.37.0
-          python packaging/check-schemas.py --manifests manifests --sbom "dist/moth-$VERSION.cdx.json"
+          python packaging/check-schemas.py --manifests manifests --sbom "dist/folio-$VERSION.cdx.json"
       - name: the .deb installs, runs a program, and is removed
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          dpkg-deb --info "dist/moth_${VERSION}_amd64.deb"
-          sudo apt-get install -y -q "./dist/moth_${VERSION}_amd64.deb"
-          printf 'say "Hello from " "the .deb"\n' > "$RUNNER_TEMP/hello.moth"
-          (cd "$RUNNER_TEMP" && test "$(moth run hello.moth)" = "Hello from the .deb")
-          sudo apt-get remove -y -q moth
-          ! test -e /usr/bin/moth
+          dpkg-deb --info "dist/folio_${VERSION}_amd64.deb"
+          sudo apt-get install -y -q "./dist/folio_${VERSION}_amd64.deb"
+          printf 'say "Hello from " "the .deb"\n' > "$RUNNER_TEMP/hello.folio"
+          (cd "$RUNNER_TEMP" && test "$(folio run hello.folio)" = "Hello from the .deb")
+          sudo apt-get remove -y -q folio
+          ! test -e /usr/bin/folio
 
   sign:
     needs: [build, windows, check]
@@ -264,7 +264,7 @@ jobs:
         env:
           IDENTITY: https://github.com/${{ github.workflow_ref }}
         run: |
-          openssl x509 -in signed/moth-linux.pem -noout -subject -issuer -ext subjectAltName
+          openssl x509 -in signed/folio-linux.pem -noout -subject -issuer -ext subjectAltName
           for path in dist/*; do
             file=${path#dist/}
             cosign verify-blob --new-bundle-format --bundle "signed/$file.sigstore.json" \
@@ -282,9 +282,9 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
-            dist/moth-linux
-            dist/moth-windows.exe
-          sbom-path: dist/moth-${{ needs.build.outputs.version }}.cdx.json
+            dist/folio-linux
+            dist/folio-windows.exe
+          sbom-path: dist/folio-${{ needs.build.outputs.version }}.cdx.json
       - name: check the attestations, as docs/verifying-releases.md does
         if: env.DRY_RUN == 'false'
         env:
@@ -295,7 +295,7 @@ jobs:
             gh attestation verify "$path" --repo "$GITHUB_REPOSITORY" --source-ref "refs/tags/$TAG" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
           done
-          gh attestation verify dist/moth-linux --repo "$GITHUB_REPOSITORY" --predicate-type https://cyclonedx.org/bom
+          gh attestation verify dist/folio-linux --repo "$GITHUB_REPOSITORY" --predicate-type https://cyclonedx.org/bom
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signatures
@@ -321,13 +321,13 @@ jobs:
         with:
           name: dist
           path: dist
-      - name: moth-linux is the one the build made, alone in the image's folder
+      - name: folio-linux is the one the build made, alone in the image's folder
         env:
           SUMS: ${{ needs.build.outputs.sums }}
         run: |
-          printf '%s\n' "$SUMS" | grep ' moth-linux$' > "$RUNNER_TEMP/sums"
+          printf '%s\n' "$SUMS" | grep ' folio-linux$' > "$RUNNER_TEMP/sums"
           (cd dist && sha256sum --check --strict "$RUNNER_TEMP/sums")
-          mkdir context && cp dist/moth-linux context/
+          mkdir context && cp dist/folio-linux context/
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: build the image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -342,18 +342,18 @@ jobs:
       - name: the image runs a program
         run: |
           mkdir -p "$RUNNER_TEMP/work" && cd "$RUNNER_TEMP/work"
-          printf 'say "Hello from " "the image"\n' > hello.moth
-          ran=$(docker run --rm -v "$PWD:/work" --user "$(id -u):$(id -g)" "$IMAGE:$VERSION" run hello.moth)
+          printf 'say "Hello from " "the image"\n' > hello.folio
+          ran=$(docker run --rm -v "$PWD:/work" --user "$(id -u):$(id -g)" "$IMAGE:$VERSION" run hello.folio)
           test "$ran" = "Hello from the image"
           docker image ls "$IMAGE"
       - name: keep the image, in a dry run
         if: env.DRY_RUN == 'true'
-        run: docker save "$IMAGE:$VERSION" | gzip > "moth-image-$VERSION.tar.gz"
+        run: docker save "$IMAGE:$VERSION" | gzip > "folio-image-$VERSION.tar.gz"
       - if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image
-          path: moth-image-*.tar.gz
+          path: folio-image-*.tar.gz
           if-no-files-found: error
       - name: sign in to ghcr.io
         if: env.DRY_RUN == 'false'
@@ -425,7 +425,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          files=("dist/moth_${VERSION}_amd64.deb" "dist/moth-${VERSION}.cdx.json" signed/*)
+          files=("dist/folio_${VERSION}_amd64.deb" "dist/folio-${VERSION}.cdx.json" signed/*)
           {
             echo "#### $([ "$DRY_RUN" = true ] && echo 'What a release would have uploaded' || echo "Uploaded to $TAG")"
             printf -- '- %s\n' "${files[@]##*/}"

@@ -2,10 +2,10 @@
 
 `start f(x) on another core` runs a call on a worker, a thread with memory of its own, and `wait for` gives
 back what it gave. Workers share nothing (each gets copies), so they can't trip over each other. In a
-program `moth build` makes, they run at the same moment on every core; in the playground they run one after
+program `folio build` makes, they run at the same moment on every core; in the playground they run one after
 another and give the same answers.
 
-```moth
+```folio
 to primes_below with top
     set found to 0
     for each n from 2 to top - 1
@@ -40,4 +40,4 @@ end
 550
 ```
 
-`tools/cores.moth` does the same for a whole list at once, across separate copies of the program.
+`tools/cores.folio` does the same for a whole list at once, across separate copies of the program.

@@ -1,13 +1,13 @@
-// Moth against C, Rust and Python: the same four programs in each, every one run as a whole process from start
+// Folio against C, Rust and Python: the same four programs in each, every one run as a whole process from start
 // to finish, the best of three, after a run to warm up: on Windows a program's first run is looked through by
-// the virus checker, and one in the temporary folder every time, so they're built in a folder of the repo's. Moth runs as the machine code machine.moth makes, and on the JavaScript engine. C
+// the virus checker, and one in the temporary folder every time, so they're built in a folder of the repo's. Folio runs as the machine code machine.folio makes, and on the JavaScript engine. C
 // needs cc, gcc or clang, or MSVC's cl in a developer prompt; Rust needs rustc; Python needs python3 or python. Run
 // with `npm run versus`.
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { machineCompiler } from "../moth.js";
+import { machineCompiler } from "../folio.js";
 
 const here = (file) => fileURLToPath(new URL(file, import.meta.url));
 const PROGRAMS = {
@@ -35,18 +35,18 @@ const rust = works("rustc", ["-O", "-o", rustExe, here("versus.rs")]);
 if (rust) ways["Rust"] = (p) => [rustExe, [p]];
 const target = { win32: "windows", linux: "linux" }[process.platform];
 if (target) {
-  const machine = machineCompiler(readFileSync(here("../machine.moth"), "utf8"), readFileSync(here("../compiler.moth"), "utf8"));
+  const machine = machineCompiler(readFileSync(here("../machine.folio"), "utf8"), readFileSync(here("../compiler.folio"), "utf8"));
   for (const p of Object.keys(PROGRAMS)) {
     const exe = join(dir, windows ? `${p}.exe` : p);
-    writeFileSync(exe, machine(readFileSync(here(`${p}.moth`), "utf8"), { target, name: `${p}.moth` }));
+    writeFileSync(exe, machine(readFileSync(here(`${p}.folio`), "utf8"), { target, name: `${p}.folio` }));
     if (!windows) chmodSync(exe, 0o755);
   }
-  ways["Moth, machine code"] = (p) => [join(dir, windows ? `${p}.exe` : p), []];
+  ways["Folio, machine code"] = (p) => [join(dir, windows ? `${p}.exe` : p), []];
 }
-// the JavaScript engine, the playground's, which the moth command used to run programs on
-const engine = pathToFileURL(here("../moth.js")).href;
+// the JavaScript engine, the playground's, which the folio command used to run programs on
+const engine = pathToFileURL(here("../folio.js")).href;
 ways["JavaScript engine"] = (p) => [process.execPath, ["--input-type=module", "-e",
-  `import { run } from ${JSON.stringify(engine)}; import { readFileSync } from "node:fs"; run(readFileSync(${JSON.stringify(here(`${p}.moth`))}, "utf8"), console.log);`]];
+  `import { run } from ${JSON.stringify(engine)}; import { readFileSync } from "node:fs"; run(readFileSync(${JSON.stringify(here(`${p}.folio`))}, "utf8"), console.log);`]];
 const python = ["python3", "python"].find((command) => works(command, ["--version"]));
 if (python) ways.Python = (p) => [python, [here(`${p}.py`)]];
 
@@ -65,7 +65,7 @@ try {
         const ran = spawnSync(command, args, { encoding: "utf8", maxBuffer: 1 << 26 });
         best = Math.min(best, Number(process.hrtime.bigint() - start) / 1e6);
         if (ran.status !== 0) throw new Error(`${name} failed on ${p}: ${ran.stderr || ran.error}`);
-        answers.add(Number(ran.stdout).toPrecision(15)); // Python shows 17 digits, Moth and C 15
+        answers.add(Number(ran.stdout).toPrecision(15)); // Python shows 17 digits, Folio and C 15
       }
       times.push(`${best.toFixed(0)} ms`.padStart(20));
     }

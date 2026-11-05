@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- The extension's icon, from the site's top: its lantern on a cord, and the moth, from docs/moth.svg,
+  <!-- The extension's icon, from the site's top: its lantern on a cord, and the folio, from docs/folio.svg,
        flying to its light, on the page's night. icon.png is this, drawn 128 by 128 by Chromium. -->
   <defs>
     <radialGradient id="night" cx="50%" cy="58%" r="72%">
@@ -45,7 +45,7 @@
     <path d="M29 116h22l-4 9H33z" fill="url(#metal)"/>
   </g>
 
-  <!-- the moth, drawn to it -->
+  <!-- the folio, drawn to it -->
   <g transform="translate(88 44) rotate(-58) scale(1.02) translate(-32 -32)" filter="url(#halo)">
     <path fill="url(#hind)" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
     <path fill="url(#fore)" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>

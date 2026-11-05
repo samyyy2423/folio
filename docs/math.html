@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>math.moth · Moth's standard library</title>
-  <meta name="description" content="Maths Moth doesn't have built in, written in Moth: random numbers, trigonometry, rounding, roots, logarithms and powers of any number.">
+  <title>math.folio · Folio's standard library</title>
+  <meta name="description" content="Maths Folio doesn't have built in, written in Folio: random numbers, trigonometry, rounding, roots, logarithms and powers of any number.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>math</em>.moth</h1>
-      <p>Maths Moth doesn't have built in, written in Moth: random numbers, trigonometry, rounding, roots, logarithms and powers of any number.</p>
-      <p class="use"><code>use "math.moth" as math</code></p>
+      <h1><em>math</em>.folio</h1>
+      <p>Maths Folio doesn't have built in, written in Folio: random numbers, trigonometry, rounding, roots, logarithms and powers of any number.</p>
+      <p class="use"><code>use "math.folio" as math</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="math.moth's functions">
+    <nav class="toc" aria-label="math.folio's functions">
       <h2>23 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#whole">whole</a></li><li><a href="#random">random</a></li><li><a href="#sine">sine</a></li><li><a href="#cosine">cosine</a></li><li><a href="#floor">floor</a></li><li><a href="#rounded">rounded</a></li><li><a href="#exp">exp</a></li><li><a href="#sqrt">sqrt</a></li><li><a href="#between">between</a></li><li><a href="#ln">ln</a></li><li><a href="#log10">log10</a></li><li><a href="#log2">log2</a></li><li><a href="#power">power</a></li><li><a href="#absolute">absolute</a></li><li><a href="#ceiling">ceiling</a></li><li><a href="#round">round</a></li><li><a href="#tangent">tangent</a></li><li><a href="#arctangent">arctangent</a></li><li><a href="#arcsine">arcsine</a></li><li><a href="#arccosine">arccosine</a></li><li><a href="#angle_of">angle_of</a></li><li><a href="#radians">radians</a></li><li><a href="#degrees">degrees</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/math.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/math.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Maths Moth doesn't have built in, written in Moth: random numbers, trigonometry, rounding, roots, logarithms and powers of any number. Any program can have them with <code>use &quot;math.moth&quot;</code>, as neural.moth does.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <p>Maths Folio doesn't have built in, written in Folio: random numbers, trigonometry, rounding, roots, logarithms and powers of any number. Any program can have them with <code>use &quot;math.folio&quot;</code>, as neural.folio does.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's sqrt(<span class="n">2</span>)                     <span class="c"># 1.41421356237309</span>
 <span class="k">say</span> math's sine(math's pi / <span class="n">6</span>)         <span class="c"># 0.5; cosine and tangent too, of angles in radians</span>
 <span class="k">say</span> math's degrees(math's arctangent(<span class="n">1</span>))   <span class="c"># 45; radians(45) the other way</span>
@@ -75,9 +75,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to whole with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L21">math.moth line 21</a></p>
+          <p class="written">Written <code>to whole with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L21">math.folio line 21</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's absolute(-<span class="n">7</span>) <span class="s">&quot; &quot;</span> math's whole(<span class="n">7.9</span>)   <span class="c"># 7 7</span></code></pre><pre class="says"><code>7 7</code></pre></div>
         </section>
         <section class="fn" id="random">
@@ -87,9 +87,9 @@
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to random</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L37">math.moth line 37</a></p>
+          <p class="written">Written <code>to random</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L37">math.folio line 37</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's <span class="k">random</span>()                    <span class="c"># from 0 up to 1, the same each run: set seed to change them</span></code></pre><pre class="says"><code>0.000328707508895876</code></pre></div>
         </section>
         <section class="fn" id="sine">
@@ -99,9 +99,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sine with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L51">math.moth line 51</a></p>
+          <p class="written">Written <code>to sine with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L51">math.folio line 51</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's sine(math's pi / <span class="n">6</span>)         <span class="c"># 0.5; cosine and tangent too, of angles in radians</span></code></pre><pre class="says"><code>0.5</code></pre></div>
         </section>
         <section class="fn" id="cosine">
@@ -111,9 +111,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to cosine with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L68">math.moth line 68</a></p>
+          <p class="written">Written <code>to cosine with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L68">math.folio line 68</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 math's cosine(x)</code></pre></div>
         </section>
         <section class="fn" id="floor">
@@ -123,9 +123,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to floor with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L75">math.moth line 75</a></p>
+          <p class="written">Written <code>to floor with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L75">math.folio line 75</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's floor(-<span class="n">2.5</span>) <span class="s">&quot; &quot;</span> math's ceiling(-<span class="n">2.5</span>) <span class="s">&quot; &quot;</span> math's round(<span class="n">2.5</span>)   <span class="c"># -3 -2 3</span></code></pre><pre class="says"><code>-3 -2 3</code></pre></div>
         </section>
         <section class="fn" id="rounded">
@@ -135,9 +135,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to rounded with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L87">math.moth line 87</a></p>
+          <p class="written">Written <code>to rounded with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L87">math.folio line 87</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's <span class="k">rounded</span>(<span class="n">3.14159</span>)            <span class="c"># 3.142: at most 3 decimals, for saying</span></code></pre><pre class="says"><code>3.142</code></pre></div>
         </section>
         <section class="fn" id="exp">
@@ -147,9 +147,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to exp with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L97">math.moth line 97</a></p>
+          <p class="written">Written <code>to exp with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L97">math.folio line 97</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's exp(math's ln(<span class="n">5</span>))</code></pre><pre class="says"><code>5</code></pre></div>
         </section>
         <section class="fn" id="sqrt">
@@ -159,9 +159,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sqrt with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L118">math.moth line 118</a></p>
+          <p class="written">Written <code>to sqrt with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L118">math.folio line 118</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's sqrt(<span class="n">2</span>)                     <span class="c"># 1.41421356237309</span></code></pre><pre class="says"><code>1.41421356237309</code></pre></div>
         </section>
         <section class="fn" id="between">
@@ -171,9 +171,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>low</code></li><li><code>high</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to between with low, high</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L136">math.moth line 136</a></p>
+          <p class="written">Written <code>to between with low, high</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L136">math.folio line 136</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's between(<span class="n">1</span>, <span class="n">6</span>)               <span class="c"># from 1 up to 6</span></code></pre><pre class="says"><code>1.00164353754448</code></pre></div>
         </section>
         <section class="fn" id="ln">
@@ -183,9 +183,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ln with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L146">math.moth line 146</a></p>
+          <p class="written">Written <code>to ln with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L146">math.folio line 146</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's ln(<span class="n">2</span>)</code></pre><pre class="says"><code>0.693147180559945</code></pre></div>
         </section>
         <section class="fn" id="log10">
@@ -195,9 +195,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to log10 with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L175">math.moth line 175</a></p>
+          <p class="written">Written <code>to log10 with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L175">math.folio line 175</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's log10(<span class="n">1000</span>)</code></pre><pre class="says"><code>3</code></pre></div>
         </section>
         <section class="fn" id="log2">
@@ -207,9 +207,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to log2 with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L180">math.moth line 180</a></p>
+          <p class="written">Written <code>to log2 with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L180">math.folio line 180</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's log2(<span class="n">1024</span>)</code></pre><pre class="says"><code>10</code></pre></div>
         </section>
         <section class="fn" id="power">
@@ -219,9 +219,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li><li><code>y</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to power with x, y</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L186">math.moth line 186</a></p>
+          <p class="written">Written <code>to power with x, y</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L186">math.folio line 186</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's <span class="k">power</span>(<span class="n">2</span>, <span class="n">0.5</span>)               <span class="c"># any power of any number; exp, ln, log10 and log2</span></code></pre><pre class="says"><code>1.41421356237309</code></pre></div>
         </section>
         <section class="fn" id="absolute">
@@ -231,9 +231,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to absolute with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L200">math.moth line 200</a></p>
+          <p class="written">Written <code>to absolute with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L200">math.folio line 200</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's absolute(-<span class="n">7</span>) <span class="s">&quot; &quot;</span> math's whole(<span class="n">7.9</span>)   <span class="c"># 7 7</span></code></pre><pre class="says"><code>7 7</code></pre></div>
         </section>
         <section class="fn" id="ceiling">
@@ -243,9 +243,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ceiling with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L208">math.moth line 208</a></p>
+          <p class="written">Written <code>to ceiling with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L208">math.folio line 208</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's floor(-<span class="n">2.5</span>) <span class="s">&quot; &quot;</span> math's ceiling(-<span class="n">2.5</span>) <span class="s">&quot; &quot;</span> math's round(<span class="n">2.5</span>)   <span class="c"># -3 -2 3</span></code></pre><pre class="says"><code>-3 -2 3</code></pre></div>
         </section>
         <section class="fn" id="round">
@@ -255,9 +255,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to round with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L213">math.moth line 213</a></p>
+          <p class="written">Written <code>to round with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L213">math.folio line 213</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's floor(-<span class="n">2.5</span>) <span class="s">&quot; &quot;</span> math's ceiling(-<span class="n">2.5</span>) <span class="s">&quot; &quot;</span> math's round(<span class="n">2.5</span>)   <span class="c"># -3 -2 3</span></code></pre><pre class="says"><code>-3 -2 3</code></pre></div>
         </section>
         <section class="fn" id="tangent">
@@ -267,9 +267,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to tangent with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L218">math.moth line 218</a></p>
+          <p class="written">Written <code>to tangent with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L218">math.folio line 218</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's tangent(<span class="n">1</span>)</code></pre><pre class="says"><code>1.5574077246549</code></pre></div>
         </section>
         <section class="fn" id="arctangent">
@@ -279,9 +279,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to arctangent with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L223">math.moth line 223</a></p>
+          <p class="written">Written <code>to arctangent with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L223">math.folio line 223</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's degrees(math's arctangent(<span class="n">1</span>))   <span class="c"># 45; radians(45) the other way</span></code></pre><pre class="says"><code>45</code></pre></div>
         </section>
         <section class="fn" id="arcsine">
@@ -291,9 +291,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to arcsine with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L249">math.moth line 249</a></p>
+          <p class="written">Written <code>to arcsine with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L249">math.folio line 249</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's arcsine(<span class="n">0.5</span>)</code></pre><pre class="says"><code>0.523598775598299</code></pre></div>
         </section>
         <section class="fn" id="arccosine">
@@ -303,9 +303,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to arccosine with x</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L263">math.moth line 263</a></p>
+          <p class="written">Written <code>to arccosine with x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L263">math.folio line 263</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's arccosine(<span class="n">0.5</span>)</code></pre><pre class="says"><code>1.0471975511966</code></pre></div>
         </section>
         <section class="fn" id="angle_of">
@@ -315,9 +315,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>x</code></li><li><code>y</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to angle_of with x, y</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L271">math.moth line 271</a></p>
+          <p class="written">Written <code>to angle_of with x, y</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L271">math.folio line 271</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's angle_of(-<span class="n">1</span>, -<span class="n">1</span>)</code></pre><pre class="says"><code>-2.35619449019234</code></pre></div>
         </section>
         <section class="fn" id="radians">
@@ -327,9 +327,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>angle</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to radians with angle</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L291">math.moth line 291</a></p>
+          <p class="written">Written <code>to radians with angle</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L291">math.folio line 291</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's radians(<span class="n">90</span>)</code></pre><pre class="says"><code>1.5707963267949</code></pre></div>
         </section>
         <section class="fn" id="degrees">
@@ -339,9 +339,9 @@ math's cosine(x)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>angle</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to degrees with angle</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/math.moth#L296">math.moth line 296</a></p>
+          <p class="written">Written <code>to degrees with angle</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/math.folio#L296">math.folio line 296</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.moth&quot;</span> <span class="k">as</span> math
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;math.folio&quot;</span> <span class="k">as</span> math
 <span class="k">say</span> math's degrees(math's arctangent(<span class="n">1</span>))   <span class="c"># 45; radians(45) the other way</span></code></pre><pre class="says"><code>45</code></pre></div>
         </section>
       </section>
@@ -349,14 +349,14 @@ math's cosine(x)</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

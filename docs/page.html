@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>page.moth · Moth's standard library</title>
-  <meta name="description" content="Web pages, made in Moth: headings, text, links, pictures, lists, tables, text boxes, buttons and the rest, styled with CSS of the page's own or Moth's, shown…">
+  <title>page.folio · Folio's standard library</title>
+  <meta name="description" content="Web pages, made in Folio: headings, text, links, pictures, lists, tables, text boxes, buttons and the rest, styled with CSS of the page's own or Folio's, shown…">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>page</em>.moth</h1>
-      <p>Web pages, made in Moth: headings, text, links, pictures, lists, tables, text boxes, buttons and the rest, styled with CSS of the page's own or Moth's, shown…</p>
-      <p class="use"><code>use "page.moth" as page</code></p>
+      <h1><em>page</em>.folio</h1>
+      <p>Web pages, made in Folio: headings, text, links, pictures, lists, tables, text boxes, buttons and the rest, styled with CSS of the page's own or Folio's, shown…</p>
+      <p class="use"><code>use "page.folio" as page</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="page.moth's functions">
+    <nav class="toc" aria-label="page.folio's functions">
       <h2>32 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#escaped">escaped</a></li><li><a href="#new">new</a></li><li><a href="#heading">heading</a></li><li><a href="#subheading">subheading</a></li><li><a href="#paragraph">paragraph</a></li><li><a href="#bold">bold</a></li><li><a href="#code_block">code_block</a></li><li><a href="#link">link</a></li><li><a href="#picture">picture</a></li><li><a href="#rule">rule</a></li><li><a href="#button">button</a></li><li><a href="#text_box">text_box</a></li><li><a href="#text_area">text_area</a></li><li><a href="#checkbox">checkbox</a></li><li><a href="#dropdown">dropdown</a></li><li><a href="#start_list">start_list</a></li><li><a href="#list_item">list_item</a></li><li><a href="#list_link">list_link</a></li><li><a href="#end_list">end_list</a></li><li><a href="#menu">menu</a></li><li><a href="#start_table">start_table</a></li><li><a href="#table_row">table_row</a></li><li><a href="#end_table">end_table</a></li><li><a href="#start">start</a></li><li><a href="#finish">finish</a></li><li><a href="#start_form">start_form</a></li><li><a href="#submit">submit</a></li><li><a href="#end_form">end_form</a></li><li><a href="#style">style</a></li><li><a href="#html">html</a></li><li><a href="#html_of">html_of</a></li><li><a href="#show">show</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Web pages, made in Moth: headings, text, links, pictures, lists, tables, text boxes, buttons and the rest, styled with CSS of the page's own or Moth's, shown where the program runs on the web (the playground, or a page moth build --web made, as the whole window). What's clicked, typed or chosen on it comes back to the program: <code>when the page is used with what</code>, <code>what</code> a dictionary of its &quot;type&quot; (&quot;click&quot;, &quot;enter&quot; for Enter in a text box, or &quot;change&quot;), the &quot;name&quot; of what was used, its &quot;value&quot;, and &quot;values&quot;: every text box's, checkbox's and dropdown's value on the page, by its name. Show the page again to change it.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <p>Web pages, made in Folio: headings, text, links, pictures, lists, tables, text boxes, buttons and the rest, styled with CSS of the page's own or Folio's, shown where the program runs on the web (the playground, or a page folio build --web made, as the whole window). What's clicked, typed or chosen on it comes back to the program: <code>when the page is used with what</code>, <code>what</code> a dictionary of its &quot;type&quot; (&quot;click&quot;, &quot;enter&quot; for Enter in a text box, or &quot;change&quot;), the &quot;name&quot; of what was used, its &quot;value&quot;, and &quot;values&quot;: every text box's, checkbox's and dropdown's value on the page, by its name. Show the page again to change it.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -76,7 +76,7 @@
     <span class="k">end</span>
 <span class="k">end</span>
 view()</code></pre></div>
-          <p>Every text is shown as it is, never read as HTML; <a href="#html">html</a>() puts HTML in as it's written, and anything in it with a data-moth=&quot;name&quot; is used as a button is. A page is shown by writing it to the file &quot;&lt;page&gt;&quot;, which the web shows instead of keeping. Elsewhere, <a href="#html_of">html_of</a>() is the page's HTML, to write to a file of its own or for server.moth to send; a site's pages have <a href="#menu">menu</a>(), <a href="#list_link">list_link</a>() and forms, <a href="#start_form">start_form</a>() to <a href="#end_form">end_form</a>(), whose fields the browser sends to the server, as a page shown in the playground has no server to send to.</p>
+          <p>Every text is shown as it is, never read as HTML; <a href="#html">html</a>() puts HTML in as it's written, and anything in it with a data-folio=&quot;name&quot; is used as a button is. A page is shown by writing it to the file &quot;&lt;page&gt;&quot;, which the web shows instead of keeping. Elsewhere, <a href="#html_of">html_of</a>() is the page's HTML, to write to a file of its own or for server.folio to send; a site's pages have <a href="#menu">menu</a>(), <a href="#list_link">list_link</a>() and forms, <a href="#start_form">start_form</a>() to <a href="#end_form">end_form</a>(), whose fields the browser sends to the server, as a page shown in the playground has no server to send to.</p>
       </section>
       <section class="fns">
         <h2>Functions</h2>
@@ -87,9 +87,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to escaped with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L42">page.moth line 42</a></p>
+          <p class="written">Written <code>to escaped with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L42">page.folio line 42</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">say</span> page's escaped(<span class="s">&quot;&lt;b&gt; &amp; \&quot;x\&quot;&quot;</span>)</code></pre><pre class="says"><code>&amp;lt;b&amp;gt; &amp;amp; &amp;quot;x&amp;quot;</code></pre></div>
         </section>
         <section class="fn" id="new">
@@ -99,9 +99,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>title</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to new with title</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L61">page.moth line 61</a></p>
+          <p class="written">Written <code>to new with title</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L61">page.folio line 61</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 <span class="k">say</span> p</code></pre><pre class="says"><code>(record with title &quot;A &lt;page&gt;&quot;, parts [], open [], css &quot;&quot;)</code></pre></div>
         </section>
@@ -112,9 +112,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to heading with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L76">page.moth line 76</a></p>
+          <p class="written">Written <code>to heading with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L76">page.folio line 76</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -143,9 +143,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to subheading with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L81">page.moth line 81</a></p>
+          <p class="written">Written <code>to subheading with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L81">page.folio line 81</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)</code></pre></div>
@@ -157,9 +157,9 @@ page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)</code></pre><
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to paragraph with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L86">page.moth line 86</a></p>
+          <p class="written">Written <code>to paragraph with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L86">page.folio line 86</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
@@ -172,9 +172,9 @@ page's paragraph(p, <span class="s">&quot;&lt;script&gt;&quot;</span>)</code></p
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bold with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L91">page.moth line 91</a></p>
+          <p class="written">Written <code>to bold with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L91">page.folio line 91</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
@@ -188,9 +188,9 @@ page's bold(p, <span class="s">&quot;Big&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to code_block with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L96">page.moth line 96</a></p>
+          <p class="written">Written <code>to code_block with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L96">page.folio line 96</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
@@ -205,16 +205,16 @@ page's code_block(p, <span class="s">&quot;a &lt; b&quot;</span>)</code></pre></
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li><li><code>address</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to link with on, words, address</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L101">page.moth line 101</a></p>
+          <p class="written">Written <code>to link with on, words, address</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L101">page.folio line 101</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
 page's paragraph(p, <span class="s">&quot;&lt;script&gt;&quot;</span>)
 page's bold(p, <span class="s">&quot;Big&quot;</span>)
 page's code_block(p, <span class="s">&quot;a &lt; b&quot;</span>)
-page's link(p, <span class="s">&quot;Moth&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)</code></pre></div>
+page's link(p, <span class="s">&quot;Folio&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="picture">
           <h3><a href="#picture"><code>page's picture(on, address, shows)</code></a></h3>
@@ -223,16 +223,16 @@ page's link(p, <span class="s">&quot;Moth&quot;</span>, <span class="s">&quot;ht
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>address</code></li><li><code>shows</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to picture with on, address, shows</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L106">page.moth line 106</a></p>
+          <p class="written">Written <code>to picture with on, address, shows</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L106">page.folio line 106</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
 page's paragraph(p, <span class="s">&quot;&lt;script&gt;&quot;</span>)
 page's bold(p, <span class="s">&quot;Big&quot;</span>)
 page's code_block(p, <span class="s">&quot;a &lt; b&quot;</span>)
-page's link(p, <span class="s">&quot;Moth&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)
+page's link(p, <span class="s">&quot;Folio&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)
 page's <span class="k">picture</span>(p, <span class="s">&quot;cat.png&quot;</span>, <span class="s">&quot;A \&quot;cat\&quot;&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="rule">
@@ -242,16 +242,16 @@ page's <span class="k">picture</span>(p, <span class="s">&quot;cat.png&quot;</sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to rule with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L111">page.moth line 111</a></p>
+          <p class="written">Written <code>to rule with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L111">page.folio line 111</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
 page's paragraph(p, <span class="s">&quot;&lt;script&gt;&quot;</span>)
 page's bold(p, <span class="s">&quot;Big&quot;</span>)
 page's code_block(p, <span class="s">&quot;a &lt; b&quot;</span>)
-page's link(p, <span class="s">&quot;Moth&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)
+page's link(p, <span class="s">&quot;Folio&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)
 page's <span class="k">picture</span>(p, <span class="s">&quot;cat.png&quot;</span>, <span class="s">&quot;A \&quot;cat\&quot;&quot;</span>)
 page's rule(p)</code></pre></div>
         </section>
@@ -262,9 +262,9 @@ page's rule(p)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to button with on, name, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L116">page.moth line 116</a></p>
+          <p class="written">Written <code>to button with on, name, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L116">page.folio line 116</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -293,9 +293,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>hint</code></li><li><code>value</code> <span class="optional">optional: &quot;&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_box with on, name, hint, value or &quot;&quot;</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L121">page.moth line 121</a></p>
+          <p class="written">Written <code>to text_box with on, name, hint, value or &quot;&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L121">page.folio line 121</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -324,9 +324,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>hint</code></li><li><code>value</code> <span class="optional">optional: &quot;&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_area with on, name, hint, value or &quot;&quot;</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L126">page.moth line 126</a></p>
+          <p class="written">Written <code>to text_area with on, name, hint, value or &quot;&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L126">page.folio line 126</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Form&quot;</span>)
 page's text_box(p, <span class="s">&quot;who&quot;</span>, <span class="s">&quot;Your name&quot;</span>, <span class="s">&quot;Sam&quot;</span>)
 page's text_box(p, <span class="s">&quot;where&quot;</span>, <span class="s">&quot;Town&quot;</span>)
@@ -339,9 +339,9 @@ page's text_area(p, <span class="s">&quot;notes&quot;</span>, <span class="s">&q
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>words</code></li><li><code>ticked</code> <span class="optional">optional: no if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to checkbox with on, name, words, ticked or no</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L131">page.moth line 131</a></p>
+          <p class="written">Written <code>to checkbox with on, name, words, ticked or no</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L131">page.folio line 131</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Form&quot;</span>)
 page's text_box(p, <span class="s">&quot;who&quot;</span>, <span class="s">&quot;Your name&quot;</span>, <span class="s">&quot;Sam&quot;</span>)
 page's text_box(p, <span class="s">&quot;where&quot;</span>, <span class="s">&quot;Town&quot;</span>)
@@ -355,9 +355,9 @@ page's <span class="k">checkbox</span>(p, <span class="s">&quot;tea&quot;</span>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>name</code></li><li><code>choices</code></li><li><code>chosen</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to dropdown with on, name, choices, chosen or nothing</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L140">page.moth line 140</a></p>
+          <p class="written">Written <code>to dropdown with on, name, choices, chosen or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L140">page.folio line 140</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Form&quot;</span>)
 page's text_box(p, <span class="s">&quot;who&quot;</span>, <span class="s">&quot;Your name&quot;</span>, <span class="s">&quot;Sam&quot;</span>)
 page's text_box(p, <span class="s">&quot;where&quot;</span>, <span class="s">&quot;Town&quot;</span>)
@@ -374,9 +374,9 @@ page's <span class="k">dropdown</span>(p, <span class="s">&quot;size&quot;</span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>numbered</code> <span class="optional">optional: no if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start_list with on, numbered or no</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L153">page.moth line 153</a></p>
+          <p class="written">Written <code>to start_list with on, numbered or no</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L153">page.folio line 153</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -405,9 +405,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to list_item with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L162">page.moth line 162</a></p>
+          <p class="written">Written <code>to list_item with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L162">page.folio line 162</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -436,9 +436,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li><li><code>address</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to list_link with on, words, address</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L167">page.moth line 167</a></p>
+          <p class="written">Written <code>to list_link with on, words, address</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L167">page.folio line 167</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Site&quot;</span>)
 <span class="k">set</span> names <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Home&quot;</span>, <span class="s">&quot;About &amp; us&quot;</span>
 <span class="k">set</span> addresses <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;/&quot;</span>, <span class="s">&quot;/about?x=1&amp;y=2&quot;</span>
@@ -453,9 +453,9 @@ page's list_link(p, <span class="s">&quot;Soup &lt;hot&gt;&quot;</span>, <span c
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to end_list with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L172">page.moth line 172</a></p>
+          <p class="written">Written <code>to end_list with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L172">page.folio line 172</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -484,9 +484,9 @@ view()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>names</code></li><li><code>addresses</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to menu with on, names, addresses</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L177">page.moth line 177</a></p>
+          <p class="written">Written <code>to menu with on, names, addresses</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L177">page.folio line 177</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Site&quot;</span>)
 <span class="k">set</span> names <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Home&quot;</span>, <span class="s">&quot;About &amp; us&quot;</span>
 <span class="k">set</span> addresses <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;/&quot;</span>, <span class="s">&quot;/about?x=1&amp;y=2&quot;</span>
@@ -499,9 +499,9 @@ page's menu(p, names, addresses)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>headings</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start_table with on, headings</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L189">page.moth line 189</a></p>
+          <p class="written">Written <code>to start_table with on, headings</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L189">page.folio line 189</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Boxes&quot;</span>)
 page's <span class="k">start</span>(p, <span class="s">&quot;card&quot;</span>)
 page's start_list(p)
@@ -520,9 +520,9 @@ page's start_table(p, headings)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>cells</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to table_row with on, cells</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L200">page.moth line 200</a></p>
+          <p class="written">Written <code>to table_row with on, cells</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L200">page.folio line 200</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Boxes&quot;</span>)
 page's <span class="k">start</span>(p, <span class="s">&quot;card&quot;</span>)
 page's start_list(p)
@@ -543,9 +543,9 @@ page's table_row(p, row)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to end_table with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L209">page.moth line 209</a></p>
+          <p class="written">Written <code>to end_table with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L209">page.folio line 209</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Boxes&quot;</span>)
 page's <span class="k">start</span>(p, <span class="s">&quot;card&quot;</span>)
 page's start_list(p)
@@ -567,9 +567,9 @@ page's end_table(p)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>kind_of_box</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start with on, kind_of_box</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L215">page.moth line 215</a></p>
+          <p class="written">Written <code>to start with on, kind_of_box</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L215">page.folio line 215</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Boxes&quot;</span>)
 page's <span class="k">start</span>(p, <span class="s">&quot;card&quot;</span>)</code></pre></div>
         </section>
@@ -580,9 +580,9 @@ page's <span class="k">start</span>(p, <span class="s">&quot;card&quot;</span>)<
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to finish with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L220">page.moth line 220</a></p>
+          <p class="written">Written <code>to finish with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L220">page.folio line 220</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Boxes&quot;</span>)
 page's <span class="k">start</span>(p, <span class="s">&quot;card&quot;</span>)
 page's start_list(p)
@@ -600,14 +600,14 @@ page's finish(p)</code></pre></div>
         </section>
         <section class="fn" id="start_form">
           <h3><a href="#start_form"><code>page's start_form(on, address, method)</code></a></h3>
-          <p>a form, until <a href="#end_form">end_form</a>(): what's in it, its text boxes, checkboxes and dropdowns, a browser sends to the address when its <a href="#submit">submit</a>() button is pressed, by their names: as a POST, which is server.moth's request's body, or with the method &quot;get&quot;, after a ? in the address, its query</p>
+          <p>a form, until <a href="#end_form">end_form</a>(): what's in it, its text boxes, checkboxes and dropdowns, a browser sends to the address when its <a href="#submit">submit</a>() button is pressed, by their names: as a POST, which is server.folio's request's body, or with the method &quot;get&quot;, after a ? in the address, its query</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>address</code></li><li><code>method</code> <span class="optional">optional: &quot;post&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to start_form with on, address, method or &quot;post&quot;</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L227">page.moth line 227</a></p>
+          <p class="written">Written <code>to start_form with on, address, method or &quot;post&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L227">page.folio line 227</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Site&quot;</span>)
 <span class="k">set</span> names <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Home&quot;</span>, <span class="s">&quot;About &amp; us&quot;</span>
 <span class="k">set</span> addresses <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;/&quot;</span>, <span class="s">&quot;/about?x=1&amp;y=2&quot;</span>
@@ -624,9 +624,9 @@ page's start_form(p, <span class="s">&quot;/recipes&quot;</span>, <span class="s
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to submit with on, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L234">page.moth line 234</a></p>
+          <p class="written">Written <code>to submit with on, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L234">page.folio line 234</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Site&quot;</span>)
 <span class="k">set</span> names <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Home&quot;</span>, <span class="s">&quot;About &amp; us&quot;</span>
 <span class="k">set</span> addresses <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;/&quot;</span>, <span class="s">&quot;/about?x=1&amp;y=2&quot;</span>
@@ -645,9 +645,9 @@ page's submit(p, <span class="s">&quot;Search&quot;</span>)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to end_form with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L239">page.moth line 239</a></p>
+          <p class="written">Written <code>to end_form with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L239">page.folio line 239</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Site&quot;</span>)
 <span class="k">set</span> names <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Home&quot;</span>, <span class="s">&quot;About &amp; us&quot;</span>
 <span class="k">set</span> addresses <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;/&quot;</span>, <span class="s">&quot;/about?x=1&amp;y=2&quot;</span>
@@ -662,14 +662,14 @@ page's end_form(p)</code></pre></div>
         </section>
         <section class="fn" id="style">
           <h3><a href="#style"><code>page's style(on, css)</code></a></h3>
-          <p>CSS of the page's own, after Moth's</p>
+          <p>CSS of the page's own, after Folio's</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>css</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to style with on, css</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L283">page.moth line 283</a></p>
+          <p class="written">Written <code>to style with on, css</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L283">page.folio line 283</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Styled&quot;</span>)
 page's style(p, <span class="s">&quot;h1 \{ color: red; }&quot;</span>)</code></pre></div>
         </section>
@@ -680,13 +680,13 @@ page's style(p, <span class="s">&quot;h1 \{ color: red; }&quot;</span>)</code></
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li><li><code>written</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to html with on, written</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L288">page.moth line 288</a></p>
+          <p class="written">Written <code>to html with on, written</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L288">page.folio line 288</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;Styled&quot;</span>)
 page's style(p, <span class="s">&quot;h1 \{ color: red; }&quot;</span>)
 page's style(p, <span class="s">&quot;.big \{ font-size: 2rem; }&quot;</span>)
-page's html(p, <span class="s">&quot;&lt;p class=\&quot;big\&quot; data-moth=\&quot;hello\&quot;&gt;Hi &lt;em&gt;there&lt;/em&gt;&lt;/p&gt;&quot;</span>)</code></pre></div>
+page's html(p, <span class="s">&quot;&lt;p class=\&quot;big\&quot; data-folio=\&quot;hello\&quot;&gt;Hi &lt;em&gt;there&lt;/em&gt;&lt;/p&gt;&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="html_of">
           <h3><a href="#html_of"><code>page's html_of(on)</code></a></h3>
@@ -695,16 +695,16 @@ page's html(p, <span class="s">&quot;&lt;p class=\&quot;big\&quot; data-moth=\&q
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to html_of with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L293">page.moth line 293</a></p>
+          <p class="written">Written <code>to html_of with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L293">page.folio line 293</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;A &lt;page&gt;&quot;</span>)
 page's heading(p, <span class="s">&quot;Fish &amp; chips&quot;</span>)
 page's subheading(p, <span class="s">&quot;&lt;i&gt;&quot;</span>)
 page's paragraph(p, <span class="s">&quot;&lt;script&gt;&quot;</span>)
 page's bold(p, <span class="s">&quot;Big&quot;</span>)
 page's code_block(p, <span class="s">&quot;a &lt; b&quot;</span>)
-page's link(p, <span class="s">&quot;Moth&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)
+page's link(p, <span class="s">&quot;Folio&quot;</span>, <span class="s">&quot;https://example.com/?a=1&amp;b=2&quot;</span>)
 page's <span class="k">picture</span>(p, <span class="s">&quot;cat.png&quot;</span>, <span class="s">&quot;A \&quot;cat\&quot;&quot;</span>)
 page's rule(p)
 <span class="k">set</span> made <span class="k">to</span> page's html_of(p)
@@ -717,9 +717,9 @@ page's rule(p)
             <div><h4>Inputs</h4><ul class="inputs"><li><code>on</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to show with on</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/page.moth#L303">page.moth line 303</a></p>
+          <p class="written">Written <code>to show with on</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/page.folio#L303">page.folio line 303</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.moth&quot;</span> <span class="k">as</span> page
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;page.folio&quot;</span> <span class="k">as</span> page
 <span class="k">set</span> todos <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Feed the cat&quot;</span>
 <span class="k">to</span> view
     <span class="k">set</span> p <span class="k">to</span> page's new(<span class="s">&quot;To do&quot;</span>)
@@ -746,14 +746,14 @@ view()</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

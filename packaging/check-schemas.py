@@ -1,9 +1,9 @@
 # Checks the manifests in packaging/ against the schemas they're written to: the winget manifests against
-# winget's (each file against its ManifestType's schema, of its ManifestVersion), Scoop's moth.json against
+# winget's (each file against its ManifestType's schema, of its ManifestVersion), Scoop's folio.json against
 # Scoop's, and, given one, an SBOM against CycloneDX's. The schemas come from those projects at a fixed commit.
 #
 #     pip install pyyaml jsonschema referencing
-#     python packaging/check-schemas.py [--manifests <folder>] [--sbom moth.cdx.json]
+#     python packaging/check-schemas.py [--manifests <folder>] [--sbom folio.cdx.json]
 #
 # --manifests checks the winget/ and scoop/ in another folder, as packaging/manifests.mjs writes them.
 import argparse
@@ -75,7 +75,7 @@ def main():
         schema = fetch(f"{WINGET}/v{version}/manifest.{kind}.{version}.json")
         good &= check(path.relative_to(folder).as_posix(), Draft7Validator(schema, format_checker=FormatChecker()), document)
 
-    scoop = folder / "scoop" / "moth.json"
+    scoop = folder / "scoop" / "folio.json"
     good &= check(scoop.relative_to(folder).as_posix(), Draft7Validator(fetch(SCOOP), format_checker=FormatChecker()),
                   json.loads(scoop.read_text(encoding="utf-8")))
 

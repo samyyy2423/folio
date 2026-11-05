@@ -1,10 +1,10 @@
-// The Moth virtual machine: runs the bytecode that moth.js compiles. It imports only pictures.js, which
+// The Folio virtual machine: runs the bytecode that folio.js compiles. It imports only pictures.js, which
 // imports nothing, so the playground's worker and a page made from an app can carry the two as they are.
 import { decodePicture } from "./pictures.js";
 
-// `value` is set by `fail with value`, so a program that called Moth code (see load()) can read it.
+// `value` is set by `fail with value`, so a program that called Folio code (see load()) can read it.
 // `trail` is the calls that led to the mistake (see trailOf).
-export class MothError extends Error {
+export class FolioError extends Error {
   constructor(at, message, value, trail = []) {
     super(`${at.file ? `${at.file}, ` : ""}line ${at.line}: ${message}`); // file: a file the program uses
     this.file = at.file || undefined;
@@ -20,11 +20,11 @@ export class MothError extends Error {
 // What `try` catches: any mistake but one that ends the program on purpose, like running past maxSteps
 // (a loop that never ends must stop, try or not). `if it fails with x` gets the value of a `fail with`,
 // or a mistake's message.
-export const catchable = (err) => err instanceof MothError && !err.final;
+export const catchable = (err) => err instanceof FolioError && !err.final;
 export const caughtValue = (err) => (err.value !== undefined ? err.value : err.reason);
 
 // Thrown by `stop the program`, which ends a run on purpose with the number the program ends with (0 if it
-// gives none). It isn't a mistake, so no `try` catches it; run() in moth.js hands the number on.
+// gives none). It isn't a mistake, so no `try` catches it; run() in folio.js hands the number on.
 export class Ended {
   constructor(code) {
     this.code = code;
@@ -32,7 +32,7 @@ export class Ended {
 }
 
 export const fail = (at, message, value, final = false, trail = []) => {
-  const err = new MothError(at, message, value, trail);
+  const err = new FolioError(at, message, value, trail);
   if (final) err.final = true;
   throw err;
 };
@@ -81,14 +81,14 @@ export function closest(name, candidates) {
   return best;
 }
 
-// The line a MothError points at, with a ^ under the exact spot.
+// The line a FolioError points at, with a ^ under the exact spot.
 export function excerpt(source, { line, col }) {
   const text = source.split(/\r?\n/)[line - 1] ?? "";
   return `${text}\n${text.slice(0, col - 1).replace(/\S/g, " ")}^`;
 }
 
 // ---------- numbers, as a spreadsheet has them ----------
-// Moth works to 15 significant digits, like a spreadsheet: 0.1 + 0.2 is 0.3. The arithmetic is the computer's
+// Folio works to 15 significant digits, like a spreadsheet: 0.1 + 0.2 is 0.3. The arithmetic is the computer's
 // own, fast and binary, but a number is shown, compared, and used as a whole number by its value to 15
 // digits: `canon`. A whole number is always exactly itself.
 export const canon = (x) => (Number.isInteger(x) || !Number.isFinite(x) ? x : Number(x.toPrecision(15)));
@@ -171,7 +171,7 @@ export const TURTLE_BARE = new Set(["up", "down", "clear"].map((name) => TURTLE_
 
 // ---------- values ----------
 
-// A Moth function. `fn` is its compiled code (or, from the JIT, just its name and inputs plus `run`, the
+// A Folio function. `fn` is its compiled code (or, from the JIT, just its name and inputs plus `run`, the
 // JavaScript function it became); `env` is the scope it was made in.
 export class Closure {
   constructor(fn, env) {
@@ -513,13 +513,13 @@ export function recordFor(record, field, error) {
   return record;
 }
 
-// Moth's built-in operations: what `uppercase of x`, `split x by y` and the rest do. `run` checks what each
+// Folio's built-in operations: what `uppercase of x`, `split x by y` and the rest do. `run` checks what each
 // input is before it does anything that depends on the values, and `needs` says the same for the checker.
 const needText = (what, v, error) => {
   if (typeof v !== "string") error(`${what} needs text, not ${kindOf(v)}`);
   return v;
 };
-// Bits work on whole numbers from 0 to the biggest a Moth number holds exactly, so they never round.
+// Bits work on whole numbers from 0 to the biggest a Folio number holds exactly, so they never round.
 const MAX_BITS = 2 ** 53 - 1;
 // a number that's wrong as itself; anything else as what kind it is (as the checker knows only that)
 const described = (v) => (typeof v === "number" ? show(v) : kindOf(v));
@@ -534,7 +534,7 @@ const bitwise = (op, a, b) => (op(Math.floor(a / 2 ** 32), Math.floor(b / 2 ** 3
 // what the checker calls each measure, as a type
 export const MEASURE_TYPES = ["distance", "time", "weight", "volume"];
 
-const isNumberText = (text) => /^\s*-?\d+(\.\d+)?\s*$/.test(text); // a number as Moth writes them, spaces around it allowed
+const isNumberText = (text) => /^\s*-?\d+(\.\d+)?\s*$/.test(text); // a number as Folio writes them, spaces around it allowed
 
 // ---------- tables: `read table "sales.csv"`, `total of price in sales` ----------
 
@@ -737,14 +737,14 @@ export const BUILTINS = [
   { name: "smallest", needs: [["list"]], gives: null, run: ([list], error) => extreme("smallest", list, error) },
   // `run program "tool.exe" with (list of "a")`: starts it, waits for it, and gives the number it ended
   // with; `... keeping its output` gives a record of that number and what it said instead. Only a program
-  // moth build makes can start one; anywhere else it's a mistake, once its inputs are what they must be.
+  // folio build makes can start one; anywhere else it's a mistake, once its inputs are what they must be.
   ...["run program", "run program keeping"].map((name) => ({
     name, needs: [["text"], ["list"]], gives: name === "run program" ? "number" : "record",
     run: ([program, args], error) => {
       needText("'run program'", program, error);
       if (!isList(args)) error(`'run program ... with' needs a list, not ${kindOf(args)}`);
       for (const arg of args) needText("'run program ... with'", arg, error);
-      error("can't run programs here: only a program made by moth build can");
+      error("can't run programs here: only a program made by folio build can");
     },
   })),
   // `scores in order`, `scores in reverse order`, `people in order by age`: a new list, sorted (see inOrder)
@@ -782,10 +782,10 @@ export const BUILTINS = [
   { name: "slider value", needs: [["number", "text", "yes/no", "nothing", "list", "record", "dictionary", "bytes", "function", ...MEASURE_TYPES]], gives: null, run: ([label], error, turtle) => turtle?.values.get(show(label)) ?? null },
   // `choose a file to open`: what `ask "Which file to open?"` gives, or nothing for no answer (DESIGN §42)
   { name: "chosen file", needs: [["text", "nothing"]], gives: null, run: ([answer]) => (answer === "" || answer === null ? null : answer) },
-  // the body of a library's function (see library in moth.js): only a program moth build makes can call one
+  // the body of a library's function (see library in folio.js): only a program folio build makes can call one
   {
     name: "library call", needs: [["text"]], gives: null,
-    run: ([library], error) => error(`can't use the library '${library}' here: only a program made by moth build can`),
+    run: ([library], error) => error(`can't use the library '${library}' here: only a program made by folio build can`),
   },
   // `start count(10)` and `wait for job` (see taskOf)
   { name: "power", needs: [["number"], ["number"]], gives: "number", run: ([x, n], error) => power(x, n, error) },
@@ -804,7 +804,7 @@ export const BUILTINS = [
     run: ([n], error) => {
       if (typeof n === "number") n = canon(n);
       if (!Number.isInteger(n) || n < 0) error(`'bytes' needs a whole number in front of it, not ${described(n)}`);
-      error("'ask for ... bytes' reads the input as it comes, which only a program moth builds can do");
+      error("'ask for ... bytes' reads the input as it comes, which only a program folio builds can do");
     },
   },
 ];
@@ -816,7 +816,7 @@ function power(x, n, error) {
   if (typeof x !== "number") error(`'to the power of' needs a number, not ${kindOf(x)}`);
   if (typeof n !== "number") error(`'to the power of' needs a number, not ${kindOf(n)}`);
   let k = canon(n);
-  if (!Number.isInteger(k)) error(`'to the power of' needs a whole number, not ${show(n)}: math.moth's power(x, y) takes any`);
+  if (!Number.isInteger(k)) error(`'to the power of' needs a whole number, not ${show(n)}: math.folio's power(x, y) takes any`);
   k = Math.max(-(2 ** 62), Math.min(2 ** 62, k));
   if (x === 0 && k < 0) error("can't raise 0 to a power below 0");
   let [made, base, left] = [1, x, Math.abs(k)];
@@ -880,7 +880,7 @@ function slice(from, upto, x, error) {
   return typeof x === "string" ? part.join("") : part;
 }
 
-// Tasks (DESIGN §62): `start count(10)` gives one, a record of its number, and in a program moth build makes
+// Tasks (DESIGN §62): `start count(10)` gives one, a record of its number, and in a program folio build makes
 // the call runs on a thread of its own. Here it has run already, as starting a task runs it to its end at
 // once, which is one of the ways threads that take turns can go, and what the call gave is kept, by the
 // task's number, for `wait for`. They're numbered from 1 in each run, as machine code numbers them, and so are
@@ -918,7 +918,7 @@ function waitedFor(task, error) {
   return jobs().tasks.get(task.task);
 }
 
-// Workers (DESIGN §124): `start count(10) on another core` gives one, a record of its number. In a program moth
+// Workers (DESIGN §124): `start count(10) on another core` gives one, a record of its number. In a program folio
 // build makes, a worker is a thread with memory of its own: a copy of the program's variables as they were
 // when it started, and of its function's inputs, which it changes as it likes and no one else sees, and a copy
 // of what it gives back, or of the mistake it ended with, for `wait for`. Here it runs to its end when it's
@@ -1100,7 +1100,7 @@ export function textOrder(a, b) {
 }
 
 // `save value to "file"`: the value, written as `say` shows a value inside a list, which `load` reads back:
-// numbers (to 15 digits, as Moth compares them), text in quotes, yes, no, nothing, lists, records and
+// numbers (to 15 digits, as Folio compares them), text in quotes, yes, no, nothing, lists, records and
 // dictionaries. Functions, bytes and amounts with units can't be saved, and nor can a list that holds itself.
 export function savedText(value, error) {
   const inside = new Set();
@@ -1197,7 +1197,7 @@ export function loadedValue(text, error) {
 
 // ---------- sending, and JSON ----------
 
-// `scores as json`: the value as JSON, which most sites and programs that take data read: numbers as Moth
+// `scores as json`: the value as JSON, which most sites and programs that take data read: numbers as Folio
 // shows them (to 15 digits), text in quotes as JSON writes it, yes, no and nothing as true, false and null,
 // lists as [...], and records and dictionaries as {...}, a dictionary's number keys as their text, with no
 // spaces. Functions, bytes, amounts with units, Infinity and NaN have no JSON, nor does a list that holds itself.
@@ -1222,7 +1222,7 @@ export function jsonText(value, error, cant) {
   return write(value);
 }
 
-// `json from reply`: what JSON text says, as Moth's values: an object becomes a dictionary (its keys are
+// `json from reply`: what JSON text says, as Folio's values: an object becomes a dictionary (its keys are
 // text, which a record's fields can't always be), an array a list, true, false and null yes, no and nothing.
 // Spaces, tabs and new lines may come between the parts; anything else that isn't JSON is a mistake.
 const JSON_STRING = /"(?:[^"\\\u0000-\u001f]|\\["\\/bfnrt]|\\u[0-9a-fA-F]{4})*"/y;
@@ -1569,7 +1569,7 @@ export class Turtle {
   // the focus and moves it there, as a drag from it does; the arrows, Home and End move it while it has the
   // focus. Moving it to a new value goes to its handlers, with the value.
   route(event, inputs) {
-    if (event === "page") return [event, undefined, inputs]; // what was done on the page a program made (page.moth)
+    if (event === "page") return [event, undefined, inputs]; // what was done on the page a program made (page.folio)
     const focused = this.focus === null ? null : this.widgets.findLast((w) => w.label === this.focus && FOCUSABLE.has(w.kind));
     if (this.focus !== null && !focused) this.focus = null; // its box is gone
     const opened = this.open === null ? null : this.widgets.findLast((w) => w.kind === "dropdown" && w.label === this.open);
@@ -2084,7 +2084,7 @@ export function soundSamples({ hertz, seconds }) {
   return samples;
 }
 
-// Sounds, one after the other, as the bytes of a WAV file: what MOTH_SOUND=file.wav gets from machine code.
+// Sounds, one after the other, as the bytes of a WAV file: what FOLIO_SOUND=file.wav gets from machine code.
 export function soundWav(sounds) {
   const parts = sounds.map(soundSamples);
   const size = parts.reduce((n, p) => n + 2 * p.length, 0);
@@ -2107,7 +2107,7 @@ export function soundWav(sounds) {
 
 // ---------- the virtual machine ----------
 
-// Thrown inside the run loop; the loop's catch block turns it into a MothError at the instruction that was running.
+// Thrown inside the run loop; the loop's catch block turns it into a FolioError at the instruction that was running.
 class Failure {
   constructor(message, value, final = false) {
     this.message = message;
@@ -2359,7 +2359,7 @@ export class Machine {
             const target = stack[stack.length - 1];
             if (isList(target) && Number.isInteger(n) && n >= 1 && n <= target.length) stack[stack.length - 1] = target[n - 1];
             else {
-              const found = isDictionary(target) && typeof n === "string" ? target.get(n) : undefined; // no Moth value is undefined
+              const found = isDictionary(target) && typeof n === "string" ? target.get(n) : undefined; // no Folio value is undefined
               if (found !== undefined) stack[stack.length - 1] = found;
               else {
                 const [seq, i] = item(target, n, false);
@@ -2494,7 +2494,7 @@ export class Machine {
           case 37 /* FIELD */: { // a field the record has, right here; fieldOf() says what's wrong with anything else
             const name = consts[code[ip++]];
             const r = stack[stack.length - 1];
-            const value = r instanceof Record ? r[name] : undefined; // no Moth value is undefined, and a record's prototype is empty
+            const value = r instanceof Record ? r[name] : undefined; // no Folio value is undefined, and a record's prototype is empty
             stack[stack.length - 1] = value !== undefined ? value : fieldOf(r, name, oops);
             break;
           }
@@ -2641,7 +2641,7 @@ export class Machine {
   }
 }
 
-// Runs a Moth function from outside, as an app runs a handler: a machine of its own, whose program is the
+// Runs a Folio function from outside, as an app runs a handler: a machine of its own, whose program is the
 // function's code, with `inputs` in its first slots. `options` are the Machine's.
 export function callFunction(closure, inputs, print, options) {
   const env = newEnv(closure.fn, closure.env);

@@ -1,6 +1,6 @@
-// The site's motion, on index.html and learn.html, and never on a page `moth build --web` makes (make-web.mjs
+// The site's motion, on index.html and learn.html, and never on a page `folio build --web` makes (make-web.mjs
 // leaves it out). GSAP and its ScrollTrigger, loaded from jsDelivr by each page's head, bring the page in,
-// show each part as it's scrolled to, and give a mouse a small lamp for a cursor, which the moth in the corner
+// show each part as it's scrolled to, and give a mouse a small lamp for a cursor, which the folio in the corner
 // of the front page flies after. None of it is needed: without GSAP, or where reduced motion is asked for,
 // the pages are just as they are without it.
 (() => {
@@ -137,18 +137,18 @@
     addEventListener("pointerup", () => gsap.to(ring, { scale: 1, duration: 0.4, ease: "back.out(3)" }));
   }
 
-  // The moth can't stay away from a light. It flies in and circles the lantern, passing behind it on the far
+  // The folio can't stay away from a light. It flies in and circles the lantern, passing behind it on the far
   // side, its head turned the way it's flying. While a mouse is over the top of the front page, the cursor is
-  // the brighter light: the moth flies after it, stopping just short, and the lantern's glow dims; when the
-  // mouse leaves, the moth goes back to circling. Nothing moves while the top of the page is out of view.
-  function mothFlies() {
+  // the brighter light: the folio flies after it, stopping just short, and the lantern's glow dims; when the
+  // mouse leaves, the folio goes back to circling. Nothing moves while the top of the page is out of view.
+  function folioFlies() {
     const flight = $(".flight");
     const top = $(".intro");
     if (!flight || !top) return;
-    root.classList.add("moving"); // the moth's own drift (in the stylesheet) gives way to this
+    root.classList.add("moving"); // the folio's own drift (in the stylesheet) gives way to this
     const small = innerWidth < 640;
     const [rx, ry] = small ? [86, 26] : [136, 38]; // the circle, seen from a little below
-    let follow = null; // the cursor, from the moth's home beside the lantern, while it's over the top of the page
+    let follow = null; // the cursor, from the folio's home beside the lantern, while it's over the top of the page
     let [x, y] = [innerWidth * 0.55, -280]; // it comes in from up and to the right
     let turn = 0;
     let clock = 0;
@@ -236,7 +236,7 @@
 
   function start() {
     embers();
-    mothFlies();
+    folioFlies();
     stage();
     if (waiting && root.classList.contains("motion")) bringIn();
     rises(".section-head, .feature, .shot, .down, .path, .foot, .toc, .lesson, .next");

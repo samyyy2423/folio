@@ -1,6 +1,6 @@
 {
-  "language": "Moth",
-  "slug": "moth",
+  "language": "Folio",
+  "slug": "folio",
   "active": false,
   "status": {
     "concept_exercises": false,
@@ -8,7 +8,7 @@
     "representer": false,
     "analyzer": false
   },
-  "blurb": "Moth is a programming language that reads like plain English, and compiles to native programs for Windows and Linux.",
+  "blurb": "Folio is a programming language that reads like plain English, and compiles to native programs for Windows and Linux.",
   "version": 3,
   "online_editor": {
     "indent_style": "space",
@@ -19,16 +19,16 @@
   },
   "files": {
     "solution": [
-      "%{snake_slug}.moth"
+      "%{snake_slug}.folio"
     ],
     "test": [
-      "%{snake_slug}.test.moth"
+      "%{snake_slug}.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ],
     "exemplar": [
-      ".meta/exemplar.moth"
+      ".meta/exemplar.folio"
     ]
   },
   "exercises": {

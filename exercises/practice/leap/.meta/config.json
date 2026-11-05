@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "leap.moth"
+      "leap.folio"
     ],
     "test": [
-      "leap.test.moth"
+      "leap.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Say whether a year is a leap year."
