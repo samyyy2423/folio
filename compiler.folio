@@ -98,7 +98,6 @@ to small with c
     return c
 end
 
-# the folder a file is in, as its name has it: up to its last / or \, or "" for one in the program's own
 # a name ending in .moth, as Folio's files were named when it was Moth, ending in .folio now (DESIGN §150);
 # any other name as it is
 to renamed_file with name
@@ -116,6 +115,7 @@ to renamed_file with name
     return made + ".folio"
 end
 
+# the folder a file is in, as its name has it: up to its last / or \, or "" for one in the program's own
 to folder_of with name
     set cut to 0
     set k to 0

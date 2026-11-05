@@ -24021,7 +24021,7 @@ to emit_random with a, target
             jcc(a, cc_ne, next_name)
             set k to k + 1
         end
-        alui(a, "add", rsi, 10)
+        alui(a, "add", rsi, length of "FOLIO_SEED=")
         jmp_to(a, parse)
         mark(a, next_name)
         alui(a, "add", r8, 8)
@@ -24291,7 +24291,7 @@ to emit_clock with a, target
             jcc(a, cc_ne, next_name)
             set k to k + 1
         end
-        alui(a, "add", rsi, 9)
+        alui(a, "add", rsi, length of "FOLIO_NOW=")
         jmp_to(a, parse)
         mark(a, next_name)
         alui(a, "add", r8, 8)
@@ -26912,7 +26912,7 @@ to emit_sound with a, target, windowed
             jcc(a, cc_ne, next_name)
             set k to k + 1
         end
-        lea(a, rdi, mem(rsi, 11))
+        lea(a, rdi, mem(rsi, length of "FOLIO_SOUND="))
         movi(a, rsi, 0x241) # to write, made if it isn't there and emptied if it is
         movi(a, rdx, 420) # rw-r--r--
         sys_call(a, 2)

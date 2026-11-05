@@ -75,8 +75,13 @@ test("a misspelled name gets a problem as it's typed, and a Quick Fix", async ()
 
 test("Format Document writes the code as folio tidy does", async () => {
   const document = await open("messy.folio");
-  await vscode.commands.executeCommand("editor.action.formatDocument");
-  assert.equal(await until(() => document.getText(), (text) => !text.startsWith("to   ")), "to area with w, h\n    return w * h\nend\nsay area(2, 3)\n");
+  // asked again until it's tidied: VS Code can let the first go by while the editor it's for is still opening, and
+  // tidying tidy code changes nothing
+  const tidied = await until(async () => {
+    await vscode.commands.executeCommand("editor.action.formatDocument");
+    return document.getText();
+  }, (text) => !text.startsWith("to   "));
+  assert.equal(tidied, "to area with w, h\n    return w * h\nend\nsay area(2, 3)\n");
   await vscode.commands.executeCommand("workbench.action.files.revert");
 });
 
