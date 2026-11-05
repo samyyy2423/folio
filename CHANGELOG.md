@@ -70,7 +70,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   range too), text of any characters, yes and no, lists, dictionaries, and generators made from others.
   `for_all` is seeded, says the seed when it fails, and makes the value that failed as small as it goes, so
   `moth test` shows `[2, 0, 1]`, not a list of twenty. `json.test.moth` and `text.test.moth` use it.
-- **Fixes.** `json.moth` reads a number with an exponent exactly: `3e28` was `2.9999999999999997e+28`, and
+- **Fixes.** A package can use the standard library: `use "text.moth"` in a package, or in a file it uses,
+  is moth's own `text.moth` unless the package has one, so a package no longer needs copies of its own.
+  `json.moth` reads a number with an exponent exactly: `3e28` was `2.9999999999999997e+28`, and
   `1.5e300` was `1.500000000000003e+300`.
 
 ## [1.11.0](https://github.com/samyyy2423/moth/releases/tag/v1.11.0) (2026-11-04)
