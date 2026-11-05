@@ -6155,8 +6155,8 @@ is done.
   program and 800 programs the generators make, broken or not, moth.wasm makes
   wasm.js's bytes exactly and stops at the same mistakes, and what it makes
   runs as the VM runs it. A program takes 17 ms to compile on average in
-  Node, as each call runs moth.wasm's program again, its runtime made again
-  with it; 0.8 ms of that is the program.
+  Node, as each call runs moth.wasm's program again, and makes the runtime
+  every module has again with it.
 - **The playground.** The page compiles moth.wasm once, when it loads, and
   sends the compiled module with each run, so the code the browser makes of it
   is kept between runs (each run has a worker of its own). On the WebAssembly
