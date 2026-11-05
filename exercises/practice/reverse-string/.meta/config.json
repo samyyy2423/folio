@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "reverse_string.moth"
+      "reverse_string.folio"
     ],
     "test": [
-      "reverse_string.test.moth"
+      "reverse_string.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Give back text backwards."

@@ -40,7 +40,7 @@ pen down
 branch 105`,
 
   "Hello": `say "Hello, world!"
-set name to "Moth"
+set name to "Folio"
 say "My name is " name " and it has " length of name " letters."`,
 
   "Repeat": `set stars to ""

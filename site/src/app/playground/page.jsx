@@ -1,6 +1,6 @@
 import "./playground.css";
 import Link from "next/link";
-import MothMark from "@/components/MothMark";
+import FolioMark from "@/components/FolioMark";
 import { BASE, GITHUB } from "@/lib/site";
 import RunPlayground from "./run";
 
@@ -31,7 +31,7 @@ export default function Playground() {
       </svg>
 
       <header className="pg-top">
-        <a className="brand" href={`${BASE}/`} title="Folio's front page"><MothMark />Folio<sup>®</sup></a>
+        <a className="brand" href={`${BASE}/`} title="Folio's front page"><FolioMark />Folio<sup>®</sup></a>
         <p className="pg-title">Playground</p>
         <nav aria-label="Pages">
           <Link href="/learn">Learn</Link>
@@ -86,7 +86,7 @@ export default function Playground() {
                   <option value="">hidden</option>
                   <option value="bytecode">bytecode (VM)</option>
                   <option value="js">JavaScript (JIT)</option>
-                  <option value="moth">JavaScript (compiler written in Folio)</option>
+                  <option value="folio">JavaScript (compiler written in Folio)</option>
                   <option value="wasm">WebAssembly</option>
                 </select>
               </label>

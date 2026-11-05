@@ -1,0 +1,12 @@
+{
+  "name": "tree-sitter-folio",
+  "version": "1.11.0",
+  "description": "Folio, the language that reads like plain English, for tree-sitter",
+  "private": true,
+  "type": "commonjs",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samyyy2423/folio"
+  }
+}

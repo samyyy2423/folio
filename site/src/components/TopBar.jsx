@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import MothMark from "./MothMark";
+import FolioMark from "./FolioMark";
 import { gsap } from "@/lib/motion";
 import { BASE, GITHUB, PAGES, RELEASES } from "@/lib/site";
 
@@ -73,7 +73,7 @@ export default function TopBar() {
     <>
       <header className={`topbar${docked ? " docked" : ""}${open ? " menu-open" : ""}`}>
         <div className="bar">
-          <a className="brand" href={`${BASE}/`}><MothMark />Folio<sup>®</sup></a>
+          <a className="brand" href={`${BASE}/`}><FolioMark />Folio<sup>®</sup></a>
           <nav className="links" ref={links} aria-label="Folio">
             <span className="lamp" ref={lamp} aria-hidden="true" />
             {PAGES.map((page) => link(page))}

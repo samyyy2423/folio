@@ -12,7 +12,7 @@ export const motionReady = () => document.documentElement.classList.add("motion-
 
 // The veil between pages (Transition.jsx) is lifting: a page's own words come up now, as the veil's go, and not
 // underneath it, where no one would see them.
-const GONE = "moth:veil-gone";
+const GONE = "folio:veil-gone";
 export function veilGone() {
   document.documentElement.classList.remove("veil-up", "veiled");
   window.dispatchEvent(new Event(GONE));

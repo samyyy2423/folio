@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "two_fer.moth"
+      "two_fer.folio"
     ],
     "test": [
-      "two_fer.test.moth"
+      "two_fer.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Share one for you and one for me, with a name that can be left out."

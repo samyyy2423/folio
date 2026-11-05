@@ -1,0 +1,20 @@
+{
+  "grammars": [
+    {
+      "name": "folio",
+      "camelcase": "Folio",
+      "scope": "source.folio",
+      "path": ".",
+      "file-types": ["folio"],
+      "highlights": "queries/highlights.scm"
+    }
+  ],
+  "metadata": {
+    "version": "1.11.0",
+    "license": "Apache-2.0",
+    "description": "Folio, the language that reads like plain English, for tree-sitter",
+    "links": {
+      "repository": "https://github.com/samyyy2423/folio"
+    }
+  }
+}

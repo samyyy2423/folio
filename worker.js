@@ -1,10 +1,10 @@
-// Runs one Moth program off the page's main thread, so a loop that never ends can't freeze the page:
+// Runs one Folio program off the page's main thread, so a loop that never ends can't freeze the page:
 // the page just ends this worker when Stop is pressed. An app (a program with `when` or `every`) keeps the
 // worker going after it has set up: the worker runs its timers, and the page sends it keys and clicks.
 // A line said to the error output goes to the page as { error: line }, among the others, and `stop the
 // program` ends the run (or the app) with the number it gave, which the page shows. Each sound goes to the
 // page too, which plays them one after the other.
-import { run, memoryDisk, seeded, excerpt, describeTrail, MothError, mothWasmCompiler, compileToWasmBytes } from "./moth.js";
+import { run, memoryDisk, seeded, excerpt, describeTrail, FolioError, folioWasmCompiler, compileToWasmBytes } from "./folio.js";
 import { realClock } from "./vm.js";
 
 // shortcut: past these, output and drawing are dropped rather than paged; raise them if programs need more.
@@ -24,7 +24,7 @@ let app = null; // the running app, once the program has set it up
 let lines = [];
 let drawn = [];
 let played = [];
-let page = null; // the newest page the program showed (page.moth, DESIGN §145) since the last message
+let page = null; // the newest page the program showed (page.folio, DESIGN §145) since the last message
 let pages = 0; // pages shown this run
 let sent = 0;
 // A picture drawn again and again (a game's sprite) goes to the page once: the drawing names it by number.
@@ -51,10 +51,10 @@ const due = () => performance.now() - sent > 50 && flush(); // stream while the 
 
 let source = "";
 let files = {};
-// A mistake ends the program, or the app; anything else that goes wrong is Moth's own.
+// A mistake ends the program, or the app; anything else that goes wrong is Folio's own.
 // A page's files are the ones picked or dropped on it (`start`, by name), and `write` makes more, for this
 // run. `read "https://..."` reads a site, if the site lets pages read it; the browser keeps the program to
-// what any page can do. What's written to "<page>" isn't kept: it's the page the program shows (page.moth).
+// what any page can do. What's written to "<page>" isn't kept: it's the page the program shows (page.folio).
 function pageDisk(start) {
   const files = memoryDisk(start);
   return {
@@ -107,10 +107,10 @@ function failed(err) {
     return;
   }
   flush();
-  const trail = err instanceof MothError && err.trail.length ? `\n${describeTrail(err.trail)}` : ""; // the calls that led there
+  const trail = err instanceof FolioError && err.trail.length ? `\n${describeTrail(err.trail)}` : ""; // the calls that led there
   postMessage({
-    error: err instanceof MothError ? `Error: ${err.message}\n${excerpt(err.file ? files[err.file] ?? "" : source, err)}${trail}` : `Moth itself crashed: ${err.message}`,
-    mistake: err instanceof MothError && !err.file ? { line: err.line, col: err.col, reason: err.reason } : undefined, // for a Fix button
+    error: err instanceof FolioError ? `Error: ${err.message}\n${excerpt(err.file ? files[err.file] ?? "" : source, err)}${trail}` : `Folio itself crashed: ${err.message}`,
+    mistake: err instanceof FolioError && !err.file ? { line: err.line, col: err.col, reason: err.reason } : undefined, // for a Fix button
   });
   app = null;
 }
@@ -133,16 +133,16 @@ function handle(run) {
 onmessage = ({ data }) => {
   if (data.event) return handle(() => app.send(data.event, data.inputs)); // a key or a click, from the page
   ({ source, files = {} } = data);
-  const { engine, answers = [], seed = 1, disk = {}, mothWasm } = data;
-  // On WebAssembly, the program is compiled by Moth's own compiler, moth.wasm (DESIGN §144), which the page has
+  const { engine, answers = [], seed = 1, disk = {}, folioWasm } = data;
+  // On WebAssembly, the program is compiled by Folio's own compiler, folio.wasm (DESIGN §144), which the page has
   // compiled once and sends with each run; until it has, or where it couldn't fetch it, by wasm.js. A mistake
-  // in the program is moth.wasm's to say; anything else that goes wrong in it, wasm.js compiles it after all.
-  const mothCompiler = engine === "wasm" && mothWasm ? mothWasmCompiler(mothWasm) : null;
-  const compiled = mothCompiler && ((text) => {
+  // in the program is folio.wasm's to say; anything else that goes wrong in it, wasm.js compiles it after all.
+  const folioCompiler = engine === "wasm" && folioWasm ? folioWasmCompiler(folioWasm) : null;
+  const compiled = folioCompiler && ((text) => {
     try {
-      return mothCompiler(text, files);
+      return folioCompiler(text, files);
     } catch (err) {
-      if (err instanceof MothError) throw err;
+      if (err instanceof FolioError) throw err;
       return compileToWasmBytes(text, { files: (name) => files[name] });
     }
   });
@@ -204,7 +204,7 @@ onmessage = ({ data }) => {
       },
     }) ?? null;
     flush();
-    postMessage({ done: true, app: app?.waits, empty: said === 0 && total === 0 && sounds === 0 && pages === 0, ms: performance.now() - start, stopped, byMothWasm: !!compiled });
+    postMessage({ done: true, app: app?.waits, empty: said === 0 && total === 0 && sounds === 0 && pages === 0, ms: performance.now() - start, stopped, byFolioWasm: !!compiled });
     app?.waits.forEach((wait, i) => wait.event === "every" && setInterval(() => handle(() => app.handle(i)), Math.max(FASTEST, wait.interval)));
   } catch (err) {
     if (err instanceof Waiting) return; // the page asks, and runs it again

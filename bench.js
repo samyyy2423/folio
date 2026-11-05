@@ -1,12 +1,12 @@
-// Times a few Moth programs. Run with `npm run bench`, or `npm run bench -- --big` for bigger ones; pass a path
-// to time another copy of moth.js.
+// Times a few Folio programs. Run with `npm run bench`, or `npm run bench -- --big` for bigger ones; pass a path
+// to time another copy of folio.js.
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const other = process.argv.slice(2).find((arg) => !arg.startsWith("--"));
-const { run, machineCompiler } = await import(other ? pathToFileURL(other).href : "./moth.js");
+const { run, machineCompiler } = await import(other ? pathToFileURL(other).href : "./folio.js");
 const big = process.argv.includes("--big");
 
 const PROGRAMS = {
@@ -264,17 +264,17 @@ function time(source, engine) {
   return { ms: best, result };
 }
 
-// The same programs in machine code, made by machine.moth, each run as a whole program from start to finish,
+// The same programs in machine code, made by machine.folio, each run as a whole program from start to finish,
 // the best of 5 after two to warm up, so starting it up is counted too; on Windows and Linux. On Windows the
 // virus checker looks through a program the first times it runs, and one in the temporary folder every time,
 // so they're made in a folder of the repo's.
-const machine = machineCompiler(readFileSync(new URL("./machine.moth", import.meta.url), "utf8"), readFileSync(new URL("./compiler.moth", import.meta.url), "utf8"));
+const machine = machineCompiler(readFileSync(new URL("./machine.folio", import.meta.url), "utf8"), readFileSync(new URL("./compiler.folio", import.meta.url), "utf8"));
 const target = { win32: "windows", linux: "linux" }[process.platform];
 function timeMachine(source, dir, name) {
   if (!target) return null;
   const exe = join(dir, target === "windows" ? `${name}.exe` : name);
   try {
-    writeFileSync(exe, machine(source, { target, name: `${name}.moth` }));
+    writeFileSync(exe, machine(source, { target, name: `${name}.folio` }));
   } catch {
     return null; // a program it can't make machine code of yet
   }
@@ -312,18 +312,18 @@ try {
       const same = [wasm, exe].every((t) => t.result === jit.result) ? "" : `   DIFFERENT RESULTS: ${jit.result} / ${wasm.result} / ${exe.result}`;
       console.log(`${name.padEnd(40)} ${ms(jit.ms)} ${ms(wasm.ms)} ${Number.isNaN(exe.ms) ? "(can't yet)".padStart(9) : ms(exe.ms - start)}${same}`);
     }
-    // A real program: moth, made by `node bootstrap.mjs`, building compiler.moth (2,400 lines), the best of 3
-    const moth = fileURLToPath(new URL(target === "windows" ? "./moth.exe" : "./moth", import.meta.url));
-    if (target && existsSync(moth)) {
-      writeFileSync(join(dir, "compiler.moth"), readFileSync(new URL("./compiler.moth", import.meta.url)));
+    // A real program: folio, made by `node bootstrap.mjs`, building compiler.folio (2,400 lines), the best of 3
+    const folio = fileURLToPath(new URL(target === "windows" ? "./folio.exe" : "./folio", import.meta.url));
+    if (target && existsSync(folio)) {
+      writeFileSync(join(dir, "compiler.folio"), readFileSync(new URL("./compiler.folio", import.meta.url)));
       let best = Infinity;
       for (let i = 0; i < 3; i++) {
         const begun = performance.now();
-        const built = spawnSync(moth, ["build", "compiler.moth"], { cwd: dir, encoding: "utf8" });
+        const built = spawnSync(folio, ["build", "compiler.folio"], { cwd: dir, encoding: "utf8" });
         best = Math.min(best, performance.now() - begun);
         if (built.status !== 0) throw new Error(built.stdout + built.stderr);
       }
-      console.log(`${"moth building compiler.moth".padEnd(40)} ${"".padStart(9)} ${"".padStart(9)} ${ms(best)}`);
+      console.log(`${"folio building compiler.folio".padEnd(40)} ${"".padStart(9)} ${"".padStart(9)} ${ms(best)}`);
     }
   }
 } finally {

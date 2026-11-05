@@ -1,0 +1,1130 @@
+# Windows' own windows, buttons, text boxes, lists, menus and file boxes, as a program `folio build` makes
+# can use them: real ones, through user32.dll and the rest, which look and behave as every other program's.
+#
+#   use "windows.folio" as ui
+#   to say_hello
+#       ui's message(w, "Hello, " + ui's text_of(name))
+#   end
+#   set w to ui's window("Hello", 360, 140)
+#   set name to ui's text_box(w, 20, 20, 200, 26)
+#   ui's button(w, "Greet", 230, 20, 100, 28, say_hello)
+#   ui's run()
+#
+# Places and sizes are in pixels as at 100% on the screen, made bigger for a screen set larger. What happens
+# calls the function given for it, a function of the program's: a button's with nothing, a checkbox's with
+# whether it's ticked, a list's or a dropdown's with the item chosen, a text box's with its text, a timer's
+# with nothing, and a window's resizing with its new width and height. A program that uses it is built with
+# --allow-libraries.
+
+use the library "user32"
+    callback window_procedure(a pointer, a whole number, a pointer, a pointer) gives a pointer
+    structure window_class with size as a whole number, style as a whole number, procedure as a window_procedure,
+        class_extra as a whole number, window_extra as a whole number, instance as a pointer, icon as a pointer,
+        cursor as a pointer, background as a pointer, menu_name as a pointer, class_name as wide text,
+        small_icon as a pointer
+    structure box_edges with left as a whole number, top as a whole number, right as a whole number,
+        bottom as a whole number
+    RegisterClassExW(a window_class) gives a whole number
+    CreateWindowExW(a whole number, wide text, wide text, a whole number, a whole number, a whole number,
+        a whole number, a whole number, a pointer, a pointer, a pointer, a pointer) gives a pointer
+    DefWindowProcW(a pointer, a whole number, a pointer, a pointer) gives a pointer
+    DestroyWindow(a pointer) gives yes or no
+    ShowWindow(a pointer, a whole number) gives yes or no
+    UpdateWindow(a pointer) gives yes or no
+    MoveWindow(a pointer, a whole number, a whole number, a whole number, a whole number, yes or no) gives yes or no
+    EnableWindow(a pointer, yes or no) gives yes or no
+    SetFocus(a pointer) gives a pointer
+    SetWindowTextW(a pointer, wide text) gives yes or no
+    GetWindowTextW(a pointer, bytes, a whole number) gives a whole number
+    GetWindowTextLengthW(a pointer) gives a whole number
+    SendMessageW(a pointer, a whole number, a pointer, a pointer) gives a pointer
+    "SendMessageW" as send_text(a pointer, a whole number, a pointer, wide text) gives a pointer
+    "SendMessageW" as send_bytes(a pointer, a whole number, a pointer, bytes) gives a pointer
+    PostMessageW(a pointer, a whole number, a pointer, a pointer) gives yes or no
+    GetMessageW(bytes, a pointer, a whole number, a whole number) gives a whole number
+    IsDialogMessageW(a pointer, bytes) gives yes or no
+    TranslateMessage(bytes) gives yes or no
+    DispatchMessageW(bytes) gives a pointer
+    PostQuitMessage(a whole number)
+    LoadCursorW(a pointer, a pointer) gives a pointer
+    LoadIconW(a pointer, a pointer) gives a pointer
+    AdjustWindowRectEx(a box_edges, a whole number, yes or no, a whole number) gives yes or no
+    MessageBoxW(a pointer, wide text, wide text, a whole number) gives a whole number
+    SetTimer(a pointer, a pointer, a whole number, a pointer) gives a pointer
+    CreateMenu() gives a pointer
+    CreatePopupMenu() gives a pointer
+    "AppendMenuW" as append_menu(a pointer, a whole number, a pointer, wide text) gives yes or no
+    "AppendMenuW" as append_line(a pointer, a whole number, a pointer, a pointer) gives yes or no
+    SetMenu(a pointer, a pointer) gives yes or no
+    DrawMenuBar(a pointer) gives yes or no
+    GetKeyState(a whole number) gives a whole number
+    SetProcessDPIAware() gives yes or no
+    GetDpiForSystem() gives a whole number
+    GetSysColor(a whole number) gives a whole number
+    GetClientRect(a pointer, a box_edges) gives yes or no
+    FillRect(a pointer, a box_edges, a pointer) gives a whole number
+    SetWindowPos(a pointer, a pointer, a whole number, a whole number, a whole number, a whole number,
+        a whole number) gives yes or no
+    InvalidateRect(a pointer, a pointer, yes or no) gives yes or no
+    BeginPaint(a pointer, bytes) gives a pointer
+    EndPaint(a pointer, bytes) gives yes or no
+    DrawTextW(a pointer, wide text, a whole number, a box_edges, a whole number) gives a whole number
+    structure tab_item with mask as a whole number, state as a whole number, state_mask as a whole number,
+        text as wide text, text_most as a whole number, image as a whole number, data as a pointer
+    structure table_column with mask as a whole number, format as a whole number, width as a whole number,
+        text as wide text, text_most as a whole number, sub_item as a whole number, image as a whole number,
+        order as a whole number, least as a whole number, usual as a whole number, ideal as a whole number
+    structure table_item with mask as a whole number, row as a whole number, sub_item as a whole number,
+        state as a whole number, state_mask as a whole number, text as wide text, text_most as a whole number,
+        image as a whole number, data as a pointer, indent as a whole number, group_id as a whole number,
+        columns as a whole number, column_list as a pointer, column_formats as a pointer, group as a whole number
+    "SendMessageW" as send_tab(a pointer, a whole number, a pointer, a tab_item) gives a pointer
+    "SendMessageW" as send_column(a pointer, a whole number, a pointer, a table_column) gives a pointer
+    "SendMessageW" as send_item(a pointer, a whole number, a pointer, a table_item) gives a pointer
+    "SendMessageW" as send_rectangle(a pointer, a whole number, a pointer, a box_edges) gives a pointer
+end
+use the library "kernel32"
+    structure activation with size as a whole number, flags as a whole number, source as wide text,
+        machine as a whole number, directory as a pointer, resource as a pointer, application as a pointer,
+        module as a pointer
+    GetModuleHandleW(a pointer) gives a pointer
+    MulDiv(a whole number, a whole number, a whole number) gives a whole number
+    CreateActCtxW(a activation) gives a pointer
+    ActivateActCtx(a pointer, bytes) gives yes or no
+    GetSystemDirectoryW(bytes, a whole number) gives a whole number
+    "lstrcatW" as wide_in(bytes, wide text) gives wide text
+    "RtlMoveMemory" as copy_in(bytes, a pointer, a whole number)
+end
+use the library "gdi32"
+    CreateFontW(a whole number, a whole number, a whole number, a whole number, a whole number, a whole number,
+        a whole number, a whole number, a whole number, a whole number, a whole number, a whole number,
+        a whole number, wide text) gives a pointer
+    GetStockObject(a whole number) gives a pointer
+    DeleteObject(a pointer) gives yes or no
+    DeleteDC(a pointer) gives yes or no
+    CreateCompatibleDC(a pointer) gives a pointer
+    CreateCompatibleBitmap(a pointer, a whole number, a whole number) gives a pointer
+    BitBlt(a pointer, a whole number, a whole number, a whole number, a whole number, a pointer, a whole number,
+        a whole number, a whole number) gives yes or no
+    SelectObject(a pointer, a pointer) gives a pointer
+    SetDCBrushColor(a pointer, a whole number) gives a whole number
+    SetDCPenColor(a pointer, a whole number) gives a whole number
+    SetTextColor(a pointer, a whole number) gives a whole number
+    SetBkMode(a pointer, a whole number) gives a whole number
+    "Rectangle" as fill_box(a pointer, a whole number, a whole number, a whole number, a whole number) gives yes or no
+    "Ellipse" as fill_ellipse(a pointer, a whole number, a whole number, a whole number, a whole number) gives yes or no
+    MoveToEx(a pointer, a whole number, a whole number, a pointer) gives yes or no
+    LineTo(a pointer, a whole number, a whole number) gives yes or no
+end
+use the library "msvcrt"
+    floor(a number) gives a number
+end
+use the library "comctl32"
+    structure common_controls with size as a whole number, classes as a whole number
+    InitCommonControlsEx(a common_controls) gives yes or no
+end
+use the library "gdiplus"
+    structure gdiplus_start with version as a whole number, debug as a pointer, no_thread as a whole number,
+        no_codecs as a whole number
+    GdiplusStartup(bytes, a gdiplus_start, a pointer) gives a whole number
+    GdipCreateBitmapFromFile(wide text, bytes) gives a whole number
+    GdipCreateHBITMAPFromBitmap(a pointer, bytes, a whole number) gives a whole number
+    GdipDisposeImage(a pointer) gives a whole number
+    GdipCreateHICONFromBitmap(a pointer, bytes) gives a whole number
+    GdipCreateBitmapFromStream(a pointer, bytes) gives a whole number
+    GdipGetImageWidth(a pointer, bytes) gives a whole number
+    GdipGetImageHeight(a pointer, bytes) gives a whole number
+    GdipCreateFromHDC(a pointer, bytes) gives a whole number
+    GdipDeleteGraphics(a pointer) gives a whole number
+    GdipDrawImageRectI(a pointer, a pointer, a whole number, a whole number, a whole number, a whole number) gives a whole number
+    GdipSetInterpolationMode(a pointer, a whole number) gives a whole number
+end
+use the library "shlwapi"
+    SHCreateMemStream(bytes, a whole number) gives a pointer
+end
+use the library "winmm"
+    "PlaySoundW" as play_bytes(bytes, a pointer, a whole number) gives yes or no
+end
+use the library "comdlg32"
+    structure open_file_name with size as a whole number, owner as a pointer, instance as a pointer,
+        filter as a pointer, custom_filter as a pointer, custom_size as a whole number,
+        filter_index as a whole number, file as a pointer, file_size as a whole number, file_title as a pointer,
+        file_title_size as a whole number, initial_folder as a pointer, title as a pointer,
+        flags as a whole number, file_offset as a whole number, default_extension as a pointer,
+        custom_data as a pointer, hook as a pointer, template_name as a pointer, reserved as a pointer,
+        reserved_too as a whole number, flags_ex as a whole number
+    GetOpenFileNameW(a open_file_name) gives yes or no
+    GetSaveFileNameW(a open_file_name) gives yes or no
+end
+
+set ui_ready to no
+set ui_instance to nothing
+set ui_dpi to 96
+set ui_font to nothing
+set ui_main to nothing # the first window: closing it ends run()
+set ui_controls to empty dictionary # each control and menu item, by its number
+set ui_windows to empty dictionary # each window, by its handle
+set ui_drawings to empty dictionary # each drawing, by its handle
+set ui_gdiplus to no
+set ui_sounds to empty list # the sounds playing, kept while they are
+set ui_timers to empty dictionary
+set ui_shortcuts to empty dictionary # each menu item's number, by its keys, as ui_keys gives them
+set ui_key_names to dictionary where "DELETE" is 46, "INSERT" is 45, "HOME" is 36, "END" is 35, "PAGEUP" is 33,
+    "PAGEDOWN" is 34, "SPACE" is 32
+set ui_next to 100
+set ui_quiet to no # yes while set_text changes a box, which isn't the one typing changing it
+set ui_return to (list of 13) as bytes as text # Windows' text boxes end a line with this, then a new line
+
+# a pointer, as a number: 0 for nothing
+to ui_number with p
+    if p is nothing
+        return 0
+    end
+    return p
+end
+
+# pixels at 100%, as many as the screen has for them
+to ui_scaled with n
+    return MulDiv(n, ui_dpi, 96)
+end
+
+# Once, before the first window: sharp on a screen set larger than 100%, Windows' modern look for its
+# controls (from the manifest shell32.dll has for it), the font Windows' own programs use, and the kind of
+# window each of these is
+to ui_start
+    if ui_ready
+        return nothing
+    end
+    set ui_ready to yes
+    SetProcessDPIAware()
+    try
+        set ui_dpi to GetDpiForSystem()
+    if it fails
+        set ui_dpi to 96
+    end
+    set folder to 1040 bytes
+    GetSystemDirectoryW(folder, 520)
+    set look to CreateActCtxW(record with size 56, flags 8, source wide_in(folder, "\\shell32.dll"), resource 124)
+    if look is not nothing and look is not -1
+        ActivateActCtx(look, 8 bytes)
+    end
+    set ui_font to CreateFontW(0 - MulDiv(9, ui_dpi, 72), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI")
+    set ui_instance to GetModuleHandleW(nothing)
+    set icon to LoadIconW(ui_instance, 1) # the program's own, if folio build was given --icon
+    set class to record with size 80, procedure ui_procedure, instance ui_instance, cursor LoadCursorW(nothing, 32512),
+        background 16, class_name "FolioWindow", icon icon, small_icon icon
+    RegisterClassExW(class)
+    InitCommonControlsEx(record with size 8, classes 255) # progress bars, tabs, tables, and the rest Windows 95 had
+    set class to record with size 80, style 3, procedure ui_procedure, instance ui_instance,
+        cursor LoadCursorW(nothing, 32512), background GetStockObject(0), class_name "FolioDrawing"
+    RegisterClassExW(class)
+end
+
+# What Windows tells a window: a command from one of its controls or menus, a timer, a new size, closing
+to ui_procedure with handle, message, w, l
+    set wn to ui_number(w)
+    set ln to ui_number(l)
+    if handle is in ui_drawings # a drawing, drawn when Windows asks (WM_PAINT), or clicked
+        set drawn to item handle of ui_drawings
+        if message is 15
+            ui_paint(drawn)
+            return 0
+        else if message is 20 # WM_ERASEBKGND: ui_paint draws all of it
+            return 1
+        else if message is 135 # WM_GETDLGCODE: its keys are its own, not the dialog manager's in run()
+            return 4
+        else if message is 256 or message is 260 # a key down
+            set held to held of drawn
+            set item (lowercase of ui_key_name(wn)) of held to yes
+            if typed of drawn is not nothing
+                set handler to typed of drawn
+                handler(ui_key_name(wn))
+            end
+            return 0
+        else if message is 257 or message is 261 # a key up
+            set held to held of drawn
+            set named to lowercase of ui_key_name(wn)
+            if named is in held
+                remove named from held
+            end
+            return 0
+        else if message is 8 # WM_KILLFOCUS: what was held isn't any more, as far as it knows
+            set held of drawn to empty dictionary
+        else if message is 512 or message is 513 or message is 514 # the mouse moved, pressed or let go
+            set mouse_x of drawn to MulDiv(ln bit and 65535, 96, ui_dpi)
+            set mouse_y of drawn to MulDiv((shift ln right by 16) bit and 65535, 96, ui_dpi)
+            if message is 513
+                SetFocus(handle)
+                set pressed of drawn to yes
+                if clicked of drawn is not nothing
+                    set handler to clicked of drawn
+                    handler(mouse_x of drawn, mouse_y of drawn)
+                end
+            else if message is 514
+                set pressed of drawn to no
+            end
+            return 0
+        end
+        return DefWindowProcW(handle, message, w, l)
+    end
+    if message is 78 # WM_NOTIFY: a tab or a table says what happened to it
+        set header to 24 bytes
+        copy_in(header, l, 24)
+        set id to ui_bytes_number(header, 9, 4)
+        if id is in ui_controls
+            ui_notify(item id of ui_controls, ui_bytes_number(header, 17, 4))
+        end
+        return 0
+    end
+    if message is 273 # WM_COMMAND: which control, and what happened to it
+        set id to wn bit and 65535
+        if id is in ui_controls
+            ui_command(item id of ui_controls, (shift wn right by 16) bit and 65535)
+            return 0
+        end
+    else if message is 275 # WM_TIMER
+        if wn is in ui_timers
+            set handler to item wn of ui_timers
+            handler()
+            return 0
+        end
+    else if message is 5 and handle is in ui_windows # WM_SIZE
+        set made to item handle of ui_windows
+        if resized of made is not nothing
+            set handler to resized of made
+            handler(MulDiv(ln bit and 65535, 96, ui_dpi), MulDiv((shift ln right by 16) bit and 65535, 96, ui_dpi))
+        end
+    else if message is 16 and handle is in ui_windows # WM_CLOSE: closed, unless its handler says no
+        set made to item handle of ui_windows
+        if closing of made is not nothing
+            set handler to closing of made
+            if handler() is no
+                return 0
+            end
+        end
+    else if message is 2 and ui_main is not nothing # WM_DESTROY: the first window gone, run() ends
+        if handle is handle of ui_main
+            PostQuitMessage(0)
+        end
+    end
+    return DefWindowProcW(handle, message, w, l)
+end
+
+# a control's handler, for what happened to it, if it has one
+to ui_command with control, code
+    set handler to on of control
+    if handler is nothing
+        return nothing
+    end
+    set kind to kind of control
+    if (kind is "button" or kind is "menu item") and code is 0
+        handler()
+    else if kind is "checkbox" and code is 0
+        handler(ticked(control))
+    else if (kind is "list" or kind is "dropdown") and code is 1
+        handler(chosen(control))
+    else if kind is "text" and code is 768 and not ui_quiet
+        handler(text_of(control))
+    end
+end
+
+# a new window, `width` by `height` inside, shown, with `title` at its top
+to window with title, width, height
+    ui_start()
+    set style to 13565952 # WS_OVERLAPPEDWINDOW
+    set room to record with left 0, top 0, right ui_scaled(width), bottom ui_scaled(height)
+    AdjustWindowRectEx(room, style, no, 0)
+    set handle to CreateWindowExW(0, "FolioWindow", title, style, 2147483648, 2147483648, right of room - left of room,
+        bottom of room - top of room, nothing, nothing, ui_instance, nothing)
+    set made to record with handle handle, title title, kind "window", resized nothing, closing nothing, menus empty dictionary,
+        bar nothing
+    set item handle of ui_windows to made
+    if ui_main is nothing
+        set ui_main to made
+    end
+    ShowWindow(handle, 5)
+    UpdateWindow(handle)
+    return made
+end
+
+# a control of Windows' own kind (`class`) in a window, with its style, its text and its handler
+# (or on a tab's page: in the page's window, where the page is, shown only while its tab is chosen)
+to ui_control with parent, class, text, style, outer, x, y, width, height, kind, handler
+    set id to ui_next
+    set ui_next to ui_next + 1
+    set host to parent
+    set page to nothing
+    set dx to 0
+    set dy to 0
+    if kind of parent is "page"
+        set page to parent
+        set host to window of parent
+        set dx to left of parent
+        set dy to top of parent
+    end
+    set handle to CreateWindowExW(outer, class, text, 1342177280 + style, ui_scaled(x + dx), ui_scaled(y + dy),
+        ui_scaled(width), ui_scaled(height), handle of host, id, ui_instance, nothing)
+    SendMessageW(handle, 48, ui_font, 1) # WM_SETFONT
+    set made to record with handle handle, id id, kind kind, on handler, window host, page page, dx dx, dy dy
+    set item id of ui_controls to made
+    if page is not nothing
+        set held to controls of page
+        add made to held
+        if nth of page is not chosen_tab(tabs of page)
+            ShowWindow(handle, 0)
+        end
+    end
+    return made
+end
+
+# a button that says `text`, at x, y in its window, `width` by `height`, which calls `handler` (with nothing)
+# when it's pressed
+to button with parent, text, x, y, width, height, handler
+    return ui_control(parent, "BUTTON", text, 65536, 0, x, y, width, height, "button", handler)
+end
+
+# words that say `text`, at x, y in a window, `width` by `height`, which set_text can change
+to label with parent, text, x, y, width, height
+    return ui_control(parent, "STATIC", text, 0, 0, x, y, width, height, "label", nothing)
+end
+
+# a box for a line of text; `text_area` for many, with a scroll bar; `on_change` gives either a handler, for
+# what's typed into it (not what set_text puts there)
+to text_box with parent, x, y, width, height
+    return ui_text(parent, 65536 + 128, x, y, width, height)
+end
+
+# a box for many lines of text, with a scroll bar
+to text_area with parent, x, y, width, height
+    return ui_text(parent, 65536 + 4 + 64 + 4096 + 2097152, x, y, width, height)
+end
+
+to ui_text with parent, style, x, y, width, height
+    set made to ui_control(parent, "EDIT", "", style, 512, x, y, width, height, "text", nothing)
+    SendMessageW(handle of made, 197, 0, 0) # EM_SETLIMITTEXT: as much as it will hold, not 32,767 characters
+    return made
+end
+
+# a text box's or text area's handler for what's typed into it, given its text each time it changes
+to on_change with control, handler
+    set on of control to handler
+end
+
+# a box to tick, which says `text` beside it; `handler` is given yes or no each time it's ticked or unticked
+to checkbox with parent, text, x, y, width, height, handler
+    return ui_control(parent, "BUTTON", text, 65536 + 3, 0, x, y, width, height, "checkbox", handler)
+end
+
+# a list of items (add_item) of which one can be chosen; `handler` is given the chosen item each time the
+# choice changes
+to list_box with parent, x, y, width, height, handler
+    return ui_control(parent, "LISTBOX", "", 65536 + 1 + 256 + 2097152, 512, x, y, width, height, "list", handler)
+end
+
+# a list that drops down, of which one is chosen; `height` includes the list when it's open
+to dropdown with parent, x, y, width, height, handler
+    return ui_control(parent, "COMBOBOX", "", 65536 + 3 + 2097152, 0, x, y, width, height, "dropdown", handler)
+end
+
+# what a control says: a text box's text, a button's label
+to text_of with control
+    set n to GetWindowTextLengthW(handle of control)
+    set room to ((n + 1) * 2) bytes
+    GetWindowTextW(handle of control, room, n + 1)
+    return join (split wide_in(room, "") by ui_return) with ""
+end
+
+# what a control says changed: a text box's text, a label's or button's words, a window's title
+to set_text with control, text
+    set lines to split (join (split text by ui_return) with "") by "\n"
+    set ui_quiet to yes
+    SetWindowTextW(handle of control, join lines with ui_return + "\n")
+    set ui_quiet to no
+end
+
+# whether a checkbox is ticked
+to ticked with control
+    return ui_number(SendMessageW(handle of control, 240, 0, 0)) is 1 # BM_GETCHECK
+end
+
+# a checkbox ticked (yes) or unticked (no), without calling its handler
+to set_ticked with control, tick
+    if tick
+        SendMessageW(handle of control, 241, 1, 0)
+    else
+        SendMessageW(handle of control, 241, 0, 0)
+    end
+end
+
+# a list's or a dropdown's messages, which differ
+to ui_list_message with control, list_one, dropdown_one
+    if kind of control is "dropdown"
+        return dropdown_one
+    end
+    return list_one
+end
+
+# an item at the end of a list box or a dropdown
+to add_item with control, text
+    send_text(handle of control, ui_list_message(control, 384, 323), 0, text)
+end
+
+# every item of a list box or a dropdown taken away
+to clear_items with control
+    SendMessageW(handle of control, ui_list_message(control, 388, 331), 0, 0)
+end
+
+# the item at a place, from 1, taken out of a list box or a dropdown
+to remove_item with control, place
+    SendMessageW(handle of control, ui_list_message(control, 386, 324), place - 1, 0)
+end
+
+# how many items a list box or a dropdown has
+to count_of with control
+    if kind of control is "table"
+        return length of rows of control
+    end
+    return ui_number(SendMessageW(handle of control, ui_list_message(control, 395, 326), 0, 0))
+end
+
+# where the chosen item is, from 1, or 0 for none
+to chosen_place with control
+    if kind of control is "table"
+        return ui_number(SendMessageW(handle of control, 4108, -1, 2)) + 1 # LVM_GETNEXTITEM, the chosen one
+    end
+    set at to ui_number(SendMessageW(handle of control, ui_list_message(control, 392, 327), 0, 0))
+    if at is -1
+        return 0
+    end
+    return at + 1
+end
+
+# the item at a place, from 1, chosen in a list box or a dropdown, without calling its handler; 0 for none
+to choose with control, place
+    SendMessageW(handle of control, ui_list_message(control, 390, 334), place - 1, 0)
+end
+
+# the chosen item, or nothing for none
+to chosen with control
+    set place to chosen_place(control)
+    if place is 0
+        return nothing
+    end
+    set n to ui_number(SendMessageW(handle of control, ui_list_message(control, 394, 329), place - 1, 0))
+    set room to ((n + 1) * 2) bytes
+    send_bytes(handle of control, ui_list_message(control, 393, 328), place - 1, room)
+    return wide_in(room, "")
+end
+
+# a control made to work (yes), or greyed out so it doesn't (no)
+to enable with control, on
+    EnableWindow(handle of control, on)
+end
+
+# the keys sent to a control: what's typed goes into it
+to focus with control
+    SetFocus(handle of control)
+end
+
+# a control put somewhere else, or made another size, as when its window is resized
+to place with control, x, y, width, height
+    MoveWindow(handle of control, ui_scaled(x + dx of control), ui_scaled(y + dy of control), ui_scaled(width),
+        ui_scaled(height), yes)
+end
+
+# a window's handler for a new size, given its width and height inside, as when the person drags its edge
+to on_resize with parent, handler
+    set resized of parent to handler
+end
+
+# a function that says whether the window may close, asked when someone closes it
+to on_close with parent, handler
+    set closing of parent to handler
+end
+
+# an item at the end of the menu called `title` on the window's bar, made if it isn't there; "-" is a line.
+# Keys after a tab, as in "Save\tCtrl+S", are shown beside it and choose it too: Ctrl, Shift and Alt, then a
+# letter, a digit, F1 to F12, Space, Delete, Insert, Home, End, PageUp or PageDown.
+to menu_item with parent, title, text, handler
+    set parts to split text by "\t"
+    set pressed to nothing
+    if length of parts is 2
+        set pressed to ui_named_keys(item 2 of parts)
+    end
+    if bar of parent is nothing
+        set bar of parent to CreateMenu()
+        SetMenu(handle of parent, bar of parent)
+    end
+    set menus to menus of parent
+    if not (title is in menus)
+        set item title of menus to CreatePopupMenu()
+        append_menu(bar of parent, 16, item title of menus, title)
+    end
+    set made to record with handle nothing, id 0, kind "menu item", on handler, window parent
+    if text is "-"
+        append_line(item title of menus, 2048, 0, nothing)
+    else
+        set id to ui_next
+        set ui_next to ui_next + 1
+        set id of made to id
+        append_menu(item title of menus, 0, id, text)
+        set item id of ui_controls to made
+        if pressed is not nothing
+            set item pressed of ui_shortcuts to id
+        end
+    end
+    DrawMenuBar(handle of parent)
+    return made
+end
+
+# "Ctrl+Shift+S" as ui_keys gives it when those keys are pressed: what's held, by 256, and the key's number
+to ui_named_keys with named
+    set held to 0
+    set key to nothing
+    for each written in split named by "+"
+        set part to uppercase of written
+        set codes to part as bytes
+        if part is "CTRL"
+            set held to held bit or 1
+        else if part is "SHIFT"
+            set held to held bit or 2
+        else if part is "ALT"
+            set held to held bit or 4
+        else if part is in ui_key_names
+            set key to item part of ui_key_names
+        else if length of codes is 1 and ui_letter_or_digit(byte 1 of codes)
+            set key to byte 1 of codes
+        else if length of codes is 2 and (byte 1 of codes) is 70 and (byte 2 of codes) is greater than 48
+            and (byte 2 of codes) is less than 58 # F1 to F9
+            set key to 111 + (byte 2 of codes) - 48
+        else if part is "F10" or part is "F11" or part is "F12"
+            set key to 111 + 10 + (byte 3 of codes) - 48
+        else
+            fail with "windows.folio doesn't know the key '" + written + "' in '" + named + "'"
+        end
+    end
+    if key is nothing
+        fail with "'" + named + "' has no key to press, only ones to hold"
+    end
+    return held * 256 + key
+end
+
+to ui_letter_or_digit with code
+    return (code is at least 65 and code is at most 90) or (code is at least 48 and code is at most 57)
+end
+
+# a key pressed, as ui_named_keys gives it (Windows' message, in `got`, is WM_KEYDOWN or WM_SYSKEYDOWN)
+to ui_keys with got
+    set held to 0
+    if ui_held(17) # Ctrl
+        set held to held bit or 1
+    end
+    if ui_held(16) # Shift
+        set held to held bit or 2
+    end
+    if ui_held(18) # Alt
+        set held to held bit or 4
+    end
+    return held * 256 + (byte 17 of got)
+end
+
+# whether a key is down: its state's top bit, a 16-bit number's, which Windows gives as below 0
+to ui_held with key
+    set state to GetKeyState(key)
+    return state is less than 0 or state is at least 32768
+end
+
+# a handler called every so many milliseconds, while run() runs
+to timer with parent, milliseconds, handler
+    set id to ui_next
+    set ui_next to ui_next + 1
+    set item id of ui_timers to handler
+    SetTimer(handle of parent, id, milliseconds, nothing)
+end
+
+# a box with a message in it, over the window, and an OK button: it waits until it's pressed
+to message with parent, text
+    MessageBoxW(handle of parent, text, title of parent, 64)
+end
+
+# a box asking a question, over the window, with Yes and No: whether Yes was pressed
+to ask_yes_no with parent, question
+    return MessageBoxW(handle of parent, question, title of parent, 36) is 6
+end
+
+# Windows' own box for choosing a file: its name, or nothing if none was chosen
+to choose_file_to_open with parent
+    return ui_choose_file(parent, yes)
+end
+
+# the system's own box for choosing where to save a file: its name, or nothing if none was chosen
+to choose_file_to_save with parent
+    return ui_choose_file(parent, no)
+end
+
+to ui_choose_file with parent, opening
+    set filter to empty list # "All files", "*.*", each in UTF-16 and ending in a 0, and a 0 to end them
+    for each part in list of "All files", "*.*"
+        set codes to part as bytes
+        for each code in codes
+            add code to filter
+            add 0 to filter
+        end
+        add 0 to filter
+        add 0 to filter
+    end
+    add 0 to filter
+    add 0 to filter
+    set filter_bytes to filter as bytes
+    set name to 1040 bytes
+    set asked to record with size 152, owner handle of parent, filter filter_bytes, file name, file_size 520, filter_index 1
+    set chose to no
+    if opening
+        set flags of asked to 530440 # explorer, the path and the file must be there, the folder left as it was
+        set chose to GetOpenFileNameW(asked)
+    else
+        set flags of asked to 526346 # explorer, the path must be there, ask before replacing a file, the folder left as it was
+        set chose to GetSaveFileNameW(asked)
+    end
+    if not chose
+        return nothing
+    end
+    return wide_in(name, "")
+end
+
+# a window closed; closing the first window run() runs for ends run()
+to close with parent
+    PostMessageW(handle of parent, 16, 0, 0)
+end
+
+# what happens to the windows, to their handlers, until the first window is closed
+to run
+    set got to 48 bytes
+    repeat while GetMessageW(got, nothing, 0, 0) is greater than 0
+        set handled to no
+        set message to (byte 9 of got) + (byte 10 of got) * 256
+        if message is 256 or message is 260 # a key pressed: a menu item's?
+            set pressed to ui_keys(got)
+            if pressed is in ui_shortcuts
+                ui_command(item (item pressed of ui_shortcuts) of ui_controls, 0)
+                set handled to yes
+            end
+        end
+        if not handled and ui_main is not nothing
+            set handled to IsDialogMessageW(handle of ui_main, got) # Tab from control to control, and the rest
+        end
+        if not handled
+            TranslateMessage(got)
+            DispatchMessageW(got)
+        end
+    end
+end
+
+# ---------- progress bars, pictures, tabs, tables and drawings ----------
+
+# a whole number from `count` bytes of `b`, lowest first, from byte `from`
+to ui_bytes_number with b, from, count
+    set made to 0
+    set k to count
+    repeat count times
+        set made to made * 256 + byte (from + k - 1) of b
+        set k to k - 1
+    end
+    return made
+end
+
+# the nearest whole number to n, from `least` to `most`
+to ui_whole with n, least, most
+    set made to floor(n + 0.5)
+    if made is less than least
+        return least
+    end
+    if made is greater than most
+        return most
+    end
+    return made
+end
+
+# a place or size as at 100%, in the screen's pixels, for drawing
+to ui_px with n
+    return floor(n * ui_dpi / 96 + 0.5)
+end
+
+# what a tab or a table says happened to it: another tab chosen, or another row
+to ui_notify with control, code
+    if kind of control is "tabs" and code is 4294966745 # TCN_SELCHANGE
+        ui_show_page(control)
+        if on of control is not nothing and not ui_quiet
+            set handler to on of control
+            handler(title of item chosen_tab(control) of pages of control)
+        end
+    else if kind of control is "table" and code is 4294967195 # LVN_ITEMCHANGED
+        set at to chosen_place(control)
+        if at is not last of control
+            set last of control to at
+            if at is greater than 0 and on of control is not nothing and not ui_quiet
+                set handler to on of control
+                handler(item at of rows of control)
+            end
+        end
+    end
+end
+
+# a bar that fills up as something gets done: set_progress says how far, from 0 to 100
+to progress with parent, x, y, width, height
+    return ui_control(parent, "msctls_progress32", "", 0, 0, x, y, width, height, "progress", nothing)
+end
+
+# how far a progress bar is, from 0 to 100
+to set_progress with control, percent
+    SendMessageW(handle of control, 1026, ui_whole(percent, 0, 100), 0) # PBM_SETPOS
+end
+
+# a picture from a file, a PNG, JPEG, GIF or BMP, made the size it's put at
+to picture with parent, file, x, y, width, height
+    set made to ui_control(parent, "STATIC", "", 14 + 64, 0, x, y, width, height, "picture", nothing)
+    set_picture(made, file)
+    return made
+end
+
+# a picture control shows another file's picture
+to set_picture with control, file
+    if not ui_gdiplus
+        GdiplusStartup(8 bytes, (record with version 1), nothing)
+        set ui_gdiplus to yes
+    end
+    set got to 8 bytes
+    if GdipCreateBitmapFromFile(file, got) is not 0
+        fail with "can't show '" + file + "': it isn't there, or isn't a picture"
+    end
+    set image to ui_bytes_number(got, 1, 8)
+    set back to GetSysColor(15) # the window's own colour, under what's see-through: its red, green and blue
+    set argb to 4278190080 + (back bit and 255) * 65536 + (back bit and 65280) + ((shift back right by 16) bit and 255)
+    set bitmap to 8 bytes
+    GdipCreateHBITMAPFromBitmap(image, bitmap, argb)
+    GdipDisposeImage(image)
+    set made to ui_bytes_number(bitmap, 1, 4) # a GDI handle: 32 bits, made 64 by its sign
+    if made is at least 2147483648
+        set made to made - 4294967296
+    end
+    set was to SendMessageW(handle of control, 370, 0, made) # STM_SETIMAGE, a bitmap
+    if was is not nothing
+        DeleteObject(was)
+    end
+end
+
+# tabs, each with a page of its own (see tab) for controls; `handler` is given a tab's title when the person
+# chooses it
+to tabs with parent, x, y, width, height, handler
+    set made to ui_control(parent, "SysTabControl32", "", 65536 + 67108864, 0, x, y, width, height, "tabs", handler)
+    set pages of made to empty list
+    set left of made to x + dx of made
+    set top of made to y + dy of made
+    return made
+end
+
+# a page of the tabs, with `title` on its tab: what's put on it, as on a window, shows while its tab is chosen
+to tab with tabs_control, title
+    set pages to pages of tabs_control
+    set made to record with kind "page", title title, tabs tabs_control, window window of tabs_control,
+        controls empty list, nth length of pages + 1, left 0, top 0
+    send_tab(handle of tabs_control, 4926, length of pages, record with mask 1, text title) # TCM_INSERTITEMW
+    add made to pages
+    set room to record with left 0, top 0, right 1000, bottom 1000
+    send_rectangle(handle of tabs_control, 4904, 0, room) # TCM_ADJUSTRECT: where a page goes, inside the tabs
+    set left of made to left of tabs_control + MulDiv(left of room, 96, ui_dpi)
+    set top of made to top of tabs_control + MulDiv(top of room, 96, ui_dpi)
+    return made
+end
+
+# which tab is chosen, from 1
+to chosen_tab with control
+    return ui_number(SendMessageW(handle of control, 4875, 0, 0)) + 1 # TCM_GETCURSEL
+end
+
+# the tab at a place, from 1, chosen, as if the person had clicked it
+to choose_tab with control, place
+    SendMessageW(handle of control, 4876, place - 1, 0) # TCM_SETCURSEL
+    ui_show_page(control)
+end
+
+# the chosen tab's page shown, and the others hidden; the tabs kept under them, for clicks to reach them
+to ui_show_page with control
+    set chosen_one to chosen_tab(control)
+    for each page in pages of control
+        for each held in controls of page
+            if nth of page is chosen_one
+                ShowWindow(handle of held, 5)
+            else
+                ShowWindow(handle of held, 0)
+            end
+        end
+    end
+    SetWindowPos(handle of control, 1, 0, 0, 0, 0, 19) # at the bottom, not moved, sized or made active
+end
+
+# a table, with a column for each title in `columns`, and rows of values (add_row); `handler` is given a row's
+# values when the person chooses it
+to table with parent, columns, x, y, width, height, handler
+    set made to ui_control(parent, "SysListView32", "", 65536 + 1 + 4 + 8, 512, x, y, width, height, "table", handler)
+    SendMessageW(handle of made, 4150, 33, 33) # LVM_SETEXTENDEDLISTVIEWSTYLE: whole rows chosen, and grid lines
+    set rows of made to empty list
+    set last of made to 0
+    set each to MulDiv(width - 4, ui_dpi, 96 * length of columns)
+    set k to 0
+    for each title in columns
+        send_column(handle of made, 4193, k, record with mask 6, width each, text title) # LVM_INSERTCOLUMNW
+        add 1 to k
+    end
+    return made
+end
+
+# a row at the end of the table: its values, each shown as `say` shows it
+to add_row with control, values
+    set ui_quiet to yes
+    set at to length of rows of control
+    set texts to empty list
+    for each v in values
+        add "" + v to texts
+    end
+    set held to rows of control
+    add values to held
+    send_item(handle of control, 4173, 0, record with mask 1, row at, text item 1 of texts) # LVM_INSERTITEMW
+    for each k from 2 to length of texts
+        send_item(handle of control, 4212, at, record with mask 1, row at, sub_item k - 1, text item k of texts)
+    end
+    set ui_quiet to no
+end
+
+# every row of a table taken away
+to clear_rows with control
+    set ui_quiet to yes
+    SendMessageW(handle of control, 4105, 0, 0) # LVM_DELETEALLITEMS
+    set rows of control to empty list
+    set last of control to 0
+    set ui_quiet to no
+end
+
+# the chosen row's values, or nothing for none
+to chosen_row with control
+    set at to chosen_place(control)
+    if at is 0
+        return nothing
+    end
+    return item at of rows of control
+end
+
+# the row at a place, from 1, chosen in a table; 0 for none
+to choose_row with control, place
+    set ui_quiet to yes
+    send_item(handle of control, 4139, place - 1, record with state 3, state_mask 3) # LVM_SETITEMSTATE: chosen
+    set last of control to place
+    set ui_quiet to no
+end
+
+# A drawing: `painter` draws it whenever it must be drawn, and after redraw, given a canvas to draw on with
+# colour, rectangle, circle, line and words, in pixels as at 100% from the drawing's top left
+to drawing with parent, x, y, width, height, painter
+    set made to ui_control(parent, "FolioDrawing", "", 0, 0, x, y, width, height, "drawing", nothing)
+    set painter of made to painter
+    set clicked of made to nothing
+    set held of made to empty dictionary
+    set mouse_x of made to 0
+    set mouse_y of made to 0
+    set pressed of made to no
+    set typed of made to nothing
+    set item (handle of made) of ui_drawings to made
+    return made
+end
+
+# a drawing's handler for a click on it, given where: x and y
+to on_click with control, handler
+    set clicked of control to handler
+end
+
+# a drawing drawn again, by its painter, as soon as the program has a moment
+to redraw with control
+    InvalidateRect(handle of control, nothing, no)
+end
+
+to ui_paint with drawn
+    set painted to 72 bytes
+    set screen to BeginPaint(handle of drawn, painted)
+    set room to record with left 0, top 0, right 0, bottom 0
+    GetClientRect(handle of drawn, room)
+    set dc to CreateCompatibleDC(screen) # drawn into a bitmap first, then onto the window at once: no flicker
+    set picture to CreateCompatibleBitmap(screen, right of room, bottom of room)
+    set was to SelectObject(dc, picture)
+    FillRect(dc, room, GetStockObject(0)) # white
+    SelectObject(dc, GetStockObject(18)) # DC_BRUSH and DC_PEN, whose colours colour() sets
+    SelectObject(dc, GetStockObject(19))
+    SelectObject(dc, ui_font)
+    SetBkMode(dc, 1) # words drawn on what's there
+    set canvas to record with dc dc, graphics nothing
+    colour(canvas, 0, 0, 0)
+    set painter to painter of drawn
+    painter(canvas)
+    if graphics of canvas is not nothing
+        GdipDeleteGraphics(graphics of canvas)
+    end
+    BitBlt(screen, 0, 0, right of room, bottom of room, dc, 0, 0, 13369376) # SRCCOPY
+    SelectObject(dc, was)
+    DeleteObject(picture)
+    DeleteDC(dc)
+    EndPaint(handle of drawn, painted)
+end
+
+# what's drawn next is this colour: red, green and blue, each from 0 to 255
+to colour with canvas, red, green, blue
+    set made to ui_whole(red, 0, 255) + ui_whole(green, 0, 255) * 256 + ui_whole(blue, 0, 255) * 65536
+    SetDCBrushColor(dc of canvas, made)
+    SetDCPenColor(dc of canvas, made)
+    SetTextColor(dc of canvas, made)
+end
+
+# a filled rectangle, its top left at x, y, `width` by `height`, in the colour chosen last
+to rectangle with canvas, x, y, width, height
+    fill_box(dc of canvas, ui_px(x), ui_px(y), ui_px(x + width), ui_px(y + height))
+end
+
+# a filled circle, its middle at x, y, so many pixels across from the middle to the edge, in the colour chosen
+# last
+to circle with canvas, x, y, radius
+    fill_ellipse(dc of canvas, ui_px(x - radius), ui_px(y - radius), ui_px(x + radius), ui_px(y + radius))
+end
+
+# a line from x1, y1 to x2, y2, in the colour chosen last
+to line with canvas, x1, y1, x2, y2
+    MoveToEx(dc of canvas, ui_px(x1), ui_px(y1), nothing)
+    LineTo(dc of canvas, ui_px(x2), ui_px(y2))
+end
+
+# words with their top left at x, y, in the windows' own font
+to words with canvas, text, x, y
+    set room to record with left ui_px(x), top ui_px(y), right ui_px(x), bottom ui_px(y)
+    DrawTextW(dc of canvas, text, -1, room, 256 + 32 + 2048) # not cut off, on one line, & as it is
+end
+
+# the window's icon, from a picture's file (a PNG, JPEG, GIF, BMP or ICO): in its title, and the taskbar's
+to set_icon with parent, file
+    if not ui_gdiplus
+        GdiplusStartup(8 bytes, (record with version 1), nothing)
+        set ui_gdiplus to yes
+    end
+    set got to 8 bytes
+    if GdipCreateBitmapFromFile(file, got) is not 0
+        fail with "can't show '" + file + "': it isn't there, or isn't a picture"
+    end
+    set image to ui_bytes_number(got, 1, 8)
+    set made to 8 bytes
+    GdipCreateHICONFromBitmap(image, made)
+    GdipDisposeImage(image)
+    set icon to ui_bytes_number(made, 1, 4) # a handle: 32 bits, made 64 by its sign
+    if icon is at least 2147483648
+        set icon to icon - 4294967296
+    end
+    SendMessageW(handle of parent, 128, 1, icon) # WM_SETICON, the big one and the small
+    SendMessageW(handle of parent, 128, 0, icon)
+end
+
+# ---------- games: keys held, the mouse, pictures and sounds ----------
+
+# each key's name, from its virtual-key code; a letter's and a digit's is itself, and F1 to F12 theirs
+set ui_vk_names to dictionary where 37 is "Left", 38 is "Up", 39 is "Right", 40 is "Down", 32 is "Space", 13 is "Enter",
+    27 is "Escape", 16 is "Shift", 17 is "Ctrl", 18 is "Alt", 9 is "Tab", 8 is "Backspace", 46 is "Delete"
+
+to ui_key_name with code
+    if code is in ui_vk_names
+        return item code of ui_vk_names
+    end
+    if (code is at least 65 and code is at most 90) or (code is at least 48 and code is at most 57)
+        return (list of code) as bytes as text
+    end
+    if code is at least 112 and code is at most 123
+        return "F" + (code - 111)
+    end
+    return "key " + code
+end
+
+# whether a key is held down while the drawing has the keys (it takes them when it's clicked, or focus()):
+# "Left", "Right", "Up", "Down", "Space", "Enter", "Escape", "Shift", "Ctrl", "Alt", "Tab", "Backspace",
+# "Delete", a letter, a digit, or F1 to F12, small letters or capitals
+to key_down with control, name
+    return lowercase of name is in held of control
+end
+
+# where the mouse was last on the drawing, as at 100%, and whether its button is down
+to mouse_x with control
+    return mouse_x of control
+end
+
+# how far down the drawing the mouse was last, as mouse_x says how far across
+to mouse_y with control
+    return mouse_y of control
+end
+
+# whether the mouse's button is down on the drawing
+to mouse_down with control
+    return pressed of control
+end
+
+to ui_gdiplus_ready
+    if not ui_gdiplus
+        GdiplusStartup(8 bytes, (record with version 1), nothing)
+        set ui_gdiplus to yes
+    end
+end
+
+# a picture from a file, or one built into the program (a PNG, JPEG, GIF or BMP), to draw with draw_image
+to load_image with file
+    ui_gdiplus_ready()
+    set data to read bytes file
+    set stream to SHCreateMemStream(data, length of data)
+    set got to 8 bytes
+    if stream is nothing or GdipCreateBitmapFromStream(stream, got) is not 0
+        fail with "can't show '" + file + "': it isn't a picture"
+    end
+    set image to ui_bytes_number(got, 1, 8)
+    set across to 4 bytes
+    set down to 4 bytes
+    GdipGetImageWidth(image, across)
+    GdipGetImageHeight(image, down)
+    return record with kind "image", image image, width ui_bytes_number(across, 1, 4), height ui_bytes_number(down, 1, 4),
+        data data, stream stream
+end
+
+# a picture drawn with its top left at x, y, at its own size (draw_image) or made `width` by `height`
+to draw_image with canvas, image, x, y
+    draw_image_sized(canvas, image, x, y, width of image, height of image)
+end
+
+# a picture drawn with its top left at x, y, made `width` by `height`
+to draw_image_sized with canvas, image, x, y, width, height
+    set got to 8 bytes
+    GdipCreateFromHDC(dc of canvas, got)
+    set graphics to ui_bytes_number(got, 1, 8)
+    GdipSetInterpolationMode(graphics, 5) # nearest: sharp, and quick enough to draw a game's many each frame
+    GdipDrawImageRectI(graphics, image of image, ui_px(x), ui_px(y), ui_px(width), ui_px(height))
+    GdipDeleteGraphics(graphics)
+end
+
+# a WAV file, or one built into the program, played while the program goes on (a new one stops the last)
+to play_sound with file
+    set data to read bytes file
+    add data to ui_sounds # kept while it plays: Windows reads it from there
+    if length of ui_sounds is greater than 8
+        set kept to empty list
+        for each k from length of ui_sounds - 7 to length of ui_sounds
+            add item k of ui_sounds to kept
+        end
+        set ui_sounds to kept
+    end
+    if not play_bytes(data, nothing, 7) # SND_MEMORY, SND_ASYNC, SND_NODEFAULT
+        fail with "can't play '" + file + "': it isn't a WAV file"
+    end
+end
+
+# a drawing's handler for each key pressed while it has the keys, given the key's name, as key_down knows them
+to on_key with control, handler
+    set typed of control to handler
+end

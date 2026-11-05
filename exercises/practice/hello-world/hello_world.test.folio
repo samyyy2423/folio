@@ -1,0 +1,5 @@
+use "hello_world.folio" as exercise
+
+to test_say_hi
+    expect exercise's hello() is "Hello, World!"
+end

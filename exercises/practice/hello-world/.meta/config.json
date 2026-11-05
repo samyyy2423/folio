@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "hello_world.moth"
+      "hello_world.folio"
     ],
     "test": [
-      "hello_world.test.moth"
+      "hello_world.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "The classic first program: give back a greeting."

@@ -1,0 +1,293 @@
+# Excel workbooks (.xlsx), read and written in Folio alone: each sheet a list of rows, each row a list of its
+# cells, a cell a number, text, yes or no, or nothing for an empty one. Excel, LibreOffice and Google Sheets
+# open what it writes; it reads what they write.
+#
+#   use "xlsx.folio" as xlsx
+#   set book to xlsx's workbook()
+#   set rows to list of (list of "Month", "Sales"), (list of "January", 120), (list of "February", 95.5)
+#   xlsx's sheet(book, "Sales", rows)
+#   xlsx's save(book, "sales.xlsx")
+#
+#   set sheets to xlsx's read_book(read bytes "sales.xlsx")   # a dictionary: each sheet's name, its rows
+#   say item 2 of item 1 of xlsx's rows_of(read bytes "sales.xlsx")
+#
+# A date in a cell is the number Excel keeps it as, days since 30 December 1899. A file that isn't a workbook is
+# a `fail with` that says why. save() is built with --allow-write.
+
+use "zip.folio" as xlsx_zip
+use "xml.folio" as xlsx_xml
+
+# ---------- writing ----------
+
+# a workbook with no sheets yet
+to workbook
+    return record with sheets empty list
+end
+
+# a sheet at the end of the workbook: its name (at most 31 characters, none of : \ / ? * [ ]) and its rows
+to sheet with book, name, rows
+    if length of name is 0 or length of name is greater than 31
+        fail with "xlsx.folio: a sheet's name is 1 to 31 characters, not " + length of name
+    end
+    for each c in split name by ""
+        if c is in ":\\/?*[]"
+            fail with "xlsx.folio: a sheet's name can't have " + c + " in it: " + name
+        end
+    end
+    for each other in sheets of book
+        if lowercase of name of other is lowercase of name
+            fail with "xlsx.folio: the workbook has a sheet called " + name + " already"
+        end
+    end
+    set kept to sheets of book
+    add record with name name, rows rows to kept
+end
+
+# a column's letters: 1 is A, 26 is Z, 27 is AA
+to column_name with n
+    set out to ""
+    set left to n
+    repeat while left is greater than 0
+        set digit to remainder of (left - 1) divided by 26
+        set letter_of_it to item (digit + 1) of "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        set out to letter_of_it + out
+        set left to (left - 1 - digit) / 26
+    end
+    return out
+end
+
+# text as XML has it inside an element
+to xlsx_escaped with words
+    return xlsx_xml's escaped(words, yes)
+end
+
+# a cell, at a column of a row, as a sheet's XML has it; nothing for an empty one
+to xlsx_cell with value, column, row
+    set at to column_name(column) + row
+    if value is nothing
+        return nothing
+    end
+    if value is yes
+        return "<c r=\"" + at + "\" t=\"b\"><v>1</v></c>"
+    else if value is no
+        return "<c r=\"" + at + "\" t=\"b\"><v>0</v></c>"
+    end
+    try
+        return "<c r=\"" + at + "\"><v>" + xlsx_number(value) + "</v></c>"
+    if it fails
+        set words to "" + value
+        return "<c r=\"" + at + "\" t=\"inlineStr\"><is><t xml:space=\"preserve\">" + xlsx_escaped(words) + "</t></is></c>"
+    end
+end
+
+# a number as a cell holds it (anything else fails, and is text)
+to xlsx_number with n as a number
+    return "" + n
+end
+
+to xlsx_sheet_xml with rows
+    set made to list of "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"
+    set row_number to 0
+    for each row in rows
+        add 1 to row_number
+        add "<row r=\"" + row_number + "\">" to made
+        set column to 0
+        for each value in row
+            add 1 to column
+            set cell to xlsx_cell(value, column, row_number)
+            if cell is not nothing
+                add cell to made
+            end
+        end
+        add "</row>" to made
+    end
+    add "</sheetData></worksheet>" to made
+    return join made with ""
+end
+
+# the workbook's .xlsx file, as bytes
+to bytes_of with book
+    if length of sheets of book is 0
+        fail with "xlsx.folio: a workbook needs a sheet: add one with sheet()"
+    end
+    set head to "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+    set main to "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    set related to "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    set packaged to "http://schemas.openxmlformats.org/package/2006/relationships"
+    set types to head + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
+    set listed to ""
+    set linked to ""
+    set names to list of "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels"
+    set contents to list of "", "", "", ""
+    set k to 0
+    for each s in sheets of book
+        add 1 to k
+        set types to types + "<Override PartName=\"/xl/worksheets/sheet" + k + ".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+        set listed to listed + "<sheet name=\"" + xlsx_escaped(name of s) + "\" sheetId=\"" + k + "\" r:id=\"rId" + k + "\"/>"
+        set linked to linked + "<Relationship Id=\"rId" + k + "\" Type=\"" + related + "/worksheet\" Target=\"worksheets/sheet" + k + ".xml\"/>"
+        add "xl/worksheets/sheet" + k + ".xml" to names
+        add xlsx_sheet_xml(rows of s) to contents
+    end
+    set item 1 of contents to types + "</Types>"
+    set item 2 of contents to head + "<Relationships xmlns=\"" + packaged + "\"><Relationship Id=\"rId1\" Type=\"" + related + "/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>"
+    set item 3 of contents to head + "<workbook xmlns=\"" + main + "\" xmlns:r=\"" + related + "\"><sheets>" + listed + "</sheets></workbook>"
+    set item 4 of contents to head + "<Relationships xmlns=\"" + packaged + "\">" + linked + "</Relationships>"
+    return xlsx_zip's zipped(names, contents)
+end
+
+# the workbook written to a file
+to save with book, name
+    write bytes_of(book) as bytes to name
+end
+
+# ---------- reading ----------
+
+# a column's number from a cell's place: A1 is 1, AB7 is 28
+to xlsx_column_of with place
+    set n to 0
+    for each c in split place by ""
+        set p to position of c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        if p is 0
+            return n
+        end
+        set n to n * 26 + p
+    end
+    return n
+end
+
+# a row's number from a cell's place: A1 is 1, AB7 is 7
+to xlsx_row_of with place
+    set digits to ""
+    for each c in split place by ""
+        if c is in "0123456789"
+            set digits to digits + c
+        end
+    end
+    return number of digits
+end
+
+# the text an element holds, from each <t> in it (rich text is in several)
+to xlsx_text_in with e
+    set found to xlsx_xml's all_named(e, "t")
+    if length of found is 0
+        return xlsx_xml's text_of(e)
+    end
+    set out to ""
+    for each t in found
+        set out to out + xlsx_xml's text_of(t)
+    end
+    return out
+end
+
+# a sheet's XML as its rows: each a list of its cells, nothing where a cell is empty
+to xlsx_rows_of_sheet with sheet_text, shared
+    set root to xlsx_xml's parse(sheet_text)
+    set rows to empty list
+    for each row in xlsx_xml's all_named(root, "row")
+        set wanted to length of rows + 1
+        set given to xlsx_xml's attribute(row, "r")
+        if given is not nothing
+            set wanted to number of given
+        end
+        repeat while length of rows is less than wanted - 1 # rows with nothing in them
+            add empty list to rows
+        end
+        set cells to empty list
+        for each c in xlsx_xml's all_named(row, "c")
+            set column to length of cells + 1
+            set place to xlsx_xml's attribute(c, "r")
+            if place is not nothing
+                set column to xlsx_column_of(place)
+            end
+            repeat while length of cells is less than column - 1
+                add nothing to cells
+            end
+            set kind_of_cell to xlsx_xml's attribute(c, "t")
+            set values to xlsx_xml's all_named(c, "v")
+            set raw to nothing
+            if length of values is greater than 0
+                set raw to xlsx_xml's text_of(item 1 of values)
+            end
+            set value to nothing
+            if kind_of_cell is "s"
+                set index to number of raw
+                set value to item (index + 1) of shared
+            else if kind_of_cell is "inlineStr"
+                set value to xlsx_text_in(c)
+            else if kind_of_cell is "b"
+                set value to raw is "1"
+            else if kind_of_cell is "str" or kind_of_cell is "e"
+                set value to raw
+            else if raw is not nothing
+                set value to number of raw
+            end
+            add value to cells
+        end
+        add cells to rows
+    end
+    return rows
+end
+
+# a workbook's file, as bytes: each sheet's name, in order, with its rows
+to read_book with data
+    set files to nothing
+    try
+        set files to xlsx_zip's unzipped(data)
+    if it fails with why
+        fail with "xlsx.folio: that isn't a workbook: " + why
+    end
+    if not ("xl/workbook.xml" is in files)
+        fail with "xlsx.folio: that isn't a workbook: it has no xl/workbook.xml"
+    end
+    set shared to empty list
+    if "xl/sharedStrings.xml" is in files
+        set raw_strings to item "xl/sharedStrings.xml" of files
+        set strings to xlsx_xml's parse(raw_strings as text)
+        for each si in xlsx_xml's all_named(strings, "si")
+            add xlsx_text_in(si) to shared
+        end
+    end
+    set targets to empty dictionary
+    if "xl/_rels/workbook.xml.rels" is in files
+        set raw_links to item "xl/_rels/workbook.xml.rels" of files
+        set links to xlsx_xml's parse(raw_links as text)
+        for each link in xlsx_xml's all_named(links, "Relationship")
+            set target to xlsx_xml's attribute(link, "Target")
+            if position of "/" in target is 1 # from the top of the package
+                set target to items 2 to (length of target) of target
+            else
+                set target to "xl/" + target
+            end
+            set item (xlsx_xml's attribute(link, "Id")) of targets to target
+        end
+    end
+    set raw_book to item "xl/workbook.xml" of files
+    set book to xlsx_xml's parse(raw_book as text)
+    set out to empty dictionary
+    set k to 0
+    for each s in xlsx_xml's all_named(book, "sheet")
+        add 1 to k
+        set id to xlsx_xml's attribute(s, "r:id")
+        set path to "xl/worksheets/sheet" + k + ".xml"
+        if id is not nothing and id is in targets
+            set path to item id of targets
+        end
+        set rows to empty list
+        if path is in files
+            set raw_sheet to item path of files
+            set rows to xlsx_rows_of_sheet(raw_sheet as text, shared)
+        end
+        set item (xlsx_xml's attribute(s, "name")) of out to rows
+    end
+    return out
+end
+
+# the rows of a workbook's first sheet
+to rows_of with data
+    set sheets to read_book(data)
+    set names to keys of sheets
+    if length of names is 0
+        return empty list
+    end
+    return item (item 1 of names) of sheets
+end

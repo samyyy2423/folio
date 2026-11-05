@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "armstrong_numbers.moth"
+      "armstrong_numbers.folio"
     ],
     "test": [
-      "armstrong_numbers.test.moth"
+      "armstrong_numbers.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Say whether a number is the sum of its digits, each to the power of how many there are."

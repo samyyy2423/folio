@@ -1,7 +1,7 @@
-// A load test for tools/server.moth (DESIGN §123): builds a small site with it, runs it, and asks it from
+// A load test for tools/server.folio (DESIGN §123): builds a small site with it, runs it, and asks it from
 // Node with many connections at once, on raw sockets, so nothing of Node's own pools or limits is measured.
 //
-//     node tools/load-test.mjs [server.moth] [--workers n] [--seconds s] [--connections c]
+//     node tools/load-test.mjs [server.folio] [--workers n] [--seconds s] [--connections c]
 //
 // It says, for each test: requests answered, per second, the slowest and the typical time to an answer,
 // and connections that failed.
@@ -16,7 +16,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import net from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { machineCompiler } from "../moth.js";
+import { machineCompiler } from "../folio.js";
 
 const args = process.argv.slice(2);
 const option = (name, otherwise) => {
@@ -28,13 +28,13 @@ const option = (name, otherwise) => {
 const workers = option("--workers", 0);
 const seconds = option("--seconds", 5);
 const connections = option("--connections", 200);
-const serverFile = args[0] ?? new URL("./server.moth", import.meta.url);
+const serverFile = args[0] ?? new URL("./server.folio", import.meta.url);
 const here = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 const target = process.platform === "win32" ? "windows" : "linux";
 const port = 24000 + (process.pid % 2000);
 
 const serve = workers ? `web's serve_on_workers(${port}, answer, ${workers})` : `web's serve(${port}, answer)`;
-const site = `use "server.moth" as web
+const site = `use "server.folio" as web
 to answer with request
     if path of request is "/heavy"
         set sum to 0
@@ -43,14 +43,14 @@ to answer with request
         end
         return "worked " + sum
     end
-    return "Hello from Moth"
+    return "Hello from Folio"
 end
 ${serve}`;
 
-const dir = mkdtempSync(join(tmpdir(), "moth-load-"));
+const dir = mkdtempSync(join(tmpdir(), "folio-load-"));
 const exe = join(dir, target === "windows" ? "site.exe" : "site");
-const machine = machineCompiler(here("machine.moth"), here("compiler.moth"));
-writeFileSync(exe, machine(site, { target, name: "site.moth", allow: ["--allow-libraries"], files: { "server.moth": readFileSync(serverFile, "utf8") } }));
+const machine = machineCompiler(here("machine.folio"), here("compiler.folio"));
+writeFileSync(exe, machine(site, { target, name: "site.folio", allow: ["--allow-libraries"], files: { "server.folio": readFileSync(serverFile, "utf8") } }));
 if (target === "linux") chmodSync(exe, 0o755);
 const running = spawn(exe, [], { cwd: dir, stdio: ["ignore", "ignore", "pipe"] });
 let said = "";

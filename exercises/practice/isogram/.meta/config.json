@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "isogram.moth"
+      "isogram.folio"
     ],
     "test": [
-      "isogram.test.moth"
+      "isogram.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Say whether no letter appears in a word more than once."

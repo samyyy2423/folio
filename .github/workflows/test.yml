@@ -5,19 +5,19 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    # real servers for the live tests of tools/postgres.moth, redis.moth and s3.moth (MySQL is started below), in
-    # machine.test.js; each test is skipped wherever its MOTH_..._URL isn't set. The passwords are for these
+    # real servers for the live tests of tools/postgres.folio, redis.folio and s3.folio (MySQL is started below), in
+    # machine.test.js; each test is skipped wherever its FOLIO_..._URL isn't set. The passwords are for these
     # throwaway containers alone.
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: moth
-          POSTGRES_PASSWORD: moth-test
-          POSTGRES_DB: moth
+          POSTGRES_USER: folio
+          POSTGRES_PASSWORD: folio-test
+          POSTGRES_DB: folio
           POSTGRES_HOST_AUTH_METHOD: md5 # SCRAM for a password kept as SCRAM, MD5 for one kept as MD5
         ports: ["5432:5432"]
-        options: --health-cmd "pg_isready -U moth" --health-interval 2s --health-timeout 5s --health-retries 30
+        options: --health-cmd "pg_isready -U folio" --health-interval 2s --health-timeout 5s --health-retries 30
       redis:
         image: redis:7-alpine
         ports: ["6379:6379"]
@@ -25,21 +25,21 @@ jobs:
       minio: # MinIO itself, as Bitnami built it: MinIO no longer publishes images of its own
         image: bitnamilegacy/minio
         env:
-          MINIO_ROOT_USER: moth-test-key
-          MINIO_ROOT_PASSWORD: moth-test-secret
+          MINIO_ROOT_USER: folio-test-key
+          MINIO_ROOT_PASSWORD: folio-test-secret
         ports: ["9000:9000"]
     env:
-      MOTH_POSTGRES_URL: postgres://moth:moth-test@127.0.0.1:5432/moth
-      MOTH_MYSQL_URL: mysql://root:moth-root@127.0.0.1:3306/moth
-      MOTH_REDIS_URL: redis://127.0.0.1:6379
-      MOTH_S3_URL: http://moth-test-key:moth-test-secret@127.0.0.1:9000
+      FOLIO_POSTGRES_URL: postgres://folio:folio-test@127.0.0.1:5432/folio
+      FOLIO_MYSQL_URL: mysql://root:folio-root@127.0.0.1:3306/folio
+      FOLIO_REDIS_URL: redis://127.0.0.1:6379
+      FOLIO_S3_URL: http://folio-test-key:folio-test-secret@127.0.0.1:9000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # OpenBLAS and ONNX Runtime (the library in its Python package), so that the tests of arrays.moth's use_blas
-      # and of tools/onnx.moth run here, not skip, as they do where those aren't installed
+      # OpenBLAS and ONNX Runtime (the library in its Python package), so that the tests of arrays.folio's use_blas
+      # and of tools/onnx.folio run here, not skip, as they do where those aren't installed
       - run: |
           sudo apt-get update -q
           sudo apt-get install -y -q libopenblas0-pthread
@@ -54,11 +54,11 @@ jobs:
       # given; then each server waited for until it answers
       - name: start MySQL, and wait for it and MinIO
         run: |
-          docker run -d --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=moth-root -e MYSQL_DATABASE=moth mysql:8.4 --mysql-native-password=ON
-          for i in $(seq 1 90); do docker exec mysql mysqladmin ping -h 127.0.0.1 -uroot -pmoth-root --silent 2> /dev/null && break; sleep 2; done
+          docker run -d --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=folio-root -e MYSQL_DATABASE=folio mysql:8.4 --mysql-native-password=ON
+          for i in $(seq 1 90); do docker exec mysql mysqladmin ping -h 127.0.0.1 -uroot -pfolio-root --silent 2> /dev/null && break; sleep 2; done
           for i in $(seq 1 60); do curl -sf http://127.0.0.1:9000/minio/health/live > /dev/null && break; sleep 2; done
       # the VS Code extension (DESIGN §126), first, as it takes a minute or two: packed by vsce, as it's published,
-      # what's packed checked, and its tests run in VS Code itself on that .vsix, with moth and without, in the
+      # what's packed checked, and its tests run in VS Code itself on that .vsix, with folio and without, in the
       # newest VS Code and in 1.75, the oldest it says it works in
       - name: pack the VS Code extension, and check the package
         working-directory: editors/vscode
@@ -72,13 +72,13 @@ jobs:
           node bootstrap.mjs
           cd editors/vscode
           xvfb-run -a node e2e/run.mjs
-          MOTH_VSCODE_VERSION=1.75.0 xvfb-run -a node e2e/run.mjs
+          FOLIO_VSCODE_VERSION=1.75.0 xvfb-run -a node e2e/run.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: moth-vscode-extension
-          path: editors/vscode/moth-*.vsix
-      # the JavaScript engines, the playground's, and machine.moth's machine code against them, moth.exe included; on
-      # a display of Xvfb's, where there's one, for tools/linux.moth's GTK windows
+          name: folio-vscode-extension
+          path: editors/vscode/folio-*.vsix
+      # the JavaScript engines, the playground's, and machine.folio's machine code against them, folio.exe included; on
+      # a display of Xvfb's, where there's one, for tools/linux.folio's GTK windows
       - run: if command -v xvfb-run > /dev/null; then xvfb-run -a npm test; else npm test; fi
 
   # a program made a DLL (DESIGN §129) and called from C, on Windows itself: the Windows-only parts of a library
@@ -91,4 +91,4 @@ jobs:
         with:
           node-version: 22
       - run: gcc --version
-      - run: node --test --test-name-pattern="^(a library:|a library whose|a library for Windows|moth build --library)" machine.test.js
+      - run: node --test --test-name-pattern="^(a library:|a library whose|a library for Windows|folio build --library)" machine.test.js

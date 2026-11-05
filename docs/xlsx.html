@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>xlsx.moth · Moth's standard library</title>
-  <meta name="description" content="Excel workbooks (.xlsx), read and written in Moth alone.">
+  <title>xlsx.folio · Folio's standard library</title>
+  <meta name="description" content="Excel workbooks (.xlsx), read and written in Folio alone.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>xlsx</em>.moth</h1>
-      <p>Excel workbooks (.xlsx), read and written in Moth alone.</p>
-      <p class="use"><code>use "xlsx.moth" as xlsx</code></p>
+      <h1><em>xlsx</em>.folio</h1>
+      <p>Excel workbooks (.xlsx), read and written in Folio alone.</p>
+      <p class="use"><code>use "xlsx.folio" as xlsx</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="xlsx.moth's functions">
+    <nav class="toc" aria-label="xlsx.folio's functions">
       <h2>7 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#workbook">workbook</a></li><li><a href="#sheet">sheet</a></li><li><a href="#column_name">column_name</a></li><li><a href="#bytes_of">bytes_of</a></li><li><a href="#save">save</a></li><li><a href="#read_book">read_book</a></li><li><a href="#rows_of">rows_of</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Excel workbooks (.xlsx), read and written in Moth alone: each sheet a list of rows, each row a list of its cells, a cell a number, text, yes or no, or nothing for an empty one. Excel, LibreOffice and Google Sheets open what it writes; it reads what they write.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <p>Excel workbooks (.xlsx), read and written in Folio alone: each sheet a list of rows, each row a list of its cells, a cell a number, text, yes or no, or nothing for an empty one. Excel, LibreOffice and Google Sheets open what it writes; it reads what they write.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 <span class="k">set</span> rows <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Month&quot;</span>, <span class="s">&quot;Sales&quot;</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;January&quot;</span>, <span class="n">120</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;February&quot;</span>, <span class="n">95.5</span>)
 xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, rows)
@@ -74,9 +74,9 @@ xlsx's save(book, <span class="s">&quot;sales.xlsx&quot;</span>)
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to workbook</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L23">xlsx.moth line 23</a></p>
+          <p class="written">Written <code>to workbook</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L23">xlsx.folio line 23</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 <span class="k">say</span> book</code></pre><pre class="says"><code>(record with sheets [])</code></pre></div>
         </section>
@@ -87,9 +87,9 @@ xlsx's save(book, <span class="s">&quot;sales.xlsx&quot;</span>)
             <div><h4>Inputs</h4><ul class="inputs"><li><code>book</code></li><li><code>name</code></li><li><code>rows</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sheet with book, name, rows</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L28">xlsx.moth line 28</a></p>
+          <p class="written">Written <code>to sheet with book, name, rows</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L28">xlsx.folio line 28</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 <span class="k">set</span> sales <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Month&quot;</span>, <span class="s">&quot;Sales&quot;</span>, <span class="s">&quot;Done&quot;</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;January&quot;</span>, <span class="n">120</span>, <span class="k">yes</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Fe&lt;b&gt; &amp; \&quot;co\&quot;&quot;</span>, <span class="n">95.5</span>, <span class="k">no</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot; spaced &quot;</span>, <span class="k">nothing</span>, <span class="n">0.1</span> + <span class="n">0.2</span>)
 xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, sales)
@@ -102,9 +102,9 @@ xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, sales)
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to column_name with n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L47">xlsx.moth line 47</a></p>
+          <p class="written">Written <code>to column_name with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L47">xlsx.folio line 47</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">say</span> xlsx's column_name(<span class="n">1</span>)</code></pre><pre class="says"><code>A</code></pre></div>
         </section>
         <section class="fn" id="bytes_of">
@@ -114,9 +114,9 @@ xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, sales)
             <div><h4>Inputs</h4><ul class="inputs"><li><code>book</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of with book</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L109">xlsx.moth line 109</a></p>
+          <p class="written">Written <code>to bytes_of with book</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L109">xlsx.folio line 109</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 <span class="k">set</span> sales <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Month&quot;</span>, <span class="s">&quot;Sales&quot;</span>, <span class="s">&quot;Done&quot;</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;January&quot;</span>, <span class="n">120</span>, <span class="k">yes</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Fe&lt;b&gt; &amp; \&quot;co\&quot;&quot;</span>, <span class="n">95.5</span>, <span class="k">no</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot; spaced &quot;</span>, <span class="k">nothing</span>, <span class="n">0.1</span> + <span class="n">0.2</span>)
 xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, sales)
@@ -131,9 +131,9 @@ xlsx's sheet(book, <span class="s">&quot;Empty&quot;</span>, <span class="k">emp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>book</code></li><li><code>name</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to save with book, name</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L139">xlsx.moth line 139</a></p>
+          <p class="written">Written <code>to save with book, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L139">xlsx.folio line 139</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 xlsx's save(book, <span class="s">&quot;sales.xlsx&quot;</span>)</code></pre></div>
         </section>
@@ -144,9 +144,9 @@ xlsx's save(book, <span class="s">&quot;sales.xlsx&quot;</span>)</code></pre></d
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to read_book with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L232">xlsx.moth line 232</a></p>
+          <p class="written">Written <code>to read_book with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L232">xlsx.folio line 232</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 <span class="k">set</span> sales <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Month&quot;</span>, <span class="s">&quot;Sales&quot;</span>, <span class="s">&quot;Done&quot;</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;January&quot;</span>, <span class="n">120</span>, <span class="k">yes</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Fe&lt;b&gt; &amp; \&quot;co\&quot;&quot;</span>, <span class="n">95.5</span>, <span class="k">no</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot; spaced &quot;</span>, <span class="k">nothing</span>, <span class="n">0.1</span> + <span class="n">0.2</span>)
 xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, sales)
@@ -161,9 +161,9 @@ xlsx's sheet(book, <span class="s">&quot;Empty&quot;</span>, <span class="k">emp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to rows_of with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/xlsx.moth#L286">xlsx.moth line 286</a></p>
+          <p class="written">Written <code>to rows_of with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/xlsx.folio#L286">xlsx.folio line 286</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.moth&quot;</span> <span class="k">as</span> xlsx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;xlsx.folio&quot;</span> <span class="k">as</span> xlsx
 <span class="k">set</span> book <span class="k">to</span> xlsx's workbook()
 <span class="k">set</span> sales <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Month&quot;</span>, <span class="s">&quot;Sales&quot;</span>, <span class="s">&quot;Done&quot;</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;January&quot;</span>, <span class="n">120</span>, <span class="k">yes</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;Fe&lt;b&gt; &amp; \&quot;co\&quot;&quot;</span>, <span class="n">95.5</span>, <span class="k">no</span>), (<span class="k">list</span> <span class="k">of</span> <span class="s">&quot; spaced &quot;</span>, <span class="k">nothing</span>, <span class="n">0.1</span> + <span class="n">0.2</span>)
 xlsx's sheet(book, <span class="s">&quot;Sales&quot;</span>, sales)
@@ -175,14 +175,14 @@ xlsx's sheet(book, <span class="s">&quot;Empty&quot;</span>, <span class="k">emp
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

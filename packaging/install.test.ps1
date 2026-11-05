@@ -3,16 +3,16 @@
 # the irm | iex form leaving the session's settings alone, and a download whose sum isn't the release's
 # refused, with nothing installed.
 #
-#     .\packaging\install.test.ps1 [-Version 1.11.0] [-Sum <its moth-windows.exe's SHA-256>]
+#     .\packaging\install.test.ps1 [-Version 1.11.0] [-Sum <its folio-windows.exe's SHA-256>]
 param(
     [string] $Version = '1.11.0',
     [string] $Sum = '0d6204ab7a8cc6451a2bb5e70c8366092eb0909113fc778b6b50de9c21929265'
 )
 $ErrorActionPreference = 'Stop'
 $script = Join-Path $PSScriptRoot 'install.ps1'
-$work = Join-Path ([IO.Path]::GetTempPath()) ('moth-install-test-' + [Guid]::NewGuid().ToString('N'))
+$work = Join-Path ([IO.Path]::GetTempPath()) ('folio-install-test-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
-Set-Content -LiteralPath (Join-Path $work 'hello.moth') -Value 'say "Hello from " "install.ps1"'
+Set-Content -LiteralPath (Join-Path $work 'hello.folio') -Value 'say "Hello from " "install.ps1"'
 Write-Host "PowerShell $($PSVersionTable.PSVersion)"
 
 $script:passed = 0
@@ -33,18 +33,18 @@ try {
     # a release, by version, as a script with options
     $dir = Join-Path $work 'a'
     & $script -Version $Version -InstallDir $dir
-    $moth = Join-Path $dir 'moth.exe'
-    Assert ((Get-FileHash $moth -Algorithm SHA256).Hash -eq $Sum.ToUpperInvariant()) "moth.exe is $Version's moth-windows.exe"
+    $folio = Join-Path $dir 'folio.exe'
+    Assert ((Get-FileHash $folio -Algorithm SHA256).Hash -eq $Sum.ToUpperInvariant()) "folio.exe is $Version's folio-windows.exe"
     Assert ((Get-Count $dir) -eq 1) 'its folder is on the user PATH'
     Assert (($env:Path -split ';') -contains $dir) "and on this session's PATH"
     Push-Location $work
-    try { $said = & $moth run hello.moth } finally { Pop-Location }
+    try { $said = & $folio run hello.folio } finally { Pop-Location }
     Assert ($said -eq 'Hello from install.ps1') "it runs a program: $said"
 
-    # again, over the moth that's there: PATH has it once still
+    # again, over the folio that's there: PATH has it once still
     & $script -Version "v$Version" -InstallDir $dir
     Assert ((Get-Count $dir) -eq 1) 'its folder is on the user PATH once, after installing twice'
-    Assert (-not (Test-Path (Join-Path $dir 'moth.exe.old'))) 'no moth.exe.old is left'
+    Assert (-not (Test-Path (Join-Path $dir 'folio.exe.old'))) 'no folio.exe.old is left'
 
     # irm | iex, in a session of its own as a person's would be: the latest release, its options from the
     # environment, and nothing of the session changed, its own $Version included
@@ -52,27 +52,27 @@ try {
     $session = @"
 `$ErrorActionPreference = 'Continue'
 `$Version = 'mine'
-`$env:MOTH_INSTALL_DIR = '$dir2'
-`$env:MOTH_NO_MODIFY_PATH = '1'
+`$env:FOLIO_INSTALL_DIR = '$dir2'
+`$env:FOLIO_NO_MODIFY_PATH = '1'
 Get-Content -Raw -LiteralPath '$script' | Invoke-Expression
 if (`$ErrorActionPreference -ne 'Continue') { 'iex changed `$ErrorActionPreference'; exit 2 }
 if (`$Version -ne 'mine') { 'iex changed `$Version'; exit 3 }
 try { `$null = `$noOneSetThis } catch { 'iex left strict mode on'; exit 4 }
-if (Get-Command Install-Moth -ErrorAction SilentlyContinue) { 'iex left its functions behind'; exit 5 }
+if (Get-Command Install-Folio -ErrorAction SilentlyContinue) { 'iex left its functions behind'; exit 5 }
 exit 0
 "@
     $shell = (Get-Process -Id $PID).Path
     $said = & $shell -NoProfile -NonInteractive -OutputFormat Text -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($session)))
     $said | Write-Host
     Assert ($LASTEXITCODE -eq 0) "irm | iex installs, and leaves the session's variables, settings and functions as they were (exit $LASTEXITCODE)"
-    Assert (Test-Path (Join-Path $dir2 'moth.exe')) 'iex installed the latest moth'
-    Assert ((Get-Count $dir2) -eq 0) 'MOTH_NO_MODIFY_PATH=1 left PATH alone'
+    Assert (Test-Path (Join-Path $dir2 'folio.exe')) 'iex installed the latest folio'
+    Assert ((Get-Count $dir2) -eq 0) 'FOLIO_NO_MODIFY_PATH=1 left PATH alone'
 
-    # a release whose SHA256SUMS.txt doesn't have moth-windows.exe's sum: nothing is installed
+    # a release whose SHA256SUMS.txt doesn't have folio-windows.exe's sum: nothing is installed
     $fake = Join-Path $work 'releases\download\v9.8.7'
     New-Item -ItemType Directory -Path $fake | Out-Null
-    Set-Content -LiteralPath (Join-Path $fake 'moth-windows.exe') -Value 'not moth'
-    Set-Content -LiteralPath (Join-Path $fake 'SHA256SUMS.txt') -Value ("{0}  moth-windows.exe" -f ('2' * 64))
+    Set-Content -LiteralPath (Join-Path $fake 'folio-windows.exe') -Value 'not folio'
+    Set-Content -LiteralPath (Join-Path $fake 'SHA256SUMS.txt') -Value ("{0}  folio-windows.exe" -f ('2' * 64))
     $dir3 = Join-Path $work 'c'
     $refused = $null
     try {
@@ -81,7 +81,7 @@ exit 0
         $refused = $_.Exception.Message
     }
     Assert ($refused -match "isn't the release's, so nothing was installed") "a wrong sum is refused: $refused"
-    Assert (-not (Test-Path (Join-Path $dir3 'moth.exe'))) 'and nothing was installed'
+    Assert (-not (Test-Path (Join-Path $dir3 'folio.exe'))) 'and nothing was installed'
     Assert ((Get-Count $dir3) -eq 0) 'nor PATH changed'
 } finally {
     # leave the user PATH as it was

@@ -1,0 +1,623 @@
+# The system's own windows and controls, on Windows or Linux: windows.folio's on Windows and linux.folio's (GTK)
+# on Linux, which have the same functions, so a program that uses this one works on both. It needs both files
+# beside it, and is built with --allow-libraries.
+#
+#   use "ui.folio" as ui
+#   to say_hello
+#       ui's message(w, "Hello, " + ui's text_of(name))
+#   end
+#   set w to ui's window("Hello", 360, 140)
+#   set name to ui's text_box(w, 20, 20, 200, 26)
+#   ui's button(w, "Greet", 230, 20, 100, 28, say_hello)
+#   ui's run()
+#
+# Every function, in a window of controls: places and sizes are in pixels from the window's top left, and each
+# handler named is a function of the program's, called when that happens.
+#
+#   set w to ui's window("Shop", 520, 400)
+#   ui's set_icon(w, "shop.png")
+#   ui's label(w, "Name", 20, 20, 60, 24)
+#   set name to ui's text_box(w, 80, 20, 200, 26)
+#   ui's on_change(name, name_changed)                 # name_changed(text), as it's typed
+#   ui's set_text(name, "Sam")
+#   say ui's text_of(name)                             # Sam
+#   ui's focus(name)                                   # what's typed goes into it
+#   set notes to ui's text_area(w, 20, 56, 260, 80)
+#   set buy to ui's button(w, "Buy", 300, 20, 80, 28, bought)    # bought(), when it's pressed
+#   ui's enable(buy, no)                               # greyed out, until enable(buy, yes)
+#   set gift to ui's checkbox(w, "A gift", 300, 56, 120, 24, gift_ticked)    # gift_ticked(yes or no)
+#   ui's set_ticked(gift, yes)
+#   say ui's ticked(gift)                              # yes
+#   set fruits to ui's list_box(w, 20, 150, 120, 100, fruit_chosen)    # fruit_chosen(item)
+#   ui's add_item(fruits, "apple")
+#   ui's add_item(fruits, "pear")
+#   ui's choose(fruits, 2)
+#   say ui's chosen(fruits) " " ui's chosen_place(fruits) " of " ui's count_of(fruits)    # pear 2 of 2
+#   ui's remove_item(fruits, 1)
+#   ui's clear_items(fruits)
+#   set sizes to ui's dropdown(w, 160, 150, 120, 28, size_chosen)      # size_chosen(item), as a list box's
+#   ui's place(sizes, 160, 190, 140, 28)               # moved, or made another size
+#   set bar to ui's progress(w, 20, 270, 260, 16)
+#   ui's set_progress(bar, 40)
+#   set photo to ui's picture(w, "apple.png", 300, 150, 100, 100)
+#   ui's set_picture(photo, "pear.png")
+#   ui's menu_item(w, "File", "Save\tCtrl+S", saved)  # saved(), when it's chosen or its keys pressed
+#   ui's timer(w, 1000, every_second)                  # every_second(), each second
+#   ui's on_resize(w, resized)                         # resized(width, height)
+#   ui's on_close(w, may_close)                        # may_close() gives yes to let it close
+#   ui's message(w, "Saved.")
+#   say ui's ask_yes_no(w, "Buy it?")                  # yes or no
+#   say ui's choose_file_to_open(w)                    # a file's name, or nothing
+#   say ui's choose_file_to_save(w)
+#   set pages to ui's tabs(w, 20, 20, 480, 360, tab_chosen)      # tab_chosen(title)
+#   set first_page to ui's tab(pages, "First")         # a page, to put controls on as on a window
+#   ui's choose_tab(pages, 1)
+#   say ui's chosen_tab(pages)                         # 1
+#   set orders to ui's table(w, (list of "Item", "Price"), 20, 20, 300, 200, row_chosen)    # row_chosen(values)
+#   ui's add_row(orders, list of "apple", 0.5)
+#   ui's choose_row(orders, 1)
+#   say ui's chosen_row(orders)                        # ["apple", 0.5]
+#   ui's clear_rows(orders)
+#   set board to ui's drawing(w, 20, 20, 300, 200, paint)        # paint(canvas), as below
+#   ui's on_click(board, clicked)                      # clicked(x, y)
+#   ui's on_key(board, key_pressed)                    # key_pressed(name)
+#   say ui's key_down(board, "Left")                   # whether it's held down
+#   say ui's mouse_x(board) ", " ui's mouse_y(board) " " ui's mouse_down(board)
+#   ui's redraw(board)                                 # paint is called again
+#   set ship to ui's load_image("ship.png")
+#   ui's play_sound("ping.wav")
+#   ui's close(w)
+#   ui's run()
+#
+# A drawing's painter is given a canvas to draw on, in pixels from the drawing's top left:
+#
+#   to paint with canvas
+#       ui's colour(canvas, 20, 20, 40)                # red, green and blue, for what's drawn next
+#       ui's rectangle(canvas, 0, 0, 300, 200)
+#       ui's colour(canvas, 255, 200, 80)
+#       ui's circle(canvas, 150, 100, 30)              # its middle, and how far from it to its edge
+#       ui's line(canvas, 0, 199, 300, 199)
+#       ui's words(canvas, "Score: 3", 10, 10)
+#       ui's draw_image(canvas, ship, 40, 60)          # at its own size
+#       ui's draw_image_sized(canvas, ship, 200, 60, 32, 32)
+#   end
+
+use "windows.folio" as win
+use "linux.folio" as gtk
+use the library "kernel32"
+    GetTickCount() gives a whole number
+end
+
+# which it is: a library every Windows has, which no Linux has
+set on_windows to yes
+try
+    GetTickCount()
+if it fails
+    set on_windows to no
+end
+
+# a new window, `width` by `height` inside, shown, with `title` at its top
+to window with title, width, height
+    if on_windows
+        return win's window(title, width, height)
+    end
+    return gtk's window(title, width, height)
+end
+
+# a button that says `text`, at x, y in its window, `width` by `height`, which calls `handler` (with nothing)
+# when it's pressed
+to button with parent, text, x, y, width, height, handler
+    if on_windows
+        return win's button(parent, text, x, y, width, height, handler)
+    end
+    return gtk's button(parent, text, x, y, width, height, handler)
+end
+
+# words that say `text`, at x, y in a window, `width` by `height`, which set_text can change
+to label with parent, text, x, y, width, height
+    if on_windows
+        return win's label(parent, text, x, y, width, height)
+    end
+    return gtk's label(parent, text, x, y, width, height)
+end
+
+# a box for a line of text, at x, y in its window, `width` by `height`; text_of says what was typed in it
+to text_box with parent, x, y, width, height
+    if on_windows
+        return win's text_box(parent, x, y, width, height)
+    end
+    return gtk's text_box(parent, x, y, width, height)
+end
+
+# a box for many lines of text, with a scroll bar
+to text_area with parent, x, y, width, height
+    if on_windows
+        return win's text_area(parent, x, y, width, height)
+    end
+    return gtk's text_area(parent, x, y, width, height)
+end
+
+# a text box's or text area's handler for what's typed into it, given its text each time it changes
+to on_change with control, handler
+    if on_windows
+        return win's on_change(control, handler)
+    end
+    return gtk's on_change(control, handler)
+end
+
+# a box to tick, which says `text` beside it; `handler` is given yes or no each time it's ticked or unticked
+to checkbox with parent, text, x, y, width, height, handler
+    if on_windows
+        return win's checkbox(parent, text, x, y, width, height, handler)
+    end
+    return gtk's checkbox(parent, text, x, y, width, height, handler)
+end
+
+# a list of items (add_item) of which one can be chosen; `handler` is given the chosen item each time the
+# choice changes
+to list_box with parent, x, y, width, height, handler
+    if on_windows
+        return win's list_box(parent, x, y, width, height, handler)
+    end
+    return gtk's list_box(parent, x, y, width, height, handler)
+end
+
+# a list that drops down, of which one item is chosen; `handler` is given the chosen item each time the choice
+# changes
+to dropdown with parent, x, y, width, height, handler
+    if on_windows
+        return win's dropdown(parent, x, y, width, height, handler)
+    end
+    return gtk's dropdown(parent, x, y, width, height, handler)
+end
+
+# what a control says: a text box's text, a button's label, a window's title
+to text_of with control
+    if on_windows
+        return win's text_of(control)
+    end
+    return gtk's text_of(control)
+end
+
+# what a control says changed: a text box's text, a label's or button's words, a window's title
+to set_text with control, text
+    if on_windows
+        return win's set_text(control, text)
+    end
+    return gtk's set_text(control, text)
+end
+
+# whether a checkbox is ticked
+to ticked with control
+    if on_windows
+        return win's ticked(control)
+    end
+    return gtk's ticked(control)
+end
+
+# a checkbox ticked (yes) or unticked (no), without calling its handler
+to set_ticked with control, tick
+    if on_windows
+        return win's set_ticked(control, tick)
+    end
+    return gtk's set_ticked(control, tick)
+end
+
+# an item at the end of a list box or a dropdown
+to add_item with control, text
+    if on_windows
+        return win's add_item(control, text)
+    end
+    return gtk's add_item(control, text)
+end
+
+# every item of a list box or a dropdown taken away
+to clear_items with control
+    if on_windows
+        return win's clear_items(control)
+    end
+    return gtk's clear_items(control)
+end
+
+# the item at a place, from 1, taken out of a list box or a dropdown
+to remove_item with control, place
+    if on_windows
+        return win's remove_item(control, place)
+    end
+    return gtk's remove_item(control, place)
+end
+
+# how many items a list box or a dropdown has
+to count_of with control
+    if on_windows
+        return win's count_of(control)
+    end
+    return gtk's count_of(control)
+end
+
+# where the chosen item is, from 1, or 0 for none
+to chosen_place with control
+    if on_windows
+        return win's chosen_place(control)
+    end
+    return gtk's chosen_place(control)
+end
+
+# the item at a place, from 1, chosen in a list box or a dropdown, without calling its handler; 0 for none
+to choose with control, place
+    if on_windows
+        return win's choose(control, place)
+    end
+    return gtk's choose(control, place)
+end
+
+# the chosen item, or nothing for none
+to chosen with control
+    if on_windows
+        return win's chosen(control)
+    end
+    return gtk's chosen(control)
+end
+
+# a control made to work (yes), or greyed out so it doesn't (no)
+to enable with control, on
+    if on_windows
+        return win's enable(control, on)
+    end
+    return gtk's enable(control, on)
+end
+
+# the keys sent to a control: what's typed goes into it
+to focus with control
+    if on_windows
+        return win's focus(control)
+    end
+    return gtk's focus(control)
+end
+
+# a control put somewhere else, or made another size, as when its window is resized
+to place with control, x, y, width, height
+    if on_windows
+        return win's place(control, x, y, width, height)
+    end
+    return gtk's place(control, x, y, width, height)
+end
+
+# a window's handler for a new size, given its width and height inside, as when the person drags its edge
+to on_resize with parent, handler
+    if on_windows
+        return win's on_resize(parent, handler)
+    end
+    return gtk's on_resize(parent, handler)
+end
+
+# a function that says whether the window may close, asked when someone closes it
+to on_close with parent, handler
+    if on_windows
+        return win's on_close(parent, handler)
+    end
+    return gtk's on_close(parent, handler)
+end
+
+# an item at the end of the menu called `title` on the window's bar, made if it isn't there, which calls
+# `handler` when it's chosen; "-" is a line. Keys after a tab, as in "Save\tCtrl+S", are shown beside it and
+# choose it too
+to menu_item with parent, title, text, handler
+    if on_windows
+        return win's menu_item(parent, title, text, handler)
+    end
+    return gtk's menu_item(parent, title, text, handler)
+end
+
+# a handler called every so many milliseconds, while run() runs
+to timer with parent, milliseconds, handler
+    if on_windows
+        return win's timer(parent, milliseconds, handler)
+    end
+    return gtk's timer(parent, milliseconds, handler)
+end
+
+# a box with a message in it, over the window, and an OK button: it waits until it's pressed
+to message with parent, text
+    if on_windows
+        return win's message(parent, text)
+    end
+    return gtk's message(parent, text)
+end
+
+# a box asking a question, over the window, with Yes and No: whether Yes was pressed
+to ask_yes_no with parent, question
+    if on_windows
+        return win's ask_yes_no(parent, question)
+    end
+    return gtk's ask_yes_no(parent, question)
+end
+
+# the system's own box for choosing a file: its name, or nothing if none was chosen
+to choose_file_to_open with parent
+    if on_windows
+        return win's choose_file_to_open(parent)
+    end
+    return gtk's choose_file_to_open(parent)
+end
+
+# the system's own box for choosing where to save a file: its name, or nothing if none was chosen
+to choose_file_to_save with parent
+    if on_windows
+        return win's choose_file_to_save(parent)
+    end
+    return gtk's choose_file_to_save(parent)
+end
+
+# a window closed; closing the first window run() runs for ends run()
+to close with parent
+    if on_windows
+        return win's close(parent)
+    end
+    return gtk's close(parent)
+end
+
+# what happens to the windows, to their handlers, until the first window is closed
+to run
+    if on_windows
+        return win's run()
+    end
+    return gtk's run()
+end
+
+# progress bars, pictures, tabs, tables and drawings
+
+# a bar that fills up as something gets done: set_progress says how far, from 0 to 100
+to progress with parent, x, y, width, height
+    if on_windows
+        return win's progress(parent, x, y, width, height)
+    end
+    return gtk's progress(parent, x, y, width, height)
+end
+
+# how far a progress bar is, from 0 to 100
+to set_progress with control, percent
+    if on_windows
+        return win's set_progress(control, percent)
+    end
+    return gtk's set_progress(control, percent)
+end
+
+# a picture from a file, a PNG, JPEG, GIF or BMP, made the size it's put at
+to picture with parent, file, x, y, width, height
+    if on_windows
+        return win's picture(parent, file, x, y, width, height)
+    end
+    return gtk's picture(parent, file, x, y, width, height)
+end
+
+# a picture control shows another file's picture
+to set_picture with control, file
+    if on_windows
+        return win's set_picture(control, file)
+    end
+    return gtk's set_picture(control, file)
+end
+
+# tabs, each with a page of its own (see tab) for controls; `handler` is given a tab's title when the person
+# chooses it
+to tabs with parent, x, y, width, height, handler
+    if on_windows
+        return win's tabs(parent, x, y, width, height, handler)
+    end
+    return gtk's tabs(parent, x, y, width, height, handler)
+end
+
+# a page of the tabs, with `title` on its tab: what's put on it, as on a window, shows while its tab is chosen
+to tab with tabs_control, title
+    if on_windows
+        return win's tab(tabs_control, title)
+    end
+    return gtk's tab(tabs_control, title)
+end
+
+# which tab is chosen, from 1
+to chosen_tab with control
+    if on_windows
+        return win's chosen_tab(control)
+    end
+    return gtk's chosen_tab(control)
+end
+
+# the tab at a place, from 1, chosen, as if the person had clicked it
+to choose_tab with control, place
+    if on_windows
+        return win's choose_tab(control, place)
+    end
+    return gtk's choose_tab(control, place)
+end
+
+# a table, with a column for each title in `columns`, and rows of values (add_row); `handler` is given a row's
+# values when the person chooses it
+to table with parent, columns, x, y, width, height, handler
+    if on_windows
+        return win's table(parent, columns, x, y, width, height, handler)
+    end
+    return gtk's table(parent, columns, x, y, width, height, handler)
+end
+
+# a row at the end of the table: its values, each shown as `say` shows it
+to add_row with control, values
+    if on_windows
+        return win's add_row(control, values)
+    end
+    return gtk's add_row(control, values)
+end
+
+# every row of a table taken away
+to clear_rows with control
+    if on_windows
+        return win's clear_rows(control)
+    end
+    return gtk's clear_rows(control)
+end
+
+# the chosen row's values, or nothing for none
+to chosen_row with control
+    if on_windows
+        return win's chosen_row(control)
+    end
+    return gtk's chosen_row(control)
+end
+
+# the row at a place, from 1, chosen in a table; 0 for none
+to choose_row with control, place
+    if on_windows
+        return win's choose_row(control, place)
+    end
+    return gtk's choose_row(control, place)
+end
+
+# a drawing: `painter` draws it whenever it must be drawn, and after redraw, given a canvas to draw on with
+# colour, rectangle, circle, line, words and draw_image, in pixels from the drawing's top left
+to drawing with parent, x, y, width, height, painter
+    if on_windows
+        return win's drawing(parent, x, y, width, height, painter)
+    end
+    return gtk's drawing(parent, x, y, width, height, painter)
+end
+
+# a drawing's handler for a click on it, given where: x and y
+to on_click with control, handler
+    if on_windows
+        return win's on_click(control, handler)
+    end
+    return gtk's on_click(control, handler)
+end
+
+# a drawing drawn again, by its painter, as soon as the program has a moment
+to redraw with control
+    if on_windows
+        return win's redraw(control)
+    end
+    return gtk's redraw(control)
+end
+
+# what's drawn next is this colour: red, green and blue, each from 0 to 255
+to colour with canvas, red, green, blue
+    if on_windows
+        return win's colour(canvas, red, green, blue)
+    end
+    return gtk's colour(canvas, red, green, blue)
+end
+
+# a filled rectangle, its top left at x, y, `width` by `height`, in the colour chosen last
+to rectangle with canvas, x, y, width, height
+    if on_windows
+        return win's rectangle(canvas, x, y, width, height)
+    end
+    return gtk's rectangle(canvas, x, y, width, height)
+end
+
+# a filled circle, its middle at x, y, so many pixels across from the middle to the edge, in the colour chosen
+# last
+to circle with canvas, x, y, radius
+    if on_windows
+        return win's circle(canvas, x, y, radius)
+    end
+    return gtk's circle(canvas, x, y, radius)
+end
+
+# a line from x1, y1 to x2, y2, in the colour chosen last
+to line with canvas, x1, y1, x2, y2
+    if on_windows
+        return win's line(canvas, x1, y1, x2, y2)
+    end
+    return gtk's line(canvas, x1, y1, x2, y2)
+end
+
+# words with their top left at x, y, in the system's own font
+to words with canvas, text, x, y
+    if on_windows
+        return win's words(canvas, text, x, y)
+    end
+    return gtk's words(canvas, text, x, y)
+end
+
+# the window's icon, from a picture's file (a PNG, JPEG, GIF or BMP)
+to set_icon with parent, file
+    if on_windows
+        return win's set_icon(parent, file)
+    end
+    return gtk's set_icon(parent, file)
+end
+
+# games: keys, the mouse, pictures and sounds
+
+# whether a key is held down while the drawing has the keys: "Left", "Right", "Up", "Down", "Space", "Enter",
+# "Escape", "Shift", "Ctrl", "Alt", "Tab", "Backspace", "Delete", a letter, a digit, or F1 to F12
+to key_down with control, name
+    if on_windows
+        return win's key_down(control, name)
+    end
+    return gtk's key_down(control, name)
+end
+
+# how far across the drawing the mouse was last, in pixels from its left
+to mouse_x with control
+    if on_windows
+        return win's mouse_x(control)
+    end
+    return gtk's mouse_x(control)
+end
+
+# how far down the drawing the mouse was last, as mouse_x says how far across
+to mouse_y with control
+    if on_windows
+        return win's mouse_y(control)
+    end
+    return gtk's mouse_y(control)
+end
+
+# whether the mouse's button is down on the drawing
+to mouse_down with control
+    if on_windows
+        return win's mouse_down(control)
+    end
+    return gtk's mouse_down(control)
+end
+
+# a drawing's handler for each key pressed while it has the keys, given the key's name, as key_down knows them
+to on_key with control, handler
+    if on_windows
+        return win's on_key(control, handler)
+    end
+    return gtk's on_key(control, handler)
+end
+
+# a picture from a file, or one built into the program (a PNG, JPEG, GIF or BMP), to draw with draw_image
+to load_image with file
+    if on_windows
+        return win's load_image(file)
+    end
+    return gtk's load_image(file)
+end
+
+# a picture drawn with its top left at x, y, at its own size
+to draw_image with canvas, image, x, y
+    if on_windows
+        return win's draw_image(canvas, image, x, y)
+    end
+    return gtk's draw_image(canvas, image, x, y)
+end
+
+# a picture drawn with its top left at x, y, made `width` by `height`
+to draw_image_sized with canvas, image, x, y, width, height
+    if on_windows
+        return win's draw_image_sized(canvas, image, x, y, width, height)
+    end
+    return gtk's draw_image_sized(canvas, image, x, y, width, height)
+end
+
+# a WAV file, or one built into the program, played while the program goes on
+to play_sound with file
+    if on_windows
+        return win's play_sound(file)
+    end
+    return gtk's play_sound(file)
+end

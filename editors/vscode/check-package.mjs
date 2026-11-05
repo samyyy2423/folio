@@ -3,14 +3,14 @@
 // package.json's; its README's pictures come from the web, as the Marketplace shows them; and it's small.
 //
 //     npx vsce package
-//     node check-package.mjs [moth-0.1.0.vsix]
+//     node check-package.mjs [folio-0.1.0.vsix]
 import { readFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { FILES, ENGINE, unzip } from "./make-vsix.mjs";
 
 const here = (file) => new URL(file, import.meta.url);
 const manifest = JSON.parse(readFileSync(here("package.json"), "utf8"));
-const vsix = process.argv[2] ?? `moth-${manifest.version}.vsix`;
+const vsix = process.argv[2] ?? `folio-${manifest.version}.vsix`;
 const LIMIT = 1024 * 1024; // the extension and its engine are under 200 KB packed: a megabyte means something got in
 const wrong = [];
 const sameSet = (what, got, want) => {

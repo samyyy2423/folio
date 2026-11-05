@@ -1,11 +1,11 @@
 # A command-line tool
 
-`options.moth` reads a program's command line as Python's argparse does: options with values, flags, names in
+`options.folio` reads a program's command line as Python's argparse does: options with values, flags, names in
 order, and a `--help` made from what each is for. In a real program, `parse` is given `arguments`, what the
 program was run with; here it's given a list, so the recipe can show what it does.
 
-```moth
-use "options.moth" as options
+```folio
+use "options.folio" as options
 
 set p to options's parser("greet", "Says hello to someone.")
 options's option(p, "name", "n", "who to greet", "World")
@@ -29,8 +29,8 @@ HELLO, SAM!
 
 What `--help` says comes from the same lines:
 
-```moth
-use "options.moth" as options
+```folio
+use "options.folio" as options
 
 set p to options's parser("greet", "Says hello to someone.")
 options's option(p, "name", "n", "who to greet", "World")
@@ -49,4 +49,4 @@ options:
   -l, --loud            shout it
 ```
 
-`moth build greet.moth` makes it a program of its own: `greet --name Sam --loud`.
+`folio build greet.folio` makes it a program of its own: `greet --name Sam --loud`.

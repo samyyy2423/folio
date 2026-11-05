@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>sockets.moth · Moth's standard library</title>
+  <title>sockets.folio · Folio's standard library</title>
   <meta name="description" content="Talking to other programs over a network, as Python's socket and ssl modules do, on Windows and Linux.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>sockets</em>.moth</h1>
+      <h1><em>sockets</em>.folio</h1>
       <p>Talking to other programs over a network, as Python's socket and ssl modules do, on Windows and Linux.</p>
-      <p class="use"><code>use "sockets.moth" as net</code></p>
+      <p class="use"><code>use "sockets.folio" as net</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="sockets.moth's functions">
+    <nav class="toc" aria-label="sockets.folio's functions">
       <h2>22 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#connect">connect</a></li><li><a href="#connect_secure">connect_secure</a></li><li><a href="#listen">listen</a></li><li><a href="#listen_everywhere">listen_everywhere</a></li><li><a href="#listen_on">listen_on</a></li><li><a href="#port_of">port_of</a></li><li><a href="#accept">accept</a></li><li><a href="#send">send</a></li><li><a href="#receive">receive</a></li><li><a href="#receive_all">receive_all</a></li><li><a href="#receive_line">receive_line</a></li><li><a href="#wait_at_most">wait_at_most</a></li><li><a href="#finish_sending">finish_sending</a></li><li><a href="#close">close</a></li><li><a href="#ready">ready</a></li><li><a href="#trust">trust</a></li><li><a href="#secure">secure</a></li><li><a href="#secure_as_server">secure_as_server</a></li><li><a href="#open_messages">open_messages</a></li><li><a href="#open_messages_on">open_messages_on</a></li><li><a href="#send_message">send_message</a></li><li><a href="#receive_message">receive_message</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Talking to other programs over a network, as Python's socket and ssl modules do, on Windows and Linux: connections out and in (TCP), secure ones (TLS), and messages (UDP), with IPv4 or IPv6 addresses or names. A program <code>moth build</code> makes can use it, built with --allow-libraries.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <p>Talking to other programs over a network, as Python's socket and ssl modules do, on Windows and Linux: connections out and in (TCP), secure ones (TLS), and messages (UDP), with IPv4 or IPv6 addresses or names. A program <code>folio build</code> makes can use it, built with --allow-libraries.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect(<span class="s">&quot;example.com&quot;</span>, <span class="n">80</span>)
 <span class="k">set</span> line_end <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">13</span>, <span class="n">10</span>) <span class="k">as</span> <span class="k">bytes</span> <span class="k">as</span> text
 net's <span class="k">send</span>(c, <span class="s">&quot;GET / HTTP/1.0&quot;</span> + line_end + <span class="s">&quot;Host: example.com&quot;</span> + line_end + line_end)
@@ -89,9 +89,9 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
             <div><h4>Inputs</h4><ul class="inputs"><li><code>host</code></li><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to connect with host, port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L402">sockets.moth line 402</a></p>
+          <p class="written">Written <code>to connect with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L402">sockets.folio line 402</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect(<span class="s">&quot;example.com&quot;</span>, <span class="n">80</span>)</code></pre></div>
         </section>
         <section class="fn" id="connect_secure">
@@ -101,9 +101,9 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
             <div><h4>Inputs</h4><ul class="inputs"><li><code>host</code></li><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to connect_secure with host, port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L542">sockets.moth line 542</a></p>
+          <p class="written">Written <code>to connect_secure with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L542">sockets.folio line 542</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect(<span class="s">&quot;example.com&quot;</span>, <span class="n">80</span>)
 <span class="k">set</span> c <span class="k">to</span> net's connect_secure(<span class="s">&quot;example.com&quot;</span>, <span class="n">443</span>)   <span class="c"># TLS, its certificate checked for that name</span></code></pre></div>
         </section>
@@ -114,9 +114,9 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to listen with port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L555">sockets.moth line 555</a></p>
+          <p class="written">Written <code>to listen with port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L555">sockets.folio line 555</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> listener <span class="k">to</span> net's listen(<span class="n">9000</span>)        <span class="c"># this computer alone; listen_everywhere(9000) for every network</span></code></pre></div>
         </section>
         <section class="fn" id="listen_everywhere">
@@ -126,9 +126,9 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to listen_everywhere with port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L560">sockets.moth line 560</a></p>
+          <p class="written">Written <code>to listen_everywhere with port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L560">sockets.folio line 560</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 net's listen_everywhere(port)</code></pre></div>
         </section>
         <section class="fn" id="listen_on">
@@ -138,9 +138,9 @@ net's listen_everywhere(port)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>host</code></li><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to listen_on with host, port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L566">sockets.moth line 566</a></p>
+          <p class="written">Written <code>to listen_on with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L566">sockets.folio line 566</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> listener <span class="k">to</span> net's listen(<span class="n">9000</span>)        <span class="c"># this computer alone; listen_everywhere(9000) for every network</span>
 <span class="k">set</span> listener <span class="k">to</span> net's listen_on(<span class="s">&quot;::&quot;</span>, <span class="n">9000</span>)  <span class="c"># an address of its own: &quot;::1&quot;, &quot;::&quot; for IPv6 and IPv4 both</span></code></pre></div>
         </section>
@@ -151,9 +151,9 @@ net's listen_everywhere(port)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>s</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to port_of with s</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L629">sockets.moth line 629</a></p>
+          <p class="written">Written <code>to port_of with s</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L629">sockets.folio line 629</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 net's port_of(s)</code></pre></div>
         </section>
         <section class="fn" id="accept">
@@ -163,9 +163,9 @@ net's port_of(s)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>listener</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to accept with listener</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L634">sockets.moth line 634</a></p>
+          <p class="written">Written <code>to accept with listener</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L634">sockets.folio line 634</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect_secure(<span class="s">&quot;example.com&quot;</span>, <span class="n">443</span>)   <span class="c"># TLS, its certificate checked for that name</span>
 <span class="k">set</span> listener <span class="k">to</span> net's listen_on(<span class="s">&quot;::&quot;</span>, <span class="n">9000</span>)  <span class="c"># an address of its own: &quot;::1&quot;, &quot;::&quot; for IPv6 and IPv4 both</span>
 <span class="k">set</span> c <span class="k">to</span> net's accept(listener)           <span class="c"># waits for one; peer of c says who: (record with host ..., port ...)</span></code></pre></div>
@@ -177,9 +177,9 @@ net's port_of(s)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to send with connection, data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L654">sockets.moth line 654</a></p>
+          <p class="written">Written <code>to send with connection, data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L654">sockets.folio line 654</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect(<span class="s">&quot;example.com&quot;</span>, <span class="n">80</span>)
 <span class="k">set</span> line_end <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">13</span>, <span class="n">10</span>) <span class="k">as</span> <span class="k">bytes</span> <span class="k">as</span> text
 net's <span class="k">send</span>(c, <span class="s">&quot;GET / HTTP/1.0&quot;</span> + line_end + <span class="s">&quot;Host: example.com&quot;</span> + line_end + line_end)</code></pre></div>
@@ -191,9 +191,9 @@ net's <span class="k">send</span>(c, <span class="s">&quot;GET / HTTP/1.0&quot;<
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li><li><code>most</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to receive with connection, most</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L678">sockets.moth line 678</a></p>
+          <p class="written">Written <code>to receive with connection, most</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L678">sockets.folio line 678</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> listener <span class="k">to</span> net's listen_on(<span class="s">&quot;::&quot;</span>, <span class="n">9000</span>)  <span class="c"># an address of its own: &quot;::1&quot;, &quot;::&quot; for IPv6 and IPv4 both</span>
 <span class="k">set</span> c <span class="k">to</span> net's accept(listener)           <span class="c"># waits for one; peer of c says who: (record with host ..., port ...)</span>
 <span class="k">say</span> net's receive(c, <span class="n">1024</span>) <span class="k">as</span> text        <span class="c"># up to 1024 bytes, as soon as some come; none once it's closed</span></code></pre></div>
@@ -205,9 +205,9 @@ net's <span class="k">send</span>(c, <span class="s">&quot;GET / HTTP/1.0&quot;<
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to receive_all with connection</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L705">sockets.moth line 705</a></p>
+          <p class="written">Written <code>to receive_all with connection</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L705">sockets.folio line 705</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect(<span class="s">&quot;example.com&quot;</span>, <span class="n">80</span>)
 <span class="k">say</span> net's receive_all(c) <span class="k">as</span> text</code></pre></div>
         </section>
@@ -218,9 +218,9 @@ net's <span class="k">send</span>(c, <span class="s">&quot;GET / HTTP/1.0&quot;<
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to receive_line with connection</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L719">sockets.moth line 719</a></p>
+          <p class="written">Written <code>to receive_line with connection</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L719">sockets.folio line 719</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 net's receive_line(connection)</code></pre></div>
         </section>
         <section class="fn" id="wait_at_most">
@@ -230,9 +230,9 @@ net's receive_line(connection)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li><li><code>milliseconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to wait_at_most with connection, milliseconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L741">sockets.moth line 741</a></p>
+          <p class="written">Written <code>to wait_at_most with connection, milliseconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L741">sockets.folio line 741</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> listener <span class="k">to</span> net's listen_on(<span class="s">&quot;::&quot;</span>, <span class="n">9000</span>)  <span class="c"># an address of its own: &quot;::1&quot;, &quot;::&quot; for IPv6 and IPv4 both</span>
 <span class="k">set</span> c <span class="k">to</span> net's accept(listener)           <span class="c"># waits for one; peer of c says who: (record with host ..., port ...)</span>
 net's wait_at_most(c, <span class="n">5000</span>)               <span class="c"># then a receive that waits longer than 5 seconds fails</span></code></pre></div>
@@ -244,9 +244,9 @@ net's wait_at_most(c, <span class="n">5000</span>)               <span class="c"
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to finish_sending with connection</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L756">sockets.moth line 756</a></p>
+          <p class="written">Written <code>to finish_sending with connection</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L756">sockets.folio line 756</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> listener <span class="k">to</span> net's listen_on(<span class="s">&quot;::&quot;</span>, <span class="n">9000</span>)  <span class="c"># an address of its own: &quot;::1&quot;, &quot;::&quot; for IPv6 and IPv4 both</span>
 <span class="k">set</span> c <span class="k">to</span> net's accept(listener)           <span class="c"># waits for one; peer of c says who: (record with host ..., port ...)</span>
 net's finish_sending(c)                   <span class="c"># no more to send: the other end's receive_all ends</span></code></pre></div>
@@ -258,9 +258,9 @@ net's finish_sending(c)                   <span class="c"># no more to send: the
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to close with connection</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L768">sockets.moth line 768</a></p>
+          <p class="written">Written <code>to close with connection</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L768">sockets.folio line 768</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect(<span class="s">&quot;example.com&quot;</span>, <span class="n">80</span>)
 net's close(c)</code></pre></div>
         </section>
@@ -271,9 +271,9 @@ net's close(c)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>sockets</code></li><li><code>milliseconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ready with sockets, milliseconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L791">sockets.moth line 791</a></p>
+          <p class="written">Written <code>to ready with sockets, milliseconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L791">sockets.folio line 791</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> listener <span class="k">to</span> net's listen_on(<span class="s">&quot;::&quot;</span>, <span class="n">9000</span>)  <span class="c"># an address of its own: &quot;::1&quot;, &quot;::&quot; for IPv6 and IPv4 both</span>
 <span class="k">set</span> c <span class="k">to</span> net's accept(listener)           <span class="c"># waits for one; peer of c says who: (record with host ..., port ...)</span>
 <span class="k">set</span> waiting <span class="k">to</span> net's ready(<span class="k">list</span> <span class="k">of</span> listener, c, d, <span class="n">1000</span>)  <span class="c"># those with something to take, within a second</span></code></pre></div>
@@ -285,9 +285,9 @@ net's close(c)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to trust with file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L851">sockets.moth line 851</a></p>
+          <p class="written">Written <code>to trust with file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L851">sockets.folio line 851</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 net's trust(<span class="s">&quot;my-ca.pem&quot;</span>)                  <span class="c"># certificates trusted besides the system's own</span></code></pre></div>
         </section>
         <section class="fn" id="secure">
@@ -297,9 +297,9 @@ net's trust(<span class="s">&quot;my-ca.pem&quot;</span>)                  <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li><li><code>host</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to secure with connection, host</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L903">sockets.moth line 903</a></p>
+          <p class="written">Written <code>to secure with connection, host</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L903">sockets.folio line 903</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect_secure(<span class="s">&quot;example.com&quot;</span>, <span class="n">443</span>)   <span class="c"># TLS, its certificate checked for that name</span>
 net's secure(c, <span class="s">&quot;mail.example.com&quot;</span>)       <span class="c"># or a connection made secure after it began, as STARTTLS does</span></code></pre></div>
         </section>
@@ -310,9 +310,9 @@ net's secure(c, <span class="s">&quot;mail.example.com&quot;</span>)       <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li><li><code>certificate</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to secure_as_server with connection, certificate, key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L927">sockets.moth line 927</a></p>
+          <p class="written">Written <code>to secure_as_server with connection, certificate, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L927">sockets.folio line 927</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect_secure(<span class="s">&quot;example.com&quot;</span>, <span class="n">443</span>)   <span class="c"># TLS, its certificate checked for that name</span>
 net's secure_as_server(c, <span class="s">&quot;cert.pem&quot;</span>, <span class="s">&quot;key.pem&quot;</span>)  <span class="c"># a connection accept() took, as its server</span></code></pre></div>
         </section>
@@ -323,9 +323,9 @@ net's secure_as_server(c, <span class="s">&quot;cert.pem&quot;</span>, <span cla
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to open_messages with port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L959">sockets.moth line 959</a></p>
+          <p class="written">Written <code>to open_messages with port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L959">sockets.folio line 959</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> u <span class="k">to</span> net's open_messages(<span class="n">9001</span>)        <span class="c"># UDP, on a port of its own (0 for any); open_messages_on(&quot;::&quot;, 9001)</span></code></pre></div>
         </section>
         <section class="fn" id="open_messages_on">
@@ -335,9 +335,9 @@ net's secure_as_server(c, <span class="s">&quot;cert.pem&quot;</span>, <span cla
             <div><h4>Inputs</h4><ul class="inputs"><li><code>host</code></li><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to open_messages_on with host, port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L964">sockets.moth line 964</a></p>
+          <p class="written">Written <code>to open_messages_on with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L964">sockets.folio line 964</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 net's open_messages_on(host, port)</code></pre></div>
         </section>
         <section class="fn" id="send_message">
@@ -347,9 +347,9 @@ net's open_messages_on(host, port)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>s</code></li><li><code>host</code></li><li><code>port</code></li><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to send_message with s, host, port, data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L982">sockets.moth line 982</a></p>
+          <p class="written">Written <code>to send_message with s, host, port, data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L982">sockets.folio line 982</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> u <span class="k">to</span> net's open_messages(<span class="n">9001</span>)        <span class="c"># UDP, on a port of its own (0 for any); open_messages_on(&quot;::&quot;, 9001)</span>
 net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class="n">9002</span>, <span class="s">&quot;hi&quot;</span>)</code></pre></div>
         </section>
@@ -360,9 +360,9 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
             <div><h4>Inputs</h4><ul class="inputs"><li><code>s</code></li><li><code>most</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to receive_message with s, most</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/sockets.moth#L1017">sockets.moth line 1017</a></p>
+          <p class="written">Written <code>to receive_message with s, most</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L1017">sockets.folio line 1017</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.moth&quot;</span> <span class="k">as</span> net
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> u <span class="k">to</span> net's open_messages(<span class="n">9001</span>)        <span class="c"># UDP, on a port of its own (0 for any); open_messages_on(&quot;::&quot;, 9001)</span>
 <span class="k">set</span> m <span class="k">to</span> net's receive_message(u, <span class="n">1500</span>)   <span class="c"># (record with data ..., host ..., port ...)</span></code></pre></div>
         </section>
@@ -371,14 +371,14 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

@@ -1,17 +1,17 @@
-id = "moth"
-name = "Moth"
+id = "folio"
+name = "Folio"
 version = "0.1.0"
 schema_version = 1
 authors = ["Samyak Pudke"]
-description = "Moth, the language that reads like plain English: colours, and moth lsp's problems, outline, definitions, hovers, completion and tidying"
-repository = "https://github.com/samyyy2423/moth"
+description = "Folio, the language that reads like plain English: colours, and folio lsp's problems, outline, definitions, hovers, completion and tidying"
+repository = "https://github.com/samyyy2423/folio"
 
-# the colours' grammar, editors/tree-sitter-moth, at a commit of Moth's that has it
-[grammars.moth]
-repository = "https://github.com/samyyy2423/moth"
-commit = "0d4281a42eceee521ad953d832bb759fbfb38369"
-path = "editors/tree-sitter-moth"
+# the colours' grammar, editors/tree-sitter-folio, at a commit of Folio's that has it
+[grammars.folio]
+repository = "https://github.com/samyyy2423/folio"
+commit = "c020fc656271c69a3172bca37248b6f239e6efd9"
+path = "editors/tree-sitter-folio"
 
-[language_servers.moth]
-name = "moth lsp"
-languages = ["Moth"]
+[language_servers.folio]
+name = "folio lsp"
+languages = ["Folio"]

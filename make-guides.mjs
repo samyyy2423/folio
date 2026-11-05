@@ -2,16 +2,16 @@
 //
 //     node make-guides.mjs
 //
-// docs/cookbook/index.html, from each recipe in guides/cookbook/ (Markdown: a # title, prose, ```moth blocks
+// docs/cookbook/index.html, from each recipe in guides/cookbook/ (Markdown: a # title, prose, ```folio blocks
 // and ```output blocks), and docs/examples.html, from each program in guides/examples/ (its opening comment's
-// first line is its title, the rest what it is). A ```moth block followed by an ```output block is run on the
-// JavaScript engine and must say exactly that; any other ```moth block (one that needs a site, a server, a
-// database or a window) must have no problems that moth check finds. guides.test.js holds them to it, and
+// first line is its title, the rest what it is). A ```folio block followed by an ```output block is run on the
+// JavaScript engine and must say exactly that; any other ```folio block (one that needs a site, a server, a
+// database or a window) must have no problems that folio check finds. guides.test.js holds them to it, and
 // says when the pages are behind what they're made from.
 import { readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { page, prose, codeBlock, escape, highlight, libraryFiles, summaryOf } from "./make-docs.mjs";
-import { run, check, memoryDisk } from "./moth.js";
+import { run, check, memoryDisk } from "./folio.js";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 const list = (folder, ending) => readdirSync(new URL(`./${folder}/`, import.meta.url)).filter((f) => f.endsWith(ending)).sort();
@@ -28,7 +28,7 @@ export function sayOf(code) {
   return said.join("\n");
 }
 
-// the problems moth check finds in code, as "line: message"
+// the problems folio check finds in code, as "line: message"
 export function problemsOf(code) {
   return check(code, { files: library }).filter((p) => p.kind === "error").map((p) => `${p.line}: ${p.message}`);
 }
@@ -59,8 +59,8 @@ export function readRecipe(file, read = here) {
       const last = parts.at(-1);
       if (!last || last.code === undefined || last.output !== null) throw new Error(`guides/cookbook/${file}: an output block after something that isn't code`);
       last.output = block.join("\n");
-    } else if (fence[1] === "moth") parts.push({ code: block.join("\n"), output: null });
-    else throw new Error(`guides/cookbook/${file}: a block of ${fence[1] ?? "nothing"}; only moth and output`);
+    } else if (fence[1] === "folio") parts.push({ code: block.join("\n"), output: null });
+    else throw new Error(`guides/cookbook/${file}: a block of ${fence[1] ?? "nothing"}; only folio and output`);
   }
   endParagraph();
   return { slug: file.replace(/^\d+-/, "").replace(/\.md$/, ""), title, parts };
@@ -75,7 +75,7 @@ export function readExample(file, read = here) {
     opening.push(line.replace(/^# ?/, ""));
   }
   if (!opening.length) throw new Error(`guides/examples/${file} has no opening comment`);
-  return { slug: file.replace(/^\d+-/, "").replace(/\.moth$/, ""), title: opening[0], about: opening.slice(1).join(" ").trim(), code };
+  return { slug: file.replace(/^\d+-/, "").replace(/\.folio$/, ""), title: opening[0], about: opening.slice(1).join(" ").trim(), code };
 }
 
 // the playground, from docs/, with the code in its address, as its Share button makes it
@@ -90,7 +90,7 @@ ${r.parts.map((p) => (p.code !== undefined ? `        ${codeBlock(p.code, p.outp
       <h1>Recipes for <em>real work</em>.</h1>
       <p>Short, complete answers to the things programs are for: files, JSON and CSV, web APIs and servers, the
         command line, numbers and charts, dates, every core of the machine, and tests. Every recipe here is run, or
-        checked, each time Moth changes, so none of them goes stale.</p>`;
+        checked, each time Folio changes, so none of them goes stale.</p>`;
   const body = `  <div class="layout wrap">
     <nav class="toc" aria-label="The recipes">
       <h2>${recipes.length} recipes</h2>
@@ -101,32 +101,32 @@ ${r.parts.map((p) => (p.code !== undefined ? `        ${codeBlock(p.code, p.outp
 ${sections}
     </main>
   </div>`;
-  return page({ title: "The Moth cookbook", description: "Short, tested recipes for real work in Moth: files, JSON, CSV, web APIs, servers, the command line, data, dates, every core and tests.", root: "../../", current: "Cookbook", hero, body });
+  return page({ title: "The Folio cookbook", description: "Short, tested recipes for real work in Folio: files, JSON, CSV, web APIs, servers, the command line, data, dates, every core and tests.", root: "../../", current: "Cookbook", hero, body });
 }
 
 function examplesPage(examples) {
   const cards = examples.map((e) => `      <section class="fn example" id="${e.slug}">
         <h2><a href="#${e.slug}">${escape(e.title)}</a></h2>
         <p>${prose(e.about)}</p>
-        <p class="written"><a class="run" href="${escape(playground(e.code))}">Run it in the playground</a> · <a href="https://github.com/samyyy2423/moth/blob/main/guides/examples/${e.file}">The source</a></p>
+        <p class="written"><a class="run" href="${escape(playground(e.code))}">Run it in the playground</a> · <a href="https://github.com/samyyy2423/folio/blob/main/guides/examples/${e.file}">The source</a></p>
         ${codeBlock(e.code)}
       </section>`).join("\n");
   const hero = `      <p class="eyebrow">Examples</p>
       <h1>Whole programs, <em>ready to run</em>.</h1>
-      <p>Small complete programs that show what Moth is like to write: each runs in the playground with a click,
-        and each is run every time Moth changes. To practise, the <a href="https://github.com/samyyy2423/moth/tree/main/exercises">exercises</a>
+      <p>Small complete programs that show what Folio is like to write: each runs in the playground with a click,
+        and each is run every time Folio changes. To practise, the <a href="https://github.com/samyyy2423/folio/tree/main/exercises">exercises</a>
         have tests to make pass, from hello world up.</p>`;
   const body = `  <div class="layout wrap">
     <nav class="toc" aria-label="The examples">
       <h2>${examples.length} programs</h2>
       <ol>${examples.map((e) => `<li><a href="#${e.slug}">${escape(e.title)}</a></li>`).join("")}</ol>
-      <p class="more"><a href="cookbook/">The cookbook</a> · <a href="https://github.com/samyyy2423/moth/tree/main/exercises">Exercises</a></p>
+      <p class="more"><a href="cookbook/">The cookbook</a> · <a href="https://github.com/samyyy2423/folio/tree/main/exercises">Exercises</a></p>
     </nav>
     <main class="prose">
 ${cards}
     </main>
   </div>`;
-  return page({ title: "Moth examples", description: summaryOf("Small complete Moth programs, each ready to run in the playground."), root: "../", current: "Examples", hero, body });
+  return page({ title: "Folio examples", description: summaryOf("Small complete Folio programs, each ready to run in the playground."), root: "../", current: "Examples", hero, body });
 }
 
 export function recipes(read = here) {
@@ -134,7 +134,7 @@ export function recipes(read = here) {
 }
 
 export function examples(read = here) {
-  return list("guides/examples", ".moth").map((file) => ({ ...readExample(file, read), file }));
+  return list("guides/examples", ".folio").map((file) => ({ ...readExample(file, read), file }));
 }
 
 // the pages, by their place under docs/

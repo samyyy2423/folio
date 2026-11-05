@@ -10,12 +10,12 @@ import { BASE } from "@/lib/site";
 export const metadata = {
   title: "Folio · a programming language that reads like English",
   description: "Folio is a programming language with no symbols to learn. Write programs in plain words, run them in your browser, and build them into programs of their own for Windows and Linux.",
-  icons: { icon: `${BASE}/docs/moth.svg` },
+  icons: { icon: `${BASE}/docs/folio.svg` },
 };
 
 export const viewport = { themeColor: "#eeeae2" };
 
-// Before the page shows: old links (the playground was at /moth/#playground, a shared program at /moth/#code=...)
+// Before the page shows: old links (the playground was at /folio/#playground, a shared program at /folio/#code=...)
 // go to the playground's own page; the veil between pages stays up over a page loaded after a click on another
 // (Transition.jsx takes it away); and what the page's motion brings in starts out of sight, unless motion is turned
 // down, or the motion hasn't started within 3 seconds, when everything is simply shown.
@@ -27,7 +27,7 @@ const BEFORE = `(function () {
   }
   var root = document.documentElement;
   try {
-    var word = sessionStorage.getItem("moth-veil");
+    var word = sessionStorage.getItem("folio-veil");
     if (word !== null) {
       root.classList.add("veiled", "veil-up");
       root.style.setProperty("--veil-word", JSON.stringify(word));

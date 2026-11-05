@@ -1,6 +1,6 @@
 # Design notes
 
-Why Moth is built the way it is, what each choice costs, and what I measured.
+Why Folio is built the way it is, what each choice costs, and what I measured.
 
 ## 1. A grammar that reads like English but parses like code
 
@@ -19,12 +19,12 @@ Why Moth is built the way it is, what each choice costs, and what I measured.
   `from`, `with`, and `than`, are still free to use as variable names.
 - **Counting starts at 1** (`item 1 of fruits`), because that's what the words
   mean in English.
-- **Errors teach.** A symbol from another language gets the Moth word back
+- **Errors teach.** A symbol from another language gets the Folio word back
   (`>` → "write 'is greater than'"), and `x is 5` on its own line suggests
   `set x to ...`. A misspelled name gets the closest real one ("Did you mean
   'total'?"). The compiler already knows every name a line can see, so it works
   this out once, using edit distance where swapping two letters counts as one
-  edit. A line that starts with an unknown name also checks Moth's own words, so
+  edit. A line that starts with an unknown name also checks Folio's own words, so
   `sya "hi"` suggests `say`.
 
 ## 2. Variables are resolved when the program is read
@@ -66,7 +66,7 @@ explain.
 v1 walked the syntax tree with recursive JavaScript functions. That was simple,
 but it had three problems:
 
-- Moth recursion used the JavaScript stack, so it failed at about 1,000 calls deep.
+- Folio recursion used the JavaScript stack, so it failed at about 1,000 calls deep.
 - Every variable read searched a chain of scope objects by name.
 - A running program couldn't be stopped, so v1 cut every program off after 10
   million steps.
@@ -82,7 +82,7 @@ one loop with its own value stack and call stack. Best of 5 runs on a Ryzen 5
 | primes up to 5,000, lists | 320 ms | 113 ms (2.8× faster) |
 | recursion 10,000 deep | fails | 6 ms |
 
-**Calls are slightly slower.** v1's Moth calls were JavaScript calls, which V8
+**Calls are slightly slower.** v1's Folio calls were JavaScript calls, which V8
 optimises very well. v2 has to build its own frame and variable array for every
 call. That is the price of recursion up to 100,000 calls deep. Things I measured:
 
@@ -121,7 +121,7 @@ can't inject anything into the page.
   exact error messages, including where the error points.
 - **Fuzzing**: 5,000 programs made by randomly breaking real ones (deleting
   characters, repeating lines, swapping words). Each one must either finish or
-  fail with a `MothError` whose position is inside the code. It must never fail
+  fail with a `FolioError` whose position is inside the code. It must never fail
   with a JavaScript error. The seed is fixed, so a failure always reproduces.
   About 15% of them finish, 30% fail while running, and 55% fail while being read.
 - **Differential testing during the rewrite**: 19,001 fuzzed programs ran through
@@ -134,11 +134,11 @@ can't inject anything into the page.
 
 ## 7. The command line and the compiler
 
-- **`vm.js` imports nothing.** The compiler (`moth.js`) and the machine
-  (`vm.js`) only share the bytecode format. That's what makes `moth build`
+- **`vm.js` imports nothing.** The compiler (`folio.js`) and the machine
+  (`vm.js`) only share the bytecode format. That's what makes `folio build`
   simple: it writes `vm.js`, the program's bytecode as JSON, and the source text
   into one `.mjs` file. The compiled program never tokenizes or parses
-  anything, and it runs on any Node with no Moth installed. Tokens are reduced
+  anything, and it runs on any Node with no Folio installed. Tokens are reduced
   to their line and column, so a compiled program's errors still point at the
   right spot. The Counter example compiles to 16 KB.
 - **The shell is a compiler session.** It keeps two things between entries: the
@@ -151,7 +151,7 @@ can't inject anything into the page.
   missing `end`, or `say 1 +` with nothing after it), the code stopped too
   early rather than being wrong. The shell then shows `....>` and waits for more
   lines, so the parser decides without a separate bracket counter.
-- **Trade-off: Ctrl+C.** A Moth program runs on Node's main thread, so the shell
+- **Trade-off: Ctrl+C.** A Folio program runs on Node's main thread, so the shell
   can't catch Ctrl+C while a program runs. It puts the terminal back in normal
   mode during each run, so Ctrl+C ends a stuck program by ending the shell.
   Running each entry in a worker thread, like the playground does, would stop
@@ -196,7 +196,7 @@ can't inject anything into the page.
   `turn` and `pen`. The machine keeps the turtle's position, heading, pen color
   and width, and for each line it draws calls a `draw` callback with the two
   ends, the color and the width. The VM never touches a canvas, so the same
-  program can draw in the browser, write an SVG from `moth run`, or be counted
+  program can draw in the browser, write an SVG from `folio run`, or be counted
   in a test.
 - **Ends are rounded to hundredths.** Otherwise `cos(90°)` leaves lines ending
   at 6.1e-17, or even `-0`, which a test caught, instead of 0.
@@ -208,10 +208,10 @@ can't inject anything into the page.
   know and keeps the previous color. The SVG writer escapes the text before
   putting it in an attribute, so a "color" can't break the file.
 
-## 10. The JIT: compiling Moth to JavaScript
+## 10. The JIT: compiling Folio to JavaScript
 
 - **Why it's fast.** The VM decodes every instruction and keeps every value on
-  an array stack. The JIT turns each Moth function into a JavaScript function
+  an array stack. The JIT turns each Folio function into a JavaScript function
   and each variable into a JavaScript variable named after its slot (`v1_2`), so
   V8 compiles the program to machine code and keeps its numbers in registers.
   Functions made inside functions become JavaScript closures, which behave the
@@ -223,8 +223,8 @@ can't inject anything into the page.
   source. Both back ends build on `scope.js`, so they agree on what every name
   means. The JIT's helpers handle the two-numbers case inline and hand
   everything else to the shared checks.
-- **Deep recursion.** The JIT's Moth calls are JavaScript calls, and JavaScript's
-  stack runs out a few thousand calls deep. Moth programs can't read input or
+- **Deep recursion.** The JIT's Folio calls are JavaScript calls, and JavaScript's
+  stack runs out a few thousand calls deep. Folio programs can't read input or
   the clock, so running one twice says and draws exactly the same things. When
   calls go past 2,000 deep, the JIT stops and `run()` runs the program again on
   the VM (100,000 calls deep), passing on only the output the first run hadn't
@@ -269,7 +269,7 @@ can't inject anything into the page.
 ## 12. Records, `fail with`, and `load()`
 
 - **Records are the smallest thing a compiler needs.** A syntax tree needs nodes
-  with named parts, so Moth got `record with kind "set", name n`, `name of
+  with named parts, so Folio got `record with kind "set", name n`, `name of
   node` and `set name of node to ...`. A record is a JavaScript object with no
   prototype, so a field can be called anything, even `constructor`, and a
   misspelled field gets "did you mean". Both engines share the checks, and `is`
@@ -279,24 +279,24 @@ can't inject anything into the page.
   records taking 40% of its time. Now a record is made by `new Record()`, whose
   prototype is an empty object with no prototype of its own: any field name
   still works, and records with the same fields share a shape, so V8 reads them
-  fast. Reading a field skips the "is it really there" check, since no Moth value
+  fast. Reading a field skips the "is it really there" check, since no Folio value
   is `undefined` and nothing is inherited. Records got 2× faster on the JIT and
   the network went from 1.18 s to 0.62 s. Only the runtime changed, so the
-  generated JavaScript, and the compiler written in Moth that matches it,
+  generated JavaScript, and the compiler written in Folio that matches it,
   stayed the same.
 - **`fail with value`** stops the program with the value as its message and
-  keeps the value on the error. The compiler written in Moth uses it to report
+  keeps the value on the error. The compiler written in Folio uses it to report
   a mistake in the code it compiles: `fail with record with at token, reason
-  "..."`, which JavaScript turns back into a normal Moth error at that spot.
+  "..."`, which JavaScript turns back into a normal Folio error at that spot.
 - **`load(source)`** runs a program and hands its top-level variables to
-  JavaScript, with Moth functions as JavaScript functions. A failed call deep
+  JavaScript, with Folio functions as JavaScript functions. A failed call deep
   inside used to leave the JIT's call depth raised, so after a few thousand
   failed calls a short one was taken for runaway recursion. An error now resets
   the depth, since it ends every call in progress anyway.
 
-## 13. Self-hosting: Moth's compiler, in Moth
+## 13. Self-hosting: Folio's compiler, in Folio
 
-[`compiler.moth`](compiler.moth) is a second compiler for the language,
+[`compiler.folio`](compiler.folio) is a second compiler for the language,
 written in the language: a tokenizer, a recursive-descent parser that builds
 records, the scope rules, and a JavaScript writer. It writes exactly the
 JavaScript `jit.js` writes, and stops at the same mistakes with the same
@@ -307,27 +307,27 @@ messages and positions.
   made for `and`, how "did you mean" breaks a tie. That makes the JIT a precise
   spec, and the tests can compare whole programs with `===` instead of
   guessing what counts as the same.
-- **Bootstrapping.** `compiler.moth` compiled by the JIT compiles itself. The
+- **Bootstrapping.** `compiler.folio` compiled by the JIT compiles itself. The
   compiler that makes compiles it again, and the one after that. All three
   stages write the same 94 KB of JavaScript, so the compiler has reached a
-  fixed point. `moth bootstrap` runs it; each stage takes about 60 ms.
-- **The language changed to make this possible, not the compiler.** Moth has no
-  character codes, so the rules for reading text had to be ones Moth can
+  fixed point. `folio bootstrap` runs it; each stage takes about 60 ms.
+- **The language changed to make this possible, not the compiler.** Folio has no
+  character codes, so the rules for reading text had to be ones Folio can
   follow with comparisons alone. Every control character now counts as a space
   (as in Wirth's Pascal compilers), comments run to the end of the line, and
   text can't hold a control character other than tab. Before, `\s` and `.` in
   the tokenizer's regular expression brought in Unicode spaces and line ends
-  that Moth couldn't name. A character's width in columns (JavaScript counts
+  that Folio couldn't name. A character's width in columns (JavaScript counts
   an emoji as 2) is one comparison against the first and last characters past
   the 65,536 that fit in one unit.
 - **Numbers go out as written.** The JIT used to print a number literal with
   `JSON.stringify`, so matching it would have meant writing JavaScript's float
-  formatting in Moth. Now both compilers write the number as it appears in the
+  formatting in Folio. Now both compilers write the number as it appears in the
   source, without leading zeros (JavaScript reads `07` as octal). That turned up
   a real bug: `JSON.stringify` prints a number too big for a float as `null`,
   so a 400-digit literal was `nothing` on the JIT and `Infinity` on the VM.
 - **One rule to watch.** A name a function sets belongs to the top level when
-  the top level sets it too. So in `compiler.moth`, a name set at the top
+  the top level sets it too. So in `compiler.folio`, a name set at the top
   (`ats`, the tables) is never set inside a function, and the parser's helpers
   live inside `parse`, sharing its position the way the JavaScript parser's
   closures do.
@@ -337,14 +337,14 @@ messages and positions.
   fuzzed programs. Writing it also found a crash in the real parser: a line
   starting with `constructor` looked up the turtle's words in a plain object
   and found `Object.prototype.constructor`.
-- **Known gaps.** Moth sees text as whole characters, so it can't tell half of
+- **Known gaps.** Folio sees text as whole characters, so it can't tell half of
   an emoji (a lone surrogate, which no file can hold) from a whole one. Its
-  parser is 8 Moth calls deep per bracket and the JIT stops at 2,000 calls, so
+  parser is 8 Folio calls deep per bracket and the JIT stops at 2,000 calls, so
   it gives up at about 245 levels of brackets, where the JIT goes past 1,000.
 
-## 14. A neural network, written in Moth
+## 14. A neural network, written in Folio
 
-[`neural.moth`](neural.moth) is a test of the language as much as a demo: a
+[`neural.folio`](neural.folio) is a test of the language as much as a demo: a
 real program, with recursion, records that point at each other, and thousands
 of numbers, written the way a beginner would read it.
 
@@ -355,7 +355,7 @@ of numbers, written the way a beginner would read it.
   seen), then goes through them backwards, applying the chain rule for `+`,
   `*` and ReLU. The loss is micrograd's max-margin loss plus a little weight
   decay, so it needs no `exp`.
-- **Its own maths.** Moth has no random numbers, no sine and no rounding. The
+- **Its own maths.** Folio has no random numbers, no sine and no rounding. The
   program makes them: Park and Miller's random numbers (16807 × seed, mod
   2³¹−1, exact in a float because the product stays under 2⁵³), a whole-number
   part found one power of two at a time, and sine from 12 terms of its Taylor
@@ -375,12 +375,12 @@ of numbers, written the way a beginner would read it.
 
 ## 15. The WebAssembly engine
 
-[`wasm.js`](wasm.js) compiles Moth to WebAssembly, the third engine. Nothing in
+[`wasm.js`](wasm.js) compiles Folio to WebAssembly, the third engine. Nothing in
 between: [`wasm-binary.js`](wasm-binary.js) writes the binary format itself
 (LEB128 numbers, sections, the GC proposal's struct and array types), and keeps
-a readable listing as it goes, which `moth wasm` and the playground show.
+a readable listing as it goes, which `folio wasm` and the playground show.
 
-- **Moth's values, inside the module.** A number is a struct holding an f64,
+- **Folio's values, inside the module.** A number is a struct holding an f64,
   yes and no are `i31` values, nothing is null, and lists, records and
   functions are GC structs, so V8's garbage collector looks after them. A
   variable's slot starts as a shared `unset` struct, so "has no value yet"
@@ -433,7 +433,7 @@ a readable listing as it goes, which `moth wasm` and the playground show.
 
 - **`stop`** leaves the innermost loop. The VM pops the loop's own values off
   its stack (one for `repeat`, two for `for each ... from`) and jumps to its
-  end, the JIT writes `break` (every Moth loop is a JavaScript loop, and
+  end, the JIT writes `break` (every Folio loop is a JavaScript loop, and
   nothing else is), and WebAssembly branches out of the loop's block, counting
   how many blocks are open to know how far. A `stop` outside a loop, or in a
   function inside one, is a mistake the parser points at.
@@ -458,19 +458,19 @@ a readable listing as it goes, which `moth wasm` and the playground show.
 - **`use` is splicing, not modules.** A used file's statements join the
   program's top level, once, however many files use it. That keeps every back
   end unchanged: they still see one program. Tokens remember their file, so a
-  mistake in one says `math.moth, line 40`, and the CLI shows that file's
+  mistake in one says `math.folio, line 40`, and the CLI shows that file's
   line. Files that use each other in a circle are a mistake, found by keeping
   the files being read on a stack. The cost of splicing is a shared top level:
   a library's helper variables can collide with a program's, which `use ...
   as` (section 18) fixes without giving splicing up.
-- **The compiler written in Moth keeps up.** Each feature went into
-  `compiler.moth` too (with `stop`, `join`, `lowercase` and `position` now
-  Moth words, its own names for them changed), and it still compiles itself to
+- **The compiler written in Folio keeps up.** Each feature went into
+  `compiler.folio` too (with `stop`, `join`, `lowercase` and `position` now
+  Folio words, its own names for them changed), and it still compiles itself to
   exactly the JIT's JavaScript.
 
 ## 17. Reading handwriting
 
-- **No dataset.** The network learns from digits Moth draws: each digit as
+- **No dataset.** The network learns from digits Folio draws: each digit as
   pen strokes, in a few of the ways people write it, bent at random each time
   (tilted, slanted, stretched, shaky, strokes not quite meeting). Mouse
   drawings are strokes too, which is why this works at all.
@@ -482,7 +482,7 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   backwards, which is most of the speed: 3,000 pictures, 10 rounds, about 7
   seconds on WebAssembly. Training starts from a fixed seed, so running it
   again writes the same model file.
-- **Train once, read instantly.** The trained weights are printed as Moth
+- **Train once, read instantly.** The trained weights are printed as Folio
   (`set model_hidden_weights to list of ...`), with the training progress as
   comments, so the model is a file the reader can `use`, and each guess is
   just one pass through the network.
@@ -497,7 +497,7 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   `if it fails` starts, and how deep the calls and the value stack were, so a
   mistake deep inside calls unwinds to the right place. The JIT writes a
   JavaScript `try`/`catch` and puts its call-depth counter back. WebAssembly
-  uses its own exception handling, but only JavaScript can tell a Moth mistake
+  uses its own exception handling, but only JavaScript can tell a Folio mistake
   from going too deep, so a `catch_all` asks it, and passes on what isn't
   ours. Running past `maxSteps` is never caught: a loop that never ends must
   stop, `try` or not.
@@ -519,15 +519,15 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   each answer, each file read, and how each write went. The second run is
   served from the log until it catches up, so it reads what the first run
   read, even if a write changed the file since, and writes nothing twice. Where
-  the files are is the caller's choice: the folder `moth run` runs in, or files
+  the files are is the caller's choice: the folder `folio run` runs in, or files
   in memory that last one run in the playground.
-- **Modules are renaming.** `use "math.moth" as math` still splices the file
+- **Modules are renaming.** `use "math.folio" as math` still splices the file
   in, so no engine changed. But first, every name the file's top level makes
   becomes `math's sine`, which no name in a program can be. Renaming is
   careful about scope: inside the file, a function's inputs and the functions
   it makes itself hide the top level's names, so those are left alone. Using
   the same file as two names gives two separate copies. The JavaScript
-  version walks the syntax tree generically; the compiler written in Moth,
+  version walks the syntax tree generically; the compiler written in Folio,
   which can't list a record's fields, walks it kind by kind, and the tests
   check both rename alike.
 - **One rule for messages.** The checker warns by running the real checks on
@@ -561,24 +561,24 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   instructions, with a shift left only up to 21 places and right up to 31, so
   the answer is always exact; anything outside those edges goes to the shared
   code, and a test checks the engines agree right at each edge.
-- **`expect` and `moth test`.** `expect` keeps both sides of its comparison, so
+- **`expect` and `folio test`.** `expect` keeps both sides of its comparison, so
   a failure can say what they were: `expected 6 to be 5`. A test is a function
   named `test_...`, and each runs in a fresh run of the whole file, so one
   can't spoil another: the simplest isolation, which costs a run of the file's
   top level per test. The call that starts a test is left out of its trail.
-- **`moth fmt` asks the parser.** Indenting by keywords goes wrong in a
+- **`folio fmt` asks the parser.** Indenting by keywords goes wrong in a
   language where `to` starts a function and also ends `set x to`, and where
   `label -1` in a record is a negative number while `x - 1` is a subtraction.
   So the parser records how deep each statement starts, which bracket opens a
   call and which minus makes a number negative, and the formatter only lays
   out what it is told. It checks its own work: the tidied code must read
-  exactly the same, piece for piece, or nothing is written. Every `.moth` file
+  exactly the same, piece for piece, or nothing is written. Every `.folio` file
   here was already tidy, the 1,500-line compiler included, which says the
-  rules match how Moth was already being written.
-- **Tools as tests of the language.** Writing `picture.moth`,
-  `wordcount.moth` and `json.moth` found two precedence surprises in my own
+  rules match how Folio was already being written.
+- **Tools as tests of the language.** Writing `picture.folio`,
+  `wordcount.folio` and `json.folio` found two precedence surprises in my own
   code (`read` and `shift ... by` take everything up to the next comparison),
-  and the trail pointed straight at the second one. They also show a gap: Moth
+  and the trail pointed straight at the second one. They also show a gap: Folio
   has no word for asking what kind a value is, which is why the JSON tool
   reads JSON but doesn't write it.
 
@@ -589,7 +589,7 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   the grammar, every feature mixed in, with a sensible value in each variable
   to start and some lines wrapped in `try`, so they get further before a
   mistake. Each must run the same on all three engines, compile to the same
-  JavaScript in the compiler written in Moth, run the same once tidied, and
+  JavaScript in the compiler written in Folio, run the same once tidied, and
   get no false alarms from the checker. 12,000 of them found one bug, which
   every engine shared, so only tidying caught it: an `if` on the line after
   an `else` was read as `else if`, so ordinary nested code failed.
@@ -622,7 +622,7 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   (everything from outside is logged for exactly this), and only then the event
   that went too deep.
 - **Randomness comes from outside.** `random number from 1 to 6` asks whoever
-  runs the program for a number: `moth run` and a built page give real ones,
+  runs the program for a number: `folio run` and a built page give real ones,
   tests give a fixed sequence, and the playground picks a new start for each
   Run but keeps it while the program waits for an answer, so running it again
   up to the question gives the same numbers.
@@ -635,23 +635,23 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   the focus, so typing in the editor never reaches the game. Trying it found a
   bug the tests couldn't: the picture took the focus before it was shown, so
   it never had it, and no key arrived.
-- **`moth build --web`** makes one HTML file, about 70 KB for Snake: the VM,
+- **`folio build --web`** makes one HTML file, about 70 KB for Snake: the VM,
   the bytecode, and a short script that draws and sends events. Only the VM,
   because it's the smallest of the three and never too deep. `ask` uses the
   browser's own box. Text in the program can hold `</script>`, which would end
   the page's script early, so every one is written `<\/script>`, which reads
   the same to JavaScript.
 
-## 22. Moth without JavaScript: the Rust engine
+## 22. Folio without JavaScript: the Rust engine
 
 - **Why another engine.** Every engine so far runs inside a JavaScript engine,
-  so a bug in JavaScript could reach any Moth program. [`native/`](native/) is
-  Moth again, from the first character to the last instruction, in Rust with no
+  so a bug in JavaScript could reach any Folio program. [`native/`](native/) is
+  Folio again, from the first character to the last instruction, in Rust with no
   libraries: about 3,000 lines for the lexer, parser, compiler, virtual machine,
   turtle and command line.
 - **The same bytecode, so it can be checked.** The compiler makes exactly what
-  moth.js's does, instruction for instruction and constant for constant, so
-  `moth-native bytecode` and `moth bytecode` print the same text. That splits
+  folio.js's does, instruction for instruction and constant for constant, so
+  `folio-native bytecode` and `folio bytecode` print the same text. That splits
   every disagreement in two: different bytecode is a front-end bug, the same
   bytecode with a different result is a machine bug.
 - **Numbers, bit for bit.** Rust's shortest float printing picks the same digits
@@ -666,11 +666,11 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   (`"！" is less than "😀"` is no in JavaScript, though its code point is
   smaller); and every character's upper and lower case is checked against V8.
 - **Checked on 80,000 programs.** `native.test.js` sends programs to
-  `moth-native conform`, which runs each and reports what it said, drew,
+  `folio-native conform`, which runs each and reports what it said, drew,
   wrote and failed with, and its bytecode, for the test to hold up against the
   JavaScript VM. On every push: the tables, the examples, 5,000 broken and
   1,500 generated programs, the bundled programs, and the compiler written in
-  Moth compiling itself. Once, by hand: 80,000 more from other seeds, with no
+  Folio compiling itself. Once, by hand: 80,000 more from other seeds, with no
   difference. A one-character bug planted in an error message failed two tests.
 - **One bug found by timing.** Dictionaries first used a fast hash that only
   mixed the high bits, and a whole number's float has all its low bits zero, so
@@ -687,36 +687,36 @@ a readable listing as it goes, which `moth wasm` and the playground show.
   random numbers, arguments), so a WebAssembly runtime runs it with no
   JavaScript anywhere. The one change is the stack: a runtime may give
   WebAssembly as little as half a megabyte, so that build stops code nested
-  past 500 levels and values past 1,000 with Moth's own message, where the
+  past 500 levels and values past 1,000 with Folio's own message, where the
   stack would have run out with a crash. CI runs it in wasmtime, a runtime with
   no JavaScript in it. Node 24's own WASI runs it too, so the tests use that
   when wasmtime isn't there, but Node 22's crashed on it with a segfault inside
   Node, even for a two-line program: a reason to test in a real runtime.
-- **Moth builds itself without JavaScript.** compiler.moth gained a second back
-  end, about 500 lines of Moth, that writes the bytecode moth.js's compiler
+- **Folio builds itself without JavaScript.** compiler.folio gained a second back
+  end, about 500 lines of Folio, that writes the bytecode folio.js's compiler
   makes, in a text format both it and the Rust engine read and write
-  (`moth-native build`, `moth-native run x.mothc`). Its first run matched the
-  Rust compiler byte for byte on compiler.moth's own 283,823 bytes, and the
-  tests hold it to that on 630 programs and 1,500 broken ones. Then `moth-native
-  bootstrap` runs compiler.moth on the Rust engine to compile itself, runs what
-  that made to do it again, and again: Moth's compiler, written in Moth, run by
+  (`folio-native build`, `folio-native run x.folioc`). Its first run matched the
+  Rust compiler byte for byte on compiler.folio's own 283,823 bytes, and the
+  tests hold it to that on 630 programs and 1,500 broken ones. Then `folio-native
+  bootstrap` runs compiler.folio on the Rust engine to compile itself, runs what
+  that made to do it again, and again: Folio's compiler, written in Folio, run by
   Rust, building itself, with JavaScript nowhere in the loop.
-- **Numbers as written.** compiler.moth keeps number tokens as text, and the
+- **Numbers as written.** compiler.folio keeps number tokens as text, and the
   bytecode keeps each number constant as it was written (`const number 0x1F`),
   which both compilers have, so neither has to print a float the other can
-  match: Moth itself shows numbers to 15 digits (section 23), which would lose
+  match: Folio itself shows numbers to 15 digits (section 23), which would lose
   the rest. The reader makes the number from the text, `0x` and `0b` included,
   as JavaScript's `Number()` would.
-- **The old trap, once more.** In Moth a `set` inside a function changes a
+- **The old trap, once more.** In Folio a `set` inside a function changes a
   variable of the top level with the same name, and defining a function counts.
   The new back end's helper `here` would have been overwritten by `resolve`'s
   own `set here to scope`, as `place` was before: it's `code_length` instead.
 
 ## 23. Everyday numbers and data
 
-Seven features meant to make Moth better than Python at the things people
+Seven features meant to make Folio better than Python at the things people
 first program for: sums of money, trips, recipes, spreadsheets. Each runs on
-all four engines, the checker and the compiler written in Moth, and the tests
+all four engines, the checker and the compiler written in Folio, and the tests
 hold them to agreeing.
 
 - **Fix buttons.** A misspelled name or a symbol from another language already
@@ -771,9 +771,9 @@ hold them to agreeing.
   in vm.js and one in Rust work out the bars (the longest 200 long, each 30 wide)
   and draw boxes and text, rounded as every drawing is, so the pictures match
   byte for byte.
-- **Asking first.** `moth run` and `moth-native run` give a program a disk that
+- **Asking first.** `folio run` and `folio-native run` give a program a disk that
   asks before each file it reads or writes and each site it reads, the way
-  Deno does: a person at a terminal is asked; a script gets no, unless moth was
+  Deno does: a person at a terminal is asked; a script gets no, unless folio was
   started with `--allow-read`, `--allow-write`, `--allow-net` or `--allow-all`.
   A refusal is an ordinary mistake, so `try` catches it. Reading a site has to
   wait for it, since `read` gives its answer at once: Node fetches it in a
@@ -783,9 +783,9 @@ hold them to agreeing.
   `use` read any file without asking, and a mistake in it printed its lines, a
   secret's included: now every parser refuses a name that starts at the top of
   a disk or goes up out of a folder, and the command lines refuse a link that
-  leads out of the program's folder. `moth test`, and programs made by `moth
+  leads out of the program's folder. `folio test`, and programs made by `folio
   build`, didn't ask at all: now they do, sharing one set of answers for every
-  test, and `moth build` builds in the flags it's given (`disk.js`, which holds
+  test, and `folio build` builds in the flags it's given (`disk.js`, which holds
   all of this, is copied into the program it makes). `--allow-write` was
   everywhere or nowhere: now it can name folders, checked where each file
   really is, links followed, so `data/../notes.txt` or a link inside `data` that
@@ -807,8 +807,8 @@ hold them to agreeing.
   `get` then an `add`. Those leave the instructions after them where they are,
   so a jump into the middle still works, and each fails exactly where its part
   would. Calls got 1.9 times faster, loops 1.7, lists and bytes 1.4 to 1.6; the
-  bytecode itself didn't change, so it still matches compiler.moth's.
-- **Machine code by way of Rust.** `moth-native build --exe` (exe.rs) writes the
+  bytecode itself didn't change, so it still matches compiler.folio's.
+- **Machine code by way of Rust.** `folio-native build --exe` (exe.rs) writes the
   program as Rust and has rustc finish the job. It starts from the bytecode, not
   the program's text, so every name is already resolved and every instruction
   knows its place for a mistake. Each function's bytecode becomes a Rust
@@ -833,24 +833,24 @@ hold them to agreeing.
   of copying it: lists got twice as fast.
 - **Checked as everything else is.** A test builds one program holding 700
   compiled programs, which answers `conform`'s jobs as the engine does, and holds
-  each to the engine's output, drawings and mistakes, trail and all; Moth's own
+  each to the engine's output, drawings and mistakes, trail and all; Folio's own
   compiler, compiled to machine code, compiles itself to the same bytecode.
 - **What's still slow.** A call checks its inputs and finds its function by name
   each time, and lists, records and dictionaries are the engine's own values
   behind reference counts and borrow checks: about twice the Rust engine's speed,
   but behind V8, which inlines, guesses types and keeps objects in shapes. A big
-  program is slow to build: compiler.moth is 1.3 MB of Rust, and rustc takes
+  program is slow to build: compiler.folio is 1.3 MB of Rust, and rustc takes
   minutes over it.
 
-## 25. Machine code from Moth alone: machine.moth
+## 25. Machine code from Folio alone: machine.folio
 
 - **Why.** Every engine so far stands on JavaScript or on Rust, and the machine
-  code from §24 needs rustc. machine.moth is a compiler written in Moth that
-  writes the machine code itself, so once it takes the parts of Moth its own
-  code uses, it can compile itself and Moth needs neither.
-- **The same front.** It starts with `use "compiler.moth" as front`: the same
+  code from §24 needs rustc. machine.folio is a compiler written in Folio that
+  writes the machine code itself, so once it takes the parts of Folio its own
+  code uses, it can compile itself and Folio needs neither.
+- **The same front.** It starts with `use "compiler.folio" as front`: the same
   tokenizer, parser and scope rules, so a name means what it means in every
-  other engine, and a mistake in the program is reported as `moth run` would.
+  other engine, and a mistake in the program is reported as `folio run` would.
 - **Its own assembler.** An encoder for the x86-64 instructions it needs (one
   function for the ModRM byte, one for each instruction), labels, and 32-bit
   distances filled in once everything has its place. Code that only runs when
@@ -874,7 +874,7 @@ hold them to agreeing.
   with 1,280-bit whole numbers; and a number below 2^-1021, which has fewer
   digits than 15, as the shortest digits of the double nearest its 15 digits.
   That last one was found by testing against the engine: the first version gave
-  4.94065645841247e-324 where Moth says 5e-324.
+  4.94065645841247e-324 where Folio says 5e-324.
 - **Comparing numbers** to 15 digits: two numbers far apart compare as they are;
   two close ones as 17-digit decimals, which is exact, since different 15-digit
   numbers are always different doubles; and two below 2^-1021 as their doubles.
@@ -884,12 +884,12 @@ hold them to agreeing.
   256 MB stack of its own, and the `write` and `exit_group` system calls. Output
   waits in a buffer, and goes out after every line at a terminal.
 - **A trap.** A function in a file used `as front` that sets a name the program
-  also sets at the top level changes the program's: compiler.moth's `resolve`
-  has `set here to scope`, which replaced machine.moth's function `here`. It's
+  also sets at the top level changes the program's: compiler.folio's `resolve`
+  has `set here to scope`, which replaced machine.folio's function `here`. It's
   named `mark` now.
 - **Speed, and what's next.** Values wait on the stack and a comparison is a call
   into the runtime, so there's room left, but fib(30) takes 0.08 s from start to
-  finish, against 0.21 s with `moth run` and 0.42 s with `moth-native run`, and
+  finish, against 0.21 s with `folio run` and 0.42 s with `folio-native run`, and
   30 million rounds of a loop 0.16 s against 0.33 s and 1.05 s. Next it needs
   text, lists and records, which need memory that grows.
 - **Memory, text and lists.** A value that lives in memory is a pointer whose top
@@ -919,7 +919,7 @@ hold them to agreeing.
   what `fail with` gave, becomes the caught value, and the stack and frame go
   back to the try's. A `stop` or `return` inside one takes it off first.
 - **The helpers, and bytes.** `number of` reads text as JavaScript's `Number()`
-  reads Moth's numbers: up to 2^53 times or over a power of ten up to 10^22 is
+  reads Folio's numbers: up to 2^53 times or over a power of ten up to 10^22 is
   one exact step, and anything else is a first guess on the x87, at its 64-bit
   precision, then moved a step at a time with big whole numbers until it's the
   nearest double. Bytes read as text the way TextDecoder reads UTF-8, each
@@ -936,7 +936,7 @@ hold them to agreeing.
   so a trail names the function that ran, not the name it was called by.
 - **A garbage collector.** At first memory came from the system 64 MB at a time
   and was never given back, which was enough for programs that run and end,
-  but machine.moth compiling itself took 9 GB and ran out. Now blocks come in
+  but machine.folio compiling itself took 9 GB and ran out. Now blocks come in
   38 sizes, from 16 bytes to 32 KB, a 64 KB page holding blocks of one size and
   anything bigger getting whole pages; a bitmap beside them, a bit for each 16
   bytes, says where a block that's been handed out starts. After 64 MB of new
@@ -947,13 +947,13 @@ hold them to agreeing.
   that could be where a block is counts, a tagged value or a plain address, so
   the runtime's code needs no maps of where its pointers are, and nothing
   moves. Blocks that never hold values (a text's bytes, a dictionary's index)
-  aren't looked through. machine.moth now compiles itself in machine code in
+  aren't looked through. machine.folio now compiles itself in machine code in
   1.9 s and 535 MB, into exactly the bytes it makes on Node.js.
 - **The trap, a third time.** The first try at that ran out of memory even with
   the collector, which looked like the collector keeping what it shouldn't. It
-  was the test: the program that used machine.moth had top-level variables
+  was the test: the program that used machine.folio had top-level variables
   called `total` and `k`, and since a file used `as` a name shares its
-  functions' variables with the program's top level, machine.moth's own loops
+  functions' variables with the program's top level, machine.folio's own loops
   counted with them and never ended.
 - **Long lines.** Each place a mistake can happen kept its own copy of its line,
   for the excerpt under the message, so the trained handwriting network, whose
@@ -961,12 +961,12 @@ hold them to agreeing.
   megabytes and broke the compiler. Now a line and its marker are kept once,
   and each place keeps only how many of the marker's bytes go before the `^`:
   4,000 negative numbers on a line went from 53 MB of program to 419 KB. The
-  digit reader then runs as a program of its own, 3.5 times as fast as `moth
+  digit reader then runs as a program of its own, 3.5 times as fast as `folio
   run`, and training it 2.3 times.
 - **Upper and lower case.** JavaScript's toUpperCase and toLowerCase know all of
   Unicode, and machine code has nothing of the kind, so tools/case-tables.mjs
   asks Node.js what each character past ASCII becomes and writes the answers
-  into machine.moth as runs (a first character, a last, a step of 1 or 2 and
+  into machine.folio as runs (a first character, a last, a step of 1 or 2 and
   what to add): 197 for upper case and 184 for lower, the 102 that become more
   than one character (ß becomes SS), and the ranges of cased and
   case-ignorable characters. ASCII changes on the spot, anything else is found
@@ -976,7 +976,7 @@ hold them to agreeing.
   JavaScript engine; only a program that changes case carries the tables. The
   Rust engine's tables are a Unicode version behind, so it differs on 56.
 - **Files, questions and arguments.** `read`, `write`, `ask` and `arguments`
-  do what they do in a program `moth-native build --exe` makes, which `moth
+  do what they do in a program `folio-native build --exe` makes, which `folio
   run` matches. A file is read or written, or a site read, only once the
   program may: the `--allow` flags it was built with, kept in its data, say
   what it may do without asking; otherwise a person at a terminal is asked,
@@ -987,7 +987,7 @@ hold them to agreeing.
   system keeps for a file opened with `O_PATH`. On Windows a file's name
   becomes the path Rust's own library opens (`GetFullPathNameW`, then `\\?\`),
   so a name ending in `/` or `.` means the same as there. A file that can't be
-  read or written says what moth-native says: Node's words for a folder, a
+  read or written says what folio-native says: Node's words for a folder, a
   missing file and one the program may not have, and the system's own for the
   rest (`FormatMessageW`, or glibc's words on Linux). Input comes a line at a
   time through a buffer that keeps what came after the line, for `ask` and
@@ -999,58 +999,58 @@ hold them to agreeing.
   answered) sit among the collector's roots. It couldn't go online at first,
   so a site the program might read said it couldn't be reached; §33 is how it
   goes online now.
-- **moth.exe.** moth.moth is the command line, in Moth: `moth build file.moth`,
+- **folio.exe.** folio.folio is the command line, in Folio: `folio build file.folio`,
   with `--target` and the `--allow` flags. It reads the program, then every
   file a `use` line names, and the files those use, gives them all to
-  machine.moth's `compile_allowing`, and writes what comes back; a mistake is
-  shown as `moth run` shows it. Made into machine code with `--allow-read
+  machine.folio's `compile_allowing`, and writes what comes back; a mistake is
+  shown as `folio run` shows it. Made into machine code with `--allow-read
   --allow-write`, it builds itself into the bytes Node.js made it, in 2.8 s,
   and so does what that builds; a Linux one and a Windows one build each other
   byte for byte. It finds which system it's on by whether it can read
   /proc/version. On Linux, bytes that start like a Linux program are written
-  so they can run, as `moth build --exe` makes them.
-- **The trap, a fourth time.** The first moth.exe stopped after reading
-  machine.moth, sure compiler.moth wasn't there. Its top level counted through
+  so they can run, as `folio build --exe` makes them.
+- **The trap, a fourth time.** The first folio.exe stopped after reading
+  machine.folio, sure compiler.folio wasn't there. Its top level counted through
   the arguments with `cli_k`, so every function's `cli_k` was that one, and
   the function that reads a file's `use` lines counted with it too, up to
-  400,000. Everything moth.moth does is in functions now, and the test for
-  such names covers moth.moth.
-- **A trap, twice.** In Moth a `set` inside a function changes a top-level
+  400,000. Everything folio.folio does is in functions now, and the test for
+  such names covers folio.folio.
+- **A trap, twice.** In Folio a `set` inside a function changes a top-level
   variable of the same name, and a file used `as` a name shares its functions'
-  variables with the program's top level. A label called `here` in machine.moth
-  was overwritten by compiler.moth's `resolve`, and a label called `bits_made`
-  overwrote machine.moth's own marker, which showed only when one compiler made
+  variables with the program's top level. A label called `here` in machine.folio
+  was overwritten by compiler.folio's `resolve`, and a label called `bits_made`
+  overwrote machine.folio's own marker, which showed only when one compiler made
   two programs. A test now checks that no function sets such a name.
 - **Checked.** 400 random programs made from what it takes, 120 written for what's
   easy to get wrong, and every test program and 300 broken ones it can take, on
   the system the tests run on, against the JavaScript engine's output, mistakes,
   trails and exit codes; and programs that read, write, ask and take arguments,
-  built with and without `--allow` flags, against `moth run` and `moth-native
+  built with and without `--allow` flags, against `folio run` and `folio-native
   run`, each in a folder of its own, down to the files they leave there.
 
 ## 26. Standalone, and what was dropped
 
-- **Why.** Once moth.exe built itself, the Rust engine and the Node.js command
-  line were two more copies of Moth to keep in step, and neither was needed to
+- **Why.** Once folio.exe built itself, the Rust engine and the Node.js command
+  line were two more copies of Folio to keep in step, and neither was needed to
   make or run a program any more. Both went in one change; the JavaScript
   engine stayed, because the playground, its debugger, drawing, apps and the
   handwriting demo run on it.
 - **What went.** `native/` (the Rust engine, its WebAssembly build and its
-  machine code through `rustc`), `cli.js` (`moth run`, `test`, `fmt`, `check`,
+  machine code through `rustc`), `cli.js` (`folio run`, `test`, `fmt`, `check`,
   the shell, and builds to JavaScript and web pages), `disk.js` (its files and
   permissions) and their tests. They're all at v1.5.1 for anyone who wants them.
 - **What the tests lean on now.** Machine code is held to the JavaScript
-  engine, as before. The two tests that ran `moth build --exe` and `moth run` as
-  processes now build moth.exe from the source, once, and have it build the
+  engine, as before. The two tests that ran `folio build --exe` and `folio run` as
+  processes now build folio.exe from the source, once, and have it build the
   programs; for the program that reads, writes, asks and takes arguments under
-  six sets of `--allow` flags, what `moth run` did was written down first, on
-  Windows from `moth run` itself and on Linux from its machine code, which CI
-  had held to `moth run` there: the two were the same, so the test checks both
-  systems against one record. Tidying and Moth's own tests, which CI ran with
-  `moth fmt --check` and `moth test`, are in moth.test.js through `format()` and
-  `test()`, for every Moth file here, tools/ and apps/ included.
-- **The first moth.exe.** `node bootstrap.mjs` makes it from the source with
-  the JavaScript engine, the same bytes moth.exe makes of itself; the release
+  six sets of `--allow` flags, what `folio run` did was written down first, on
+  Windows from `folio run` itself and on Linux from its machine code, which CI
+  had held to `folio run` there: the two were the same, so the test checks both
+  systems against one record. Tidying and Folio's own tests, which CI ran with
+  `folio fmt --check` and `folio test`, are in folio.test.js through `format()` and
+  `test()`, for every Folio file here, tools/ and apps/ included.
+- **The first folio.exe.** `node bootstrap.mjs` makes it from the source with
+  the JavaScript engine, the same bytes folio.exe makes of itself; the release
   starter-1 has one for Windows and one for Linux.
 
 ## 27. The naming trap, fixed
@@ -1058,9 +1058,9 @@ hold them to agreeing.
 - **The trap.** A `set` in a function changed a top-level variable of the same
   name, even one the top level only set further down the file, and a file used
   `as` a name shared its functions' variables with the program's top level. It
-  bit four times (sections 22 and 25): machine.moth's `here`, overwritten by
-  compiler.moth's `set here to scope`; a test driver whose `total` and `k` made
-  machine.moth's loops count forever; and moth.moth's `cli_k`, which a function
+  bit four times (sections 22 and 25): machine.folio's `here`, overwritten by
+  compiler.folio's `set here to scope`; a test driver whose `total` and `k` made
+  machine.folio's loops count forever; and folio.folio's `cli_k`, which a function
   that reads files counted up to 400,000. Each time the fix was a new name, and
   a test that looked for clashes.
 - **A function changes only what's made above it.** When a function sets a name,
@@ -1085,31 +1085,31 @@ hold them to agreeing.
   makes: a name is made above a function when fewer functions come before it
   than before the function. A function's own name counts from its `to` line,
   and a try's `with` name from its `if it fails`. The JavaScript side finds a
-  function by its code; compiler.moth, which can't tell two equal lists apart,
+  function by its code; compiler.folio, which can't tell two equal lists apart,
   numbers each function as it parses it. Both give every variable the same slot,
-  and the tests hold compiler.moth to the JIT, byte for byte, as before.
-- **Two copies in machine code.** machine.moth found each top-level function by
+  and the tests hold compiler.folio to the JIT, byte for byte, as before.
+- **Two copies in machine code.** machine.folio found each top-level function by
   the line and column of its `to`, which two copies of one file share, so a file
   used as two names lost one copy's functions and the build stopped. It goes by
   the parser's number for each function now, and a test builds two copies.
 - **What changed.** One test program said `1` and now stops: f sets `x`, the top
   level calls f, says `x`, and only then sets it. f's `x` is its own, so `say x`
-  finds the top level's, which has no value yet. Of everything written in Moth
-  here, only tools/picture.moth had functions (`whole` and `escape`) that set a
+  finds the top level's, which has no value yet. Of everything written in Folio
+  here, only tools/picture.folio had functions (`whole` and `escape`) that set a
   name the top level makes below them, its loop's `n`; nothing relied on it, and
   the picture is the same. Of the 1,500 programs the tests generate, 255 now
   give a function a variable of its own where it used to change the top
   level's, as their functions come before most of the top level's code; the
-  engines and compiler.moth agree on every one, and machine code on the 10 of
+  engines and compiler.folio agree on every one, and machine code on the 10 of
   its own 400 that changed. The self-compiling test's driver counts with `total`
-  and `k` again, made before it uses machine.moth, and the test that looked for
-  clashes between files now only looks inside machine.moth and moth.moth, where
+  and `k` again, made before it uses machine.folio, and the test that looked for
+  clashes between files now only looks inside machine.folio and folio.folio, where
   a function setting a top-level name would still be a mistake.
 - **What it costs.** A variable of a function in a file used as `math` shows as
   `math's x` in a mistake, as the file's own top-level names already did. A hint
   in the checker for each function that changes a top-level variable was weighed
-  and left out: snake.moth alone would get 16, for game state that's meant to
-  change, and neural.moth and json.moth 8 each.
+  and left out: snake.folio alone would get 16, for game state that's meant to
+  change, and neural.folio and json.folio 8 each.
 
 ## 28. Drawing, apps and the pad in machine code: a window on Windows
 
@@ -1121,7 +1121,7 @@ hold them to agreeing.
   made smaller when a drawing reaches past 240 from the middle but never for an
   app, lines with round ends, text with its baseline on the point. GDI+ draws
   it, smoothed, because it ships with every Windows and needs no font or image
-  code of Moth's own; text is Segoe UI, which is what the playground's
+  code of Folio's own; text is Segoe UI, which is what the playground's
   system-ui is on Windows.
 - **Colours as a canvas reads them.** The CSS names, all 148, are a table in
   the program, and `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa` are read in the
@@ -1139,11 +1139,11 @@ hold them to agreeing.
   is the one the program ends with. The end of a program comes back to the
   window's code once more when that happens, so it remembers it has already
   begun: without that, the first try opened a second window inside the first,
-  and with `MOTH_EVENTS` it went through the events again, for ever.
+  and with `FOLIO_EVENTS` it went through the events again, for ever.
 - **The pad.** `ask` with a question that starts with "Draw", as the
   playground decides it, opens a 440 by 440 pad at a terminal. Each stroke
   comes back as the playground's pad gives it: points from 0 to 100, y going
-  down, none closer than 1.5 to the one before, so handwriting.moth reads the
+  down, none closer than 1.5 to the one before, so handwriting.folio reads the
   same text from both. Enter answers, Escape wipes the pad, and closing it ends
   the program. Away from a terminal, the question is asked as any other is.
   Only a program that may ask for a drawing gets the pad: one whose questions
@@ -1151,27 +1151,27 @@ hold them to agreeing.
 - **Only a program that needs it pays.** The window's code, GDI+ and the
   colour table go into a Windows program that draws, sets up an app, or may
   ask for a drawing. Any other is the same bytes as before.
-- **How it's tested.** With `MOTH_PICTURE=file.bmp`, the window isn't opened:
-  the program draws into that file instead, after the events `MOTH_EVENTS`
+- **How it's tested.** With `FOLIO_PICTURE=file.bmp`, the window isn't opened:
+  the program draws into that file instead, after the events `FOLIO_EVENTS`
   lists (`key left;click 10 20;drag 11 21;tick 0`). The tests check the colour
   of the picture at chosen points, and that an app given the same events says
   and fails exactly as the JavaScript engine's `app.send` makes it. The window
   itself was tried by sending it Windows' own mouse and key messages and
-  reading back what it showed: the paint app, a timer, and handwriting.moth,
+  reading back what it showed: the paint app, a timer, and handwriting.folio,
   which read a drawn 1 and a drawn 2.
 - **Linux has no window yet.** A program there draws into the list and shows
   nothing, and an app sets up and ends.
 
-## 29. The moth command, complete
+## 29. The folio command, complete
 
-- **What it was missing.** moth.exe could only `moth build`: a program's
+- **What it was missing.** folio.exe could only `folio build`: a program's
   mistakes went to the normal output, it couldn't end with a code of its own,
   and running, tidying and checking a program had gone with the Node.js command
-  line in 1.6. All four needed something Moth itself couldn't do, so the
+  line in 1.6. All four needed something Folio itself couldn't do, so the
   language grew first.
-- **Two ways to end, in words Moth already has.** A new reserved word breaks
+- **Two ways to end, in words Folio already has.** A new reserved word breaks
   every program that used it as a name, so both phrases are built from words
-  Moth already keeps: `say "oops" to the error output` is `say` with a target,
+  Folio already keeps: `say "oops" to the error output` is `say` with a target,
   the way `write ... to` has one, and `stop the program with 2` is `stop`
   followed by words that could never have meant anything else (`stop` alone
   still only leaves a loop, and `the` and `program` are still names). The
@@ -1185,11 +1185,11 @@ hold them to agreeing.
   `set code to run program ...` instead. `remove the file "old.txt"` is
   `remove`, which already removes a dictionary's keys, with `the file` after
   it. Every phrase works the same in all three JavaScript engines, in the
-  compiler written in Moth (whose JavaScript and bytecode are still byte for
-  byte what moth.js makes), and in machine code; in the playground and the
+  compiler written in Folio (whose JavaScript and bytecode are still byte for
+  byte what folio.js makes), and in machine code; in the playground and the
   tests the error output is shown the way a mistake is, an exit code just ends
   the run, and starting a program is a mistake that says only a program
-  `moth build` makes can.
+  `folio build` makes can.
 - **In machine code.** The error output goes out at once, after whatever the
   normal output has waiting, so the two stay in the order they were said.
   `stop the program` flushes and ends through one ending the runtime shares
@@ -1205,39 +1205,39 @@ hold them to agreeing.
 - **Asked for, like a file.** Starting a program is a fourth thing a program
   may do, beside reading a file, writing one and going online: `--allow-run`
   (Deno's name) lets it without asking, `--allow-all` covers it, and otherwise
-  a person at a terminal is asked "moth: let this program run 'git'?" once for
+  a person at a terminal is asked "folio: let this program run 'git'?" once for
   each program, or for all of them with `a`. Away from a terminal the answer is
   no, and the refusal is a mistake a `try` can catch. `--allow-run` names
-  nothing: a program may start programs, or it may not. moth.exe itself is
-  built with it, since `moth run` starts what it built.
-- **`moth run`.** It builds the program into a file beside its source
+  nothing: a program may start programs, or it may not. folio.exe itself is
+  built with it, since `folio run` starts what it built.
+- **`folio run`.** It builds the program into a file beside its source
   (`hello-run.exe`, or `hello-run` on Linux, with `./` in front when the source
   has no folder, so the system looks for it there and nowhere else), starts it
   with whatever was written after the file, waits, removes the file, and ends
   with the program's number. A number no system can end with (Windows gives a
   crash a huge one) becomes 1.
-- **`moth tidy`.** `format()` in moth.js, in Moth. It needed two things from
+- **`folio tidy`.** `format()` in folio.js, in Folio. It needed two things from
   the parser, which only the parser knows: how deep in blocks each statement
   starts, and which pieces are written with no space after them (a negating
-  minus, a call's bracket). compiler.moth's parser now writes both into the
-  `reading` record when it's asked to, as moth.js's does, and machine.moth
-  hands them to the command line. The rest is in moth.moth: one line's pieces
+  minus, a call's bracket). compiler.folio's parser now writes both into the
+  `reading` record when it's asked to, as folio.js's does, and machine.folio
+  hands them to the command line. The rest is in folio.folio: one line's pieces
   as they were written, counted in the columns the parser counts, then the
-  lines joined the one way Moth writes them. After tidying, the pieces are
-  read again and must be the same pieces in the same order, as moth.js checks;
+  lines joined the one way Folio writes them. After tidying, the pieces are
+  read again and must be the same pieces in the same order, as folio.js checks;
   a mistake in the code is a mistake, and the file is left alone.
-- **`moth check`.** checker.js finds two kinds of problem: what the scope rules
+- **`folio check`.** checker.js finds two kinds of problem: what the scope rules
   know (a name nothing ever sets, a line that can never run, a name set or made
   and never used), and what its types know, which it gets by trying an
-  operation on sample values of the types it worked out — every one of Moth's
+  operation on sample values of the types it worked out — every one of Folio's
   operations, through the same code the VM runs. The first kind is the scope
-  rules compiler.moth already has, so `moth check` does those, in the checker's
+  rules compiler.folio already has, so `folio check` does those, in the checker's
   words (the same `undefined_message`, with the same "Did you mean") and in the
-  checker's order. The second kind would mean writing all of vm.js in Moth
+  checker's order. The second kind would mean writing all of vm.js in Folio
   again; the playground's Problems pane has it. A call to a name nothing sets
   doesn't look at what it was given, as the checker doesn't, so the same
   "never used" warnings come out.
-- **`expect` in machine code.** It was the last thing `moth build` turned away.
+- **`expect` in machine code.** It was the last thing `folio build` turned away.
   It is the comparison the engines make, and when it doesn't hold, their
   message, which says what each side was: both values wait on the stack, so the
   message can show them after the comparison has used them, and the mistake
@@ -1254,51 +1254,51 @@ hold them to agreeing.
   whole, the same bytes on both systems. What came goes into a block of its own
   for each output, which doubles as it fills, and both blocks are among the
   collector's roots, since nothing else holds them.
-- **`moth test`.** The file is built once, with lines at its end that call the
+- **`folio test`.** The file is built once, with lines at its end that call the
   test whose name the program is started with, and then started once for each
   test: a run of its own, so one test can't spoil another, which is what
-  moth.js's `test()` gives by running the file again for each test. What it
+  folio.js's `test()` gives by running the file again for each test. What it
   says is kept, so a test that failed can show the mistake, the calls that led
   there and its own output under it, indented, exactly as the Node.js command
   line showed them. The call the runner adds comes after the file's own lines,
   so the one trail line pointing past them is dropped, as `test()` drops it. A
   file with no `test_` functions is one test itself, named after the file.
-- **Checked.** Every command runs as a process against what moth.js does:
-  `moth tidy` on every Moth file here and on programs broken on purpose, each
+- **Checked.** Every command runs as a process against what folio.js does:
+  `folio tidy` on every Folio file here and on programs broken on purpose, each
   tidied to exactly the bytes `format()` makes and tidy again the second time;
-  `moth check` against `check()` with its type warnings taken away, word for
-  word and in order; `moth run` passing arguments, input, output and the number
-  a program ended with through, and leaving nothing behind; `moth test` against
-  `test()`, tick for tick and line for line, with tools/json.test.moth passing
-  under moth.exe; and a program that starts another, with and without
+  `folio check` against `check()` with its type warnings taken away, word for
+  word and in order; `folio run` passing arguments, input, output and the number
+  a program ended with through, and leaving nothing behind; `folio test` against
+  `test()`, tick for tick and line for line, with tools/json.test.folio passing
+  under folio.exe; and a program that starts another, with and without
   `--allow-run`. The phrases themselves are held to the three JavaScript
-  engines, the compiler written in Moth, and machine code, on Windows and on
+  engines, the compiler written in Folio, and machine code, on Windows and on
   Linux.
-- **What's left.** `moth test` needs its files named: machine code can't look
-  through a folder yet, so it doesn't find every `.test.moth` file itself.
-  `moth check` leaves out the checker's type warnings. And `moth build` still
+- **What's left.** `folio test` needs its files named: machine code can't look
+  through a folder yet, so it doesn't find every `.test.folio` file itself.
+  `folio check` leaves out the checker's type warnings. And `folio build` still
   turns away units, tables, `random number` and `draw chart of` (random numbers
-  came next, §30, and the rest after them, §31, with `moth test` finding its
+  came next, §30, and the rest after them, §31, with `folio test` finding its
   files).
 
-### Asking which Moth this is
+### Asking which Folio this is
 
 - **Why.** A bug report or an install check needs the release version of the
-  program actually running. `moth --version` and `moth version` each say one
-  line, `moth MAJOR.MINOR.PATCH`, on standard output and end with 0.
+  program actually running. `folio --version` and `folio version` each say one
+  line, `folio MAJOR.MINOR.PATCH`, on standard output and end with 0.
 - **One source, carried along.** `package.json` already has the release
   version. bootstrap.mjs includes that file in the executable, and cli_main
   reads it only for a version command. Built-in files are read before disk
-  files, so an installed moth needs no manifest beside it, and another
-  project's package.json cannot change its answer. Building moth with itself
-  includes package.json too, just as it includes moth-debugger.moth.
+  files, so an installed folio needs no manifest beside it, and another
+  project's package.json cannot change its answer. Building folio with itself
+  includes package.json too, just as it includes folio-debugger.folio.
 - **Arguments.** Only a version command on its own takes this path. Extra
   arguments use the usual wrong-usage message and exit code 2. The existing
-  `moth build --version` flag still sets the built program's version.
+  `folio build --version` flag still sets the built program's version.
 - **Tested.** machine.test.js runs both commands from a renamed copy in a
   folder without the source or manifest, then with a different manifest and
   invalid JSON. It checks exact output, empty standard error and exit code 0,
-  rejects extra arguments, and checks that moth built by itself has the same
+  rejects extra arguments, and checks that folio built by itself has the same
   bytes and reports the release version away from the source folder.
 
 ## 30. Random numbers in machine code
@@ -1309,22 +1309,22 @@ hold them to agreeing.
   `low + floor(r * (high - low + 1))`. `r` comes from the same small generator
   the engines use when they aren't given real randomness (mulberry32), worked
   out in 32-bit steps, so a seed gives exactly the same numbers everywhere.
-- **Where they start.** If `MOTH_SEED` is set to a whole number, they start
+- **Where they start.** If `FOLIO_SEED` is set to a whole number, they start
   there, which is how the tests compare machine code with the JavaScript
   engine: both start from 1. Otherwise they start from the processor's cycle
   count, so each run of a game is different. That's random enough for games
   and dice, not for secrets.
 - **Only a program that uses it pays.** The generator, and on Windows the
-  import it needs to read `MOTH_SEED`, go only into programs with a
-  `random number`. With it, apps/snake.moth builds into a program of its own
+  import it needs to read `FOLIO_SEED`, go only into programs with a
+  `random number`. With it, apps/snake.folio builds into a program of its own
   and plays in the window.
 
-## 31. The rest of Moth in machine code
+## 31. The rest of Folio in machine code
 
-- **What was left.** `moth build` turned away amounts with units, tables and
+- **What was left.** `folio build` turned away amounts with units, tables and
   `draw chart of`; the window didn't read `rgb(...)` or `hsl(...)`; and
-  `moth test` needed its files named, because a program in machine code
-  couldn't look in a folder. Now machine code takes every phrase Moth had
+  `folio test` needed its files named, because a program in machine code
+  couldn't look in a folder. Now machine code takes every phrase Folio had
   before `the time`, `wait`, `in order`, `save` and `load` came, and each of
   these says, fails and ends exactly as the JavaScript engine does.
 - **An amount is a value of its own.** `5 km` is 16 bytes, the number and which
@@ -1364,19 +1364,19 @@ hold them to agreeing.
   units, each part held to its range and rounded, and `hsl` worked out as
   Chrome works it out. White space either side of any colour is let go, as CSS
   lets it go.
-- **Looking in a folder, in words Moth already has.** `read the folder "tests"`
-  gives the names of what's in a folder, in Moth's order for text, a folder's
+- **Looking in a folder, in words Folio already has.** `read the folder "tests"`
+  gives the names of what's in a folder, in Folio's order for text, a folder's
   name with `/` after it, so `folder + name` is the path either way, and a
   program can tell what to go into. It is `read`, followed by words that could
   never have meant anything else after it, as `remove the file` is: `the` and
   `folder` are still names. It works in every engine, through whatever holds
   the files (in memory, the files' names are the folders), in the compiler
-  written in Moth, the checker and the moth command's checking, and in machine
+  written in Folio, the checker and the folio command's checking, and in machine
   code with `FindFirstFileW` on Windows and `getdents64` on Linux, the names
   sorted by a merge sort. It is reading, so it needs `--allow-read` or a yes,
   as reading a file does.
-- **`moth test` on its own.** It finds the tests as the Node.js command line
-  did: every file ending in `.test.moth` here and in the folders inside, but
+- **`folio test` on its own.** It finds the tests as the Node.js command line
+  did: every file ending in `.test.folio` here and in the folders inside, but
   not hidden ones or `node_modules`, each folder's in turn, sorted as
   JavaScript's `localeCompare` sorts them (case after the letters themselves,
   marks before digits before letters), with `\` between folders on Windows.
@@ -1385,15 +1385,15 @@ hold them to agreeing.
   holds to the JavaScript engine, mistakes included, on Windows and on Linux;
   tables and folders are read from real files in a folder of their own;
   colours and charts are checked pixel by pixel in pictures drawn through
-  `MOTH_PICTURE`; and `moth test` with no files is held to the old command
+  `FOLIO_PICTURE`; and `folio test` with no files is held to the old command
   line's own way of finding them.
 
 ## 32. Faster machine code
 
 - **Where the time went.** Before, every variable lived in memory, every value
   went through the value stack, and every `+` checked both sides were numbers.
-  On the counting loop that made Moth 8 times as slow as C.
-- **What the compiler knows.** As machine.moth writes a function's code, it
+  On the counting loop that made Folio 8 times as slow as C.
+- **What the compiler knows.** As machine.folio writes a function's code, it
   keeps what each variable is sure to hold: a whole number, a number, or at
   least a value. It works this out in the order the code runs: a branch keeps
   what both sides agree on, a loop or a `try` only what stays true all through
@@ -1423,13 +1423,13 @@ hold them to agreeing.
 ## 33. Going online in machine code
 
 - **What was missing.** A program built with `--allow-net` got past the
-  question, then said it couldn't reach the site: machine.moth had no way to
+  question, then said it couldn't reach the site: machine.folio had no way to
   connect. Now `read "https://..."` and `read bytes` fetch the page, on Windows
   and on Linux, over http and https.
 - **The same as before.** Both old command lines went online: disk.js fetched
   the page in a second Node, and the Rust engine ran `curl`. Where they
-  differ, machine code does what the Rust engine did, since `moth run` is
-  machine code now and keeps moth-native's words:
+  differ, machine code does what the Rust engine did, since `folio run` is
+  machine code now and keeps folio-native's words:
   - the page as the site sent it. Its text is read as a file's is, as UTF-8
     with U+FFFD for what isn't; its bytes as they came.
   - no move made by itself. An answer from 300 to 399 that says where to go is
@@ -1446,7 +1446,7 @@ hold them to agreeing.
     it to Node's fetch, which waits minutes.
   - `--allow-net=example.com` allows that host exactly, with any port or only
     the one named, as the Rust engine had it. disk.js allowed any host with the
-    name inside it, `example.com.evil.net` too. machine.moth already did this.
+    name inside it, `example.com.evil.net` too. machine.folio already did this.
   - what went wrong: "couldn't reach it (...)", with curl's words inside. The
     Rust engine passed on whatever curl printed, which changes with curl's
     version and holds times ("after 3 ms"), and for a bad certificate ran to
@@ -1467,17 +1467,17 @@ hold them to agreeing.
   changed. A Location that isn't a whole address is made one from the address
   it came from (`//host...`, `/path`, `?query`, or a name in the same folder),
   as curl makes `%{redirect_url}`.
-- **Linux: curl.** A program machine.moth makes is static: it calls no
+- **Linux: curl.** A program machine.folio makes is static: it calls no
   library, so there is no TLS library to call, and TLS written by hand is not
   worth the risk. So it starts the system's `curl` the way `run program`
   starts a program: found in PATH, then `fork` and `execve`, its arguments
   given straight to it with no shell between, the page and curl's mistakes
   read through two pipes as `keeping its output` reads them. curl gets `-q`, so
   a `.curlrc` can't make it follow moves itself, past the questions; `-sS`;
-  `-g`, so `[` and `{` in an address are only characters; `-A moth`;
+  `-g`, so `[` and `{` in an address are only characters; `-A folio`;
   `--max-time 60`; `--proto =http,https`; and `-w`, which writes the answer's
   number and where it moves to after the page. Its exit code says what went
-  wrong. With no curl: "couldn't reach it (on Linux a Moth program goes online
+  wrong. With no curl: "couldn't reach it (on Linux a Folio program goes online
   through curl, and there is no program called 'curl')".
 - **One address, read one way.** A `\` before any `?` or `#` is a `/`, as a
   browser reads it, so the host the `--allow-net` names were checked against is
@@ -1487,13 +1487,13 @@ hold them to agreeing.
 - **Only a program that reads.** Any name a program reads might be a site's
   address, so a program with `read` or `read bytes` in it has all of this, and
   on Windows imports WINHTTP.dll. A program that never reads has none of it,
-  and is the same bytes as before. moth.exe reads files, so it has it too.
+  and is the same bytes as before. folio.exe reads files, so it has it too.
 - **Checked.** A test starts a server of its own on 127.0.0.1, over plain
   http, so nothing needs the internet: text with a broken UTF-8 byte in it,
   bytes, moves (to a path, to a name in the same folder, to another host, in a
   loop, to ftp:), a 3xx that says nowhere, 404, 500, an empty 204, a 3.2 MB
   page, a port nobody listens on, and two addresses that can't be, with seven
-  sets of `--allow` flags, and through `moth run`. Another test checks that a
+  sets of `--allow` flags, and through `folio run`. Another test checks that a
   program that never reads is the same bytes, and imports no WinHTTP. The same
   program built for Linux said the same, against the same answers, in WSL. By
   hand, on both systems: https://example.com, a 404, http://github.com moving
@@ -1518,7 +1518,7 @@ hold them to agreeing.
   it was, and a line that only looks like a phrase (`wait 5`, `save 5`) is a
   call again. With no function of that name, its mistake says what the phrase
   needs (`to wait, say how long: 'wait 2 seconds'`), instead of guessing at a
-  Moth word that's spelled alike.
+  Folio word that's spelled alike.
 - **The clock comes from outside, like random numbers.** A run is given a
   clock: what time it is where the program runs, the milliseconds since it
   started, and a way to wait. Unless it's given a real one, a run gets one that
@@ -1526,7 +1526,7 @@ hold them to agreeing.
   move it on, so every engine and every test says the same times. The
   playground gives the real one, and shows what was said and drawn before each
   wait; run() keeps what the clock said, so a run handed over to the VM gets
-  the same times and doesn't wait again. In machine code, MOTH_NOW (milliseconds
+  the same times and doesn't wait again. In machine code, FOLIO_NOW (milliseconds
   since 1970, as the local time) does what the made-up clock does, and is how
   the tests hold machine code to the engines.
 - **The time where it runs.** The JavaScript engines take the local time from
@@ -1544,7 +1544,7 @@ hold them to agreeing.
   computer's language is, unlike `localeCompare`. Equal ones keep their order,
   which machine code gets with a merge sort; `in reverse order` keeps it too.
   A list that mixes numbers and text is a mistake, not a guess.
-- **Saving writes a value as Moth shows it.** `save` writes what `say` would
+- **Saving writes a value as Folio shows it.** `save` writes what `say` would
   show for the value inside a list (text in quotes, records as `(record with
   ...)`), and `load` reads exactly that back, with spaces and new lines allowed
   between parts. So a saved file is readable, the format needs no explaining,
@@ -1594,12 +1594,12 @@ hold them to agreeing.
   window, whose closing ends them too. Only a program that makes a sound
   imports winmm.dll. Away from a terminal it's silent, as it opens no window
   there, and Linux has no sound a program of its own can count on, so there it
-  makes none. MOTH_SOUND=file.wav writes every sound into that WAV file
+  makes none. FOLIO_SOUND=file.wav writes every sound into that WAV file
   instead, with its sizes put right after each sound, so the file is whole
   even when the program stops with a mistake.
 - **Tested.** Every way of writing a note, and every mistake, the same on all
-  three engines, in the checker and in the compiler written in Moth; a hand-over
-  to the VM; and 19 programs whose sounds machine code writes with MOTH_SOUND,
+  three engines, in the checker and in the compiler written in Folio; a hand-over
+  to the VM; and 19 programs whose sounds machine code writes with FOLIO_SOUND,
   byte for byte the WAV of the sounds the JavaScript engine played, up to the
   same mistakes, on Windows and on Linux, with each note's pitch measured where
   its samples cross zero, and an app's handlers making theirs as its events
@@ -1611,7 +1611,7 @@ hold them to agreeing.
   `when the button "Start" is clicked` are the owner's own. A text box follows
   them: `draw text box "Name" at 0, 50`, `when enter is pressed in the text box
   "Name" with words`, `the text in the text box "Name"`, and `clear the text box
-  "Name"`, which empties it. Every one starts with a word Moth already keeps
+  "Name"`, which empties it. Every one starts with a word Folio already keeps
   (`draw`, `when`, `clear`) or is a run of words that meant nothing before:
   `draw button "Start"` was a mistake (a value can't follow `button`), and so
   were `draw text box`, `clear the` and `the text in the text box`. So `button`,
@@ -1640,7 +1640,7 @@ hold them to agreeing.
   nothing more. The letters themselves come from a new kind of event, `type`,
   which hosts send for each character typed, as it was typed (`A`, not `a`),
   after the key's own event: `app.send("type", ["A"])` in JavaScript, WM_CHAR
-  in the window, `type hello` in MOTH_EVENTS. A box holds up to 40 letters;
+  in the window, `type hello` in FOLIO_EVENTS. A box holds up to 40 letters;
   more are dropped, and so are control characters. The cursor is always at the
   end: there are no arrow keys inside a box, which keeps it to one rule.
 - **The text outlives the picture.** Apps draw their picture again after each
@@ -1651,7 +1651,7 @@ hold them to agreeing.
 - **Where the rules live.** One place for the JavaScript engines: the Turtle in
   vm.js, which already sees everything drawn, keeps the buttons and boxes since
   the last `clear`, the texts and the focus, and `route()` decides where each
-  event goes; moth.js's `app.send` asks it first. machine.moth does the same
+  event goes; folio.js's `app.send` asks it first. machine.folio does the same
   in its runtime. A JavaScript run handed over to the VM in the middle of an
   app replays the events, not only the handlers they ran, so the VM's turtle
   gets the same texts.
@@ -1674,10 +1674,10 @@ hold them to agreeing.
   `draw picture read bytes "cat.png" at 0, 0`. `picture` is still a name:
   `draw picture at 0, 0` draws the text a variable called `picture` holds.
   A picture is drawn with its pixels sharp, however big, which suits sprites.
-- **One decoder of Moth's own.** pictures.js reads PNGs (zlib, every filter,
+- **One decoder of Folio's own.** pictures.js reads PNGs (zlib, every filter,
   every colour type and bit depth, palettes, transparency and interlacing) and
   BMPs (1 to 32 bits, with masks), so the playground, every engine and the tests
-  get the same pixels whatever the browser is. machine.moth has the same decoder
+  get the same pixels whatever the browser is. machine.folio has the same decoder
   in machine code, written step for step as the JavaScript one, so a broken file
   stops at the same mistake in the same words: "'x.png' is a broken PNG: a
   chunk's checksum is wrong". Windows' GDI+ could have read the files, but then
@@ -1709,7 +1709,7 @@ hold them to agreeing.
 - **DLLs only from System32.** Windows looks for a program's DLLs beside the
   program first, and winhttp.dll, winmm.dll and gdiplus.dll aren't among the
   ones it always takes from its own folder. So a file called winhttp.dll in
-  Downloads, beside moth.exe, would have run inside it. A program now carries a
+  Downloads, beside folio.exe, would have run inside it. A program now carries a
   load configuration whose DependentLoadFlags say LOAD_LIBRARY_SEARCH_SYSTEM32,
   so its DLLs come only from System32 (Windows 10 1607 and later).
 - **Programs from the system's folders and PATH.** `run program "git"` let
@@ -1722,13 +1722,13 @@ hold them to agreeing.
 - **Batch files.** Windows runs a .bat or .cmd file in cmd.exe, which reads `&`,
   `|`, `%` and the rest in its arguments as commands whatever the quoting: an
   argument of `x" & echo INJECTED` ran `echo INJECTED`. Rust had the same hole
-  (CVE-2024-24576). Moth now refuses an argument to a batch file that holds any
+  (CVE-2024-24576). Folio now refuses an argument to a batch file that holds any
   of `" % ^ & | < > !` or a line break, rather than trying to quote for cmd.exe,
   which has no quoting that holds for all of them; and since cmd.exe looks for
   the batch file again by its name, starting in the folder the program runs
   in, one that was found on PATH is named by its whole path.
 - **Not changed.** Programs still load at a fixed address (no ASLR): they never
-  run their data or write their code, and Moth checks every index and every
+  run their data or write their code, and Folio checks every index and every
   kind, so it would only matter with a bug in the runtime. A shared playground
   link still runs its code as it opens, in the page's worker, which can't reach
   the page.
@@ -1754,7 +1754,7 @@ hold them to agreeing.
   is `save`'s own walk over a value, with JSON's brackets, and `save`'s checks:
   functions, bytes, amounts with units, a list that holds itself, and Infinity
   and NaN, which JSON has no way to write, are mistakes that say so. Numbers go
-  to 15 digits, as Moth shows them.
+  to 15 digits, as Folio shows them.
 - **What comes back.** `json from` reads with `load`'s own reader, set to JSON:
   `{...}`, `true`, `false`, `null` and JSON's exponents, `1e5` and `1E5`
   included. An object becomes a dictionary, not a record: its keys are text that
@@ -1827,12 +1827,12 @@ hold them to agreeing.
 - **A new event, `scroll`.** Hosts send it with x, y and a number of rows,
   down: the playground for a turn of the wheel (a row for each 24 pixels it
   would have scrolled the page), the window for each 40 of a turn (3 rows a
-  notch, as Windows scrolls), and MOTH_EVENTS as `scroll x y rows`. Like `type`,
+  notch, as Windows scrolls), and FOLIO_EVENTS as `scroll x y rows`. Like `type`,
   it's only ever for the picture's controls: no handler waits for it.
 - **Where the rules live.** The Turtle in vm.js again: `route()` decides, and
   it tells the host what changed without the program drawing anything with
   items of their own, `{ checkbox, ticked }` and `{ list, chosen, top, focused
-  }`, as a text box's `{ textbox, ... }`. machine.moth keeps an entry by label
+  }`, as a text box's `{ textbox, ... }`. machine.folio keeps an entry by label
   for each, 16 bytes for a checkbox and 64 for a list (its items, them as
   shown, what's chosen and what's first in view), a text area's being a text
   box's, and decides the same way.
@@ -1845,7 +1845,7 @@ hold them to agreeing.
   its right for where the rows in view are among them.
 - **Linux.** As for buttons: drawn and read, never clicked.
 - **Tested.** The phrases and their near misses on all three engines, through a
-  hand-over to the VM, and in compiler.moth against the JIT; machine code's
+  hand-over to the VM, and in compiler.folio against the JIT; machine code's
   window against the JavaScript engine on three runs of events, clicks, keys,
   the wheel and lines typed, and its pixels; and on Windows and Linux, ticks and
   choices read before anything's clicked, and every mistake in what's drawn.
@@ -1880,7 +1880,7 @@ hold them to agreeing.
   take it off; pasting is the host typing what's on the clipboard, which follows
   typing's rules: a text box drops new lines, and a text area keeps them. The
   window turns Windows' CR LF into new lines and back. While the events come
-  from MOTH_EVENTS it leaves the clipboard alone, so the tests never touch the
+  from FOLIO_EVENTS it leaves the clipboard alone, so the tests never touch the
   clipboard of the person running them.
 - **What's kept.** Where the cursor is, the other end of what's selected, and
   the first column and line in view are kept by the box's label with its text,
@@ -1968,7 +1968,7 @@ hold them to agreeing.
   temporary folder, and timed their first runs; they now build them in a folder
   of the repo's and run each once or twice first, and the bench has a row for a
   program that only starts, to read the rest against. Every compiled language
-  in `versus` got quicker for it, Moth's machine code with them.
+  in `versus` got quicker for it, Folio's machine code with them.
 
 ## 44. A window on Linux
 
@@ -1988,7 +1988,7 @@ hold them to agreeing.
   away from edges.
 - **Letters.** There's no font to ask for either, so the letters come with the
   program: DejaVu Sans, drawn by FreeType at 16 pixels to the em and at 24, and
-  DejaVu Sans Mono at 16, 4 bits of ink a pixel, made into machine.moth's
+  DejaVu Sans Mono at 16, 4 bits of ink a pixel, made into machine.folio's
   tables by `tools/glyph-tables.py`. Text 16 high, which is every button's,
   box's and list's, is drawn from the table at 16 with each letter on a whole
   pixel, as hinting puts it, which keeps its lines sharp; any other size is
@@ -2014,15 +2014,15 @@ hold them to agreeing.
 - **Timers aren't buttons.** Building it found that a timer and a button's
   handler had the same number for what they wait for, 3, so a button's handler
   was taken for a timer: in Windows' window it ran every 10 milliseconds, and
-  `tick 0` in `MOTH_EVENTS` could reach it. A timer has a number of its own
+  `tick 0` in `FOLIO_EVENTS` could reach it. A timer has a number of its own
   now, after the events', on both systems.
 - **Tested.** The thirteen tests of the window's, on Linux as on Windows,
-  through `MOTH_PICTURE` and `MOTH_EVENTS`, which go through the same drawing
+  through `FOLIO_PICTURE` and `FOLIO_EVENTS`, which go through the same drawing
   and the same handling; and a real window, on WSLg's X server, sent the
   tests' clicks, keys, drags and turns of the wheel by another X client, and
   read back by it: for the to-do app, the checkboxes and lists, the dropdown
   and slider, and editing, it said and showed, pixel for pixel, what the same
-  events did through `MOTH_EVENTS`. And DISPLAY by TCP, a cookie sent for its
+  events did through `FOLIO_EVENTS`. And DISPLAY by TCP, a cookie sent for its
   display and not another's, no server, no terminal, Escape, stopping from a
   handler, and a title cut at 200 bytes between characters.
 - **Not yet.** The clipboard, which X keeps by messages between programs; the
@@ -2037,14 +2037,14 @@ hold them to agreeing.
   call any C library's functions itself, as a C program would.
 - **Declaring them.** `use the library "sqlite3"`, then a line for each function
   the program calls and `end`: its name as the library has it, what it takes,
-  and what it `gives`, in Moth's words for C's types. `a number` is a double,
+  and what it `gives`, in Folio's words for C's types. `a number` is a double,
   `a whole number` an int (a uint fits too), `a long whole number` 64 bits,
   `a pointer` a whole number, nothing or bytes, `text` UTF-8 and `wide text`
-  wchar_t's, both ending in a 0 C sees and Moth doesn't, `bytes` the program's
+  wchar_t's, both ending in a 0 C sees and Folio doesn't, `bytes` the program's
   own memory, which C can fill (a pointer it gives back, say), and `yes or no`
   an int. Each line makes a function of the program's, called like any other,
   whose inputs say what they are, so a call with text for a number stops where
-  it's made. Names are the library's, in their case; Moth's own words go in
+  it's made. Names are the library's, in their case; Folio's own words go in
   quotes with a name for them: `"remove" as remove_file(text)`. Libraries
   named with `or` are tried in turn, so `"winsqlite3" or "sqlite3"` is SQLite
   on Windows and Linux; `as` keeps a library's functions apart, as for a file.
@@ -2068,17 +2068,17 @@ hold them to agreeing.
   `--allow-libraries` (or `--allow-all`).
 - **Only in machine code.** The playground and the JavaScript engines can't load
   a library, so a call there is a mistake that says so, as `run program` is.
-- **A library of Moth's on one.** `tools/sqlite.moth` keeps a database in a file
+- **A library of Folio's on one.** `tools/sqlite.folio` keeps a database in a file
   through SQLite, which comes with Windows (winsqlite3.dll) and most Linux
   systems: `open`, `run` and `query`, each row a dictionary, values bound to
   `?`s, and SQLite's mistakes as `fail with`. An `out` pointer is 8 bytes C
-  fills, read back in Moth.
+  fills, read back in Folio.
 - **Tested.** On Windows and Linux: the C library's own functions with each
   kind of input and what they give, 15 inputs to `sprintf`, past the registers
   on both systems, a function of a library's as a value, each mistake (a
   number that isn't whole, a library or function that isn't there, no
   --allow-libraries), and only a program with a library being linked; and
-  sqlite.moth's database, written, read back and opened again.
+  sqlite.folio's database, written, read back and opened again.
 - **Then structs, floats and callbacks** (§46).
 
 ## 46. Structures, callbacks and floats
@@ -2102,7 +2102,7 @@ hold them to agreeing.
   number, not text".
 - **Callbacks.** `callback compare(a cell, a cell) gives a whole number` makes
   `a compare` a type an input or a field can be, given a function of the
-  program's that takes as many inputs. C can't call a Moth function, so each
+  program's that takes as many inputs. C can't call a Folio function, so each
   kind of callback has 64 entries in the program, small pieces of code C can
   call, each with a slot that holds the function it calls: a function given
   for one takes the slot it had, or the first that's empty, and C is given
@@ -2113,24 +2113,24 @@ hold them to agreeing.
   one ends the program then and there: going on past C's own code, which is
   in the middle of calling it, would leave the library half done.
 - **Floats.** `a float` is C's float, 4 bytes, for the functions, OpenGL's and
-  the like, that take one; it's a number to Moth.
-- **Tested.** On Windows and Linux: `qsort` sorting with a Moth function as
+  the like, that take one; it's a number to Folio.
+- **Tested.** On Windows and Linux: `qsort` sorting with a Folio function as
   its comparison, given records of structures; `mktime` filling in a struct it
   was given; a structure of text, bytes, another structure and a number,
   copied by `memcpy`; floats both ways; and each mistake. On Windows, a window
   class registered with a structure that holds a callback, its window made
-  and destroyed, its procedure a Moth function Windows calls with each of its
+  and destroyed, its procedure a Folio function Windows calls with each of its
   messages, and `EnumWindows` calling one for every window.
 - **Not yet.** A struct passed or given by its value, whole numbers of 8 or 16
   bits, a callback called from another thread, and a Mac.
 
-## 47. Windows' own controls, in Moth
+## 47. Windows' own controls, in Folio
 
 - **Why.** An app's window draws its own buttons and boxes, the same on every
-  system and in the playground, but they're Moth's and not Windows': no
+  system and in the playground, but they're Folio's and not Windows': no
   menus, no Tab between them, nothing a screen reader knows. With libraries,
   structures and callbacks, a program can use Windows' own, so
-  [`tools/windows.moth`](tools/windows.moth) does, in Moth and nothing else:
+  [`tools/windows.folio`](tools/windows.folio) does, in Folio and nothing else:
   a module on user32.dll, kernel32.dll, gdi32.dll and comdlg32.dll, about 540
   lines, and a program that uses it is built with `--allow-libraries`.
 - **What it makes.** `window`, then `button`, `label`, `text_box`,
@@ -2140,7 +2140,7 @@ hold them to agreeing.
   what happens until the first window closes. Each control is a record with
   its handle, so the module's own declarations, `ui's sendmessagew` among
   them, can be given it for anything it doesn't wrap.
-- **What happens.** One window class, whose procedure is a Moth function:
+- **What happens.** One window class, whose procedure is a Folio function:
   Windows' WM_COMMAND, from a control or a menu item, finds the control by
   its number and calls its handler, a button's with nothing, a checkbox's with
   whether it's ticked, a list's with what's chosen, a box's with its text;
@@ -2148,7 +2148,7 @@ hold them to agreeing.
   WM_CLOSE asks the window's, which can say no. `IsDialogMessageW` in `run`
   gives Tab and Shift+Tab between the controls.
 - **The look.** Windows draws controls as Windows 95 did unless a program asks
-  for version 6 of its common controls, by a manifest. Moth's programs have
+  for version 6 of its common controls, by a manifest. Folio's programs have
   none, so the module makes an activation context from the one shell32.dll
   has, resource 124, and keeps it active: buttons, checkboxes, boxes and
   lists are drawn as Windows 11 draws them. It says it knows about screens set
@@ -2158,7 +2158,7 @@ hold them to agreeing.
 - **Text.** A box's text goes in and out as UTF-16 (`wide text`); its line
   ends are Windows' CR LF, so `text_of` gives `\n` and `set_text` takes either.
   `lstrcatW` onto an empty string reads a UTF-16 buffer back as text, which
-  Moth's types have no other way to. A box holds as much as Windows will, not
+  Folio's types have no other way to. A box holds as much as Windows will, not
   the 32,767 characters it starts with. `on_change` is for what's typed: a
   one-line box tells its window when `set_text` changes it and a text area
   doesn't, so the module ignores the first while it's setting the text, and
@@ -2169,7 +2169,7 @@ hold them to agreeing.
   each key pressed before it's handled, as `GetKeyState` says Ctrl, Shift and
   Alt are, and gives a menu item's handler the keys that are its. Keys it
   doesn't know are a mistake when the item is made, not when they're pressed.
-- **A demo.** [`tools/notes.moth`](tools/notes.moth), a notepad in under 120
+- **A demo.** [`tools/notes.folio`](tools/notes.folio), a notepad in under 120
   lines: New, Open, Save and Save as with their keys, the file's name in the
   title with a `*` while it isn't saved, and a question before what's written
   is lost.
@@ -2183,7 +2183,7 @@ hold them to agreeing.
   (No kept it, Yes closed it), a file opened through the Open box, one with CR
   LF opened as it was, and New.
 - **Not yet.** Linux's own controls (see §49); pictures and drawing in a
-  window of its own; more than one window's Tab order; and windows.moth on the
+  window of its own; more than one window's Tab order; and windows.folio on the
   JavaScript engines, which can't call a library.
 
 ## 48. Faster calls
@@ -2197,7 +2197,7 @@ hold them to agreeing.
   call and another in the function. And a number the program wrote, `n - 1`,
   was loaded into a register before it was used.
 - **What each function is given and gives.** For a function only ever called
-  by its name, and never used as a value, machine.moth works out what kind of
+  by its name, and never used as a value, machine.folio works out what kind of
   value each input always gets and what it always gives back: a whole number,
   a number, or anything (the kinds of §32). Each input is first taken to be a
   whole number and the function to give one, then each guess is made less
@@ -2224,15 +2224,15 @@ hold them to agreeing.
   reads the number from where the frame goes back to; the runtime's own calls
   into a handler or a callback, and main's, are followed by -1, where the
   trail stops. A table of every call's return place did it first, but cost
-  16 bytes a call, 589 KB of moth.exe.
+  16 bytes a call, 589 KB of folio.exe.
 - **The JavaScript engine's `is`** made a new Map every time it compared two
   values, for lists that hold themselves, even for two texts. It makes one
   only for lists, dictionaries and records now, which took a third off
-  compiling moth.moth with Node.js (21 s to 14.5 s), more than going through
+  compiling folio.folio with Node.js (21 s to 14.5 s), more than going through
   the program costs.
 - **What it gave.** fib(32) in 27 ms, against C's 20 and Rust's 18; the
   other three are as they were. Each of fib's calls is about 25 instructions,
-  from about 35. moth.exe is 0.9% bigger.
+  from about 35. folio.exe is 0.9% bigger.
 - **Tested.** Programs written to break it, which machine code must say,
   fail and exit on exactly as the JavaScript engine does: a function given a
   whole number in one call, a fraction in another and text in a third, one
@@ -2246,26 +2246,26 @@ hold them to agreeing.
 
 ## 49. Linux's own controls, and one module for both
 
-- **Why.** windows.moth gave a program Windows' own controls, and only
+- **Why.** windows.folio gave a program Windows' own controls, and only
   Windows'. Linux has no one set of its own, but GTK 3 comes with nearly every
   desktop, GNOME's and the rest, and libgtk-3.so.0 is a library like any other,
-  so [`tools/linux.moth`](tools/linux.moth) is windows.moth's functions again,
-  on it, in Moth, about 600 lines.
+  so [`tools/linux.folio`](tools/linux.folio) is windows.folio's functions again,
+  on it, in Folio, about 600 lines.
 - **How it's made.** A window is a GtkWindow holding a box: the menu bar, when
   there is one, on top, and under it a GtkFixed, which puts each control where
   it's asked, as Windows does. A text area and a list are in a scrolled window
   with a border; a list is a GtkListBox of labels, and a dropdown a
-  GtkComboBoxText, each keeping its items' text in Moth as well, which GTK makes
+  GtkComboBoxText, each keeping its items' text in Folio as well, which GTK makes
   hard to read back. Places and sizes are as at 100%, which GTK makes bigger
   itself for a screen set larger, and it makes nothing smaller than it can be
   drawn.
 - **What happens.** GTK calls a C function for each signal. Every one is
-  connected with the control's number as its data, to one of four Moth
+  connected with the control's number as its data, to one of four Folio
   functions, by what the signal gives: a click, a tick, a change of text, a
   menu item chosen and a window gone; a list's choice and a new size; a window
   being closed, which says whether it may; and a timer, which keeps going. So
   four callback entries are all a program uses, however many controls it has.
-  A control the program changes itself doesn't tell it: as in windows.moth,
+  A control the program changes itself doesn't tell it: as in windows.folio,
   `set_text`, `choose` and the rest are kept quiet, where GTK would signal
   them. A new size is told on Linux as the window first opens, too.
 - **Keys.** A menu item's keys, `"Save\tCtrl+S"`, become an accelerator of the
@@ -2273,17 +2273,17 @@ hold them to agreeing.
 - **GTK's own text.** What GTK makes and the program must free, as a text
   view's text and a file box's name, comes back as a pointer: `strstr(p, "")`,
   which gives p, reads it as text, and `g_free` frees it.
-- **One module for both.** [`tools/ui.moth`](tools/ui.moth) uses both, and as
+- **One module for both.** [`tools/ui.folio`](tools/ui.folio) uses both, and as
   it starts asks Windows' kernel32 for the time: on Linux there's no library
   called that, which is a mistake it catches. Each of its functions then calls
-  windows.moth's or linux.moth's. A library is only loaded when it's first
+  windows.folio's or linux.folio's. A library is only loaded when it's first
   called, so the other system's is never looked for.
-  [`tools/notes.moth`](tools/notes.moth) uses it, so the notepad is one
+  [`tools/notes.folio`](tools/notes.folio) uses it, so the notepad is one
   program for both.
-- **Tested.** On Linux, linux.moth's own test, the same window as
-  windows.moth's, driven by its own timer through GTK's functions for a click
+- **Tested.** On Linux, linux.folio's own test, the same window as
+  windows.folio's, driven by its own timer through GTK's functions for a click
   and typing, a list's choice made as a person would make it, and its menu's
-  keys pressed through `gtk_accel_groups_activate`; ui.moth's, on Windows and
+  keys pressed through `gtk_accel_groups_activate`; ui.folio's, on Windows and
   on Linux; on WSLg's display here, and on CI's from Xvfb. And notes, on
   Linux, typed into by another program's X events, its Save box answered,
   saving what was typed, and closed.
@@ -2294,8 +2294,8 @@ hold them to agreeing.
 
 - **What an app was missing.** Real programs show more than buttons and boxes:
   settings on tabs, rows of data, a bar while something's being done, a
-  picture, and something they draw themselves. Each is now in windows.moth
-  and linux.moth, with the same functions, and in ui.moth.
+  picture, and something they draw themselves. Each is now in windows.folio
+  and linux.folio, with the same functions, and in ui.folio.
 - **Tabs.** `tabs` makes them, and `tab(tabs, "People")` a page, which is a
   parent like a window: controls put on it show while its tab is chosen. GTK's
   notebook has a page of its own for each; Windows' tab control is only the
@@ -2323,8 +2323,8 @@ hold them to agreeing.
   class of its own that shares the windows' procedure, with the DC's own brush
   and pen, whose colours change without making any; GTK with cairo, on its
   draw signal.
-- **Names.** Moth's names don't mind capitals, so a function called
-  `rectangle` and Windows' `Rectangle` are the same name: windows.moth calls
+- **Names.** Folio's names don't mind capitals, so a function called
+  `rectangle` and Windows' `Rectangle` are the same name: windows.folio calls
   GDI's `"Rectangle" as fill_box` and `"Ellipse" as fill_ellipse`, and cairo's
   is `cairo_box`.
 - **What GDI gives.** A GDI handle is 32 bits, sign-extended to 64, so read
@@ -2343,9 +2343,9 @@ hold them to agreeing.
 
 - **Why.** A program could read sites and send to them, but not be one, and a
   backend, an API or a page for a phone on the same network is a site.
-  [`tools/server.moth`](tools/server.moth) is one, in Moth, on the system's own
+  [`tools/server.folio`](tools/server.folio) is one, in Folio, on the system's own
   sockets: Winsock's on Windows, libc's on Linux, the same functions declared
-  in two libraries and the right one called, as ui.moth chooses.
+  in two libraries and the right one called, as ui.folio chooses.
 - **What a program writes.** `web's serve(8080, answer)`, where `answer` is
   given a request, a record of its method, path, query, headers and body, and
   gives back text (a page if it starts with `<`), a list or dictionary (sent as
@@ -2363,7 +2363,7 @@ hold them to agreeing.
   goes before it's answered is a mistake too, said the same way; on Linux it's
   sent with MSG_NOSIGNAL, so it isn't the end of the program, as SIGPIPE would
   make it.
-- **Tested.** A server built from the test's program, answering another Moth
+- **Tested.** A server built from the test's program, answering another Folio
   program, which `read`s and `send`s to it as to any site: a page, a query
   decoded, JSON with a header seen, a POST's body given back with its status, a
   file, a missing file's 404, the handler's mistake as a 500 with the server
@@ -2374,10 +2374,10 @@ hold them to agreeing.
 ## 52. Work in the background
 
 - **Why.** A window whose program is busy can't be drawn or clicked: a slow
-  download or a long sum freezes it. Moth's runtime has one stack, one
+  download or a long sum freezes it. Folio's runtime has one stack, one
   collector and one set of registers it keeps things in, so it can't run two
   of its functions at once. Two programs can, so
-  [`tools/tasks.moth`](tools/tasks.moth) runs the slow part as another one.
+  [`tools/tasks.folio`](tools/tasks.folio) runs the slow part as another one.
 - **What a program writes.** `tasks's start(program, inputs)` starts another
   program and gives back at once; `start_self(inputs)` starts this same program
   again, which looks at its `arguments` to know it's to do the job, and says
@@ -2410,7 +2410,7 @@ hold them to agreeing.
 - **Why.** A program to give someone is one file, and on Windows it looks like
   one of theirs: an icon in Explorer and the taskbar, and a version in its
   properties. Its pictures and data shouldn't be files lying beside it.
-- **`--include`.** `moth build app.moth --include data --include logo.png`
+- **`--include`.** `folio build app.folio --include data --include logo.png`
   builds the files, and every file in a folder and the folders inside it,
   into the program's read-only data, each with its name as it was given, `/`
   between folders and no `./` at the start. `read` and `read bytes`, and what
@@ -2424,16 +2424,16 @@ hold them to agreeing.
   and the text Explorer shows: the version, and the program's name as its
   description, product and file name. An .ico file's pictures are taken as
   they are; a .png is one picture, which Windows shows from inside an icon
-  since Vista. windows.moth's windows use icon number 1 for theirs, so a
+  since Vista. windows.folio's windows use icon number 1 for theirs, so a
   program built with an icon has it in its title bar as well, and `set_icon`
   gives a window one from a file, on Linux too.
 - **For Node.js** `machineCompiler`'s options take `icon`, `version` and
-  `include`; machine.moth's `compile_shipping` takes them, and
+  `include`; machine.folio's `compile_shipping` takes them, and
   `compile_allowing` is it with none.
 - **A mistake in what it's given** (an icon that isn't one, a version that
   isn't up to four whole numbers, a file to include that isn't there) is
-  moth's, said as `moth: ...`, not a place in the program.
-- **Tested.** moth.exe building a program with a folder of files, one inside
+  folio's, said as `folio: ...`, not a place in the program.
+- **Tested.** folio.exe building a program with a folder of files, one inside
   another, a picture built in and used as its icon, and a version; the program
   moved to a folder with none of them, reading them all, and refused a file
   that isn't built in; on Windows, its RT_ICON, RT_GROUP_ICON and RT_VERSION,
@@ -2444,8 +2444,8 @@ hold them to agreeing.
 
 - **Why.** Programs check what's typed, pull numbers out of text, show money
   with two decimals, read and write spreadsheets' CSV, and count days. None of
-  it needs the system, so [`tools/text.moth`](tools/text.moth) and
-  [`tools/dates.moth`](tools/dates.moth) are Moth alone, and work on every
+  it needs the system, so [`tools/text.folio`](tools/text.folio) and
+  [`tools/dates.folio`](tools/dates.folio) are Folio alone, and work on every
   engine, machine code and the playground's three.
 - **Patterns** are regular expressions as most languages have them: classes,
   `\d \w \s` and their opposites, `.`, `^ $ \b`, groups kept and not, `|`,
@@ -2453,7 +2453,7 @@ hold them to agreeing.
   recursive descent into a program of steps (a character, a set of ranges, a
   split between two places to go on from, a jump, a group's edge saved, and
   the tests for the start, the end and a word's edge), and run by
-  backtracking, with its own stack, not Moth's calls, so a long text can't run
+  backtracking, with its own stack, not Folio's calls, so a long text can't run
   out of them. A split is tried in its order, so the first match is the one
   other languages find. A step at a place in the text that has been tried
   before is not tried again: it can't do better the second time, so `(a*)*b`
@@ -2461,7 +2461,7 @@ hold them to agreeing.
   bit-state backtracker does it. Repeats are copies of the steps: `{2,4}` is
   two, then two that may be skipped.
 - **Numbers.** `number_text` rounds as a person does, half away from 0, on the
-  digits Moth shows (15 of them), so `number_text(2.675, 2)` is `2.68`, where
+  digits Folio shows (15 of them), so `number_text(2.675, 2)` is `2.68`, where
   arithmetic on the double, 2.67499..., would give 2.67. `grouped` puts a
   comma (or `grouped_with`'s separator) between each three digits.
 - **CSV** as RFC 4180 has it: commas, a value in quotes when it has a comma, a
@@ -2470,13 +2470,13 @@ hold them to agreeing.
 - **Dates** are records of a year, month and day, checked when they're made.
   A date's number of days from 1 January 1970, and back, is Howard Hinnant's
   days-from-civil, which counts from March, so February's leap day is last,
-  in eras of 400 years. Moth has no floor, so it's the digits before the
+  in eras of 400 years. Folio has no floor, so it's the digits before the
   point, one less for a fraction below 0. Weekdays come from 1 January 1970
   being a Thursday; months are added keeping the day, or the month's last.
   `format_date` takes the tokens from the longest, `[ ]` for words as they
-  are; `today` and `now` are Moth's own `the year`, `the hour` and the rest.
-- **Tested.** text.test.moth's 8 tests and dates.test.moth's 6, on all three
-  engines and in machine code, through moth.exe's test runner: patterns
+  are; `today` and `now` are Folio's own `the year`, `the hour` and the rest.
+- **Tested.** text.test.folio's 8 tests and dates.test.folio's 6, on all three
+  engines and in machine code, through folio.exe's test runner: patterns
   matching and not, groups and the rest, finding every match and empty ones,
   replacing with `$1` and `$$`, splitting, the two that would never end, bad
   patterns' mistakes, rounding at the edges, CSV both ways and back, and
@@ -2485,29 +2485,29 @@ hold them to agreeing.
 
 ## 55. Files, folders, the environment and SHA-256
 
-- **Why.** Moth reads, writes and removes files, and lists a folder, but a real
+- **Why.** Folio reads, writes and removes files, and lists a folder, but a real
   program also moves a file, makes a folder for its data, asks how big a file
   is or when it changed, reads `PATH` or `HOME`, and checks a download against
   its hash.
-- **SHA-256** is [`tools/hash.moth`](tools/hash.moth), FIPS 180-4 in Moth, so
-  it works everywhere. Moth's numbers are doubles, exact to 2^53, and its bit
+- **SHA-256** is [`tools/hash.folio`](tools/hash.folio), FIPS 180-4 in Folio, so
+  it works everywhere. Folio's numbers are doubles, exact to 2^53, and its bit
   operations work on whole numbers up to there on every engine, so 32-bit
   words fit, and a sum of five of them does before it's cut back to 32 bits.
   Turning a word right by n would shift it left by up to 31 bits, past 2^53, so
   it's done by multiplying what falls off by 2^(32 - n) instead.
 - **Files, folders and the environment** are
-  [`tools/system.moth`](tools/system.moth), on the system's own functions:
+  [`tools/system.folio`](tools/system.folio), on the system's own functions:
   kernel32's on Windows (GetFileAttributesExW for a file's size and when it
   changed, a FILETIME's 100 ns since 1601 made seconds since 1970; MoveFileExW,
   CreateDirectoryW, GetEnvironmentVariableW and the rest), libc's on Linux
   (`stat`, its mode at byte 24, its size at 48 and its time at 88 on x86-64;
   `rename`, `mkdir`, `getenv`, `getcwd` and the rest). `make_folder` makes the
-  folders a folder is in too, as `mkdir -p`. `move` is a Moth word (the
+  folders a folder is in too, as `mkdir -p`. `move` is a Folio word (the
   turtle's), so it's `move_file`, and `copy_file` to match.
-- **Tested.** hash.test.moth: the empty text, `abc`, the fox, FIPS 180-4's
+- **Tested.** hash.test.folio: the empty text, `abc`, the fox, FIPS 180-4's
   448-bit one, 55, 56 and 64 bytes of `a` (where the padding takes another
   block), text and its bytes alike, and 1000 bytes against Node's crypto, on
-  all three engines and in machine code. system.moth: one program, run on
+  all three engines and in machine code. system.folio: one program, run on
   Windows and on Linux, saying the same, word for word: a file made, its size
   and time, folders made in folders and removed, a folder that isn't empty
   refused, a file copied, moved and removed, a variable set, read and
@@ -2518,14 +2518,14 @@ hold them to agreeing.
 - **Why.** A game is the program people most want to make first, and it needs
   what a window with buttons doesn't: drawing again many times a second, the
   keys being held, not just typed, where the mouse is, pictures and sounds.
-- **[`tools/game.moth`](tools/game.moth)** is a window that is all one drawing,
-  on ui.moth, so on Windows and Linux: `run_game(update, show)` calls
+- **[`tools/game.folio`](tools/game.folio)** is a window that is all one drawing,
+  on ui.folio, so on Windows and Linux: `run_game(update, show)` calls
   `update(seconds)` and then `show(canvas)` about 60 times a second, by a 16 ms
   timer, with how long it's been since the frame before (a quarter of a second
   at most, so a program held up takes a step, not a leap). `the clock` times
   it. `key_down`, `mouse_x`, `mouse_y` and `mouse_down` say what's held and
   where; `on_key` and `on_click` are told as it happens.
-- **In windows.moth and linux.moth.** A drawing keeps the keys held, by name,
+- **In windows.folio and linux.folio.** A drawing keeps the keys held, by name,
   from WM_KEYDOWN and WM_KEYUP (and says it wants all of them, WM_GETDLGCODE,
   so `run`'s dialog manager leaves the arrows to it; and forgets them when it
   loses the keys), or from GTK's key-press-event and key-release-event on its
@@ -2549,13 +2549,13 @@ hold them to agreeing.
   message on Windows; on Linux by GTK's own test call, which needs X11's core
   events), held for 17 frames and let go, moving what it held and then not,
   the mouse moved, pressed and let go, at least 30 frames a second, and a
-  frame painted. And `tools/catch.moth`, a game of falling stars, played.
+  frame painted. And `tools/catch.folio`, a game of falling stars, played.
 
 ## 57. A value's own functions and fields
 
 - **Why.** A record keeps a thing's values together, but the functions that
   work on it are written `bark(rex)` and `name of rex`, inside out from how
-  it's said: rex's name, rex barks. Moth already had `'s`, for a file used `as`
+  it's said: rex's name, rex barks. Folio already had `'s`, for a file used `as`
   a name, and it reads the way people talk.
 - **What it means.** Any `x's` that isn't a name the file used `as` is the
   value's own: `rex's bark()` is `bark(rex)`, the value given first and any
@@ -2572,10 +2572,10 @@ hold them to agreeing.
   Only the mistake for `say x's y` with no `x` changes: x has no value yet.
 - **A file's name wins.** Which `'s` it is is decided as the file is read:
   `use ... as` and `use the library ... as` note the name, and from then on
-  `math's sqrt` is the file's, as before; compiler.moth keeps the same list.
+  `math's sqrt` is the file's, as before; compiler.folio keeps the same list.
 - **Tested.** Two programs on the three engines and in machine code (calls
   with and without brackets, fields read, set and chained, a list's items, a
-  number's own function); three mistakes; and compiler.moth held to moth.js,
+  number's own function); three mistakes; and compiler.folio held to folio.js,
   byte for byte, on every case.
 
 ## 58. Values in text
@@ -2588,57 +2588,57 @@ hold them to agreeing.
   joining starts from text, so `"{a}{b}"` is text even when both are numbers.
   Inside the braces is any value: `{age + 1}`, `{rex's name}`, `{length of
   fruits}`.
-- **What stays as it was.** Moth's own code is full of `{`: the JavaScript
-  compiler.moth writes (`") {\n"`), patterns (`"\\d{3}"`), JSON (`"{\"a\":
+- **What stays as it was.** Folio's own code is full of `{`: the JavaScript
+  compiler.folio writes (`") {\n"`), patterns (`"\\d{3}"`), JSON (`"{\"a\":
   1}"`). So only a `{` right before a letter, `_` or a bracket starts a value,
   and it ends at its own `}`; any other `{` is itself, and so is `\{`, which
   already meant `{` (a `\` before any other character is that character). A
   value that starts with a number goes in brackets, `{(3 * n)}`, as `{3}` in a
   pattern is a count. Of every
-  string in the repository's Moth, one changed: machine.moth's curl format,
+  string in the repository's Folio, one changed: machine.folio's curl format,
   `%{http_code}`, now `%\{http_code}`.
 - **In the tokenizer and the parser.** A text's token keeps its parts: text,
   and each value's own tokens, read from where they are in the line, so a
   mistake in one points at it, ending with a `}`. The parser reads each the way
   it reads a bracket and builds the `+`s, so the VM, the JIT, WebAssembly and
   machine code have nothing new to do. A mistake inside one says how to write
-  a `{` itself. compiler.moth does the same, with each part a record of its
-  text or its tokens, since Moth can't ask what kind a value is.
+  a `{` itself. compiler.folio does the same, with each part a record of its
+  text or its tokens, since Folio can't ask what kind a value is.
 - **Text inside a value.** `"{join words with ", "}"`: a `"` inside a value
   starts text of its own, which can have values in it too, so where text ends
   is no longer the next quote. The tokenizer's pattern finds only an opening
   quote, and a scan finds the end: past a `\` and the character after it, and
-  past each value, to its `}`, past any text inside it. Tidying, in moth.js and
-  in moth.moth, and the playground's colouring find the end the same way. If
+  past each value, to its `}`, past any text inside it. Tidying, in folio.js and
+  in folio.folio, and the playground's colouring find the end the same way. If
   the line ends inside a value, even inside text in it, the mistake is the
   value's `{`, which nothing ends, not the quote of the text in it.
 - **Tested.** A program of values in text, on the three engines and in machine
   code on Windows and Linux: numbers, a sum, a call, `'s` and `of`, a list,
   nothing and yes, text as an item's key, and every `{` that stays as it was;
   another of text inside values, inside text inside values, and values in
-  brackets; nine mistakes; compiler.moth held to moth.js on all of them;
-  moth.exe tidying text with text in it as format() does; and the playground
+  brackets; nine mistakes; compiler.folio held to folio.js on all of them;
+  folio.exe tidying text with text in it as format() does; and the playground
   colours a value in text as code, the text inside it as text.
 
 ## 59. A debugger for built programs
 
 - **Why.** The playground can step a program both ways and show every variable,
   but a program built into machine code could only `say` what it was doing.
-- **`moth debug file.moth`** builds the program as `moth run` would, with a
+- **`folio debug file.folio`** builds the program as `folio run` would, with a
   debugger in it, and runs it. It stops before the first line, and before each
   line it's told to, says where it is, and takes commands from its input,
-  typed or not: `step`, `next`, `out`, `go`, `break 12` or `break math.moth 12`,
+  typed or not: `step`, `next`, `out`, `go`, `break 12` or `break math.folio 12`,
   `clear`, `breaks`, `show x`, `vars`, `where`, `list`, `quit` and `help`.
-- **The debugger is Moth.** [`moth-debugger.moth`](moth-debugger.moth) is used
-  `as moth_debugger`, read before the program so its functions are numbered
+- **The debugger is Folio.** [`folio-debugger.folio`](folio-debugger.folio) is used
+  `as folio_debugger`, read before the program so its functions are numbered
   first, and its code goes before the program's. Before each line of the
-  program, and of the files it uses, machine.moth asks `wants(line, file, depth,
+  program, and of the files it uses, machine.folio asks `wants(line, file, depth,
   function)` whether to stop, and if so calls `here` with the variables too.
   Stepping, breakpoints, the calls in progress (`wants` sees how deep each line
   is, so one more than the line before means that line made a call), and
-  reading commands with `ask`, are all ordinary Moth; only the hook is machine
-  code. moth.exe carries the debugger as a file built into it, `--include
-  moth-debugger.moth`, and builds it into the programs it debugs.
+  reading commands with `ask`, are all ordinary Folio; only the hook is machine
+  code. folio.exe carries the debugger as a file built into it, `--include
+  folio-debugger.folio`, and builds it into the programs it debugs.
 - **What the hook needs.** How deep in calls the line is, r15, as
   `debug_depth`; and for each variable the line can see, nearest first (its
   own, then each function out to the top, but not the functions the program
@@ -2652,45 +2652,45 @@ hold them to agreeing.
   its own line, as it would built the usual way.
 - **Tested.** Three sessions word for word, on Windows and Linux; every test
   program built to be debugged and told to `go`, against its usual build; and
-  `moth debug` through moth.exe.
+  `folio debug` through folio.exe.
 
 ## 60. Packages
 
-- **Why.** A Moth file someone else wrote was a file to copy by hand, and copy
+- **Why.** A Folio file someone else wrote was a file to copy by hand, and copy
   again when it changed, with nothing to say which version a program needs.
-- **A package is a Git repository** of Moth files, its main file named after it.
-  `moth add <repository> [name]` clones it into `packages/<name>`, from a site
+- **A package is a Git repository** of Folio files, its main file named after it.
+  `folio add <repository> [name]` clones it into `packages/<name>`, from a site
   (`github.com/someone/thing` gets `https://` put before it) or a folder, and
-  writes a line to `moth.packages`: its name, where it came from, and the
-  commit it's at. `moth get` makes `packages/` match the list, cloning what's
+  writes a line to `folio.packages`: its name, where it came from, and the
+  commit it's at. `folio get` makes `packages/` match the list, cloning what's
   missing and checking each clone out at its commit, fetching first if it hasn't
-  that commit; `moth update` checks out `origin/HEAD` after a fetch, and writes
-  the new commit down; `moth remove` takes the folder away, with the system's
+  that commit; `folio update` checks out `origin/HEAD` after a fetch, and writes
+  the new commit down; `folio remove` takes the folder away, with the system's
   own `rmdir /s /q` or `rm -rf`, as a clone's files can be read-only. A package
-  with a `moth.packages` of its own brings those packages too, at their commits,
+  with a `folio.packages` of its own brings those packages too, at their commits,
   into the same `packages/`, unless one of that name is there already.
 - **Git, not a registry.** Every program that needs packages is a program
   people already keep in Git, and a commit names the exact code, so the list
-  needs no versions or hashes of its own. moth runs `git`, as it runs any
+  needs no versions or hashes of its own. folio runs `git`, as it runs any
   program (`run program ... keeping its output`), and says what git said when
   it fails. It passes `core.longpaths=true` on Windows, where a package's
   files can be deeper than 260 characters.
 - **Finding a package's files.** A file used to be found from the program's
   folder, even when another file used it; now a file uses files from its own
   folder (from the parser's `folder`, as `within` is kept for names), so a
-  package's `use "helpers.moth"` is its own. `use the package "json"` is
-  `packages/json/json.moth`, from the program's folder wherever it's written,
-  so a package that uses another finds it where `moth add` put it. Nothing in
+  package's `use "helpers.folio"` is its own. `use the package "json"` is
+  `packages/json/json.folio`, from the program's folder wherever it's written,
+  so a package that uses another finds it where `folio add` put it. Nothing in
   the repository used a file from a folder, so nothing that ran changes.
-  Both parsers do this, and moth.moth's list of the files to read before a
-  build (`cli_used_by`) finds them the same way. compiler.moth's `use_file`
+  Both parsers do this, and folio.folio's list of the files to read before a
+  build (`cli_used_by`) finds them the same way. compiler.folio's `use_file`
   had kept the wrong list of files being read after a file used one, which
   only mattered now.
 - **Tested.** Git repositories made by the tests: a package with a file of its
   own, added, run, updated, fetched again after `packages/` was deleted, and
   one that uses it brought along at its listed commit; every mistake; and
-  `remove`, through moth.exe, on Windows and Linux. Files in folders and
-  packages on the three engines, and compiler.moth held to moth.js.
+  `remove`, through folio.exe, on Windows and Linux. Files in folders and
+  packages on the three engines, and compiler.folio held to folio.js.
 
 ## 61. VS Code
 
@@ -2703,17 +2703,17 @@ hold them to agreeing.
   both). Text's values are a begin/end rule inside text that includes the
   whole grammar again, so text inside a value inside text is coloured as the
   tokenizer reads it. The rest is `extension.js`: it runs `check()` from
-  moth.js a quarter of a second after each change, the files a program uses
+  folio.js a quarter of a second after each change, the files a program uses
   read from beside it, or from the editor where one is open and not saved,
   and shows each problem on the word at its column, red for a mistake or a
   line sure to fail and yellow for the rest; a mistake in a used file goes on
   the line that uses it. `suggestedFix` is its Quick Fix, `format()` is
   Format Document, `to` lines are the outline (by their indents, so it works on
   code with a mistake in it) and where Go to Definition goes, and Run, Debug
-  and Build start `moth` (or `moth.path`) on the file as a terminal's own
+  and Build start `folio` (or `folio.path`) on the file as a terminal's own
   process, so nothing is quoted for a shell.
 - **The engine goes with it.** `make-vsix.mjs` packs the extension, with
-  moth.js and the seven files it needs as `engine/`, beside a package.json that
+  folio.js and the seven files it needs as `engine/`, beside a package.json that
   makes them modules, into a .vsix: a zip with a manifest and a list of
   content types, written by the script itself (deflated, every file dated
   1980, so the same files make the same bytes), so there's nothing to install
@@ -2721,7 +2721,7 @@ hold them to agreeing.
 - **Tested.** The grammar through a TextMate tokenizer the tests have, enough
   of one for this grammar; the extension against a stand-in for VS Code's API;
   the .vsix unzipped and compared, file for file; `code --install-extension`
-  with a profile of its own; and, with MOTH_VSCODE=1, VS Code 1.142 itself,
+  with a profile of its own; and, with FOLIO_VSCODE=1, VS Code 1.142 itself,
   running the extension in its extension host: the problems, the Quick Fix,
   Format Document, the outline and the commands.
 
@@ -2778,7 +2778,7 @@ hold them to agreeing.
   the turn go keeps a copy of every register on its stack, or, in a library's
   function, in its slot, as C may need the stack where it is; the collector
   looks through each other thread's stack, from there to where it starts.
-- **What changes in a program that starts a task.** machine.moth makes it
+- **What changes in a program that starts a task.** machine.folio makes it
   twice: once to find that it starts one, then with threads. The second time it
   keeps no name of the program's in a register through a loop, and takes
   nothing as known about one from line to line (§48), as another thread can
@@ -2802,7 +2802,7 @@ hold them to agreeing.
   task sums to 50 million; and, by hand at the time, every example and table
   program that starts no task made to the same bytes as before. A thousand
   tasks start and end in about a tenth of a second.
-- **Not yet.** Two threads running Moth at the same moment, which needs a
+- **Not yet.** Two threads running Folio at the same moment, which needs a
   collector that can stop them all. (A lock a program can take, and asking
   whether a task has ended without waiting for it, came in §94.)
 
@@ -2898,7 +2898,7 @@ hold them to agreeing.
   about 45; setting 5 million, 82 ms to 34; joining a text to a text a million
   times, 87 ms to about 60; adding to one 2 million times, 122 ms to 60; text
   joined to a number a million times, 113 ms to 63; `as text`, 95 ms to 60
-  (each a whole program, started up and all). And moth.exe builds itself in
+  (each a whole program, started up and all). And folio.exe builds itself in
   9.2 seconds, from 10.9, as the compiler reads fields all the time. With
   §63, it's 4.6% bigger: 19,020,288 bytes.
 - **Tested.** Items read, set and added, with every number that isn't one of
@@ -2909,21 +2909,21 @@ hold them to agreeing.
   other shapes at the same place, fields added later, and every mistake; on
   Windows and Linux, against the JavaScript engine.
 
-## 65. The Moth shell
+## 65. The Folio shell
 
-- **Why.** Python's first lesson is typing `2 + 3` and seeing 5. moth.exe
-  could only build files; the shell Moth had, on the Node.js command line, went
+- **Why.** Python's first lesson is typing `2 + 3` and seeing 5. folio.exe
+  could only build files; the shell Folio had, on the Node.js command line, went
   with it in 1.5.
-- **What it does.** `moth`, or `moth shell` with `--allow` flags for what its
-  entries may do, reads Moth an entry at a time: a line, or a block once its
+- **What it does.** `folio`, or `folio shell` with `--allow` flags for what its
+  entries may do, reads Folio an entry at a time: a line, or a block once its
   `end` is typed (the compiler says when what's typed ended too soon: its
   mistake is at the end of the code), with `....>` while it waits for more,
   and two empty lines dropping what isn't finished. An entry that's a value
   (`x + 1`, `xs`, `p's name`) is said; a call to one of the functions made
   (`square(4)`) shows what it gives, unless that's nothing. `quit`, `exit` or
   the end of the input ends it.
-- **Each entry is a program.** moth.exe has no interpreter in it, only the
-  compiler, so each entry is built into a program, run and removed, as `moth
+- **Each entry is a program.** folio.exe has no interpreter in it, only the
+  compiler, so each entry is built into a program, run and removed, as `folio
   run` does, in about 35 ms. The program is what the entries before it left,
   then the entry: each entry before is a file of its own, `[1]`, `[2]`..., which
   the program uses in order, holding that entry's `to` blocks and `use` lines
@@ -2934,7 +2934,7 @@ hold them to agreeing.
   a function changes the names it would have if the entries were one program
   (a name it sets that wasn't made before it is its own, §27).
 - **Values in between.** After the entry, the program saves every name's value
-  to `.moth-shell-state` with `save`, which the next program loads, so the
+  to `.folio-shell-state` with `save`, which the next program loads, so the
   program may read and write that one file whatever the flags say. A value
   `save` can't keep (a function, bytes, a list that holds itself) is said to
   be lost, and is nothing in the next entry. An entry that ends with a mistake,
@@ -2943,8 +2943,8 @@ hold them to agreeing.
 - **Not as one program.** Two names holding the same list hold copies of it
   after the entry, as each value is saved by itself; a task started doesn't
   outlive its entry; a file used runs its own lines again in every entry; and
-  Ctrl+C ends the shell with the program, as no Moth program can catch it.
-- **Tested.** A session through moth.exe, on Windows and Linux, typed into its
+  Ctrl+C ends the shell with the program, as no Folio program can catch it.
+- **Tested.** A session through folio.exe, on Windows and Linux, typed into its
   input: values shown, functions made and called, a function's own name kept
   apart from the program's, lists added to, a loop's names, a file used, a
   mistake in a function made earlier, with its trail, a function that can't be
@@ -2952,12 +2952,12 @@ hold them to agreeing.
 
 ## 66. Inputs left out, functions with no name, lists built from lists
 
-- **Why.** Next to Python, Moth had no default inputs, no lambdas, no list
+- **Why.** Next to Python, Folio had no default inputs, no lambdas, no list
   comprehensions, no slices and no `**`: each a line of Python that took a
-  loop or a helper function in Moth.
-- **Only the parsers.** Each is written in terms of what Moth already had, so
-  the VM, the JIT, WebAssembly and machine code needed nothing new: moth.js
-  and compiler.moth make the same tree, and every back end compiles it as it
+  loop or a helper function in Folio.
+- **Only the parsers.** Each is written in terms of what Folio already had, so
+  the VM, the JIT, WebAssembly and machine code needed nothing new: folio.js
+  and compiler.folio make the same tree, and every back end compiles it as it
   compiles the rest.
 - **Inputs left out.** `to greet with name, greeting or "Hello"`. Once the
   whole program is read (files it uses too), each call by the function's name
@@ -2981,11 +2981,11 @@ hold them to agreeing.
   text or bytes) and `x to the power of n` are builtins, as `in order` is:
   items 3 to 2 are none, and past the end is the mistake `item` makes. Powers
   are whole ones, worked out by squaring, so `2 to the power of 10` is exactly
-  1024; math.moth's `power(x, y)` takes any, through `exp` and `ln`, which it
+  1024; math.folio's `power(x, y)` takes any, through `exp` and `ln`, which it
   has now, with `log10`, `log2`, `tangent`, `arctangent`, `arcsine`,
   `arccosine`, `angle_of`, `ceiling`, `round`, `absolute`, `radians` and
-  `degrees`, tested in math.test.moth.
-- **compiler.moth's numbers.** Functions are numbered in the order they're
+  `degrees`, tested in math.test.folio.
+- **compiler.folio's numbers.** Functions are numbered in the order they're
   written, once the program is read, as scope.js counts them (§27), since
   the ones a statement's values make are read before the statement but go in
   front of it; and on from the last program's, so a build that reads two
@@ -2993,21 +2993,21 @@ hold them to agreeing.
 - **Tested.** Each, and each mistake (a power that isn't whole, of 0 below 0,
   items of a number or past the end, an `or` that isn't a value written out,
   an input after one with `or` without, a list built with a mistake in an
-  item, and where it says it is), on the three engines and in compiler.moth,
+  item, and where it says it is), on the three engines and in compiler.folio,
   in machine code on Windows and Linux, and in the randomly broken programs.
 
 ## 67. Rounding, remainders, and whole numbers of any size
 
-- **Why.** Moth had no `//`, `%`, `round` or `floor` of its own: math.moth
+- **Why.** Folio had no `//`, `%`, `round` or `floor` of its own: math.folio
   found a number's whole part a power of two at a time, and nothing gave a
-  remainder. Python's whole numbers have no size limit; Moth's are exact to
+  remainder. Python's whole numbers have no size limit; Folio's are exact to
   2^53.
 - **Rounding.** `x rounded down`, `x rounded up` and `x rounded` come after
   the sum they round, as `in miles` does, so `total / count rounded` rounds
-  the quotient. They round x as Moth shows it, to 15 digits, so `(0.1 * 30)
+  the quotient. They round x as Folio shows it, to 15 digits, so `(0.1 * 30)
   rounded down` is 3, like `item (0.1 * 30)`; a half rounds away from 0, as a
   spreadsheet's does, and none gives -0. `rounded` followed by a bracket is
-  still a call, so math.moth's `rounded(x)` works as it did; a variable called
+  still a call, so math.folio's `rounded(x)` works as it did; a variable called
   `rounded` after a value in `say` now rounds it.
 - **Remainders.** `remainder of a divided by b` has b's sign, as Python's `%`
   and a spreadsheet's MOD do. Of two whole numbers it is exact: a 64-bit
@@ -3017,7 +3017,7 @@ hold them to agreeing.
   field, as the phrase needs `divided by`.
 - **Machine code.** `roundsd` rounds; each routine first takes the number to
   15 digits with the routine `say` uses (§25), keeping its sign.
-- **big.moth.** Whole numbers of any size, as text, so `say`, `is`, `save` and
+- **big.folio.** Whole numbers of any size, as text, so `say`, `is`, `save` and
   JSON need nothing new. Inside, a sign and parts of 7 digits each, the lowest
   first, so two parts multiplied, with what's carried, stay below 2^53, and
   each carry is a remainder, so none is rounded. Division is a part at a time
@@ -3027,14 +3027,14 @@ hold them to agreeing.
 - **Tested.** Rounding every kind of number (halves both ways, 15-digit
   neighbours, whole numbers past 2^53, fractions, infinities) and remainders
   of whole numbers below and above 2^53, fractions and mixed signs, with each
-  mistake, on the three engines, in compiler.moth, and in machine code on
-  Windows and Linux, 600 random ones too; big.moth's own tests, and 800
+  mistake, on the three engines, in compiler.folio, and in machine code on
+  Windows and Linux, 600 random ones too; big.folio's own tests, and 800
   random sums against BigInt, on each.
 
 ## 68. A record's own functions
 
 - **Why.** Python's classes give each kind of object its own methods, and a
-  subclass its own versions of some. Moth had records and `rex's bark()`,
+  subclass its own versions of some. Folio had records and `rex's bark()`,
   which is `bark(rex)`: one function for every record.
 - **What it does.** `rex's speak()`, in a program that makes nothing called
   `speak` (no function, input or variable, in any file it uses), calls the
@@ -3058,31 +3058,31 @@ hold them to agreeing.
 - **Tested.** Two kinds of record answering one call, a function with inputs
   given later, one replaced that calls what it replaced, one said on its own
   line, two in a row on what the first gave, a function of that name winning,
-  and each mistake, caught and not, on the three engines, in compiler.moth,
+  and each mistake, caught and not, on the three engines, in compiler.folio,
   and in machine code on Windows and Linux.
 
 ## 69. Lists as sets
 
 - **Why.** Python has sets: each value once, `in` that's quick, and `&`, `|`
-  and `-`. Moth had `is in` and dictionaries, whose keys are once each.
+  and `-`. Folio had `is in` and dictionaries, whose keys are once each.
 - **What's new.** `xs without repeats`, after the sum before it as `rounded`
   is, keeps each item where it first is, by `is`, so lists and records count
   as the same when they hold the same, and `0.1 * 30` is a repeat of 3. It
   is a function of the program's, made as list building's are (§66), so
   nothing else changed. What's in both, in one only, or in either is list
   building with `is in`, which the README shows.
-- **Not added.** A set as a value of its own: the dictionaries Moth has are
+- **Not added.** A set as a value of its own: the dictionaries Folio has are
   one already, for text and numbers, and finding a list in a list by `is`
   can't be quicker than looking at each.
 - **Tested.** Repeats of numbers to 15 digits, of letters in text, of lists
   and records, none at all, and what isn't a list, on the three engines, in
-  compiler.moth and in machine code on Windows and Linux.
+  compiler.folio and in machine code on Windows and Linux.
 
 ## 70. XML
 
 - **Why.** Python reads XML with `xml.etree`; feeds, office files, SVG and
   much of what older services send are XML.
-- **What it is.** tools/xml.moth, in Moth alone, so it works on every engine.
+- **What it is.** tools/xml.folio, in Folio alone, so it works on every engine.
   An element is a record with kind "element", its name, its attributes in a
   dictionary, in the order written, and its children, in order: elements, and
   text as records with kind "text", so a program tells them apart by `kind`.
@@ -3098,7 +3098,7 @@ hold them to agreeing.
   over. A DOCTYPE's entities aren't used, and namespaces are just names with
   a `:`.
 - **Mistakes** are a `fail with` saying the line: a closing tag that doesn't
-  match, one missing, an attribute twice or without quotes, an entity Moth
+  match, one missing, an attribute twice or without quotes, an entity Folio
   doesn't know, anything after the element.
 - **Tested.** Its own tests, on the three engines and in machine code; and
   800 random documents (attributes in either quote, entities, CDATA,
@@ -3109,7 +3109,7 @@ hold them to agreeing.
 
 - **Why.** Python has `gzip`, `zlib` and `zipfile`; downloads, logs and
   office files come squeezed.
-- **What it is.** tools/zip.moth, in Moth alone, so it works on every engine:
+- **What it is.** tools/zip.folio, in Folio alone, so it works on every engine:
   `deflate` and `inflate` (RFC 1951), `gzip` and `gunzip` (RFC 1952, every
   member of a file, its name, comment and extra field passed over, its check
   and size checked), `zipped` and `unzipped` for archives, and `crc32`.
@@ -3136,10 +3136,10 @@ hold them to agreeing.
   zlib made at every level (so stored, fixed and own-code blocks), round
   trips of empty, short, repeating, random and every-byte data, archives
   with a folder, an empty file and a name past one byte, and each mistake.
-  And 46 random samples of four shapes, up to 60 KB: zlib reads Moth's gzip
-  and Moth reads zlib's, crc32 agrees, and the machine code on Windows and
+  And 46 random samples of four shapes, up to 60 KB: zlib reads Folio's gzip
+  and Folio reads zlib's, crc32 agrees, and the machine code on Windows and
   Linux writes the same bytes as the JIT; Windows' tar and Python's zipfile
-  read Moth's archive, and Moth reads one with data descriptors and a
+  read Folio's archive, and Folio reads one with data descriptors and a
   comment. 400 gzip files damaged at random each stop with a mistake, or,
   where the damage is somewhere gzip doesn't look, read right: none gives
   wrong bytes.
@@ -3147,11 +3147,11 @@ hold them to agreeing.
 ## 72. Sockets
 
 - **Why.** Python's `socket` is how a program talks to any other over a
-  network: its own protocols, a database's, a game's. Moth had `read` and
-  `send` for the web, and server.moth for answering it.
-- **What it is.** tools/sockets.moth, on the system's own sockets through
+  network: its own protocols, a database's, a game's. Folio had `read` and
+  `send` for the web, and server.folio for answering it.
+- **What it is.** tools/sockets.folio, on the system's own sockets through
   `use the library` (ws2_32 on Windows, the C library on Linux), so a
-  program `moth build` makes, with `--allow-libraries`, can use it.
+  program `folio build` makes, with `--allow-libraries`, can use it.
   Connections out (`connect`) and in (`listen`, `listen_everywhere`,
   `accept`), each a record with its handle and `peer`, the host and port at
   the other end; `send` sends all it's given; `receive` gives what has come,
@@ -3175,7 +3175,7 @@ hold them to agreeing.
   for one, a port with nothing on it, a name no DNS has, a port past 65535,
   and 300 KB through `listen_everywhere`, read back the same.
 
-## 73. HTTPS for server.moth
+## 73. HTTPS for server.folio
 
 - **Why.** A server a browser reaches over the internet needs TLS; Python's
   `http.server` gets it from the `ssl` module, which is OpenSSL.
@@ -3192,7 +3192,7 @@ hold them to agreeing.
   folder) or libssl-3-x64.dll and libcrypto-3-x64.dll (the Win64 OpenSSL
   installer's) go beside the program, or Git for Windows' own, from its
   mingw64 folder: those, built with MinGW, once failed in a program of
-  Moth's (no randomness to seed them, then a crash), until a library's own
+  Folio's (no randomness to seed them, then a crash), until a library's own
   libraries were found in System32 too (below; §81).
 - **A library beside the program** now finds what it needs from System32
   too: the second place a name is looked for was LoadLibraryExW with
@@ -3202,8 +3202,8 @@ hold them to agreeing.
 - **Bodies in chunks.** HTTP/1.1 lets a body come as chunks, each its length
   in hex, then its bytes, until one of none, with trailers after it, and
   servers must read it: Node sends a body it's given in pieces that way.
-  server.moth does now, over HTTP and HTTPS; chunks it can't read are 400.
-- **Not added.** TLS for sockets.moth's own connections, and HTTP/2.
+  server.folio does now, over HTTP and HTTPS; chunks it can't read are 400.
+- **Not added.** TLS for sockets.folio's own connections, and HTTP/2.
 - **Tested.** In machine code on Windows and Linux, with a certificate the
   test makes: a page, a body in chunks and one with a length, a page that
   isn't there, a client that doesn't trust the certificate, and a
@@ -3211,24 +3211,24 @@ hold them to agreeing.
 
 ## 74. The standard library, everywhere
 
-- **Why.** Python's `import json` works in any folder. Moth's libraries were
+- **Why.** Python's `import json` works in any folder. Folio's libraries were
   files in tools/, so a program used one only with a copy beside it.
-- **What it does.** moth (the command, moth.moth) carries math.moth and the
+- **What it does.** folio (the command, folio.folio) carries math.folio and the
   libraries in tools/ (not their tests or the example programs): when a file
   a program uses isn't beside the file that uses it, and has a standard
-  library's name, moth uses its own copy, and so do the files that copy
+  library's name, folio uses its own copy, and so do the files that copy
   uses. A file beside the program comes first, as Python's own modules shadow
   its library's.
-- **stdlib.moth** holds them, each file's text as a Moth text in a function
-  that gives it by name, and moth.moth uses it as it uses machine.moth. It is
-  made by make-stdlib.mjs, so moth still builds itself from its source
+- **stdlib.folio** holds them, each file's text as a Folio text in a function
+  that gives it by name, and folio.folio uses it as it uses machine.folio. It is
+  made by make-stdlib.mjs, so folio still builds itself from its source
   alone, into the same bytes. Not `--include`: a file built into a program
-  is found before the disk, so a program's own math.moth would lose to moth's,
+  is found before the disk, so a program's own math.folio would lose to folio's,
   and a folder built in would take whatever else is in it.
-- **Tested.** stdlib.moth is what make-stdlib.mjs makes of the files as they
-  are, and holds each one exactly; and through moth.exe, in a folder with
-  nothing else, a program that uses json.moth, math.moth and big.moth, and
-  big.moth's own tests, and a math.moth beside the program used instead.
+- **Tested.** stdlib.folio is what make-stdlib.mjs makes of the files as they
+  are, and holds each one exactly; and through folio.exe, in a folder with
+  nothing else, a program that uses json.folio, math.folio and big.folio, and
+  big.folio's own tests, and a math.folio beside the program used instead.
 
 ## 75. Every core at once
 
@@ -3236,7 +3236,7 @@ hold them to agreeing.
   take turns, as Python's do under its lock, so a long sum is no quicker in
   four of them than in one. Python's answer is multiprocessing: copies of
   the program, each a process with a core to itself.
-- **What it is.** tools/cores.moth, on tasks.moth's `start_self`, which
+- **What it is.** tools/cores.folio, on tasks.folio's `start_self`, which
   starts the same program again with other arguments. `each_at_once(work,
   items)` shares the items out into as many parts as there are cores
   (GetActiveProcessorCount on Windows, sysconf on Linux), or
@@ -3263,29 +3263,29 @@ hold them to agreeing.
 ## 76. A profiler
 
 - **Why.** Python has cProfile: which functions a slow program's time goes
-  to. Moth had the clock, and guessing.
-- **What it does.** `moth profile file.moth args` runs the program as `moth
+  to. Folio had the clock, and guessing.
+- **What it does.** `folio profile file.folio args` runs the program as `folio
   run` does, then says on the error output how long it took and how many
   lines ran; each function's own time (its lines', not what it calls), as a
   share of the whole, and how often it was called; and the 15 lines that
   took longest, with how often each ran.
-- **How.** It builds the program as `moth debug` does (§59), with
-  moth-profiler.moth in the debugger's place: before each line, `wants`
+- **How.** It builds the program as `folio debug` does (§59), with
+  folio-profiler.folio in the debugger's place: before each line, `wants`
   counts it and gives the time since the line before to that line and its
   function, and never stops; a line one call deeper than the one before
   starts a call. The debug build now calls the debugger's `finish` when the
   program ends or stops itself, which for the profiler says what it found
   (and for the debugger does nothing). The profiler is in the standard
-  library (§74), so moth carries it and builds itself as it did.
+  library (§74), so folio carries it and builds itself as it did.
 - **Time** comes from `the clock`, which moves a millisecond at a time, each
   call about 40 ns: so each millisecond goes to the line that was running
   when it passed, which over a run worth profiling is where the time is, and
   counts are exact. A program profiled runs several times slower.
 - **Not yet.** A program that ends with a mistake says nothing (the runtime
-  has no Moth code to call there); nor does an app, whose handlers run after
+  has no Folio code to call there); nor does an app, whose handlers run after
   its last line.
-- **Tested.** Through moth.exe: a program with a slow function and a quick
-  one, its output and arguments as moth run gives them, every line's count,
+- **Tested.** Through folio.exe: a program with a slow function and a quick
+  one, its output and arguments as folio run gives them, every line's count,
   each function's calls, the slowest line first, a program that stops
   itself, and nothing left behind.
 
@@ -3293,14 +3293,14 @@ hold them to agreeing.
 
 - **Why.** Jupyter is how much of Python is written: code in pieces, with
   words between them and what each piece said beneath it, kept in one file.
-- **What it does.** `moth notebook notes.md` runs each ```moth block of a
+- **What it does.** `folio notebook notes.md` runs each ```folio block of a
   Markdown file in turn, as the shell runs entries (§65), so a block has what
   the blocks before it made, and writes what it said, its output and then
   its mistakes, beneath it in an ```output block, in place of the one there
   was; everything else in the file stays as it is. A block whose last line
   is a value shows it, as a cell's does. A mistake says the block and line
   (`block 3:1:7: can't divide by zero`), and, as in the shell, a block that
-  fails keeps nothing it made. moth then says how many blocks ran and how
+  fails keeps nothing it made. folio then says how many blocks ran and how
   many had a mistake, and ends with 1 if any did.
 - **Plain Markdown.** The file stays one any editor, GitHub or a site shows
   as it is, its outputs as code blocks, and running it again gives the same
@@ -3309,7 +3309,7 @@ hold them to agreeing.
   list built from a list, a function with no name) gives them the line's
   number, and the shell kept every `to` block's lines for the entries after,
   so the whole line ran again in each. It keeps only the program's own.
-- **Tested.** Through moth.exe: a notebook with a value, a function, a block
+- **Tested.** Through folio.exe: a notebook with a value, a function, a block
   that ends in a value, an old output to replace, a mistake, and a block
   after it, run twice to the same file, with nothing left behind; and the
   shell running a list built from a list once.
@@ -3317,32 +3317,32 @@ hold them to agreeing.
 ## 78. A package index
 
 - **Why.** Python has PyPI: `pip install requests` finds a package by its
-  name. Moth's packages (§60) are Git repositories, fetched by where they
+  name. Folio's packages (§60) are Git repositories, fetched by where they
   are.
 - **What it is.** An index is a JSON file: each package's name, its
-  repository as `moth add` takes it, and a line about it. `moth search
+  repository as `folio add` takes it, and a line about it. `folio search
   [words]` lists its packages, or those with every word in their name or
-  line, in no case; `moth add greeter` takes the index's greeter. A name
+  line, in no case; `folio add greeter` takes the index's greeter. A name
   alone (no folder, address or site, and no folder of that name here) is the
   index's; anything else is as it was. `--index` gives another, an address
   or a file.
 - **Where it is.** By default
-  raw.githubusercontent.com/samyyy2423/moth-packages/main/index.json, read
-  with curl, which Windows 10 and later and Linux have, so moth needs no new
+  raw.githubusercontent.com/samyyy2423/folio-packages/main/index.json, read
+  with curl, which Windows 10 and later and Linux have, so folio needs no new
   permission: a package is added there by a pull request to that
-  repository. Until it's made, the default address answers 404, which `moth
+  repository. Until it's made, the default address answers 404, which `folio
   search` says.
-- **Tested.** Through moth.exe, with an index in a file: every package, words
+- **Tested.** Through folio.exe, with an index in a file: every package, words
   in any case, none, a package added by its name and used, a name the index
   hasn't, an index that isn't there, and one that isn't JSON.
 
 ## 79. Programs as web pages
 
 - **Why.** A program anyone can run with nothing to install: a link, or a
-  file sent. The playground runs Moth in a browser already; moth.exe made
+  file sent. The playground runs Folio in a browser already; folio.exe made
   only programs for Windows and Linux.
-- **What it does.** `moth build --web app.moth` writes app.html: the
-  playground's page with Moth's engine in it, in app mode, holding the
+- **What it does.** `folio build --web app.folio` writes app.html: the
+  playground's page with Folio's engine in it, in app mode, holding the
   program and every file it uses (beside it, or from the standard library,
   §74), which runs it as soon as it opens and shows only what it says and
   draws, its buttons, text boxes and questions, taking keys and clicks as
@@ -3351,28 +3351,28 @@ hold them to agreeing.
   and makes no page.
 - **One file.** Each of the engine's modules is in the page as text, and
   made a module from a blob: URL the first time it's imported, its own
-  imports pointing at the others', so moth.js, vm.js and the rest, and the
+  imports pointing at the others', so folio.js, vm.js and the rest, and the
   worker a run goes in, are as they are here; the page's own imports wait
   for them. The program goes in as JSON, with every `</` made `<\/`, so no
   text of its ends the page's script.
-- **webpage.moth** holds the page, made by make-web.mjs from index.html and
-  the modules, as stdlib.moth is made, so moth builds itself as it did; a
+- **webpage.folio** holds the page, made by make-web.mjs from index.html and
+  the modules, as stdlib.folio is made, so folio builds itself as it did; a
   test says when it's behind them. About 520 KB a page.
 - **Tested.** The page's loader, run as a browser runs it, makes modules
-  that find each other and run a program as moth.js does, with each
-  module's text exactly its file's; through moth.exe, a page with a file of
+  that find each other and run a program as folio.js does, with each
+  module's text exactly its file's; through folio.exe, a page with a file of
   the standard library's in it, a `</script>` in the program, and a program
   with a mistake; and in a browser, a drawing, a question answered, and
   Snake, with its keys and timer.
 
 ## 80. A text a letter at a time
 
-- **Why.** moth building itself went from 10 seconds to almost six minutes
-  once it held webpage.moth, whose page is one line of half a million
-  letters: moth.moth looks through each line with `item k of line`, and
+- **Why.** folio building itself went from 10 seconds to almost six minutes
+  once it held webpage.folio, whose page is one line of half a million
+  letters: folio.folio looks through each line with `item k of line`, and
   finding letter k of a text with letters past one byte meant counting from
   its start, so going through a line that way took its length squared.
-  `moth tidy` did the same. Any program going through a long text by `item`
+  `folio tidy` did the same. Any program going through a long text by `item`
   did.
 - **In machine code**, a text whose letters are a byte each goes straight to
   the letter, as it should have; and the routines that find a letter
@@ -3384,8 +3384,8 @@ hold them to agreeing.
 - **In JavaScript**, the engines turned the text into its letters for every
   `item`, `length of` and `items ... of`; they keep the last text's letters
   now.
-- **What it gave.** moth builds itself in 10 seconds again, into the same
-  bytes; `moth tidy --check` of the biggest files takes 3; 20,000 letters
+- **What it gave.** folio builds itself in 10 seconds again, into the same
+  bytes; `folio tidy --check` of the biggest files takes 3; 20,000 letters
   one at a time take 15 ms on the JIT.
 - **Tested.** A text with letters of one to four bytes, every letter in
   turn, then out of order; views of its bytes; and 3,000 lookups at random
@@ -3395,7 +3395,7 @@ hold them to agreeing.
 
 ## 81. The profiler's last word, however a program ends
 
-- **Why.** `moth profile` (§76) said nothing when a program ended with a
+- **Why.** `folio profile` (§76) said nothing when a program ended with a
   mistake, and for an app it spoke too soon: its report was a call put after
   the program's last line, so a mistake never reached it, and an app, whose
   handlers run after its last line, had its report before any of them ran.
@@ -3404,7 +3404,7 @@ hold them to agreeing.
   it left open, at `stop the program`, after a mistake's report, and when
   the pad it asked with is closed. It's called as a handler is, the first
   call in progress, so a mistake in it ends the program with no second last
-  word. The debugger (moth debug, §59) has nothing to say then.
+  word. The debugger (folio debug, §59) has nothing to say then.
 - **Waiting.** The runtime also calls the debugger's `waits` before an app's
   window loop and after each handler. The profiler gives the time from
   there to the next line to a row of its own, "(waiting for events)",
@@ -3413,28 +3413,28 @@ hold them to agreeing.
 - **Not yet.** Calls are counted by depth: when tasks (§62) take turns, a
   task's first line one call deep after another task's isn't counted as a
   call of its own.
-- **Also.** server.moth's HTTPS test runs with Git's OpenSSL too, built
-  with MinGW, when it's there. It was thought not to work in a Moth program
+- **Also.** server.folio's HTTPS test runs with Git's OpenSSL too, built
+  with MinGW, when it's there. It was thought not to work in a Folio program
   ("entropy source strength too weak", then a crash), but built again with
   each commit's compiler, the same program fails only before §73's change
   to where a library's own libraries are looked for: a program built before
   it was what failed.
-- **Tested.** Through moth.exe: a mistake, then the profile up to it; an
+- **Tested.** Through folio.exe: a mistake, then the profile up to it; an
   app driven by two keys, with its handler's two calls and lines and the
   wait; on Windows and Linux.
 
 ## 82. Secure connections
 
 - **Why.** Python's `ssl` wraps a socket in TLS: HTTPS by hand, mail
-  (STARTTLS), databases, anything on the internet that isn't plain. Moth's
-  sockets (§72) were plain, and only server.moth spoke TLS (§73).
+  (STARTTLS), databases, anything on the internet that isn't plain. Folio's
+  sockets (§72) were plain, and only server.folio spoke TLS (§73).
 - **What it does.** `connect_secure(host, port)` connects, then `secure`s
   the connection; `secure(connection, host)` makes one secure after it
   began, as STARTTLS does; `secure_as_server(connection, certificate, key)`
   is the other end, for a connection `accept` took. After that `send`,
   `receive` and the rest go through TLS, `finish_sending` sends TLS's last
   word, and `close` ends it. All through OpenSSL 3 by `use the library`,
-  found where server.moth finds it.
+  found where server.folio finds it.
 - **What's checked.** The other end's certificate, against those the
   system trusts, and that it's for the host asked for, a name (also sent
   with SNI, for a server with many) or an address (SSL_set1_host takes
@@ -3488,8 +3488,8 @@ hold them to agreeing.
 ## 84. Email
 
 - **Why.** Python sends mail with `smtplib` and writes it with `email`: a
-  report, an alert, a password reset. Moth had no way to.
-- **What it is.** tools/email.moth, in Moth over sockets.moth (§82), in the
+  report, an alert, a password reset. Folio had no way to.
+- **What it is.** tools/email.folio, in Folio over sockets.folio (§82), in the
   standard library. `message(sender, recipients, subject, text)` is a
   record whose cc, bcc, reply_to, html, attachments and headers can be set;
   `attach(m, file)` and `attach_bytes(m, name, data, type)` add files;
@@ -3504,7 +3504,7 @@ hold them to agreeing.
   gives a meaning to goes in quotes; a file's name that isn't ASCII is RFC
   2231's `filename*`. Date is the time in UTC, from the C library's clock
   (`_time64` on Windows, `time` on Linux); Message-ID and each boundary are
-  part of a SHA-256 (hash.moth) of the time, a count and a random number. A
+  part of a SHA-256 (hash.folio) of the time, a count and a random number. A
   line end in an address, subject or header is a mistake, so none can add
   a header of its own (a Bcc, say). Bcc's addresses are sent to and never
   written.
@@ -3548,20 +3548,20 @@ hold them to agreeing.
 
 - **Why.** Python's `hashlib`, `hmac`, `base64` and `secrets`: checking a
   download, signing a request to an API, a token in an address, a password
-  kept safely. hash.moth had SHA-256 alone, base64 was inside email.moth, and
+  kept safely. hash.folio had SHA-256 alone, base64 was inside email.folio, and
   `random number` is made to repeat when a program asks it to.
-- **hash.moth** has SHA-224 (SHA-256 from other starting words), SHA-512 and
+- **hash.folio** has SHA-224 (SHA-256 from other starting words), SHA-512 and
   SHA-384, SHA-1 and MD5, each by its own name or through `digest(name,
   data)`; `hmac(name, key, data)` (RFC 2104); `pbkdf2(name, password, salt,
-  rounds, size)` (RFC 8018); and `hex_of` and `bytes_of_hex`. All in Moth, so
+  rounds, size)` (RFC 8018); and `hex_of` and `bytes_of_hex`. All in Folio, so
   on every engine. SHA-512's words are 64 bits, past what a number holds
   exactly, so each is two halves of 32 bits, every sum carried from the low
   half to the high; its constants were made from their definition (the cube
   and square roots of the first primes) and checked against FIPS 180-4's.
-- **base64.moth** writes base64, its URL-safe kind, and base32 (RFC 4648),
+- **base64.folio** writes base64, its URL-safe kind, and base32 (RFC 4648),
   and reads them back passing over what isn't their alphabet, as Python
-  does. email.moth uses it.
-- **secrets.moth** asks the system: BCryptGenRandom on Windows, getrandom on
+  does. email.folio uses it.
+- **secrets.folio** asks the system: BCryptGenRandom on Windows, getrandom on
   Linux, through `use the library`. `random_bytes(n)`, `token_hex`,
   `token_url`, `below(n)` (each number as likely: bytes drawn again when
   they'd favour the smallest), `choice`, `shuffled` and `same_secret`, which
@@ -3571,27 +3571,27 @@ hold them to agreeing.
   machine code on Windows and Linux; base64 and base32 against RFC 4648's
   and Node's; secrets on Windows and Linux.
 
-## 87. Asking web servers: http.moth
+## 87. Asking web servers: http.folio
 
 - **Why.** `read` and `send` ask sites through the system (WinHTTP, curl),
   and only `read` and POST: no PUT, PATCH or DELETE, and a redirect isn't
   followed. Python's urllib.request does any method.
-- **What it is.** tools/http.moth, in Moth over sockets.moth (§82), in the
+- **What it is.** tools/http.folio, in Folio over sockets.folio (§82), in the
   standard library. `request(method, url, body, headers)` and `head`, `get`,
   `post`, `put`, `patch`, `delete`; a body is text, bytes, or a record, list
   or dictionary sent as JSON; the answer is a record of status, reason,
   headers (each name in small letters), body, text and url. A 404 is an
   answer like any other: `check` makes one a mistake; `get_json` reads JSON.
 - **What it does on the way.** Connection: close, so the answer ends when
-  the connection does; Accept-Encoding: gzip, undone with zip.moth; a body in
+  the connection does; Accept-Encoding: gzip, undone with zip.folio; a body in
   chunks put together; redirects followed up to 10, as browsers do: a 303,
   or a 301 or 302 to a POST, goes on as a GET with no body; a 307 or 308
   keeps both; Authorization isn't sent on to another host. A header with a
   line end in it is a mistake. `encoded`, `decoded` and `form_of` write and
   read what goes in an address or a form.
-- **Where.** HTTPS uses OpenSSL as sockets.moth does, so on Windows its DLLs
+- **Where.** HTTPS uses OpenSSL as sockets.folio does, so on Windows its DLLs
   go beside the program; `read` and `send` need nothing there.
-- **Tested.** In machine code on Windows and Linux, asking server.moth in a
+- **Tested.** In machine code on Windows and Linux, asking server.folio in a
   task of the program's: each method, a header of its own, JSON both ways,
   bytes, each redirect, one to another host, gzip, a 404, a loop of
   redirects, chunks, and each mistake. By hand, example.com over HTTP and
@@ -3601,11 +3601,11 @@ hold them to agreeing.
 
 - **Why.** A page that's told things as they happen (a chat, a game, a
   dashboard) talks to its server over a WebSocket; Python has the websockets
-  package. Moth's server.moth answers one request at a time and closes.
-- **What it is.** tools/websocket.moth, over sockets.moth, both ends.
+  package. Folio's server.folio answers one request at a time and closes.
+- **What it is.** tools/websocket.folio, over sockets.folio, both ends.
   `connect(url)` asks for one (ws:// or wss://) with a key of 16 random bytes
-  (secrets.moth) and checks the server's answer: base64 of the SHA-1 of the
-  key and RFC 6455's own text (hash.moth, base64.moth). `accept(listener)`
+  (secrets.folio) and checks the server's answer: base64 of the SHA-1 of the
+  key and RFC 6455's own text (hash.folio, base64.folio). `accept(listener)`
   answers such a request, and says 400 to any other. Each connection keeps
   the path and headers it was asked with.
 - **Messages.** `send` sends text as text and bytes as bytes, a frame each,
@@ -3618,7 +3618,7 @@ hold them to agreeing.
 - **Tested.** In machine code on Windows and Linux: an echo server in a task
   and the program connecting to it, with text, a ping, 70,000 bytes, 300
   letters, and a close; and Node's own WebSocket client, as a browser's,
-  asking a server of Moth's.
+  asking a server of Folio's.
 
 ## 89. Reading mail
 
@@ -3642,7 +3642,7 @@ hold them to agreeing.
   by UID, the message fetched with BODY.PEEK[] so it isn't marked seen,
   `imap_mark` (STORE +FLAGS), `imap_close`. Each command has a tag of its own;
   an answer that carries bytes ({n}, then n bytes) is read exactly.
-- **Tested.** In machine code on Windows and Linux: a message email.moth
+- **Tested.** In machine code on Windows and Linux: a message email.folio
   made, read back as it was; one another program wrote, in
   quoted-printable and Latin-1, with Q words and folded headers; and POP3
   and IMAP servers of the test's own, in tasks, with what each was told.
@@ -3650,8 +3650,8 @@ hold them to agreeing.
 ## 90. TOML, command lines and logging
 
 - **Why.** Python reads settings with `tomllib`, its command line with
-  `argparse`, and says what happened with `logging`; Moth had none of them.
-- **toml.moth** reads TOML 1.0 into dictionaries and lists: bare, quoted and
+  `argparse`, and says what happened with `logging`; Folio had none of them.
+- **toml.folio** reads TOML 1.0 into dictionaries and lists: bare, quoted and
   dotted keys; [tables] and [[arrays of tables]]; basic strings with every
   escape, literal strings, and both multiline kinds (a line end after the
   opening dropped, a \ at a line's end joining it to the next); whole
@@ -3659,26 +3659,26 @@ hold them to agreeing.
   exponents, read as their digits times a power of 10, so rounded once
   (`number of` doesn't take an exponent); true and false; arrays over many
   lines; inline tables. Dates and times stay text, as written. inf and nan
-  are mistakes, as Moth's numbers have neither. `toml_of` writes a
+  are mistakes, as Folio's numbers have neither. `toml_of` writes a
   dictionary back: its plain values, its tables, then its arrays of
   tables. A mistake says which line.
-- **options.moth** reads `arguments`: `option` (--name value, -n value,
+- **options.folio** reads `arguments`: `option` (--name value, -n value,
   --name=value; a number if its default is), `flag`, `positional`, and
   `rest`; `--` ends the options; a negative number is a name, not an
   option. `--help` says the usage, the program's description and each
   name's and option's help, and stops the program; a mistake says the usage
   and why on the error output and stops it with 2, as argparse does.
   `parse_or_fail` fails instead, for a `try`.
-- **log.moth** writes a line for each thing, with the date and time, its
+- **log.folio** writes a line for each thing, with the date and time, its
   level (debug, info, warning, error, critical), a name if one is set, and
   the message, in a format of the program's own (%time%, %level%, %name%,
-  %message%, as `{` starts a value in Moth's text), for those at the level
+  %message%, as `{` starts a value in Folio's text), for those at the level
   set or above, to the error output or added to the end of a file.
-- **system.moth's append_to_file** adds to the end of a file, making it if
+- **system.folio's append_to_file** adds to the end of a file, making it if
   it isn't there: CreateFileW with FILE_APPEND_DATA on Windows, open with
   O_APPEND on Linux.
 - **Tested.** TOML against Python's tomllib on a file with each of its
-  kinds, and toml.test.moth and options.test.moth, on the three engines and
+  kinds, and toml.test.folio and options.test.folio, on the three engines and
   in machine code; logging and adding to a file in machine code on Windows
   and Linux.
 
@@ -3688,25 +3688,25 @@ hold them to agreeing.
   `functools`, `statistics` and `zoneinfo`: each saves a program writing the
   same loops again, and the last one can't be written without the world's
   zone data.
-- **collections.moth.** `counted` and `most_common` (most first, and those
+- **collections.folio.** `counted` and `most_common` (most first, and those
   counted the same in the order they came: sorted by the count below 0,
-  as Moth's sort keeps order); `grouped` by a function; a queue whose
+  as Folio's sort keeps order); `grouped` by a function; a queue whose
   things are in a dictionary by place, from `first` to `last`, so both ends
-  are quick, as Moth's lists can't be shortened at their end (`remove` takes
+  are quick, as Folio's lists can't be shortened at their end (`remove` takes
   a key from a dictionary); a heap in a list, with its own count, as a list
   only grows; and `where_sorted`, `where_sorted_first` and `insert_sorted`.
-- **lists.moth.** chunks, windows, paired, numbered, flattened, product,
+- **lists.folio.** chunks, windows, paired, numbered, flattened, product,
   permutations, combinations, running totals, total, folded, mapped,
   kept_by, dropped_by, split_by, taken_while, dropped_while, every_one,
   some_one, sorted_by (by a key, those the same kept in order),
   smallest_by, largest_by and repeated. A list given before another input
   goes in brackets, as `list of` takes what comes after it.
-- **stats.moth.** mean (summed with Kahan's way), median and its low and
+- **stats.folio.** mean (summed with Kahan's way), median and its low and
   high, mode and modes, variance and standard deviation of a sample and of
   a population, quantiles (Python's "exclusive" way), covariance,
   correlation, a straight line by least squares, and the geometric and
-  harmonic means, with math.moth's square root, logs and powers.
-- **zones.moth.** A moment is seconds since 1970 in UTC. On Windows, ICU's
+  harmonic means, with math.folio's square root, logs and powers.
+- **zones.folio.** A moment is seconds since 1970 in UTC. On Windows, ICU's
   calendar in icu.dll (Windows 10 1903 and later): the zone's name checked,
   then its offset and summer time's at that moment. On Linux, the zone's
   zoneinfo file (TZif): its changes, the offset before the first, and the
@@ -3724,12 +3724,12 @@ hold them to agreeing.
 ## 92. More of C: small whole numbers, structures by value, any thread
 
 - **Why.** Python's ctypes has every C type, passes structures by value, and
-  lets C call back on any thread; Moth's library blocks had whole numbers of
+  lets C call back on any thread; Folio's library blocks had whole numbers of
   32 and 64 bits, structures only by where they are, and callbacks only on
   the program's own threads.
 - **Whole numbers.** `a byte`, `a signed byte`, `a short whole number`, `an
   unsigned short whole number`, `an unsigned whole number` and `an unsigned
-  long whole number`, from one table (machine.moth's c_wholes): as inputs,
+  long whole number`, from one table (machine.folio's c_wholes): as inputs,
   checked from their least to their most; as what a function gives, made
   from their low bytes with or without their sign (an unsigned long from
   2^63 up as half of it, doubled); as fields, as many bytes as they have, on
@@ -3776,18 +3776,18 @@ hold them to agreeing.
   once, before the last word: the debugger says where it stopped and takes
   `show`, `vars`, `where` and `list` until another command ends it. With no
   more commands (the input over), it ends at once.
-- **moth coverage.** As `moth profile`, with moth-coverage.moth in the
+- **folio coverage.** As `folio profile`, with folio-coverage.folio in the
   debugger's place, from the standard library: `start` is told now every
   line a statement is on, in the blocks inside others too (with_debugger
   walks the program for them), and `wants` notes each line that runs; at
   the end, however the program ends, it says how many of each file's ran,
   the program's own first, and those that didn't, as runs (5-7).
-- **Versions.** `moth add thing@v1.2`: what's after an @ in a source's last
+- **Versions.** `folio add thing@v1.2`: what's after an @ in a source's last
   part is a tag, branch or commit, checked out after the clone, and kept in
-  moth.packages with the source, so `moth get` fetches the same commit as
-  before and `moth update` moves a branch's to its newest and leaves a tag's
+  folio.packages with the source, so `folio get` fetches the same commit as
+  before and `folio update` moves a branch's to its newest and leaves a tag's
   or a commit's where it is.
-- **Tested.** Through moth.exe: coverage of a program and a file it uses; a
+- **Tested.** Through folio.exe: coverage of a program and a file it uses; a
   package at a tag, which update leaves, on a branch, which it follows, and
   at a version that isn't there; and a program built to be debugged
   stopping at its mistake, with its variables, its calls and its lines.
@@ -3795,16 +3795,16 @@ hold them to agreeing.
 ## 94. Concurrency: asking whether a task has ended, locks and queues
 
 - **Why.** Python has `future.done()`, `threading.Lock`, `Semaphore` and
-  `Event`, `queue.Queue`, and `concurrent.futures`' `map`; Moth could start a
+  `Event`, `queue.Queue`, and `concurrent.futures`' `map`; Folio could start a
   task and wait for it, and nothing else (§62's "not yet").
 - **`job has ended`.** A test, as `is` is: after a value, `has ended` on the
-  same line, parsed by moth.js and compiler.moth alike into the builtin `has
+  same line, parsed by folio.js and compiler.folio alike into the builtin `has
   ended`, last in vm.js's BUILTINS. `has` alone is still a name. In machine
   code it finds the task's number as `wait for` does and looks through the
   slots (rt_task_ended): a slot running that task means no, and a number no
   task has had is the same mistake as `wait for`'s. On the JavaScript engines
   a task has always ended, as it ran to its end when it was started.
-- **sync.moth, in Moth alone.** One thread runs Moth at a time and only lets
+- **sync.folio, in Folio alone.** One thread runs Folio at a time and only lets
   the turn go at a loop's end, a call or a wait (§62), so between those
   nothing else runs: `take` sees the lock is free and marks it held with no
   call in between, and `receive` sees a value is there and takes it off the
@@ -3813,14 +3813,14 @@ hold them to agreeing.
   lock is a semaphore for one: a record with how many places are free and how
   many there are, so letting go of one that's free is a mistake. `holding`
   calls a function with the lock held and lets it go even if the function
-  fails. The queue is collections.moth's, a dictionary from `first` to
+  fails. The queue is collections.folio's, a dictionary from `first` to
   `last`, with `queue_holding(n)` making `send` wait while n are waiting.
   `take_within`, `wait_for_flag_within` and `receive_within` give up after so
   many milliseconds of `the clock`, which on the JavaScript engines moves on
   with each `wait`, so they give up there too. `run_each` starts a task for
   each thing and waits for them in order; `run_each_at_most(f, things, n)`
   waits for the oldest before starting more than n.
-- **Tested.** sync.moth's own tests on every engine and in machine code;
+- **Tested.** sync.folio's own tests on every engine and in machine code;
   through tasks that really wait, on Windows and Linux: `has ended` before and
   after a task ends, three tasks adding to one total through a lock (which,
   without it, ends at 20 of 60), fifty values through a queue that holds 3, a
@@ -3828,16 +3828,16 @@ hold them to agreeing.
 
 ## 95. finally, inputs by name, unpacking, match and steps
 
-- **Why.** Next to Python, Moth had no `finally`, no keyword arguments, no
+- **Why.** Next to Python, Folio had no `finally`, no keyword arguments, no
   `a, b = b, a`, no `match`, and no `range` with a step: each a few lines of
-  Python that took a helper variable or a loop by hand in Moth.
+  Python that took a helper variable or a loop by hand in Folio.
 - **Only the parsers, again.** As in §66, each is written in terms of what
-  Moth already had, so the VM, the JIT, WebAssembly, machine code, the
-  checker and the shell needed nothing new; moth.js and compiler.moth make
-  the same tree, and compiler.moth still writes the JIT's JavaScript byte for
+  Folio already had, so the VM, the JIT, WebAssembly, machine code, the
+  checker and the shell needed nothing new; folio.js and compiler.folio make
+  the same tree, and compiler.folio still writes the JIT's JavaScript byte for
   byte. A statement that becomes several (`several`) is put in its place in
   the block, as a used file's code is. The variables they need have names no
-  program can write: `the step on line 3`, with `of shapes.moth` in a file the
+  program can write: `the step on line 3`, with `of shapes.folio` in a file the
   program uses, and `(2)` for a second on one line; the debuggers leave a name
   with "on line" in it out of what they show. A number they write in has a
   token of its own, with the number as its text, as the JIT writes numbers as
@@ -3883,19 +3883,19 @@ hold them to agreeing.
   a `stop` after `either way` itself is left as it is, so it ends what it
   ends, as Python's `return` in a `finally` does. The mistake passed on is
   reported at the `try`, with its message: what's lost is where it was, since
-  Moth has no way to fail again with the same mistake.
-- **Tested.** Each, on the three engines, in compiler.moth against the JIT,
+  Folio has no way to fail again with the same mistake.
+- **Tested.** Each, on the three engines, in compiler.folio against the JIT,
   in machine code on Windows and Linux: the order inputs are given in, a swap,
   steps down, by fractions and the wrong way, every kind of clause, a try left
   by a return in a loop, by a stop, by a mistake caught and one passed on, a
   try with `either way` inside another, and each mistake they can make; and
-  `moth format` lays out `match` and `either way` as it does `if` and `else`.
+  `folio format` lays out `match` and `either way` as it does `if` and `else`.
 
 ## 96. Kinds, give, and numbers of any size
 
 - **Why.** Python has classes, generators, and whole numbers of any size (and
-  `fractions`, and `math.gcd`, `isqrt`, `comb`, `pow(a, n, m)`). Moth had a
-  record's own functions (§68), lists, and big.moth.
+  `fractions`, and `math.gcd`, `isqrt`, `comb`, `pow(a, n, m)`). Folio had a
+  record's own functions (§68), lists, and big.folio.
 - **Kinds, only in the parsers.** `kind dog with name, sound or "woof"`, then
   `to` lines, then `end`, is the statement when a name follows `kind` and
   then `with` or `from`, or a `to` starts the next line; `kind` alone is
@@ -3916,37 +3916,37 @@ hold them to agreeing.
   mistake. A real generator's laziness would need a function to stop and go
   on again, which only tasks can do here, and the JavaScript engines run a
   task to its end when it's started.
-- **Numbers of any size.** big.moth has `gcd` (Euclid's, with its own
+- **Numbers of any size.** big.folio has `gcd` (Euclid's, with its own
   remainder), `lcm`, `square_root` (Newton's way, from 10 to the power of
   half the digits, rounded up, which is never below the root), `factorial`,
   `choices` (each step's product divided at once, as each is whole),
   `power_mod` (squaring, and the remainder after each multiplying, so the
   power can have hundreds of digits), `absolute`, `negated`, `in_base` and
-  `from_base`. fractions.moth keeps a fraction as text in lowest terms, the
+  `from_base`. fractions.folio keeps a fraction as text in lowest terms, the
   sign on top, read from "3/4", a whole number, or a decimal as it's
   written (a number as it's shown, so 0.1 is 1/10, not the binary fraction
-  Python's Fraction(0.1) is); each sum is big.moth's, then the gcd.
-  `as_decimal` rounds a half away from 0, as Moth's `rounded` does.
+  Python's Fraction(0.1) is); each sum is big.folio's, then the gcd.
+  `as_decimal` rounds a half away from 0, as Folio's `rounded` does.
 - **Tested.** Kinds, one from another, a function of the kind it's from,
   inputs by name, a kind with no inputs and one with no functions, `give` in
   loops, after a return and in a try with `either way`, a program with its
-  own `give`, and each mistake, on the three engines, in compiler.moth and in
-  machine code; big.moth's new functions and fractions.moth against
+  own `give`, and each mistake, on the three engines, in compiler.folio and in
+  machine code; big.folio's new functions and fractions.folio against
   JavaScript's BigInt on 400 random numbers, and their own tests on every
   engine and in machine code.
 
 ## 97. The language's own functions: decimals, and how a kind is shown
 
 - **Why.** Python writes a number to so many places with `f"{x:.2f}"`, and a
-  class says how it's printed with `__str__`. Moth had text.moth's
+  class says how it's printed with `__str__`. Folio had text.folio's
   `number_text`, a call away, and showed a kind's record as a record.
-- **Written in Moth.** Both need code that runs, not just a new shape of tree,
-  and every engine and machine code run Moth. So moth.js has `LANGUAGE`, a
-  short Moth file, and compiler.moth the same text (a test holds them to each
+- **Written in Folio.** Both need code that runs, not just a new shape of tree,
+  and every engine and machine code run Folio. So folio.js has `LANGUAGE`, a
+  short Folio file, and compiler.folio the same text (a test holds them to each
   other): once the whole program is read, if it needs any of it, the parser
   reads that text as a file used as "the language", its names `the language's
   with_decimals` and so on, which no program can write and no file's alias
-  renames, and puts it at the program's top. machine.moth knows the text too,
+  renames, and puts it at the program's top. machine.folio knows the text too,
   for a mistake's line, and the debugger and coverage leave its lines out.
 - **`x with 2 decimals`.** After a sum, `with`, one number or name, then
   `decimals` (or `decimal`) on the same line: a call of `with_decimals`, which
@@ -3961,22 +3961,22 @@ hold them to agreeing.
   else the value itself. A program with no such kind is as it was.
 - **Tested.** Decimals of numbers small, huge, below 0, carried up a place and
   in text; a kind shown by `say`, in text and inside other text, a record
-  with a `shown` that isn't a function, on the three engines, in compiler.moth
+  with a `shown` that isn't a function, on the three engines, in compiler.folio
   and in machine code.
 
 ## 98. Sets, and the debugger's sums
 
-- **sets.moth.** A set is a kind's record holding a dictionary of its things,
+- **sets.folio.** A set is a kind's record holding a dictionary of its things,
   each to yes, its `kind` "set" and a `shown` that writes `{1, 2, 3}`; `has`
   is a dictionary's own finding, so it's as quick with a million as with ten.
   Its things are a dictionary's keys: numbers and text.
-- **`show x + 1`.** moth-debugger.moth reads what's after `show` as Moth reads
+- **`show x + 1`.** folio-debugger.folio reads what's after `show` as Folio reads
   a sum: numbers, text, the line's variables, `+ - * /`, brackets, `is` and
   its comparisons, `and`, `or`, `not`, `item ... of`, `length of`, `keys of`,
   a field (`age of sam`, `sam's age`) and a file's name (`math's pi`), each
-  worked out in the debugger with Moth's own operators, so the answer is the
+  worked out in the debugger with Folio's own operators, so the answer is the
   program's. A field is found through JSON (`json from (x as json)`), as
-  Moth has no field by a name held in a variable. A function can't be
+  Folio has no field by a name held in a variable. A function can't be
   called, as the program isn't running; a mistake says what it was.
 - **Tested.** A program built to be debugged, shown sums, items, fields of
   fields, comparisons, brackets, a minus, and three it can't work out.
@@ -3986,8 +3986,8 @@ hold them to agreeing.
 - **Why.** A program to give to people needed a setup that puts it in the
   menus and can take it away, as Inno Setup or an MSI does, and a way to sign
   it, so Windows can say who made it.
-- **The installer is a Moth program.** tools/installer.moth, in the standard
-  library: `moth build --installer` writes a two-line program that uses it,
+- **The installer is a Folio program.** tools/installer.folio, in the standard
+  library: `folio build --installer` writes a two-line program that uses it,
   with the app's name, version and file, and builds that with the app built in
   (`--include` does the same), its icon, and `--allow-all`. Run, it asks with
   Windows' own message box (or a question on Linux), writes the program where
@@ -4006,23 +4006,23 @@ hold them to agreeing.
 - **--sign.** A command, split at spaces with quoted parts kept, run with each
   program's name after it, after the program is built and before the
   installer takes it in, then on the installer; one that fails, or can't be
-  started, stops the build. moth knows nothing of certificates: signtool, or
+  started, stops the build. folio knows nothing of certificates: signtool, or
   any tool, does the signing.
-- **Tested.** Through moth.exe, on Windows and Linux: an installer made and
+- **Tested.** Through folio.exe, on Windows and Linux: an installer made and
   signed (with `echo` for signtool), installed into a folder, the program run
   from there, taken away, a wrong option, and a signer that isn't there. By
   hand, on Windows: the Start menu shortcut's target, the Settings entry's
   values, and its uninstall string run as Settings runs it, leaving nothing;
   and on Linux, in WSL, the menu entry and uninstall.sh. A real certificate
-  wasn't at hand, so signtool itself is untried on Moth's programs.
+  wasn't at hand, so signtool itself is untried on Folio's programs.
 
 ## 100. Pictures, encryption and charts
 
 - **Why.** Python has Pillow for pictures, `cryptography` for encrypting, and
-  matplotlib for charts saved to files; Moth had a picture drawn in a window,
+  matplotlib for charts saved to files; Folio had a picture drawn in a window,
   hashes, and a chart in the playground.
-- **images.moth.** An image is a record with its width, height and pixels, 4
-  bytes each. PNG is read chunk by chunk, its IDAT inflated by zip.moth, each
+- **images.folio.** An image is a record with its width, height and pixels, 4
+  bytes each. PNG is read chunk by chunk, its IDAT inflated by zip.folio, each
   row's filter undone (Paeth's too), at any depth from 1 to 16 bits, grey,
   colour, a palette with tRNS's opacity, and Adam7's seven passes; written as
   8-bit RGBA, each row filtered the way whose numbers come out smallest, as
@@ -4039,17 +4039,17 @@ hold them to agreeing.
   JPEG written here, read by Pillow, 45.7 dB from what it was; crops, flips
   and grey the same as Pillow's; and machine code the same bytes as the
   JavaScript engine for all of them.
-- **crypto.moth.** AES from FIPS 197, bytes as lists of numbers, with its
+- **crypto.folio.** AES from FIPS 197, bytes as lists of numbers, with its
   S-box and doubling table written out; GCM from SP 800-38D, its GHASH on
   four 32-bit numbers, and its counter mode from 2. `decrypt` checks the tag
-  with secrets.moth's `same_secret`, so how long it takes says nothing.
+  with secrets.folio's `same_secret`, so how long it takes says nothing.
   `encrypt` puts a fresh 12-byte nonce from the system before what it seals;
-  new_key, new_salt and encrypt need a program moth build made, as the system's
+  new_key, new_salt and encrypt need a program folio build made, as the system's
   randomness is through C. Tested: 36 cases from Python's cryptography (all
   three key sizes, messages of 0 to 40 bytes, with and without extra bytes)
   on every engine and in machine code, GCM's own first two, a byte changed,
   the wrong key and the wrong extra found out.
-- **charts.moth.** A chart is laid out once, as shapes and text, then written
+- **charts.folio.** A chart is laid out once, as shapes and text, then written
   as SVG (each mark's value in a `<title>`, so it shows under the mouse) or
   drawn into an image: rectangles with their data end rounded and smoothed,
   2-pixel lines by their distance from each pixel, dots with a ring, and
@@ -4068,13 +4068,13 @@ hold them to agreeing.
 
 ## 101. Faster on the web, and every core with less to write
 
-- **Why.** The playground and the pages `moth build --web` makes ran on the
+- **Why.** The playground and the pages `folio build --web` makes ran on the
   JIT. WebAssembly was already quicker at sums and calls, but two to three
   times slower with lists of numbers and with text: each number in a list was
   a box of its own, which the GC kept and copied (73% of the time, adding
   3,000,000 numbers to a list), and each `+` on text went into JavaScript and
   back six times. Counting steps took a call each turn of a loop. And
-  cores.moth (§75) asked for a `work_here` line before anything that should
+  cores.folio (§75) asked for a `work_here` line before anything that should
   run once.
 - **Small whole numbers, unboxed.** A whole number from -2^30 to 2^30 - 1 is
   an i31 value, as yes and no already were. No and yes keep 0 and 1, so the
@@ -4117,7 +4117,7 @@ hold them to agreeing.
   with a `remainder of`, run once as the playground runs a program: 227 to
   87 ms (the JIT: 76). Primes up to 5,000, which compares numbers from a
   list, went from 15 to 18 ms, as each number now says which kind it is.
-- **cores.moth with no work_here.** Each each_at_once outside a part has a
+- **cores.folio with no work_here.** Each each_at_once outside a part has a
   number, counted as the program runs. A copy is started with its call's
   number and runs the program to it: a call before its own gives what it gave
   the program, from a file each_at_once saves them to (with how many calls
@@ -4139,7 +4139,7 @@ hold them to agreeing.
   and longer is shared evenly: counting the primes below 60,000 to 1,920,000,
   32 items, on 6 copies, 5.0 s before and 3.4 s now (one copy: 12.0 s). On 12
   or more both take 2.7 s, which is what 6 cores with two threads each give.
-- **Waiting.** tasks.moth's wait_for waits on the process (Windows) or its
+- **Waiting.** tasks.folio's wait_for waits on the process (Windows) or its
   output (Linux) for up to 10 ms, so it wakes when the task ends, not at the
   next 10 ms. Starting and finishing 12 copies took 117 ms, now 100 ms on
   Windows (most of it CreateProcess, 6 ms each), and 8 ms on Linux.
@@ -4147,14 +4147,14 @@ hold them to agreeing.
   fractions, bytes, as yes and no, through kinds, dictionaries and records),
   `remainder of` every sign with whole numbers, fractions, 2^31 and more, and
   `rounded` near whole numbers and halves, small and big: the VM, the JIT and
-  WebAssembly say the same. cores.moth in machine code on Windows and Linux:
+  WebAssembly say the same. cores.folio in machine code on Windows and Linux:
   two calls in a row, one in a loop, records, calls inside a part and inside
   one done here, a part's mistake inside the program's own try, a copy that
   came to another each_at_once, and no files left behind.
 
 ## 102. Learning it, and a web app made with it
 
-- **Why.** The README shows all of Moth at once, which suits someone who
+- **Why.** The README shows all of Folio at once, which suits someone who
   already programs; someone new needs it a step at a time. And a language is
   believed when something real is made with it, start to finish.
 - **learn.html.** Eleven lessons, from `say` to a word counter and the turtle,
@@ -4167,89 +4167,89 @@ hold them to agreeing.
   playground, which shows drawings. Lessons run are ticked, and kept in the
   browser's storage.
 - **Lessons that can't go stale.** They're in learn-lessons.js, which the page
-  imports and moth.test.js runs: every program on every engine, the same on all
+  imports and folio.test.js runs: every program on every engine, the same on all
   of them, with the answers the lesson types; the one that fails on purpose (an
   item that isn't there, to show a mistake's words) fails with that mistake.
 - **apps/guestbook.** A page to sign and read, in SQLite, with the entries as
-  JSON: guestbook.moth serves book.moth, which does the work with no network,
+  JSON: guestbook.folio serves book.folio, which does the work with no network,
   so it's tested by calling answer_with with requests made by hand. Values go to
   SQLite as parameters, never in the SQL; everything shown is escaped; a sign is
   answered with 303 to the page, so Reload doesn't sign again; a refused one with
   400, the page, the problem and what was typed. docs/guestbook.md walks through
   it. 161 lines, built into a 1.3 MB program.
-- **A bug it found.** In text.moth, `^\s+|\s+$` never matched its first part:
+- **A bug it found.** In text.folio, `^\s+|\s+$` never matched its first part:
   text_either worked out where each part jumps to from the list of steps it had
   before the last part, and a repeat in the last part (`+`) makes a new list. It
   reads the list again before setting the jumps now.
-- **Tested.** Every lesson, as above; text.moth's either-ors whose last part
+- **Tested.** Every lesson, as above; text.folio's either-ors whose last part
   repeats, against Python's re; the guestbook's own tests in machine code, then
-  the guestbook built by moth.exe, run, signed (a name of `<script>`, one of
+  the guestbook built by folio.exe, run, signed (a name of `<script>`, one of
   only spaces), read as a page and as JSON, a 404, and its database file, over
   HTTP.
 
-## 103. Package sums: moth.sums
+## 103. Package sums: folio.sums
 
-- **Why.** A commit in `moth.packages` names a package's code, but nothing
+- **Why.** A commit in `folio.packages` names a package's code, but nothing
   checked that the files in `packages/` were still that code. A cached
   `packages/` in CI, or a file changed there by hand, ran as it was; and a
   commit is a SHA-1, which Git hardens but which is the weakest link a company
   would be asked about. npm's lockfile has an integrity hash, Go has go.sum,
   Cargo checks each crate's.
-- **What.** `moth add` and `moth update` write the SHA-256 of each package's
-  files, at its commit, to `moth.sums`, beside `moth.packages`: a line each,
-  its name, the commit and `sha256:` with 64 hex digits. `moth get` works it out
+- **What.** `folio add` and `folio update` write the SHA-256 of each package's
+  files, at its commit, to `folio.sums`, beside `folio.packages`: a line each,
+  its name, the commit and `sha256:` with 64 hex digits. `folio get` works it out
   again and compares. One that was in `packages/` already and differs is named
   with the files git sees changed, added or taken away, and left as it is, for
   a person to look at; one just fetched that differs came from somewhere that
-  isn't what it was, and is taken away, so nothing uses it. `moth update`
+  isn't what it was, and is taken away, so nothing uses it. `folio update`
   checks a package first, so a change in `packages/` never becomes the next
-  sum. A package's own `moth.sums` is checked for the packages it brings.
+  sum. A package's own `folio.sums` is checked for the packages it brings.
 - **The sum.** For each file in the folder but Git's own (any `.git` folder or
   file), in the order of its path's bytes, with `/` between its parts: its
   SHA-256 in hex, two spaces, its path, a line end; then the SHA-256 of that.
   It's what `sha256sum` writes, so `find`, `sort` and `sha256sum` can check one
-  without moth, and it's Go's dirhash with hex for base64. Every file counts,
+  without folio, and it's Go's dirhash with hex for base64. Every file counts,
   not only the ones git tracks: a file added to a package's folder is a change.
-  It uses tools/hash.moth, which moth.moth now uses `as cli_hashing`, so
-  bootstrap.mjs and the tests give moth that file too. A megabyte takes moth
+  It uses tools/hash.folio, which folio.folio now uses `as cli_hashing`, so
+  bootstrap.mjs and the tests give folio that file too. A megabyte takes folio
   about half a second.
 - **The same on every system.** Git for Windows checks text files out with
   `\r\n` (its installer sets `core.autocrlf`), so a package's files, and their
-  sum, were different on Windows and Linux. moth now runs git with
+  sum, were different on Windows and Linux. folio now runs git with
   `core.autocrlf=false`, `core.eol=lf` and `core.symlinks=false`: files as they
   were committed, or as the repository's own `.gitattributes` says, which is
   the same everywhere, and a symbolic link as a small file holding where it
   points, as Windows has it anyway. So a link in a package can't lead `use`
   out of it either.
 - **A file of its own.** The sums could have gone at the end of each
-  `moth.packages` line, but moth 1.11 takes a line's last word as its commit,
-  so it couldn't have read the file. `moth.sums` is a file 1.11 doesn't know,
-  and ignores. A `moth.packages` with no sums, or one whose commit has none,
-  gets them from the next `moth get`, which fetches the package again first,
-  as a moth before this one may have checked it out with other line ends.
-- **Tested.** Through moth.exe: the sum against one Node.js works out the same
+  `folio.packages` line, but folio 1.11 takes a line's last word as its commit,
+  so it couldn't have read the file. `folio.sums` is a file 1.11 doesn't know,
+  and ignores. A `folio.packages` with no sums, or one whose commit has none,
+  gets them from the next `folio get`, which fetches the package again first,
+  as a folio before this one may have checked it out with other line ends.
+- **Tested.** Through folio.exe: the sum against one Node.js works out the same
   way; a package whose `.gitattributes` asks for the system's line ends
   checked out with `\n` on Windows too; a file changed and a file added in
   `packages/`, by get and by update; a fetch whose sum differs, not kept; a
-  `moth.packages` with no sums, and one checked out with `\r\n`; update's new
-  sum; a package's own `moth.sums`, which fits and which doesn't; remove.
+  `folio.packages` with no sums, and one checked out with `\r\n`; update's new
+  sum; a package's own `folio.sums`, which fits and which doesn't; remove.
 
 ## 104. Signed packages: --signed
 
 - **Why.** A sum says the code is what was pinned, not who wrote it. A company
   that signs its commits, or takes a library only at its signed releases, wants
-  moth to check.
-- **What.** `moth add`, `get` and `update` take `--signed`. A package passes if
+  folio to check.
+- **What.** `folio add`, `get` and `update` take `--signed`. A package passes if
   it was asked for at a tag that's a signed tag (an object of its own, not a
   name for a commit) at the package's commit and `git verify-tag` accepts it, or
   else if `git verify-commit` accepts its commit. Which keys count is git's:
   the person's GPG keyring, or for SSH signatures the file
-  `gpg.ssh.allowedSignersFile` names. moth says what git said when it doesn't
+  `gpg.ssh.allowedSignersFile` names. folio says what git said when it doesn't
   pass. `add` takes away what it fetched; `update` goes back to the commit it
   was at, and says so; `get` ends with 1.
 - **Asked for, not always.** Most packages aren't signed yet, so checking each
-  time would stop everyone. A company puts `moth get --signed` in its CI.
-- **Tested.** Through moth.exe, with SSH keys ssh-keygen makes and an allowed
+  time would stop everyone. A company puts `folio get --signed` in its CI.
+- **Tested.** Through folio.exe, with SSH keys ssh-keygen makes and an allowed
   signers file given to git in `GIT_CONFIG_*`: a tag that's only a name on an
   unsigned commit, refused; a signed commit asked for by its hash, and a signed
   tag on an unsigned commit, taken by add and get; a commit signed by a key
@@ -4257,10 +4257,10 @@ hold them to agreeing.
   update on a branch, refusing an unsigned newest commit and taking a signed
   one; and `--signed` where it means nothing.
 
-## 105. Advisories and moth audit
+## 105. Advisories and folio audit
 
 - **Why.** npm audit, pip-audit and cargo audit say when a program depends on a
-  version with a known problem. Moth's packages are pinned by commit, so its
+  version with a known problem. Folio's packages are pinned by commit, so its
   advisories name commits.
 - **The advisories** are a list in the package index's JSON, beside its
   packages, so one file, one address and one pull request hold both. Each names
@@ -4270,36 +4270,36 @@ hold them to agreeing.
   with (or `"0"`) that aren't from the one that fixed it on, as OSV's GIT ranges
   are; or neither, for every commit. `id`, `severity`, `about` and `link` are
   for people.
-- **moth audit** reads moth.packages and the index (`--index` as for search),
+- **folio audit** reads folio.packages and the index (`--index` as for search),
   matches each package to the advisories by where it comes from, in lower case,
   with no `https://`, `ssh://`, `git@site:`, `.git` or `/` at its end, and asks
   the package's own clone, with `git merge-base --is-ancestor`, whether a commit
   is before another. A package not fetched can't be asked, and says so. It ends
   with 1 if an advisory is about a package's commit or one couldn't be checked,
   so CI stops; with 0, it says there are none.
-- **The index.** samyyy2423/moth-packages needs `advisories` in index.json,
+- **The index.** samyyy2423/folio-packages needs `advisories` in index.json,
   and its check-index.mjs to allow and check it; the pull request that adds
   this describes the change.
-- **Tested.** Through moth.exe, with an index in a file: an advisory by its
+- **Tested.** Through folio.exe, with an index in a file: an advisory by its
   commits, written in another case with `.git/` after it, and one by
   introduced and fixed, each at the commits it's about and not; a package from
   a site written another way than the index has it; a package not fetched; an
-  index with no advisories; advisories that aren't; and no moth.packages.
+  index with no advisories; advisories that aren't; and no folio.packages.
 
 ## 106. A specification, a promise, a changelog and a security policy
 
 - **Why.** A company that builds on a language asks what it means, what
   updates will change, what's changed, and where to send a security problem.
-  Moth's answers were spread through the README, DESIGN.md and the release
+  Folio's answers were spread through the README, DESIGN.md and the release
   notes.
-- **SPEC.md** is the language as it is, from moth.js's parser and vm.js's
+- **SPEC.md** is the language as it is, from folio.js's parser and vm.js's
   checks and messages: how a program is read, the grammar of every statement
   and expression, values and their kinds, numbers to 15 digits, each built-in
   operation, mistakes, files, packages and the flags. What's guaranteed is
   marked apart from what's only how it's done today (the engines, limits,
   speed, the words of a mistake).
 - **VERSIONING.md** is semantic versioning, with one number for the language,
-  the standard library and the `moth` command, which are released together.
+  the standard library and the `folio` command, which are released together.
   1.x keeps every program working; no word is ever reserved in 1.x, as each new
   phrase has started with a word that stays a name; something to remove is
   deprecated first and can go only in 2.0. The newest minor release gets every
@@ -4317,7 +4317,7 @@ hold them to agreeing.
 
 - **Why.** A company's code is read by people who didn't write it, and its
   mistakes are cheapest before it runs. TypeScript and Python's type hints say
-  what a value is where it matters and nowhere else; Moth's inputs could say
+  what a value is where it matters and nowhere else; Folio's inputs could say
   only one of eight kinds, and the checker could only speak where values were
   written out.
 - **What the code can say.** An input can be `a dog` (or `an owl`): a record a
@@ -4347,23 +4347,23 @@ hold them to agreeing.
   the program sets a field of that name anywhere, when any record may have it.
   A kind named that the program doesn't make is said once, with the nearest
   name (`there is no kind called 'dgo'`).
-- **moth check does the same in Moth.** It can't run vm.js's checks, so
+- **folio check does the same in Folio.** It can't run vm.js's checks, so
   make-checker-rules.mjs runs each of checker.js's rules on a sample of every
   type, and of every unit and turtle action, and writes what each does into
-  checker-rules.moth: a line per rule and types, saying which operands' values
+  checker-rules.folio: a line per rule and types, saying which operands' values
   (not just types) can change the outcome, and which message it stops with.
-  moth.moth works the types out as checker.js does and looks each check up
-  there. So moth check says what the checker says, word for word, but leaves
+  folio.folio works the types out as checker.js does and looks each check up
+  there. So folio check says what the checker says, word for word, but leaves
   out what rests on a value written out (`1 / 0`, `item 0 of x`, `repeat "x"
   times`), which needs the value, not its type; the playground finds those
-  too. moth.test.js says when checker-rules.moth is behind.
-- **Everywhere alike.** moth check ends with 1 for "will fail" and "doesn't
+  too. folio.test.js says when checker-rules.folio is behind.
+- **Everywhere alike.** folio check ends with 1 for "will fail" and "doesn't
   fit"; the editors and the playground show both in red, "doesn't fit"
   named as such (the playground showed it in yellow before).
 - **Tested.** Each kind of input type, `gives`, kinds made from kinds, and
-  every message, in moth.test.js, word for word; moth check against the
+  every message, in folio.test.js, word for word; folio check against the
   checker on every example, working program, typed program and 120 broken
-  ones, through moth.exe. And that unannotated code gets no false alarm: the
+  ones, through folio.exe. And that unannotated code gets no false alarm: the
   checker's claims held against runs of the examples, the table programs, the
   lessons, the programs machine.test.js makes machine code of, and every file
   of the standard library (no "doesn't fit", and each "will fail" where the run
@@ -4371,22 +4371,22 @@ hold them to agreeing.
   further: main's checker and this one on 2,970 unannotated programs differ
   only in a mistake's wording (`expected what kind of value it is ... or a
   kind's name`) and in true "will fail"s from what a function returns
-  (`f() + 1` where f gives nothing); and moth check and the checker agree word
-  for word on 2,360 programs, and the playground's Problems pane with moth check
+  (`f() + 1` where f gives nothing); and folio check and the checker agree word
+  for word on 2,360 programs, and the playground's Problems pane with folio check
   on every typed program, in Chromium.
 
 ## 108. The language server, and every major editor
 
 - **Why.** People write code in their own editor. One language server gives
   them all what the VS Code extension had, and more.
-- **moth lsp** speaks the Language Server Protocol on its input and output, in
-  Moth (moth.moth), from what moth check and moth tidy already know: the
-  problems as you type (moth check's, types and all), formatting (moth tidy's),
+- **folio lsp** speaks the Language Server Protocol on its input and output, in
+  Folio (folio.folio), from what folio check and folio tidy already know: the
+  problems as you type (folio check's, types and all), formatting (folio tidy's),
   the outline (each function, kind with its own functions in it, and variable,
   each to its `end`), go to definition (in the file, in a file it `use`s, and
   on a `use` line, the file itself), hover (what a name is, what a variable or
   input holds, what a function takes and gives, with the comment above it),
-  and completion (the names the position can see, Moth's words, and after
+  and completion (the names the position can see, Folio's words, and after
   `rex's`, what rex's kind has). Hovers and `rex's` use the checker's types:
   it notes where each variable, input and function's returns are made, and
   hovers look them up.
@@ -4397,7 +4397,7 @@ hold them to agreeing.
   engines say so). The answers are said with `say`, whose new line the
   Content-Length counts.
 - **Code being typed.** Most keystrokes leave code that can't be read. The
-  problems then are its first mistake, as moth check says it; for everything
+  problems then are its first mistake, as folio check says it; for everything
   else the server leaves out the line with the mistake (made empty, so the
   lines after keep their numbers), or the line before when the mistake is at
   a line's start (`set x to`, then the next line), or ends a block left open,
@@ -4409,26 +4409,26 @@ hold them to agreeing.
   the documents that use a changed file get their problems again. An editor
   that finds the problems itself can ask for none (`initializationOptions:
   { diagnostics: no }`).
-- **VS Code.** The extension now starts moth lsp where moth is installed
+- **VS Code.** The extension now starts folio lsp where folio is installed
   (client.js, which needs no VS Code, speaks the protocol) for the outline,
   definitions, hovers and completion, which only the server can do across
-  files. It keeps Moth's engine, built in, for the problems, the quick fixes and
+  files. It keeps Folio's engine, built in, for the problems, the quick fixes and
   tidying: that needs no install, and finds what rests on a value written out
-  too. Without moth, or with `moth.languageServer` off, it does as it did.
-- **Neovim, Helix and Zed** colour with tree-sitter, so editors/tree-sitter-moth
-  is a grammar: each line as Moth's tokenizer reads it, with a call, `to name`,
+  too. Without folio, or with `folio.languageServer` off, it does as it did.
+- **Neovim, Helix and Zed** colour with tree-sitter, so editors/tree-sitter-folio
+  is a grammar: each line as Folio's tokenizer reads it, with a call, `to name`,
   `kind name`, `x's` and the values in text as parts of their own, and VS
   Code's words. Whether a `{` in text starts a value rests on the character
   after it, which a regular expression can't look at, so src/scanner.c reads the
   text between values. editors/neovim is a plugin folder (filetype, comments,
-  Moth's indenting, moth lsp, the colours once the parser is built),
+  Folio's indenting, folio lsp, the colours once the parser is built),
   editors/helix a languages.toml and its queries in Helix's names, and
-  editors/zed an extension whose Rust starts moth lsp, as Zed runs a language
+  editors/zed an extension whose Rust starts folio lsp, as Zed runs a language
   server only for a language with a grammar. Zed and Helix build the grammar
   from the commit of this repository that added it. **JetBrains' IDEs** use
   LSP4IJ, which runs any language server, with the VS Code extension's
   TextMate grammar for the colours. editors/README.md says how to set up each.
-- **Tested.** machine.test.js starts moth lsp and speaks the protocol to it,
+- **Tested.** machine.test.js starts folio lsp and speaks the protocol to it,
   checking each message's framing: the problems as a document opens, against
   the checker's; the outline; definitions here and in two files it uses; each
   kind of hover; completion, and after `rex's` and `shapes's`; a document as
@@ -4438,21 +4438,21 @@ hold them to agreeing.
   it. editor.test.js runs the extension against stand-ins for VS Code and for
   the server, with and without it; and checks the grammar has VS Code's words,
   the colours' copies match, Zed and Neovim indent as VS Code does, and Zed and
-  Helix name the commit the grammar is at. Done by hand: every Moth file here,
+  Helix name the commit the grammar is at. Done by hand: every Folio file here,
   and every example and test program (563), reads with tree-sitter with no
   error; Neovim 0.11, headless, showed the problems, hovered, went to a
   definition, tidied, indented and coloured; Helix 25.07 built the grammar and
   found the server and the queries; and the Zed extension built for
   WebAssembly.
 
-## 109. A debug adapter for moth debug
+## 109. A debug adapter for folio debug
 
 - **Why.** An editor's debugger shows breakpoints in the margin, the calls in
-  progress and the variables, and steps with a key. moth debug (§59) had all
+  progress and the variables, and steps with a key. folio debug (§59) had all
   of that, as commands typed in a terminal.
 - **What.** editors/vscode/debug-adapter.js speaks the Debug Adapter
-  Protocol to the editor and moth debug's commands to the program: a
-  breakpoint is `break lib.moth 4` (or `clear`), step in, over and out and
+  Protocol to the editor and folio debug's commands to the program: a
+  breakpoint is `break lib.folio 4` (or `clear`), step in, over and out and
   continue are `step`, `next`, `out` and `go`, the calls in progress are
   `where`, the variables `vars`, and what's under the pointer, in a watch or
   in the debug console is `show` (the console's `where`, `list`, `breaks` and
@@ -4460,37 +4460,37 @@ hold them to agreeing.
   with its words, whose variables can still be looked at. While the program
   runs, a line typed in the debug console answers its `ask`.
 - **Reading it.** The debugger answers on the program's own output, and asks
-  for each command with `(moth) `, which the command is said after, as `ask`
+  for each command with `(folio) `, which the command is said after, as `ask`
   says an answer when the input isn't a terminal; a text value's new line is
-  `\n`. So what comes before `(moth) ` after a command that only looks is its
+  `\n`. So what comes before `(folio) ` after a command that only looks is its
   answer; after one that runs the program, it's what the program said, then
-  the line it stopped at, whose shape (`prog.moth:5, in 'bump': ...`, or
+  the line it stopped at, whose shape (`prog.folio:5, in 'bump': ...`, or
   `stopped at the mistake, at ...`) the adapter reads. What the program says
   is shown as it comes, but for its last line, which may be that line: held
-  until the next line comes, `(moth) ` does, or 200 ms go by.
+  until the next line comes, `(folio) ` does, or 200 ms go by.
 - **In JavaScript, for now.** Driving a program's input and output both,
   while reading the editor's, needs a process with pipes for both, which
-  tasks.moth hasn't, and moth isn't built with --allow-libraries. So the
+  tasks.folio hasn't, and folio isn't built with --allow-libraries. So the
   adapter is Node.js's: VS Code runs it inside the extension, and Neovim
   (nvim-dap, which editors/neovim sets up), Helix and LSP4IJ start it with
-  node. A `moth dap` in Moth can come once tasks.moth can give a program its
+  node. A `folio dap` in Folio can come once tasks.folio can give a program its
   input.
-- **What moth debug can't do.** It's told things only while the program is
+- **What folio debug can't do.** It's told things only while the program is
   stopped, so a breakpoint set while it runs counts from where it next stops,
   and a pause is refused, saying so. A program stopped while it runs is ended
-  with moth, as a group, and the program moth built (prog-debug) is taken
-  away by the adapter, as moth can't, if this session made it.
-- **VS Code.** *Moth: Debug this file* (and F5 with no launch.json) starts a
-  debugging session in place of `moth debug` in a terminal, with moth.path's
-  moth.
+  with folio, as a group, and the program folio built (prog-debug) is taken
+  away by the adapter, as folio can't, if this session made it.
+- **VS Code.** *Folio: Debug this file* (and F5 with no launch.json) starts a
+  debugging session in place of `folio debug` in a terminal, with folio.path's
+  folio.
 - **Tested.** machine.test.js runs the adapter as a program of its own, as an
-  editor other than VS Code does, on moth.exe's moth debug: breakpoints in the
+  editor other than VS Code does, on folio.exe's folio debug: breakpoints in the
   program and a file it uses, taken away, the calls in progress, variables, a
   hover, a watch that fails, the console's `where` and an answer to `ask`,
   step out and over, a refused pause, what the program said and the number it
   ended with; a mistake stopped at, with its calls and variables; stopping on
-  entry; a program stopped while it runs, and the program moth built taken
-  away; and a moth that isn't there. editor.test.js checks the extension
+  entry; a program stopped while it runs, and the program folio built taken
+  away; and a folio that isn't there. editor.test.js checks the extension
   starts a session for Debug, fills a launch configuration in, and runs the
   adapter inside itself. Done by hand: Neovim 0.11 with nvim-dap, headless,
   set a breakpoint, stopped there, read a variable, continued, stepped and
@@ -4500,8 +4500,8 @@ hold them to agreeing.
 ## 110. YAML
 
 - **Why.** CI files, Kubernetes, Docker Compose and most of a company's
-  settings are YAML; toml.moth read only TOML.
-- **What.** yaml.moth reads YAML 1.2's core schema, as PyYAML does with
+  settings are YAML; toml.folio read only TOML.
+- **What.** yaml.folio reads YAML 1.2's core schema, as PyYAML does with
   YAML 1.2's resolver: `true`/`false`, `null`/`~`/nothing, decimal, `0x` and
   `0o` whole numbers, decimals with exponents and `.inf`; everything else text,
   so `on`, `no`, `1.2.3` and dates stay text (the "Norway problem" of 1.1
@@ -4514,7 +4514,7 @@ hold them to agreeing.
   mapping's own keys winning), `? key` explicit keys, and the tags !!str,
   !!int, !!float, !!bool, !!null and !!binary (bytes); other tags (`!Ref`)
   are passed over. Keys are text as written. A key twice is a mistake, as
-  in toml.moth; YAML forbids it, though PyYAML keeps the last.
+  in toml.folio; YAML forbids it, though PyYAML keeps the last.
 - **Writing.** yaml_of writes block style, two spaces a level; text plain
   where it reads back as itself, also by YAML 1.1 readers (so `yes`, `on`
   and anything starting with a digit, sign or dot is quoted), text with
@@ -4524,15 +4524,15 @@ hold them to agreeing.
   mistakes) against PyYAML with a YAML 1.2 resolver: 59 the same, the other
   three differences on purpose (a key twice, a tab after `:`, and `! 12`,
   which the spec says is text). Each of the 59 written by yaml_of, read back
-  the same by yaml.moth and by PyYAML. yaml.test.moth keeps the cases, on all
+  the same by yaml.folio and by PyYAML. yaml.test.folio keeps the cases, on all
   three engines and in machine code.
 
 ## 111. JSON Web Tokens
 
 - **Why.** Every API a company runs or calls has bearer tokens, and an
   identity provider's are JWTs signed with RSA.
-- **What.** jwt.moth makes tokens with HS256, HS384 and HS512 (hash.moth's
-  HMAC) and checks them, and checks RS256, RS384 and RS512 with big.moth's
+- **What.** jwt.folio makes tokens with HS256, HS384 and HS512 (hash.folio's
+  HMAC) and checks them, and checks RS256, RS384 and RS512 with big.folio's
   `power_mod`: 0.05 s for a 2048-bit key in machine code, so checking is
   practical; signing with RSA (a 2048-bit private exponent, about 4 seconds
   even with the CRT) isn't offered. The signature is checked by building the
@@ -4562,16 +4562,16 @@ hold them to agreeing.
 
 - **Why.** Files a company keeps are in S3, or a store that speaks its
   language: MinIO, R2, B2, Ceph.
-- **What.** s3.moth signs each request with SigV4 (the canonical request,
+- **What.** s3.folio signs each request with SigV4 (the canonical request,
   the string to sign, the key derived from the date, region and service) and
-  sends it through http.moth, with the Host header it signed and the path and
+  sends it through http.folio, with the Host header it signed and the path and
   query exactly as signed (each encoded once, as S3 wants, the query sorted).
   Objects are put, got, looked at, listed (ListObjectsV2, page after page),
   deleted; buckets made (with a LocationConstraint outside us-east-1),
   removed and listed; and presigned URLs made for GET, PUT or DELETE.
   Buckets go in the path for MinIO and other stores, in the host's name for
   amazonaws.com. Temporary credentials' token is sent and signed;
-  `sign_payload no` sends UNSIGNED-PAYLOAD, as hashing in Moth is about
+  `sign_payload no` sends UNSIGNED-PAYLOAD, as hashing in Folio is about
   1.7 MB a second. `sign()` is public, for other AWS services.
 - **Tested.** Against the signatures in S3's own guide (GET with a Range,
   PUT of a key with `$`, a bucket's lifecycle, a listing, and the presigned
@@ -4582,9 +4582,9 @@ hold them to agreeing.
 
 - **Why.** A program a company writes signs people in through Google,
   GitHub, Okta or Entra, and calls APIs with its own credentials.
-- **What.** oauth.moth has the authorization code flow with PKCE (S256; a
-  32-byte verifier and 16-byte state from secrets.moth), and `sign_in`, which
-  does it as command-line tools do (RFC 8252): server.moth answers on
+- **What.** oauth.folio has the authorization code flow with PKCE (S256; a
+  32-byte verifier and 16-byte state from secrets.folio), and `sign_in`, which
+  does it as command-line tools do (RFC 8252): server.folio answers on
   127.0.0.1, at the first free port from 8765; the browser is opened where
   the program may run one (rundll32 or xdg-open), and the address is said to
   the error output either way; a request whose state isn't the one sent is
@@ -4605,19 +4605,19 @@ hold them to agreeing.
 
 - **Why.** Databases speak protocols of bytes: lengths, numbers and lines,
   arriving in pieces.
-- **wire.moth.** A reader keeps a buffer of what came, twice as big when a
+- **wire.folio.** A reader keeps a buffer of what came, twice as big when a
   message needs more, so a 10 MB reply costs about 10 MB of copying, not its
   square; `take(n)`, `line` (to \r\n), `text_to_zero`, numbers of 1 to 8 bytes
   either way round, signed or not, and IEEE 754 doubles both ways, written by
   finding the exponent and scaling by powers of 2, which are exact. A
   writer keeps pieces and joins them once. A negative 8-byte number is
   written as -n-1 with its bits turned over, so it stays exact to 2^53.
-- **redis.moth.** RESP2 and RESP3 (maps as dictionaries, sets as lists,
+- **redis.folio.** RESP2 and RESP3 (maps as dictionaries, sets as lists,
   doubles, booleans, big numbers as text, verbatim strings, attributes passed
   over, pushes); commands as arrays of bulk strings, binary-safe; pipelining
   (every reply read before any error is raised, so the connection stays in
   step); MULTI/EXEC; SCAN rather than KEYS; BLPOP; pub/sub by channel and
-  pattern, with a time limit through sockets.moth's `ready`; AUTH with a
+  pattern, with a time limit through sockets.folio's `ready`; AUTH with a
   user; `rediss://` over TLS. Bulk strings come back as text, or as bytes
   through get_bytes and command_bytes.
 - **Tested.** Every reply type read from bytes, and commands written byte
@@ -4632,7 +4632,7 @@ hold them to agreeing.
   whichever the server asks for. Every query goes by the extended protocol:
   Parse with each parameter's type left to the server (bytea's said, as its
   bytes go in binary), Bind, Describe, Execute and Sync in one send, so the
-  SQL and the values never meet. Results come as text and are made Moth
+  SQL and the values never meet. Results come as text and are made Folio
   values by their type's OID (int2/4/8, float4/8, numeric, bool, bytea, json
   and jsonb, one-dimensional arrays of those); NULL is nothing. After an
   error the server skips to Sync's ReadyForQuery, which is read before the
@@ -4640,7 +4640,7 @@ hold them to agreeing.
   are kept on the connection. `run_script` uses the simple protocol, for
   files of many statements. `in_transaction` commits, or rolls back and
   raises the mistake again.
-- **TLS.** "prefer" tries TLS where the server has it; as sockets.moth
+- **TLS.** "prefer" tries TLS where the server has it; as sockets.folio
   always checks certificates, a server whose certificate can't be checked
   (or a Windows computer without OpenSSL) is connected to again without TLS,
   which is what "prefer" means in libpq, where it never checks at all.
@@ -4660,7 +4660,7 @@ hold them to agreeing.
   caching_sha2's full way, and sha256_password, send the password in the
   clear over TLS, and without TLS ask for the server's RSA key and send it
   XORed with the nonce and encrypted with RSAES-OAEP (SHA-1, MGF1), built
-  here on big.moth and jwt.moth's key reader.
+  here on big.folio and jwt.folio's key reader.
 - **A user that isn't there.** So that a login can't tell whether an account
   exists, MySQL gives a user it doesn't have a plugin chosen at random (kept
   for that name until it restarts): any of the three. Without
@@ -4689,8 +4689,8 @@ hold them to agreeing.
 - **Why.** A protocol read only from bytes made by hand is a protocol as
   understood by whoever made them.
 - **What.** machine.test.js has a live test for each of PostgreSQL, MySQL,
-  Redis and S3, run where `MOTH_POSTGRES_URL`, `MOTH_MYSQL_URL`,
-  `MOTH_REDIS_URL` and `MOTH_S3_URL` say where a server is, skipped where not.
+  Redis and S3, run where `FOLIO_POSTGRES_URL`, `FOLIO_MYSQL_URL`,
+  `FOLIO_REDIS_URL` and `FOLIO_S3_URL` say where a server is, skipped where not.
   CI's test job has PostgreSQL 16 (logins md5, so a SCRAM password logs in by
   SCRAM and an MD5 one by MD5), Redis 7 and MinIO as service containers, and
   starts MySQL 8.4 with `docker run`, as `--mysql-native-password=ON` is a
@@ -4701,12 +4701,12 @@ hold them to agreeing.
   server's address; what it says must be exactly what it said here against
   the same servers in WSL's Docker.
 
-## 118. Arrays of numbers, and Moth's own loops
+## 118. Arrays of numbers, and Folio's own loops
 
 - **Why.** NumPy is what makes Python the language of data and machine
-  learning: numbers in a shape, and maths on all of them at once. Moth had
-  lists, and a loop in Moth takes a few instructions an item.
-- **tools/arrays.moth** is an array as NumPy has one: a record of a `shape`
+  learning: numbers in a shape, and maths on all of them at once. Folio had
+  lists, and a loop in Folio takes a few instructions an item.
+- **tools/arrays.folio** is an array as NumPy has one: a record of a `shape`
   and its numbers, the last axis's one after another, as C lays them out.
   It makes arrays (from nested lists, zeros, random, counting, identity),
   does maths element by element with NumPy's broadcasting, matrix
@@ -4714,24 +4714,24 @@ hold them to agreeing.
   slicing, transposing, stacking and softmax. Axes and places count from 1,
   as items do. A shape that can't be, or shapes that don't go together, is
   a `fail with` that says which.
-- **Moth's own loops.** `use the library "moth"` names functions a program
-  has in it, which machine.moth writes in machine code: numbers_binary,
+- **Folio's own loops.** `use the library "folio"` names functions a program
+  has in it, which machine.folio writes in machine code: numbers_binary,
   numbers_matmul and numbers_reduce (matmul and sums with SSE2, two numbers
   at a time), and numbers_convert. Nothing is loaded, so they need no `--allow-libraries`.
   Each is given the lists themselves and checks what it's given: every
   place it reads or writes is in its list and every number it works out is
   a number. For anything else (a place outside a list, a NaN, a division by
-  0) it gives 1 and arrays.moth does that work in Moth, so what happens is
-  what Moth says happens, to the last bit, on every engine. On the
-  JavaScript engines, which can't call a library, all of it is Moth.
+  0) it gives 1 and arrays.folio does that work in Folio, so what happens is
+  what Folio says happens, to the last bit, on every engine. On the
+  JavaScript engines, which can't call a library, all of it is Folio.
 - **Lists of numbers for C.** `a list of numbers` as a library function's
   input gives C where the list's numbers are, a `double*`, which C can read
-  and change; a NaN C leaves there is made the NaN Moth's arithmetic makes.
+  and change; a NaN C leaves there is made the NaN Folio's arithmetic makes.
   Only an input can be one.
-- **Tested.** arrays.test.moth on all three engines and in machine code:
+- **Tested.** arrays.test.folio on all three engines and in machine code:
   making, element by element, broadcasting, matrices, along axes, shapes,
   NaN and infinity, mistakes, and machine code's loops giving exactly what
-  Moth's give; Moth's own library used without `--allow-libraries` and not
+  Folio's give; Folio's own library used without `--allow-libraries` and not
   linked; and memcpy and memset on a list of numbers.
 
 ## 119. BLAS and ONNX Runtime: calls at an address
@@ -4747,8 +4747,8 @@ hold them to agreeing.
 - **use_blas.** `arrays's use_blas()` has matmul go through BLAS's dgemm:
   OpenBLAS as its releases and Linux's packages have it, or NumPy's copy
   (scipy_openblas64_, with 64-bit whole numbers). It says which it found, or
-  nothing, and stop_using_blas goes back to Moth's own loops.
-- **tools/onnx.moth** loads a model, says its inputs and outputs (name,
+  nothing, and stop_using_blas goes back to Folio's own loops.
+- **tools/onnx.folio** loads a model, says its inputs and outputs (name,
   type and shape, -1 for an axis of any length), and runs it: arrays in and
   arrays out, in floats, doubles or 64-bit whole numbers, which
   numbers_convert converts to and from. Windows 11 has ONNX Runtime in
@@ -4757,28 +4757,28 @@ hold them to agreeing.
 - **Tested.** In machine code: abs and strlen called where dlsym (or
   GetProcAddress) says they are; a dense layer as an ONNX model the test
   writes, in floats and doubles, with a wrong input's name, a wrong shape
-  and a missing file; and matmul through BLAS giving what Moth's loops give.
+  and a missing file; and matmul through BLAS giving what Folio's loops give.
   Each runs where ONNX Runtime and OpenBLAS are installed, and is skipped
   where they aren't; CI installs both.
 
-## 120. Python inside Moth
+## 120. Python inside Folio
 
-- **Why.** Most of machine learning's libraries are Python's. A Moth
-  program that can use them needn't wait for Moth to have its own.
-- **tools/python.moth** loads CPython's own library, through its C API at
+- **Why.** Most of machine learning's libraries are Python's. A Folio
+  program that can use them needn't wait for Folio to have its own.
+- **tools/python.folio** loads CPython's own library, through its C API at
   addresses (§119): where PYTHON_LIBRARY says, else beside a folder in PATH,
   else as Linux installs it. It runs code, evaluates expressions, imports
   modules, calls functions (with inputs by name), and reads and sets
   attributes and variables. Numbers, text, yes and no, nothing, lists and
   dictionaries go across as each other; an array as a NumPy array, where
   NumPy is; anything else stays a Python object. Python's mistakes are
-  Moth's: `Python: ZeroDivisionError: division by zero`.
+  Folio's: `Python: ZeroDivisionError: division by zero`.
 - **Tested.** In machine code, with the Python the computer has: code,
   modules, values both ways, text beyond ASCII, Python's mistakes and a
   module that isn't there, and with NumPy, arrays both ways. It's skipped
   where Python's library isn't installed.
 
-## 121. Large language models: tools/ai.moth
+## 121. Large language models: tools/ai.folio
 
 - **Why.** Programs ask models now: for an answer, for JSON of a shape, to
   use the program's own functions, or for embeddings to search by meaning.
@@ -4802,7 +4802,7 @@ hold them to agreeing.
   off. After a fallback part of the way through, the turn sent back holds
   only the text from before it, not tool uses or thinking, and that tool
   use isn't run.
-- **Tested.** ai.test.moth on all three engines: what each request says,
+- **Tested.** ai.test.folio on all three engines: what each request says,
   events read from bytes however they're cut, a fallback part of the way,
   and searching vectors. In machine code, against a server of the test's
   own that answers as both APIs do: answers, streams, tools and a tool that
@@ -4813,43 +4813,43 @@ hold them to agreeing.
 ## 122. Jupyter
 
 - **Why.** Jupyter is where data work is done, and its notebooks run in
-  JupyterLab, VS Code and the rest. `moth notebook` (§77) runs Markdown,
+  JupyterLab, VS Code and the rest. `folio notebook` (§77) runs Markdown,
   but people open .ipynb files.
-- **moth kernel** runs cells as notebook blocks are run, so a cell has what
+- **folio kernel** runs cells as notebook blocks are run, so a cell has what
   the cells before it made, a cell whose last line is a value shows it, and
   one that fails keeps nothing. Each line it reads names a file holding a
   cell; a number before it numbers the cell as Jupyter does, so mistakes say
   `cell 4:1:5`, but never back, so each cell's name is its own. Unlike a
   notebook's blocks, a cell's output and mistakes go out as they come, and
   it has the kernel's input, so it can ask. A line of byte 1 and
-  `moth-cell` comes before a cell's output, then one of byte 1 and
-  `moth-done` on the error output and one with `ok` or `failed` on the
+  `folio-cell` comes before a cell's output, then one of byte 1 and
+  `folio-done` on the error output and one with `ok` or `failed` on the
   output. Its program and the file it keeps names in have names of their
   own, so two kernels can share a folder. A one-line cell that's a value
   now shows it, and the shell's state file is the shell's record's.
 - **editors/jupyter** is a wrapper kernel, ipykernel's `Kernel` with
-  `do_execute`, and its kernelspec; `python moth_kernel.py install` installs
-  it for the Python that ran it. Each cell goes to `moth kernel`, its output
+  `do_execute`, and its kernelspec; `python folio_kernel.py install` installs
+  it for the Python that ran it. Each cell goes to `folio kernel`, its output
   to Jupyter as it comes, a whole line at a time, and a mistake as
-  Jupyter's error. A Moth program writes a line part of the way only when it
+  Jupyter's error. A Folio program writes a line part of the way only when it
   asks, so output that stops part of the way for a quarter of a second is a
   question, asked in Jupyter's input box, whose answer goes to the cell's
   input and isn't shown twice; where the frontend can't answer, the cell is
-  stopped. moth kernel has a process group of its own, so Jupyter's
+  stopped. folio kernel has a process group of its own, so Jupyter's
   interrupt reaches only the Python kernel, which stops the cell's program
-  (found in /proc, or with psutil) and keeps the cells before it. If moth
+  (found in /proc, or with psutil) and keeps the cells before it. If folio
   kernel itself stops, a new one starts and the cell says so.
-- **What cells may do.** All of it, unless MOTH_KERNEL_ALLOW gives other
+- **What cells may do.** All of it, unless FOLIO_KERNEL_ALLOW gives other
   `--allow` flags: a notebook's code is the person's own, as a Python
   notebook's is.
-- **Tested.** Through moth.exe, each line given once the one before is
+- **Tested.** Through folio.exe, each line given once the one before is
   done: values, a function, a mistake that keeps nothing, an empty cell,
   the error output, numbering and its never going back, a file that isn't
   there, a question answered, and nothing left behind. In Python, against
-  a stand-in for moth kernel that runs each cell as a program of its own:
+  a stand-in for folio kernel that runs each cell as a program of its own:
   output in pieces and in several bytes a character, questions answered and
-  not, mistakes, numbers, a cell stopped, moth kernel stopping, and the
-  programs a program started; against the moth built here: what cells keep
+  not, mistakes, numbers, a cell stopped, folio kernel stopping, and the
+  programs a program started; against the folio built here: what cells keep
   and show, a question, a cell stopped, a file beside the notebook, and two
   kernels in one folder; and, where ipykernel and jupyter_client are
   installed, the kernel installed and run as Jupyter runs it, interrupted
@@ -4857,7 +4857,7 @@ hold them to agreeing.
 
 ## 123. A web server for many people at once
 
-- **Why.** server.moth answered one request at a time, start to finish: it
+- **Why.** server.folio answered one request at a time, start to finish: it
   read until a request was whole, answered, and closed the connection. One
   client that stopped halfway held up everyone until it went away, nothing
   limited how long a request could take or how big its headers grew, and each
@@ -4902,7 +4902,7 @@ hold them to agreeing.
 - **A mistake in the server** while it sees to one connection closes that
   connection, says why to the error output, and the rest go on. stop_serving()
   stops reading and sends what's being sent before serve() returns.
-- **What it gave.** tools/load-test.mjs builds a site with server.moth and
+- **What it gave.** tools/load-test.mjs builds a site with server.folio and
   asks it from Node on raw sockets: `steady` is 200 connections each asking
   again as soon as it's answered (on one connection if the server keeps it,
   a new one each time if not), `burst` 200 connections at once, `slow` 200
@@ -4932,33 +4932,33 @@ hold them to agreeing.
   a length that isn't, two lengths and chunks that can't be read; 408 for a
   request too slow to arrive, and a kept connection closed when it's idle; a
   client sending a byte at a time while another is answered first; and
-  stop_serving(). The tests from before (HTTPS, the guestbook app, http.moth's
-  and websocket.moth's) pass as they were.
+  stop_serving(). The tests from before (HTTPS, the guestbook app, http.folio's
+  and websocket.folio's) pass as they were.
 
 ## 124. Workers: every core, sharing nothing
 
-- **Why.** Tasks (§62) take turns: one runs Moth at a time, so a server's
+- **Why.** Tasks (§62) take turns: one runs Folio at a time, so a server's
   handlers, or a sum split into tasks, use one core however many there are.
-  cores.moth (§75) uses them all, but with copies of the program, each a
+  cores.folio (§75) uses them all, but with copies of the program, each a
   process, started again from the top and talking through files.
 - **Isolated workers, not shared threads.** Threads that share memory would
   need every list, record and dictionary, and the runtime's own memory, to be
   safe to change from two threads at once: a lock around each, or a garbage
   collector that stops every thread to look at their memory, and a program
   could still change a list while another thread reads it, which is a race.
-  sync.moth's lock is right only because one task runs at a time: it takes a
+  sync.folio's lock is right only because one task runs at a time: it takes a
   lock by seeing it free and marking it held, with nothing in between. So a
   worker shares nothing. It has a copy of the program's variables as they were
   when it started, and copies of its inputs; it changes them as it likes, and
   no one else sees; what it gives back, or the mistake it ends with, is copied
-  back when it's waited for. There are no races, sync.moth keeps its promise
+  back when it's waited for. There are no races, sync.folio keeps its promise
   (a worker's tasks take turns among themselves, as the program's do), and
   each worker's collector looks at its own memory alone, with nothing to stop.
   It's what JavaScript's Web Workers, Erlang's processes and Python's
   subinterpreters do.
 - **Plain English.** `start count(10) on another core` starts a worker and
   gives a record of its number, `(record with worker 1)`, as `start count(10)`
-  gives a task; `wait for` and `has ended` take either, and so do sync.moth's
+  gives a task; `wait for` and `has ended` take either, and so do sync.folio's
   wait_for_all and wait_for_any. `on another core` is read only after a
   `start` and its call, where nothing could follow before, so no program that
   worked means anything new, and `on`, `another` and `core` are still names.
@@ -4980,7 +4980,7 @@ hold them to agreeing.
   texts) are listed when the program is built, and each is moved in the copy
   by how far the copy is from the original. So a worker has its own heap and
   collector, its own variables, its own turn for its own tasks, and its own
-  workers, and the program and its workers run Moth at the same moment.
+  workers, and the program and its workers run Folio at the same moment.
 - **Copying between heaps.** Both heaps are in one address space, so the
   worker copies what it's given from the program's heap into its own while
   the program waits, which keeps the program's collector away from what's
@@ -5012,7 +5012,7 @@ hold them to agreeing.
   Its own tasks and workers are numbered from 1 while it runs, as in machine
   code, and the limit of 64 is kept. So a program says the same everywhere,
   except what only threads show (a worker that hasn't ended yet).
-- **server.moth on workers.** `set_workers(4)`, or `serve_on_workers(8080,
+- **server.folio on workers.** `set_workers(4)`, or `serve_on_workers(8080,
   answer, 4)`, starts 4 workers (0 for one a core) on the one listening
   socket. Each runs §123's rounds with connections of its own, taking one new
   connection a round, so those that wake for the same one share them. A
@@ -5025,7 +5025,7 @@ hold them to agreeing.
   workers. 3,000 workers started and waited for one after another: 0.10 s; 64
   at once, 34 ms. The `heavy` load test of §123: 664/s on one thread, 4,489/s
   on four workers.
-- **Tested.** The JavaScript engines, the compiler written in Moth and machine
+- **Tested.** The JavaScript engines, the compiler written in Folio and machine
   code agree on: the program's variables and a worker's inputs, which it
   changes only for itself; functions, records, dictionaries, bytes and amounts
   given and given back; a worker's mistake, kept for `wait for`; what can't be
@@ -5038,42 +5038,42 @@ hold them to agreeing.
   given and given back; what a worker says, and one never waited for; a
   worker's mistake. And only in machine code: two workers that each wait for a
   file the other writes, which they can do only at the same moment; `has
-  ended` on a worker still working; sync.moth's lock among a worker's tasks;
+  ended` on a worker still working; sync.folio's lock among a worker's tasks;
   four workers taking far less time than four calls; and a Windows program's
-  imports. server.moth with three workers: twenty requests answered while one
+  imports. server.folio with three workers: twenty requests answered while one
   handler works for a second and a half.
 
-## 125. A WebAssembly back end written in Moth
+## 125. A WebAssembly back end written in Folio
 
-Moth's web side is about 18,000 lines of JavaScript, and even a program the
+Folio's web side is about 18,000 lines of JavaScript, and even a program the
 WebAssembly engine compiles calls back into `vm.js` for text, dictionaries,
-built-ins and every mistake. The plan is a Moth compiler written in Moth that
+built-ins and every mistake. The plan is a Folio compiler written in Folio that
 runs in the browser as WebAssembly, with JavaScript left as a small loader, in
-four stages: a WebAssembly back end in Moth; the runtime in WebAssembly, so a
-module imports nothing from `vm.js`; `moth.wasm`, the compiler built into a
+four stages: a WebAssembly back end in Folio; the runtime in WebAssembly, so a
+module imports nothing from `vm.js`; `folio.wasm`, the compiler built into a
 module that rebuilds itself to the same bytes; and the playground on
-`moth.wasm`. This is the first. The rest are still to come, and the JavaScript
+`folio.wasm`. This is the first. The rest are still to come, and the JavaScript
 engines stay: as the fallback, and as what the tests compare against.
 
-- **A port, byte for byte.** [`wasm.moth`](wasm.moth) is `wasm.js` written in
-  Moth: the same encoder, the same runtime functions, the same escape analysis
+- **A port, byte for byte.** [`wasm.folio`](wasm.folio) is `wasm.js` written in
+  Folio: the same encoder, the same runtime functions, the same escape analysis
   and unboxed numbers, the same fast paths for `remainder`, `rounded` and
   `item n of`, and numbers as `wasm.js` keeps them (an i31 from -2^30 to
   2^30-1 that isn't 0 or 1, which are no and yes, and a box otherwise). It
-  reads programs with `compiler.moth`'s tokenizer, parser and scope rules, as
-  `machine.moth` does, and makes exactly the bytes `wasm.js` makes, as
-  `compiler.moth` makes exactly the JIT's JavaScript. Matching byte for byte
+  reads programs with `compiler.folio`'s tokenizer, parser and scope rules, as
+  `machine.folio` does, and makes exactly the bytes `wasm.js` makes, as
+  `compiler.folio` makes exactly the JIT's JavaScript. Matching byte for byte
   is the strongest check there is: every local, global, type and position
   must come in the same order, so any difference in what the two back ends
   think a program means shows up as a byte.
-- **The tree is `compiler.moth`'s.** Its fields differ from `moth.js`'s where
+- **The tree is `compiler.folio`'s.** Its fields differ from `folio.js`'s where
   `of`, `to` and `bytes` can't be field names (`subject`, `start` and `limit`,
-  `over`, `binary`), and a number is kept as written, so `wasm.moth` works out
+  `over`, `binary`), and a number is kept as written, so `wasm.folio` works out
   a double's 8 bytes itself, with exact steps (halving, doubling and
-  subtracting), as `machine.moth` does, and keeps one global for each
+  subtracting), as `machine.folio` does, and keeps one global for each
   different double, keyed by its bytes.
 - **Writing code from text.** The runtime is about 450 lines of instruction
-  chains in `wasm.js`. In Moth each chain is a line of text, such as
+  chains in `wasm.js`. In Folio each chain is a line of text, such as
   `local.get 0 ref.test i31 if i32 ...`, which a small assembler turns into
   bytes, knowing each instruction's immediates and the names of the module's
   types, functions, imports, globals and a function's own locals. That kept
@@ -5083,39 +5083,39 @@ engines stay: as the fallback, and as what the tests compare against.
   the compiler and copied, with each function's encoded body kept. A program
   then costs only its own code: about 1.5 ms a program through the JIT, 12
   seconds for the 7,822 programs of the test corpora.
-- **The escape analysis missed three places.** Making `wasm.moth` meant
+- **The escape analysis missed three places.** Making `wasm.folio` meant
   reading every field the parser makes, and `wasm.js`'s escape analysis never
   looked inside `ask`'s question, `wait`'s amount, or `play note`'s note and
   time. A function that used an outer variable only there kept it in a local
   of the program's, not in the heap, and found it unset. Both back ends now
   look there, and a test runs the four programs that showed it on every
   engine.
-- **It compiles itself.** `wasm.moth` with `compiler.moth` is a program like
+- **It compiles itself.** `wasm.folio` with `compiler.folio` is a program like
   any other: compiled by itself, it is a 977,707-byte module, `wasm.js`'s bytes
   exactly, in about a second, and that module, run, compiles a program into
-  the same bytes again. That is the start of `moth.wasm`; what's missing is
+  the same bytes again. That is the start of `folio.wasm`; what's missing is
   the runtime, which the module still imports from `vm.js`.
-- **Half an emoji.** Holding `wasm.moth`'s mistakes to the VM's, column and
-  all, found one more difference, in `compiler.moth`'s tokenizer: half of a
+- **Half an emoji.** Holding `wasm.folio`'s mistakes to the VM's, column and
+  all, found one more difference, in `compiler.folio`'s tokenizer: half of a
   character past the first 65,536, on its own, sorts among those characters,
   so it counted 2 columns where JavaScript counts 1. It now counts 2 only for
   a character that is 4 bytes of UTF-8.
-- **`moth build --target wasm`.** `moth.moth` carries `wasm.moth`, made into
-  machine code by `machine.moth` with the rest, and writes `<file>.wasm`:
-  `wasm.js`'s module, byte for byte, then a custom section called `moth`
+- **`folio build --target wasm`.** `folio.folio` carries `wasm.folio`, made into
+  machine code by `machine.folio` with the rest, and writes `<file>.wasm`:
+  `wasm.js`'s module, byte for byte, then a custom section called `folio`
   holding, as JSON, what the JavaScript side needs to run it (each position,
   the names, the messages, the text, and what typed inputs must be).
-  `runWasm` in `moth.js` reads that section and runs it. Until the runtime is
+  `runWasm` in `folio.js` reads that section and runs it. Until the runtime is
   in WebAssembly too, the module still imports `vm.js`'s checks, and with no
   source to hand to the VM, calls past 2,000 deep are a mistake there.
-- **Tested.** `wasm.moth`, run through the JIT, makes `wasm.js`'s bytes, or
+- **Tested.** `wasm.folio`, run through the JIT, makes `wasm.js`'s bytes, or
   stops at the same mistake, on every playground example, every hand-written
   case, the 1,500 programs the grammar makes, the 5,000 broken ones and 500 of
   machine code's random programs; what it makes says, draws and stops at what
   the VM does, mistakes, positions and trails included, on all of them but
-  machine code's, and the hand-written cases say what they should. `moth`
-  itself, with `wasm.moth` in machine code, builds a module whose bytes are
-  `wasm.js`'s, which runs as the VM runs the program, and moth still builds
+  machine code's, and the hand-written cases say what they should. `folio`
+  itself, with `wasm.folio` in machine code, builds a module whose bytes are
+  `wasm.js`'s, which runs as the VM runs the program, and folio still builds
   itself into the same bytes.
 
 ## 126. The VS Code extension, ready to publish
@@ -5123,39 +5123,39 @@ engines stay: as the fallback, and as what the tests compare against.
 - **Why.** People find VS Code extensions in VS Code's Extensions view, from
   the Visual Studio Marketplace, and editors built from VS Code (VSCodium,
   Cursor, Gitpod) from Open VSX. The extension was a .vsix to make from the
-  repository, and it ran whatever `moth.path` said, `moth` by default.
-- **Finding moth.** find-moth.js, which needs no VS Code, looks where
-  `moth.path` says (the file, or the folder it's in; `~`, a path from the
+  repository, and it ran whatever `folio.path` said, `folio` by default.
+- **Finding folio.** find-folio.js, which needs no VS Code, looks where
+  `folio.path` says (the file, or the folder it's in; `~`, a path from the
   workspace's folder, and the quotes Windows' "Copy as path" puts round one,
-  all taken), or else in each folder on the PATH, in order: `moth.exe` on
+  all taken), or else in each folder on the PATH, in order: `folio.exe` on
   Windows, where the PATH is Path, split at `;`, with folders in quotes, and
-  `moth` on Linux, which must be marked as a program. It's looked for each
+  `folio` on Linux, which must be marked as a program. It's looked for each
   time it's needed, so one installed since is found, and the language server
-  starts again when `moth.path` changes. Run, Build, the debugger and moth
+  starts again when `folio.path` changes. Run, Build, the debugger and folio
   lsp all start the full path found, never a name a shell or Windows would
   look for in the program's own folder first. Where there's none, one
-  warning says why (not on the PATH, not where moth.path says, or not marked
-  as a program), with **Get Moth**, which opens the releases, and **Don't
+  warning says why (not on the PATH, not where folio.path says, or not marked
+  as a program), with **Get Folio**, which opens the releases, and **Don't
   Show Again**, kept between sessions; Run, Build and Debug say it again, as
   they can't do what was asked. Nothing waits for it to be answered. The
   checker and tidying are the engine built in, so the problems, Format
-  Document, colours and snippets go on without moth.
-- **Folders not trusted.** `moth.path` is a restricted setting
+  Document, colours and snippets go on without folio.
+- **Folders not trusted.** `folio.path` is a restricted setting
   (`untrustedWorkspaces: limited`): in VS Code's Restricted Mode a folder's
-  own settings can't say which program to run, and a moth.path that doesn't
+  own settings can't say which program to run, and a folio.path that doesn't
   start at the top is taken from the folder only once it's trusted.
-- **Run and Build as tasks.** A terminal whose program is moth closes the
+- **Run and Build as tasks.** A terminal whose program is folio closes the
   moment the program ends, so what it said was gone at once. A task with a
-  ProcessExecution starts moth the same way, with nothing for a shell to
+  ProcessExecution starts folio the same way, with nothing for a shell to
   quote, but its terminal stays, says how it ended, and gives the program
-  its input for `ask`. `"type": "moth"` tasks in tasks.json are made the
+  its input for `ask`. `"type": "folio"` tasks in tasks.json are made the
   same, from a task provider.
 - **The Marketplace's page.** The manifest has an icon (the site's lantern on
   its cord and its moth flying to it, drawn in SVG, images/icon.svg, and made
   a 128-pixel PNG by Chromium), the site's night as the banner, keywords,
   the site as its homepage, issues as its bugs, no Q&A, and Education among
-  its categories. The README is for someone who has never heard of Moth:
-  what it is, how to get moth, then each feature with a picture taken in VS
+  its categories. The README is for someone who has never heard of Folio:
+  what it is, how to get folio, then each feature with a picture taken in VS
   Code. Its pictures are the repository's, by their full address, as vsce
   would make a relative one point at the repository's top, not this folder,
   so the .vsix holds none of them but the icon. e2e/screenshots.mjs takes
@@ -5181,31 +5181,31 @@ engines stay: as the fallback, and as what the tests compare against.
   with `vsce publish --oidc`, the Marketplace's Trusted Publishing, which
   takes the run's own GitHub identity. docs/publishing-the-extension.md
   says how to set each up. The extension's version is its own, 0.1.0.
-- **What it needs of moth.** Run, Build, questions and tasks work with
-  moth 1.11.0, the latest release; moth lsp and the debugger need a newer
-  one, so it's best published with Moth's next release.
-- **Tested.** editor.test.js: finding moth on Linux's paths, and on
+- **What it needs of folio.** Run, Build, questions and tasks work with
+  folio 1.11.0, the latest release; folio lsp and the debugger need a newer
+  one, so it's best published with Folio's next release.
+- **Tested.** editor.test.js: finding folio on Linux's paths, and on
   Windows' (with a stand-in for the disk); the message, its buttons, Don't
   Show Again kept, and nothing waiting for an answer; the server started
-  again with a new moth.path; Run, Build and a tasks.json task as tasks;
+  again with a new folio.path; Run, Build and a tasks.json task as tasks;
   the .vsix's files, its licence the repository's, and .vscodeignore's list.
   e2e/suite.js, in VS Code itself, on the extension as the .vsix has it, with
-  moth in a folder with spaces in its name and with none: it starts, a
+  folio in a folder with spaces in its name and with none: it starts, a
   broken file's problem, a problem as it's typed and its Quick Fix, Format
-  Document, the outline and Go to Definition, the snippets, and with moth,
-  Go to Definition into a used file, a hover and completion from moth lsp,
-  Build and Run (moth build's program made, both ending with 0, and the
+  Document, the outline and Go to Definition, the snippets, and with folio,
+  Go to Definition into a used file, a hover and completion from folio lsp,
+  Build and Run (folio build's program made, both ending with 0, and the
   output kept), a question answered in the terminal, a tasks.json task, and
   the debugger stopped at a breakpoint with its variables. CI runs it in the
   newest VS Code and in 1.75, the oldest the extension says it works in;
-  it replaces in-vscode.js, which needed MOTH_VSCODE=1 and an installed
+  it replaces in-vscode.js, which needed FOLIO_VSCODE=1 and an installed
   VS Code.
 
 ## 127. The standard library from a package
 
-- **Why.** A package couldn't use the standard library. `use "text.moth"`
-  in packages/datey/datey.moth names packages/datey/text.moth, from the
-  folder of the file that uses it (§60), and moth.moth's cli_sources_of
+- **Why.** A package couldn't use the standard library. `use "text.folio"`
+  in packages/datey/datey.folio names packages/datey/text.folio, from the
+  folder of the file that uses it (§60), and folio.folio's cli_sources_of
   asked the standard library for a file by that name, which it hasn't. So
   every package carried copies of the libraries it needed, and a file in a
   folder of the program's own had the same trouble.
@@ -5214,37 +5214,37 @@ engines stay: as the fallback, and as what the tests compare against.
   standard library's is used. So cli_sources_of now asks the library for the
   name the `use` line gives in quotes (cli_uses_in keeps it beside the path),
   not the path it makes. A file of the same name beside the file that uses
-  it still comes first: the package's own text.moth beats moth's, as the
+  it still comes first: the package's own text.folio beats folio's, as the
   program's beats it for the program. A file beside the program is the
   program's alone, as it was: a package never saw it. `use the package` and
-  a name with a folder in it (`use "sub/text.moth"`) are never the
+  a name with a folder in it (`use "sub/text.folio"`) are never the
   library's.
 - **A copy of its own.** The parsers ask for a file by its path from the
-  program's folder, so moth's text.moth goes to them as
-  packages/datey/text.moth, and a package's copy is its own, as the copy it
+  program's folder, so folio's text.folio goes to them as
+  packages/datey/text.folio, and a package's copy is its own, as the copy it
   carried in its folder was: the same names, the same top level, and no
   change to the parsers or engines. A mistake in it says it's in
-  packages/datey/text.moth, as one in moth's own text.moth says text.moth.
+  packages/datey/text.folio, as one in folio's own text.folio says text.folio.
 - **Everywhere `use` is resolved.** Every command that reads a program's
   files goes through cli_sources_of: run, build, `build --web` (whose page
   holds the copies by those names), `build --target wasm`, test, debug,
   profile, coverage, check, the shell, notebooks and the language server,
   whose definitions and hovers now read a file as a run finds it.
-  machine.moth, wasm.moth and the JavaScript engines are given the files by
+  machine.folio, wasm.folio and the JavaScript engines are given the files by
   name and look nothing up themselves, and the playground fetches files
   from its own site.
-- **Tested.** Through moth.exe: a package in a Git repository whose main
-  file uses text.moth and dates.moth, and a file of its own that uses them
-  too, added with `moth add`, then used by a program that has a text.moth of
+- **Tested.** Through folio.exe: a package in a Git repository whose main
+  file uses text.folio and dates.folio, and a file of its own that uses them
+  too, added with `folio add`, then used by a program that has a text.folio of
   its own: run, checked, built and run as a program of its own, built as a
-  page (which runs on the JavaScript engine and holds moth's copies under
+  page (which runs on the JavaScript engine and holds folio's copies under
   the package's names), built as a WebAssembly module and run, and tested
-  with `moth test`; a json.moth in the package beating moth's; and a name
+  with `folio test`; a json.folio in the package beating folio's; and a name
   the library hasn't, still a mistake.
 
 ## 128. Measuring machine code before making it faster
 
-- **Why.** machine.moth already knows what each variable holds (§32), works
+- **Why.** machine.folio already knows what each variable holds (§32), works
   out what each function is given (§48), puts small functions in line (§63)
   and reads lists and records where the code is (§64). What's left to make
   faster had to be found by measuring, not guessed: so first the benchmarks
@@ -5255,22 +5255,22 @@ engines stay: as the fallback, and as what the tests compare against.
   a function with a loop of its own (Collatz's steps), records made by
   functions, text built two letters at a time, each letter of a text compared
   with others, a grid read by `item c of item r of grid`, and a dictionary
-  whose keys are made as text. And a real program: moth, as bootstrap.mjs
-  makes it, building compiler.moth, 2,400 lines of Moth.
+  whose keys are made as text. And a real program: folio, as bootstrap.mjs
+  makes it, building compiler.folio, 2,400 lines of Folio.
 - **Counting instructions.** A short run of machine code takes 10% more or
   less from one run to the next, on this machine at least. The number of
   instructions it runs is the same every time, so `node bench-count.mjs
-  program.moth` counts them with valgrind's callgrind and says how many ran
+  program.folio` counts them with valgrind's callgrind and says how many ran
   in each of the program's functions and each of the runtime's routines. It
-  builds the program with machine.moth on Node.js with a heap of 4 GB, not
-  64, which valgrind can't give a program, and keeps machine.moth's
+  builds the program with machine.folio on Node.js with a heap of 4 GB, not
+  64, which valgrind can't give a program, and keeps machine.folio's
   assembler, for where each function and routine starts.
-- **Where the time goes.** moth building compiler.moth runs 3.58 billion
+- **Where the time goes.** folio building compiler.folio runs 3.58 billion
   instructions. 12% are comparing two values with `is` (rt_equal and
   rt_cmp_is), nearly always a text with a text the program wrote, as in `if
   kind of node is "call"`: about 80 instructions, through two routines and
   `repe cmpsb`, for what can't fail. 9.5% are `bit and` and the shifts
-  (rt_bits, rt_bit_and, rt_shift_right), which machine.moth's put32 and the
+  (rt_bits, rt_bit_and, rt_shift_right), which machine.folio's put32 and the
   rest do for every byte they write: each calls rt_bits twice, about 60
   instructions, to `and` two whole numbers. 22% is the collector and making
   blocks, 6% the code kept out of the way for when something's unusual
@@ -5312,9 +5312,9 @@ engines stay: as the fallback, and as what the tests compare against.
   | text: 2,000,000 letters, each compared | 148 ms | 579 ms | 350 ms |
   | list: a grid, item of item, 4,000,000 | 117 ms | 93 ms | 30 ms |
   | dictionary: 300,000 keys made, set, read | 424 ms | 386 ms | 175 ms |
-  | moth building compiler.moth | | | 697 ms |
+  | folio building compiler.folio | | | 697 ms |
 
-  | `npm run versus` | C (gcc -O2) | Rust | Moth, machine code |
+  | `npm run versus` | C (gcc -O2) | Rust | Folio, machine code |
   |:--|--:|--:|--:|
   | fib(32): 7 million calls | 9 ms | 13 ms | 23 ms |
   | adding 1 to 100,000,000 | 50 ms | 4 ms | 46 ms |
@@ -5323,14 +5323,14 @@ engines stay: as the fallback, and as what the tests compare against.
 
   And counted: fib(32), 152 million instructions; primes, 282 million;
   Collatz's steps, 1,432 million; the letters compared, 1,161 million; the
-  calls of four inputs, 573 million; moth building compiler.moth, 3,579
+  calls of four inputs, 573 million; folio building compiler.folio, 3,579
   million. The sections after this one each say what they changed, from
   these.
 
-## 129. A library for C: moth build --library
+## 129. A library for C: folio build --library
 
-- **Why.** Moth could call C (§45) and Python (§120), but nothing could call
-  Moth: a fast function written in it was only any use to another Moth
+- **Why.** Folio could call C (§45) and Python (§120), but nothing could call
+  Folio: a fast function written in it was only any use to another Folio
   program. A shared library with a C ABI is what every language can call:
   C, Python's ctypes, Rust, Go, C#, Node.
 - **The file.** On Linux an ELF shared object, loaded anywhere: every
@@ -5346,26 +5346,26 @@ engines stay: as the fallback, and as what the tests compare against.
   relocations for the same addresses, no entry point, and the same imports.
 - **What it exports.** Each function the main file makes at its top level
   (not one of a file it uses, a library block's, or one the parser made),
-  by its name: `int fib(moth_value *result, moth_value n)` in Windows x64's
-  convention or System V's, as §46's callbacks take theirs. A `moth_value` is
+  by its name: `int fib(folio_value *result, folio_value n)` in Windows x64's
+  convention or System V's, as §46's callbacks take theirs. A `folio_value` is
   a value's own 8 bytes, so a number is its double. One that's only ever
   called by its name, with inputs in registers (§63), is called straight;
   any other as a call through its name's value is, its inputs checked by its
   description. C may give it anything, so the guesses (§48) know nothing of
-  its inputs. Names starting with `moth_` are the library's own, and a
+  its inputs. Names starting with `folio_` are the library's own, and a
   program's function of such a name is a mistake when it's built.
-- **The value API.** Pure functions for what needs no memory (`moth_number`,
-  `moth_number_of`, `moth_yes_or_no`, `moth_nothing`, `moth_kind`) or only
-  reads it (`moth_text_utf8`, `moth_bytes_data`, `moth_list_length`,
-  `moth_list_numbers`, `moth_exports`); and functions shaped as the program's
-  are for what makes or finds values: `moth_text`, `moth_bytes`,
-  `moth_numbers`, `moth_list`, `moth_list_add`, `moth_list_item`,
-  `moth_dictionary`, its `_set`, `_get` and `_keys`, `moth_record_names` and
-  `_values`, `moth_call`, `moth_keep` (a value kept once more), and
-  `moth_free`. `fast.h` declares them, with the
+- **The value API.** Pure functions for what needs no memory (`folio_number`,
+  `folio_number_of`, `folio_yes_or_no`, `folio_nothing`, `folio_kind`) or only
+  reads it (`folio_text_utf8`, `folio_bytes_data`, `folio_list_length`,
+  `folio_list_numbers`, `folio_exports`); and functions shaped as the program's
+  are for what makes or finds values: `folio_text`, `folio_bytes`,
+  `folio_numbers`, `folio_list`, `folio_list_add`, `folio_list_item`,
+  `folio_dictionary`, its `_set`, `_get` and `_keys`, `folio_record_names` and
+  `_values`, `folio_call`, `folio_keep` (a value kept once more), and
+  `folio_free`. `fast.h` declares them, with the
   program's own functions.
 - **Whose a value is.** What the library gives C is kept from the collector
-  in a list among its roots until C gives it to moth_free, which takes the
+  in a list among its roots until C gives it to folio_free, which takes the
   last place it's kept (so a value given twice is freed twice). What C gives
   a function stays C's. Numbers, yes, no and nothing are kept nowhere.
 - **Mistakes.** Every call is made inside a `try` of its own, so a mistake,
@@ -5383,13 +5383,13 @@ engines stay: as the fallback, and as what the tests compare against.
 - **One at a time, from any thread.** One heap and one collector, as in §62,
   so a lock: a ticket lock with a futex on Linux, as tasks take their turn,
   and an SRW lock on Windows. A call from the thread that holds it (C called
-  by Moth, calling back in) goes on inside it, so it can't wait for itself.
-  Running Moth from several threads at once would need what workers do: an
+  by Folio, calling back in) goes on inside it, so it can't wait for itself.
+  Running Folio from several threads at once would need what workers do: an
   image each.
-- **Its own stack.** Moth allows 100,000 calls in progress, which can take
+- **Its own stack.** Folio allows 100,000 calls in progress, which can take
   far more than a thread C made has, so each call moves to the library's own
   256 MB stack (in the zeroed data on Linux; on Windows committed at the
-  first call, the TEB's stack fields set to it while Moth runs, so Windows'
+  first call, the TEB's stack fields set to it while Folio runs, so Windows'
   probes and exceptions see where the stack is) and back. The collector
   looks through it alone: C's frames hold nothing it keeps.
 - **What it costs.** A call of a function that gives 1 takes about 30 ns
@@ -5397,11 +5397,11 @@ engines stay: as the fallback, and as what the tests compare against.
 - **Tested.** A C program, built with gcc and linked to the library, calls
   it with every kind of value and the value API, gets mistakes as records
   (a `fail with`, one of the runtime's, an input of the wrong kind, and the
-  value API's), calls a function Moth made, runs eight threads at once that
+  value API's), calls a function Folio made, runs eight threads at once that
   lose no count, recurses 50,000 deep from a 256 KB thread stack (and is
   told 200,000 is too deep), and holds 100 values through two million
   lists' collections; a library whose top level fails; each mistake a
-  library can't be built with; `moth build --library` with gcc linking C
+  library can't be built with; `folio build --library` with gcc linking C
   to what it wrote; and a Windows DLL read as Windows reads it. On Windows,
   CI runs the same C program against the DLL.
 
@@ -5411,20 +5411,20 @@ engines stay: as the fallback, and as what the tests compare against.
   hand, and nothing a package manager could install. People on Windows reach
   for winget or Scoop, on Debian and Ubuntu for a .deb, in CI for an image, and
   everyone for one line to paste.
-- **The release's bytes, everywhere.** Every installer takes `moth-windows.exe`
-  or `moth-linux` as it is and only renames it: the .deb's `/usr/bin/moth` and
-  the image's are `moth-linux` byte for byte, and winget, Scoop and the two
+- **The release's bytes, everywhere.** Every installer takes `folio-windows.exe`
+  or `folio-linux` as it is and only renames it: the .deb's `/usr/bin/folio` and
+  the image's are `folio-linux` byte for byte, and winget, Scoop and the two
   scripts install the release's own download. So each is checked by the
   release's own sums and signatures (§131), and the fixed point (§25) holds for
   what people install, not only for what they download.
-- **winget.** The three files of a version (`samyyy2423.Moth.yaml`, the
+- **winget.** The three files of a version (`samyyy2423.Folio.yaml`, the
   installer and the en-US locale) are written to schema 1.28.0, the one
   winget-pkgs' pull request checklist asks for: `InstallerType: portable` and
-  `Commands: [moth]`, so winget links the download as the command `moth`. They
-  live in `packaging/winget/manifests/s/samyyy2423/Moth/<version>/`, as in
+  `Commands: [folio]`, so winget links the download as the command `folio`. They
+  live in `packaging/winget/manifests/s/samyyy2423/Folio/<version>/`, as in
   winget-pkgs, so a submission is that folder copied in. Submitting is
   Samyak's, by hand (docs/installers.md).
-- **Scoop.** `packaging/scoop/moth.json` installs straight from its raw URL on
+- **Scoop.** `packaging/scoop/folio.json` installs straight from its raw URL on
   `main`. `checkver: github` finds the newest release, and `autoupdate` names
   its program and `SHA256SUMS.txt`, where Scoop finds the sum by the file's
   name, so Scoop's own `checkver.ps1 -Update`, or a bucket's bot, writes the
@@ -5434,33 +5434,33 @@ engines stay: as the fallback, and as what the tests compare against.
   (a test holds them to it), and the release workflow writes the next
   version's into its `manifests` artifact, so nothing is typed twice.
 - **The .deb.** `packaging/debian/build-deb.sh` builds it with `dpkg-deb`
-  alone: `/usr/bin/moth`, a machine-readable copyright file (Apache 2.0 with
+  alone: `/usr/bin/folio`, a machine-readable copyright file (Apache 2.0 with
   the NOTICE, and DejaVu's license in full, since its letters are in
-  `machine.moth`), `md5sums`, and `Installed-Size` counted as
-  dpkg-gencontrol counts it. moth is static, so it depends on nothing; it
-  suggests git and curl (`moth add` and `moth search` run them) and OpenSSL 3
-  (a program moth builds loads it for a secure connection). It refuses a file
+  `machine.folio`), `md5sums`, and `Installed-Size` counted as
+  dpkg-gencontrol counts it. folio is static, so it depends on nothing; it
+  suggests git and curl (`folio add` and `folio search` run them) and OpenSSL 3
+  (a program folio builds loads it for a secure connection). It refuses a file
   that isn't an x86-64 ELF, so the Windows program can't be packaged by
   mistake. Every file's time is `SOURCE_DATE_EPOCH` and the owner root, so the
-  same `moth-linux` gives the same .deb, on one CPU or four.
-- **The image: distroless, because moth allows it.** `moth-linux` has no
-  dynamic section, so it would run on an empty image. But a program moth builds
+  same `folio-linux` gives the same .deb, on one CPU or four.
+- **The image: distroless, because folio allows it.** `folio-linux` has no
+  dynamic section, so it would run on an empty image. But a program folio builds
   that says `use the library` is a dynamic ELF, which needs glibc's loader, and
-  `http.moth` and `sockets.moth` load OpenSSL 3, so `static` would break `moth
+  `http.folio` and `sockets.folio` load OpenSSL 3, so `static` would break `folio
   run` for them. `gcr.io/distroless/base-debian13` adds only glibc, OpenSSL, CA
-  certificates and time zones: about 15 MB compressed with moth. It runs as
+  certificates and time zones: about 15 MB compressed with folio. It runs as
   distroless's nonroot user, and `--user "$(id -u):$(id -g)"` lets it write into
-  the folder it's given. It has no shell, git or curl, so `moth add` and `moth
+  the folder it's given. It has no shell, git or curl, so `folio add` and `folio
   search` don't work in it, and it can't be a CI job's container; `COPY --from`
-  puts moth into an image that can. Debian 13's slim image with git, curl and
+  puts folio into an image that can. Debian 13's slim image with git, curl and
   OpenSSL is 71.7 MB compressed, about five times the size, for those two
   commands. The base is
   pinned by its digest, so it changes only when someone changes that line.
 - **install.sh** is POSIX `sh`, every line inside `main`, which runs only once
   the whole script has arrived, so a download cut short does nothing. It needs
   curl or wget, and `sha256sum`, `shasum` or `openssl`. It installs nothing
-  unless `moth-linux`'s SHA-256 is the one `SHA256SUMS.txt` gives, copies it in
-  beside the old one and renames it over it (so a moth that's running carries
+  unless `folio-linux`'s SHA-256 is the one `SHA256SUMS.txt` gives, copies it in
+  beside the old one and renames it over it (so a folio that's running carries
   on), and adds one `export PATH` line to `~/.profile` and the shell's own file
   (`.bashrc`, `.zshrc`, or fish's `conf.d`) if the folder isn't on PATH, and
   never twice. With curl it takes only HTTPS, redirects included.
@@ -5472,7 +5472,7 @@ engines stay: as the fallback, and as what the tests compare against.
   which `iex` set in the caller's session, and the test found it). It adds the
   folder to the user's PATH as the registry keeps it, leaving `%USERPROFILE%`
   and the like unexpanded, then sets and removes a variable through .NET so
-  Windows tells new terminals PATH changed. A `moth.exe` that's running can't
+  Windows tells new terminals PATH changed. A `folio.exe` that's running can't
   be written over, but it can be renamed out of the way, so that's what
   happens.
 - **Only the sum.** Both scripts check `SHA256SUMS.txt`, which comes from the
@@ -5480,7 +5480,7 @@ engines stay: as the fallback, and as what the tests compare against.
   release. Checking a signature would mean installing cosign first; the
   signatures are for people who want to check who made it (§131).
 - **Tested.** In `npm test` (`packaging.test.js`): the manifests are what
-  `manifests.mjs` writes; the .deb holds `moth-linux` as it is, as root's,
+  `manifests.mjs` writes; the .deb holds `folio-linux` as it is, as root's,
   with its fields, and comes out the same twice; and install.sh, given a
   release on the disk, installs it once its sum matches, puts it on PATH once
   however often it runs, and installs nothing when the sum is wrong or
@@ -5488,7 +5488,7 @@ engines stay: as the fallback, and as what the tests compare against.
   winget and Scoop manifests against their schemas, from winget-cli and Scoop
   at a fixed commit, and their URLs downloaded and summed; on Windows, `winget
   validate` and `winget install` from the manifests, `scoop install` from
-  `moth.json`, and checkver and autoupdate turning a 1.10.0 manifest into the
+  `folio.json`, and checkver and autoupdate turning a 1.10.0 manifest into the
   newest release's, with the sum from its `SHA256SUMS.txt`; install.ps1 in
   PowerShell 7 and 5.1, from GitHub, run twice, through `iex` in a session of
   its own, and refusing a wrong sum; install.sh from GitHub on Ubuntu, piped
@@ -5508,28 +5508,28 @@ engines stay: as the fallback, and as what the tests compare against.
   trusting a key it has to find.
 - **The release stays a fixed point.** A release is still made by hand. The
   workflow signs what's there and adds files beside it, and changes no byte of
-  `moth-windows.exe`, `moth-linux` or `SHA256SUMS.txt`. Before it signs
-  anything, it builds moth from the tag's source with
-  `packaging/release-build.sh`: Node.js makes the first moth, which builds
-  itself into the same bytes and the Windows moth into the bytes Node.js makes
+  `folio-windows.exe`, `folio-linux` or `SHA256SUMS.txt`. Before it signs
+  anything, it builds folio from the tag's source with
+  `packaging/release-build.sh`: Node.js makes the first folio, which builds
+  itself into the same bytes and the Windows folio into the bytes Node.js makes
   of it, and the release's two programs must be exactly those. A Windows job
-  then has `moth-windows.exe` build itself and the Linux moth, byte for byte.
+  then has `folio-windows.exe` build itself and the Linux folio, byte for byte.
   So GitHub's provenance, "built by this workflow from this commit", is true
   of the very bytes Samyak uploaded, even though he built them by hand.
 - **It would have stopped 1.11.0.** Run on the v1.11.0 tag, the script finds
   the release's programs aren't what its source builds: they were built
-  without `--include moth-debugger.moth`, so they're the fixed point of
-  `moth build moth.moth --allow-read --allow-write --allow-run` (the
-  release's Linux moth builds both that way, byte for byte), not of the
-  documented command or `node bootstrap.mjs`, and their `moth debug` needs
-  `moth-debugger.moth` in the folder. Making a release with the script
+  without `--include folio-debugger.folio`, so they're the fixed point of
+  `folio build folio.folio --allow-read --allow-write --allow-run` (the
+  release's Linux folio builds both that way, byte for byte), not of the
+  documented command or `node bootstrap.mjs`, and their `folio debug` needs
+  `folio-debugger.folio` in the folder. Making a release with the script
   leaves no way to forget it.
 - **Sigstore, keyless.** cosign signs each file with a certificate Fulcio gives
   to this workflow, through GitHub's OIDC token, for a few minutes, and the
   signature goes into Rekor, Sigstore's public log. There's no key to keep or
   lose, and the certificate names the workflow and the tag, so a user checks
   the identity
-  `https://github.com/samyyy2423/moth/.github/workflows/release.yml@refs/tags/v<version>`:
+  `https://github.com/samyyy2423/folio/.github/workflows/release.yml@refs/tags/v<version>`:
   a copy of the workflow elsewhere, or a run on a branch, has another.
 - **.sig, .pem, and a bundle.** cosign 3 checks only Sigstore bundles, and
   cosign 2 the signature and certificate as files too. So each file gets
@@ -5546,11 +5546,11 @@ engines stay: as the fallback, and as what the tests compare against.
   through Sigstore too.
 - **The SBOM** is CycloneDX 1.6 JSON, written by `packaging/sbom.mjs` with no
   dependencies. It lists the release's files with SHA-256 and SHA-512, then
-  what each program is built from: the files `moth.moth` is compiled with (a
+  what each program is built from: the files `folio.folio` is compiled with (a
   test holds the list to `bootstrap.mjs`'s), the files the standard library
   and the `--web` page are made from (from `make-stdlib.mjs`'s and
   `make-web.mjs`'s own lists), each with its sum, and DejaVu's letters in
-  `machine.moth`, under Bitstream Vera's license. moth links no library, so a
+  `machine.folio`, under Bitstream Vera's license. folio links no library, so a
   composition says the list is complete. Its time is the commit's and its
   serial number is made from what it says, so the same release gives the same
   SBOM.
@@ -5597,15 +5597,15 @@ engines stay: as the fallback, and as what the tests compare against.
 
 - **Why.** The standard library had grown to 49 libraries and 800 public functions, and the only way to learn
   one was to read its source: its opening comment, then the comment above each `to`, where there was one.
-  353 public functions had none, ui.moth's 64 among them. A language people learn needs a reference: each
+  353 public functions had none, ui.folio's 64 among them. A language people learn needs a reference: each
   function, what it takes, what it gives, and an example.
-- **Made from the code.** There was no `moth doc`, but the language server already reads a library's own
+- **Made from the code.** There was no `folio doc`, but the language server already reads a library's own
   words: `cli_lsp_file_comment` takes a file's opening comment as what it's for, and `cli_lsp_comment_above`
   the comment lines just above a `to` as what that function does. make-docs.mjs reads the same, so the hover
   in an editor and the page on the site say the same thing, and there's one place to write it. A comment's
   lines three spaces in past the `#` are code, as every opening comment already wrote its examples.
 - **Public and helpers.** VERSIONING.md keeps a library's public functions and lets its helpers change, but
-  Moth has no word for which is which. Most libraries name their helpers with a prefix (`stats_`, `web_`,
+  Folio has no word for which is which. Most libraries name their helpers with a prefix (`stats_`, `web_`,
   `mail_`); a few (json, xml, zip, images, charts, big, crypto) use plain names. make-docs.mjs's `HELPERS`
   says, for each library, its prefix and any helpers with plain names; everything else at its top level is
   public. A new function is public unless it's named as a helper, so it shows up in the reference, and
@@ -5620,12 +5620,12 @@ engines stay: as the fallback, and as what the tests compare against.
   shown with what it said. 301 of the 807 do. The rest need a network, a file, a C library or a window, and
   are shown as they're written; a function that no line calls is shown as its call, with the opening
   comment's `set`s of the names it takes (`set r to redis's connect(...)` for `redis's get(r, key)`).
-  linux.moth and windows.moth have ui.moth's functions, and borrow its examples.
+  linux.folio and windows.folio have ui.folio's functions, and borrow its examples.
 - **Writing what was missing.** Every public function now has a comment, written from its code, and each
-  library whose functions had no line calling them got more lines in its opening comment: ui.moth every
-  control and drawing call, in context; math.moth an opening example, which it had none of; hash, system,
+  library whose functions had no line calling them got more lines in its opening comment: ui.folio every
+  control and drawing call, in context; math.folio an opening example, which it had none of; hash, system,
   http, email, python, tasks, log, game and server the calls they left out. Two comments were wrong:
-  zip.moth's deflate said how it works and not what it gives, and xml.moth's element pointed at text_of for
+  zip.folio's deflate said how it works and not what it gives, and xml.folio's element pointed at text_of for
   the texts inside an element, where text_node, now public, makes them.
 - **The pages.** docs/index.html lists the libraries in eight groups, each a card with the first sentence of
   its opening comment, and searches every function by its name, its library and what it does (`?q=` in the
@@ -5642,19 +5642,19 @@ engines stay: as the fallback, and as what the tests compare against.
 
 ## 133. Coverage of tests, and LCOV
 
-- **Why.** `moth coverage` (§93) said which lines of one run of a program
+- **Why.** `folio coverage` (§93) said which lines of one run of a program
   ran. What people measure is their tests, as coverage.py does under pytest:
   which lines of the code under test the tests ran, and where they're
   missing it, said in CI and shown in an editor.
-- **Which engine.** Machine code, built to be watched as `moth debug` and
-  `moth profile` build it, with moth-coverage.moth in the debugger's place.
+- **Which engine.** Machine code, built to be watched as `folio debug` and
+  `folio profile` build it, with folio-coverage.folio in the debugger's place.
   The other way was the JavaScript VM, whose debugger stops before each
-  statement too, but moth, the command, has no JavaScript in it, and the
-  tests would then run on another engine from `moth test`'s: one without
+  statement too, but folio, the command, has no JavaScript in it, and the
+  tests would then run on another engine from `folio test`'s: one without
   C libraries, sockets, other programs or workers on cores, where a
   program's file and network use are pretend, and whose `wait` doesn't
   wait. Coverage run on a different engine from the one the tests pass on
-  measures something else. In machine code the tests run as `moth test`
+  measures something else. In machine code the tests run as `folio test`
   runs them, each in a run of its own, on what the program ships on; the
   call before each statement is made whatever the compiler does (a watched
   build guesses nothing about calls and puts no function in line, so each
@@ -5664,20 +5664,20 @@ engines stay: as the fallback, and as what the tests compare against.
   `expect` that fails, a mistake or `stop the program`. The JIT, which makes
   one JavaScript function of many lines, can't say which ran at all.
 - **Adding runs up.** wants() now counts how many times each line runs.
-  moth puts lines at the end of moth-coverage.moth when it builds it in
+  folio puts lines at the end of folio-coverage.folio when it builds it in
   (cli_coverage_asking), which set what it's asked for: a test's run is
   asked to keep its counts, and says them on the error output after a line
-  that marks them, each file's line by line; moth takes them off what the
-  test said, which moth test shows unchanged for a test that fails, and
-  adds them to every other test's, by each file's path from the folder moth
+  that marks them, each file's line by line; folio takes them off what the
+  test said, which folio test shows unchanged for a test that fails, and
+  adds them to every other test's, by each file's path from the folder folio
   runs in, so a file two folders' tests use is one. Then it says the
-  summary §93's coverage says, with moth-coverage.moth's own functions,
-  which moth uses as cli_coverage: the lines run of all, each file's share
+  summary §93's coverage says, with folio-coverage.folio's own functions,
+  which folio uses as cli_coverage: the lines run of all, each file's share
   in the order of its path, and the lines that never ran, as runs. A branch
   never taken is its lines; a function never called, its body's (its `to`
   line ran: making a function is a statement).
 - **What's counted.** The files the tests use, not the test files, nor
-  moth's own copies of the standard library (§74), nor packages: as
+  folio's own copies of the standard library (§74), nor packages: as
   coverage.py leaves out the standard library and site-packages, it's the
   program's own code that's measured. A program's run leaves out the same.
   A file the tests use counts once it has run once, with all its lines.
@@ -5686,31 +5686,31 @@ engines stay: as the fallback, and as what the tests compare against.
   (DA), and how many there are and ran (LF, LH), which Codecov, Coveralls,
   GitLab and editors' coverage views read. For a program's run the watcher
   writes it, and the program is built with --allow-write=lcov.info, so it
-  isn't asked; for tests moth does, after the last.
-- **The command line.** `moth coverage x.test.moth`, any number of them, or
-  none for every .test.moth file here and in the folders inside, as moth
-  test finds them; a file ending in .test.moth is tests, anything else a
+  isn't asked; for tests folio does, after the last.
+- **The command line.** `folio coverage x.test.folio`, any number of them, or
+  none for every .test.folio file here and in the folders inside, as folio
+  test finds them; a file ending in .test.folio is tests, anything else a
   program, after which everything is the program's own. With tests,
   `--lcov` and the --allow flags can come after the files too, as with
-  moth test. It ends with 1 if a test failed, as moth test does.
+  folio test. It ends with 1 if a test failed, as folio test does.
 - **Limits.** A worker (§124) runs on a copy of the program, the watcher's
   counts too, which end with it: its lines aren't counted, though a task's
   are. A line run within 16 calls of the most there can be (100,000) isn't
   counted, as the debugger doesn't stop there either.
-- **Tested.** Through moth.exe: a program's run, its summary on the error
+- **Tested.** Through folio.exe: a program's run, its summary on the error
   output and its lcov.info, from another folder; a file's tests, and a
   folder's, two files of tests in two folders, with a branch never taken, a
-  function never called, a line run in a loop, moth's json.moth and a
-  package left out, and a test that fails and says something, which moth
-  coverage shows as moth test does and still counts; the same files named,
+  function never called, a line run in a loop, folio's json.folio and a
+  package left out, and a test that fails and says something, which folio
+  coverage shows as folio test does and still counts; the same files named,
   with --lcov after them; lcov.info word for word; nothing left behind; and
-  moth test as it was.
+  folio test as it was.
 
 ## 134. Property-based testing
 
 A test says what one example gives. A property says what holds for every value of a sort: sorting twice is
 sorting once, JSON reads back what `as json` wrote, splitting text by commas and joining it with them gives it
-back. `properties.moth` tries a property on many values made at random, as Python's Hypothesis and Haskell's
+back. `properties.folio` tries a property on many values made at random, as Python's Hypothesis and Haskell's
 QuickCheck do, and when one shows it doesn't hold, makes that value as simple as it can.
 
 - **What it is.** `for_all(generator, property)` makes 100 values and gives each to the property, which holds
@@ -5738,74 +5738,74 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
   Without a seed, one is picked at random.
 - **Showing values.** A value in a mistake is shown `as json`, so text is in quotes and `"1"` isn't `1`; one
   JSON can't show is shown as `say` would.
-- **Tested.** properties.test.moth, on the three JS engines (moth.test.js) and in machine code (`moth test`):
+- **Tested.** properties.test.folio, on the three JS engines (folio.test.js) and in machine code (`folio test`):
   what each generator makes, its range and mistakes; the same seed giving the same values, and seed 42's
   pinned; properties that hold, with a function, a property using expect, and settings; the simplest value
   for whole numbers, decimals, lists, text and dictionaries; a mistake inside a property; and two of the
-  standard library's own properties, json.moth reading what `as json` writes (numbers, decimals, yes and no,
+  standard library's own properties, json.folio reading what `as json` writes (numbers, decimals, yes and no,
   text with quotes, backslashes, tabs, new lines and letters beyond ASCII, in lists and dictionaries) and
-  text.moth's split_by joining back.
+  text.folio's split_by joining back.
 ## 135. A cookbook, examples and exercises
 
 - **Why.** The reference (§132) says what each function does, and the Learn page teaches the language a lesson at
   a time; neither shows a whole task done end to end, nor gives a learner problems to solve. Those are what a
   person new to a language looks for next, and what keeps documentation honest is running it.
 - **The cookbook** (`docs/cookbook/`) is made by `make-guides.mjs` from `guides/cookbook/*.md`: a `# title`, prose,
-  ` ```moth ` blocks, and ` ```output ` blocks after the ones that can run here, which say what the code says. Ten
+  ` ```folio ` blocks, and ` ```output ` blocks after the ones that can run here, which say what the code says. Ten
   recipes: CSV, JSON, a web API, a web API with a database, the command line, statistics and a chart, dates,
   every core, tests, and finding and changing text. A block that needs a site, a server, a database or a window
-  has no output block, and is held to having no problem `moth check` finds instead.
-- **The examples** (`docs/examples.html`) are `guides/examples/*.moth`, whole programs whose opening comment's
+  has no output block, and is held to having no problem `folio check` finds instead.
+- **The examples** (`docs/examples.html`) are `guides/examples/*.folio`, whole programs whose opening comment's
   first line is the title and the rest what they are: the towers of Hanoi, the game of life, word counts, a
   bank account (a kind), Caesar's cipher, Roman numerals both ways, the Mandelbrot set in text, and Koch's
   snowflake drawn by the turtle. Each links to the playground with its code in the address (`#code=`, as the
   Share button makes it).
 - **The exercises** (`exercises/`) are twenty practice exercises in Exercism's track format (a `config.json`;
-  for each, `.docs/instructions.md`, `.meta/config.json`, `.meta/example.moth`, the starting file and its
-  tests), written for Moth from Exercism's open problem descriptions: hello-world, two-fer, leap, raindrops,
+  for each, `.docs/instructions.md`, `.meta/config.json`, `.meta/example.folio`, the starting file and its
+  tests), written for Folio from Exercism's open problem descriptions: hello-world, two-fer, leap, raindrops,
   bob, isogram, pangram, word-count, anagram, acronym, hamming, rna-transcription, difference-of-squares,
   collatz-conjecture, armstrong-numbers, reverse-string, matching-brackets, clock, sieve and luhn. grains is
   left out: its 2^64 is past what 15 digits keep. The starting file has each function's first line and a
-  `fail with` saying what to do, so `moth test` fails every test until it's written.
+  `fail with` saying what to do, so `folio test` fails every test until it's written.
 - **The site.** The pages share the reference's frame (`page()` in make-docs.mjs), and the navigation of every
   page under docs/ now has Cookbook and Examples.
 - **Tested** (guides.test.js): the pages are what make-guides.mjs makes; every recipe block with an output says
   exactly that on the JavaScript engine (files in memory), and every other has no problems; every example runs,
   says something, has no problems, and its link is its code; every exercise is listed once in config.json with
   a uuid of its own, its tests (113 in all) pass with its example and every one fails with its starting file.
-## 136. Moth from Python: the mothlang package
+## 136. Folio from Python: the foliolang package
 
 - **Why.** Python is where most people who want speed are: a loop that's
-  slow in Python is fast in Moth's machine code (§129), if Python can call
+  slow in Python is fast in Folio's machine code (§129), if Python can call
   it. And a package is how Python gets anything: `pip install`.
-- **Its name.** `moth` on PyPI is an unrelated project (tokens kept in
-  MongoDB) whose module is also called `moth`, so the package is
-  `mothlang`, and so is its module, everywhere: two packages giving Python
-  one module name would break each other. Code says `import mothlang as
-  moth`, then `moth.load(...)`. The command it installs is still `moth`.
-- **Wheels with moth in them.** A wheel for Windows (`win_amd64`) and one
-  for Linux (`manylinux_2_17_x86_64`) each carry `moth` itself, built from
-  the source by `bootstrap.mjs`, as `mothlang/bin/moth(.exe)`, so `pip
-  install` is all there is. Linux's moth calls the kernel itself and links
+- **Its name.** `folio` on PyPI is an unrelated project (tokens kept in
+  MongoDB) whose module is also called `folio`, so the package is
+  `foliolang`, and so is its module, everywhere: two packages giving Python
+  one module name would break each other. Code says `import foliolang as
+  folio`, then `folio.load(...)`. The command it installs is still `folio`.
+- **Wheels with folio in them.** A wheel for Windows (`win_amd64`) and one
+  for Linux (`manylinux_2_17_x86_64`) each carry `folio` itself, built from
+  the source by `bootstrap.mjs`, as `foliolang/bin/folio(.exe)`, so `pip
+  install` is all there is. Linux's folio calls the kernel itself and links
   nothing, so it runs on any distribution, and a library it builds needs
   only libc.so.6. The wheels are `py3-none`: no Python extension, so one
   wheel serves every Python from 3.10 on. hatchling builds them, its build
-  hook putting moth in and tagging the wheel when MOTHLANG_BINARY and
-  MOTHLANG_PLATFORM say which; the sdist has no moth, and finds one through
-  MOTHLANG_MOTH or PATH.
-- **Calling a library: ctypes alone.** `moth.load("fast.moth")` builds the
-  file with `moth build --library --into <cache>` and loads it with
-  ctypes; `moth.compile(source)` does the same for code in a string. Each
-  function the library exports (`moth_exports` lists them, with their
+  hook putting folio in and tagging the wheel when FOLIOLANG_BINARY and
+  FOLIOLANG_PLATFORM say which; the sdist has no folio, and finds one through
+  FOLIOLANG_FOLIO or PATH.
+- **Calling a library: ctypes alone.** `folio.load("fast.folio")` builds the
+  file with `folio build --library --into <cache>` and loads it with
+  ctypes; `folio.compile(source)` does the same for code in a string. Each
+  function the library exports (`folio_exports` lists them, with their
   inputs' names) is an attribute, whose ctypes signature is `int(uint64*,
   uint64...)`. No compiled extension means nothing to build per Python
   version, and nothing for pip to compile.
 - **Cached by what it was built from.** A library is kept in
-  `~/.cache/mothlang` (or `%LOCALAPPDATA%\mothlang\Cache`, or
-  `MOTHLANG_CACHE`), in a folder named by a SHA-256 of mothlang's version,
-  the moth that builds it, its --allow flags, the file's name and text, and
+  `~/.cache/foliolang` (or `%LOCALAPPDATA%\foliolang\Cache`, or
+  `FOLIOLANG_CACHE`), in a folder named by a SHA-256 of foliolang's version,
+  the folio that builds it, its --allow flags, the file's name and text, and
   the text of each file it `use`s (by a name, or as a package), found the
-  way moth finds them. Changing any of them builds it again; changing
+  way folio finds them. Changing any of them builds it again; changing
   nothing loads the one built before. Built in a folder of its own, then
   moved into place, so a library half written is never loaded; loaded once
   for each process.
@@ -5814,38 +5814,38 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
   rather than a number changed silently. str is text in UTF-8, bool yes or
   no, None nothing, bytes bytes, list and tuple a list, dict a dictionary.
   A record comes back as a read-only `Record`, read as `p.x` or `p["x"]`;
-  as C can't make Moth's records (a field is found by its name being one
+  as C can't make Folio's records (a field is found by its name being one
   of the program's own texts), one given back is a dictionary. Anything
-  else, a function above all, is a `Value`, kept with `moth_keep` until
+  else, a function above all, is a `Value`, kept with `folio_keep` until
   Python lets go of it, which can be given back, and called with
-  `moth_call`. A list of numbers goes across at once, through
-  `moth_numbers` and `moth_list_numbers` and an array of doubles, not an
+  `folio_call`. A list of numbers goes across at once, through
+  `folio_numbers` and `folio_list_numbers` and an array of doubles, not an
   item at a time; and the kind of a value is worked out in Python from its
-  bits, as a call to `moth_kind` would cost more than the rest.
+  bits, as a call to `folio_kind` would cost more than the rest.
 - **Mistakes as exceptions.** What a call fails with is raised as
-  `MothError`, with the message, line, column and file from the record
+  `FolioError`, with the message, line, column and file from the record
   (§129) and what `fail with` gave as `value`; code that can't be built is
-  `BuildError`, with moth's own report. A wrong number of inputs is
-  Python's TypeError, before Moth is called.
-- **Running a program.** `moth.run(source)` writes the code to a folder of
-  its own and runs `moth run` there: what it said, its error output and
+  `BuildError`, with folio's own report. A wrong number of inputs is
+  Python's TypeError, before Folio is called.
+- **Running a program.** `folio.run(source)` writes the code to a folder of
+  its own and runs `folio run` there: what it said, its error output and
   the number it ended with, as a RunResult, with arguments, --allow flags,
   input and a folder to run in.
 - **What it gave.** On CI's runners, called from Python: fib(30) 10 times
   as fast as Python's own on Linux and 13 on Windows, a Mandelbrot set 16
   to 18 times, a sieve of primes 3.5 to 5.7 times (benchmarks/RESULTS.md).
   A call costs 1.5 to 1.7 µs, most of it ctypes' own, and a value given to
-  Moth is copied, so a sum over a list Python already has is faster in
+  Folio is copied, so a sum over a list Python already has is faster in
   Python, which the benchmark shows too.
 - **Tested** with pytest, against a wheel built as the publishing workflow
   builds it and installed: Linux with Python 3.10 and 3.14, and Windows. Each
   kind of value both ways, records and functions, every kind of mistake
   and where it was, a library's top level failing, deep recursion and
   eight threads at once, the cache (built once, again when a file it uses
-  changes, nothing written beside the source), moth.run with arguments,
-  input and flags, and the moth command. CI runs the benchmark too.
+  changes, nothing written beside the source), folio.run with arguments,
+  input and flags, and the folio command. CI runs the benchmark too.
 
-## 137. Publishing mothlang, with no token
+## 137. Publishing foliolang, with no token
 
 - **Why.** A package is only `pip install`-able once it's on PyPI, and
   what uploads it must be trusted with the project. A token kept in the
@@ -5856,7 +5856,7 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
   told to trust. Nothing is published yet: Samyak adds the publisher on
   pypi.org (docs/python-package.md says how) when he wants it to be.
 - **python-publish.yml.** Runs for a published release, or by hand. It
-  makes moth for Linux and for Windows from the source on one Linux
+  makes folio for Linux and for Windows from the source on one Linux
   runner (bootstrap.mjs makes either), builds the sdist and the two
   wheels as python.yml builds one (§136), checks them with `twine check
   --strict`, installs the Linux wheel and runs its tests, and keeps the
@@ -5870,7 +5870,7 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
   `python/` or the workflow gets that dry run as a check, so a release
   never finds out first that the wheels don't build. Only a release, or
   `publish` ticked by hand, reaches the upload.
-- **Versions.** mothlang's version is Moth's, in `__init__.py`. A release
+- **Versions.** foliolang's version is Folio's, in `__init__.py`. A release
   whose tag isn't `v` and that version stops before building anything, as
   PyPI never takes a version twice and a wheel of the wrong version would
   be there for good.
@@ -5882,8 +5882,8 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
 
 - **Why.** `x bit and 255`, `shift u right by 8` and the rest went to the
   runtime, which checked each side with rt_bits: about 60 instructions, two
-  calls in, to `and` two whole numbers. machine.moth does it for every byte
-  it writes (put32, put64), so moth building compiler.moth spent 9.5% of its
+  calls in, to `and` two whole numbers. machine.folio does it for every byte
+  it writes (put32, put64), so folio building compiler.folio spent 9.5% of its
   instructions there, and a call of `distance(i, 0, 0, i bit and 1023)`
   58% (§128).
 - **What it does.** When both sides are whole numbers from 0 to 2^53 - 1,
@@ -5910,10 +5910,10 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
   6755399441055744. rt_shift_left now multiplies the number as it is by 2^n,
   as the engines do, and says it's too big as they do.
 - **What it gave.** Counted (§128): the calls of four inputs, 573 million
-  instructions to 231 million; moth building compiler.moth, 3,579 million to
+  instructions to 231 million; folio building compiler.folio, 3,579 million to
   3,259 million. Timed: the calls of four inputs, 44 ms to 23; a million
-  bytes filled and summed, 37 ms to 27; moth building compiler.moth, 712 ms
-  to 677 (the best of ten, each moth run in turn with the other).
+  bytes filled and summed, 37 ms to 27; folio building compiler.folio, 712 ms
+  to 677 (the best of ten, each folio run in turn with the other).
 - **Tested.** Every kind of value on each side of `bit and`, `bit or` and
   `bit xor` (0, -0, 2^53 - 1, 2^53, -1, 1.5, numbers whole to 15 digits,
   infinities, text, nothing, yes, a list, hex), each shifted both ways by
@@ -5924,21 +5924,21 @@ QuickCheck do, and when one shows it doesn't hold, makes that value as simple as
 
 ## 139. Text in the WebAssembly module
 
-The second of `moth.wasm`'s four stages (§125) is the runtime in WebAssembly,
+The second of `folio.wasm`'s four stages (§125) is the runtime in WebAssembly,
 so a module imports nothing from `vm.js`. It goes in parts, and text is the
 first, as nearly everything after it (a mistake's words, a dictionary's keys,
 the built-ins) needs it. A module made 68 imports; it makes 65 now, and text,
 joining it, comparing it and showing a number in it no longer leave the module.
 
-- **Written once.** wasm.js and wasm.moth must make the same bytes, so each
+- **Written once.** wasm.js and wasm.folio must make the same bytes, so each
   piece of runtime would be written twice: as JavaScript calls, and as text in
-  Moth. [`wasm-runtime.js`](wasm-runtime.js) holds the new runtime once, as
+  Folio. [`wasm-runtime.js`](wasm-runtime.js) holds the new runtime once, as
   WebAssembly's own instructions, a function at a time, with named inputs and
   locals. wasm.js assembles it; `make-wasm-runtime.mjs` writes it into
-  `wasm-runtime.moth`, which wasm.moth reads and assembles by the same rules.
+  `wasm-runtime.folio`, which wasm.folio reads and assembles by the same rules.
   Both make its functions before the rest of the runtime, so the rest can call
   them, and write their code last, so they can call the rest. A test checks
-  `wasm-runtime.moth` is up to date, and the corpus checks the two agree.
+  `wasm-runtime.folio` is up to date, and the corpus checks the two agree.
 - **Text as UTF-16, in the module.** A text was a struct holding a JavaScript
   string. It is now a view of the first so many units of a buffer, in UTF-16
   like JavaScript's strings, so its length, its order (unit by unit) and what
@@ -5957,7 +5957,7 @@ joining it, comparing it and showing a number in it no longer leave the module.
   crosses through a memory of the module's own, 32,768 units at a time, which
   is where WASI will want text too; a text keeps the JavaScript string it was
   made into, and text JavaScript made gets units only when the module needs
-  them. wasm.moth reads the units of a program's text from its letters, and
+  them. wasm.folio reads the units of a program's text from its letters, and
   half of an emoji on its own, which its UTF-8 can't hold, from `as json`.
 - **Numbers as text, as the VM shows them.** `"n is " + n` is joined in the
   module, so a number becomes text there: to 15 significant digits, laid out
@@ -5975,7 +5975,7 @@ joining it, comparing it and showing a number in it no longer leave the module.
   same, and a test runs 120,000 of them each time. Text joined in place, the
   text it began kept as it was; text compared, with emoji and half of one; a
   module run with no imports at all showing numbers and joining text. And
-  every program the engines are tested with, made by wasm.js and wasm.moth
+  every program the engines are tested with, made by wasm.js and wasm.folio
   byte for byte, and run against the VM.
 - **What it gave, and cost.** On the WebAssembly engine, comparing text 500,000
   times went from 117 ms to 10 (it called JavaScript each time); joining
@@ -5985,53 +5985,53 @@ joining it, comparing it and showing a number in it no longer leave the module.
   and making one in wasm.js takes about a millisecond longer, the shared
   runtime's code assembled and encoded once and kept.
 
-## 140. The moth command, for the first hour and after
+## 140. The folio command, for the first hour and after
 
-Moth could do a great deal by the time a person had written something, and
+Folio could do a great deal by the time a person had written something, and
 little to help them start, or to look after what they'd written. Seven commands
-fill that in, each in moth.moth, run in the tests as moth.exe itself.
+fill that in, each in folio.folio, run in the tests as folio.exe itself.
 
-- **`moth new`.** A folder named for the project, with what each kind needs:
-  an app's `main.moth`, what it does in `<name>.moth` and tests of that in
-  `<name>.test.moth`, so the tests don't run the program; a web server's
-  answers kept from `server.moth`, so its tests ask them without a server; a
+- **`folio new`.** A folder named for the project, with what each kind needs:
+  an app's `main.folio`, what it does in `<name>.folio` and tests of that in
+  `<name>.test.folio`, so the tests don't run the program; a web server's
+  answers kept from `server.folio`, so its tests ask them without a server; a
   package for other programs; a library for C and Python. Each has a README, a
-  `.gitignore` and a GitHub workflow that installs moth with the installer and
-  runs `moth test`. Its tests pass as it's made: the test makes each kind, runs
+  `.gitignore` and a GitHub workflow that installs folio with the installer and
+  runs `folio test`. Its tests pass as it's made: the test makes each kind, runs
   its tests, and runs the app. A name is a letter, then letters, digits and
   `_`, and not `main`, as it names files and a package.
-- **`moth explain`.** A file's first mistake, as `moth check` says it (a
+- **`folio explain`.** A file's first mistake, as `folio check` says it (a
   mistake in reading it, or one that will fail), or a mistake's words pasted
-  from a run, matched against 32 mistakes moth knows: what each means, why it
+  from a run, matched against 32 mistakes folio knows: what each means, why it
   happens and how to put it right, with code that makes it and the same code
-  put right. A test checks every example put right reads as Moth, which found
+  put right. A test checks every example put right reads as Folio, which found
   two of them that didn't.
-- **`moth upgrade`.** The newest release, from GitHub's API, put in place of
-  the moth on PATH: downloaded with curl, its SHA-256 (from the system's own
-  `certutil` or `sha256sum`, as hashing 30 MB in Moth would be slow) checked
+- **`folio upgrade`.** The newest release, from GitHub's API, put in place of
+  the folio on PATH: downloaded with curl, its SHA-256 (from the system's own
+  `certutil` or `sha256sum`, as hashing 30 MB in Folio would be slow) checked
   against the release's `SHA256SUMS.txt`, and only then moved in. On Windows a
   running program can't be written over, but it can be moved aside, so the old
-  one is `moth.exe.old` until the next upgrade. A moth from Scoop, winget, pip
+  one is `folio.exe.old` until the next upgrade. A folio from Scoop, winget, pip
   or the .deb is left to that package manager, and the command for it said.
-  `MOTH_RELEASES` names a folder or address laid out as a release is, which is
+  `FOLIO_RELEASES` names a folder or address laid out as a release is, which is
   how the test runs it: an old release, a download whose sum is wrong, and a
   new one.
-- **`moth doc`.** What `make-docs.mjs` does for the standard library, for any
+- **`folio doc`.** What `make-docs.mjs` does for the standard library, for any
   program: a page for each file, with its opening comment and, for each
   function and kind at its top level, the line that makes it and the comment
   above it; lines indented in a comment are code. More than one file gets an
   index.
-- **`moth bench`.** A `.bench.moth` file is built with a driver at its end, as
-  `moth test` does with tests: each `bench_` function is called as many times
+- **`folio bench`.** A `.bench.folio` file is built with a driver at its end, as
+  `folio test` does with tests: each `bench_` function is called as many times
   as take 50 ms or more (doubling from one), then that many again five times
   over; it says the mean time a call, how far the five spread, and calls a
   second. `the clock` counts milliseconds, so 50 ms keeps its error under 2%.
-- **`moth watch`.** Any other command, run again whenever a `.moth` file here
+- **`folio watch`.** Any other command, run again whenever a `.folio` file here
   or inside changes (by its text, read four times a second, as a file's time of
   change needs a library). For that, `cli_main` became `cli_dispatch`, which
   takes the command and gives back the number to end with, where it had
   stopped the program itself.
-- **`moth publish`.** What the package index's README says to do by hand: the
+- **`folio publish`.** What the package index's README says to do by hand: the
   package's main file found at the top of the folder, its origin on GitHub
   (whose main file anyone must be able to read), a line about it from its
   opening comment or `--about`, its tests run, and the index changed and
@@ -6043,14 +6043,14 @@ fill that in, each in moth.moth, run in the tests as moth.exe itself.
 ## 141. MCP servers, PDF files and spreadsheets
 
 Three libraries for work people do with programs now: tools for AI apps, and
-the two file formats offices send each other. Each is Moth alone, on every
+the two file formats offices send each other. Each is Folio alone, on every
 engine, with its tests in `tools/` run on all three. (Markdown and HTML
 templates, also asked for, were packages in the index already: `markdown` and
 `template`.)
 
-- **mcp.moth.** A server is a name, a version, and the tools, resources and
+- **mcp.folio.** A server is a name, a version, and the tools, resources and
   prompts it offers. `serve()` reads the app's JSON-RPC messages a line at a
-  time with `ask for 1 bytes` (as `moth lsp` reads its editor's), since `ask`
+  time with `ask for 1 bytes` (as `folio lsp` reads its editor's), since `ask`
   shows its question and repeats what's piped to it, which would put text in
   the app's replies; `answer()` answers one message, so the tests run on the
   JavaScript engines too. What a tool needs is said in words (`"number"`,
@@ -6059,9 +6059,9 @@ templates, also asked for, were packages in the index already: `markdown` and
   the app asked for if it speaks it (2024-11-05, 2025-03-26, 2025-06-18), and
   its newest if not; a tool's mistake is its result with `isError`, as the
   protocol says, so the model sees it, and the server goes on. A test builds a
-  server with moth.exe and talks to it through its input, with `\r\n` line
+  server with folio.exe and talks to it through its input, with `\r\n` line
   ends as Windows pipes have them; built, it is a program of 156 KB.
-- **pdf.moth.** PDF 1.4, written as text: each object, then the table of where
+- **pdf.folio.** PDF 1.4, written as text: each object, then the table of where
   each starts, which a test reads back to check every offset. Text is in the
   14 fonts every reader has, in their WinAnsi encoding, so nothing is embedded
   and a page of text is a few kilobytes; letters outside it are `?`. Text wraps
@@ -6069,32 +6069,32 @@ templates, also asked for, were packages in the index already: `markdown` and
   `paragraph()` breaks lines where a reader will draw them: the test checks
   each line fits, and that the next word wouldn't have. A report made with it
   opens in pypdf and PyMuPDF, and draws as it should.
-- **xlsx.moth.** A workbook is a zip of XML, so it is `zip.moth` and
-  `xml.moth`: four small files and one per sheet, each cell a number, text
+- **xlsx.folio.** A workbook is a zip of XML, so it is `zip.folio` and
+  `xml.folio`: four small files and one per sheet, each cell a number, text
   (written inline, so there's no shared table to keep), yes or no. Reading
   takes what Excel writes too: shared strings, rich text in runs, cells and
   rows left out, a formula's last value, a sheet found by its relationship
   rather than its place. openpyxl reads what it writes back exactly.
 
-## 142. Moth from JavaScript: mothlang on npm
+## 142. Folio from JavaScript: foliolang on npm
 
-Python could call Moth (§136); JavaScript, where Moth's engine was born,
-couldn't, but for copying `moth.js` out of the repository. `npm/` is the
+Python could call Folio (§136); JavaScript, where Folio's engine was born,
+couldn't, but for copying `folio.js` out of the repository. `npm/` is the
 package.
 
 - **What it is.** The engine as the VS Code extension carries it (the same
   `ENGINE` list, so the two can't differ), the standard library's files in
-  `lib/`, where `use "json.moth"` finds them after the program's own, and
-  `mothlang.js`: `run` (what a program said, a line each, or a `MothError`),
+  `lib/`, where `use "json.folio"` finds them after the program's own, and
+  `foliolang.js`: `run` (what a program said, a line each, or a `FolioError`),
   `load` (a program's top level by name, its functions JavaScript ones, as
-  `moth.js`'s `load` gives Moth's compiler to the tests), `runFile` and
+  `folio.js`'s `load` gives Folio's compiler to the tests), `runFile` and
   `loadFile` (with `use` finding files beside them), `check`, `format` and
   `test`. Programs get the computer's own clock and randomness, as a program
-  `moth build` makes does, and a disk only when they're given one.
-- **Its command.** `mothlang run`, `check`, `test` and `tidy`, on the JIT,
+  `folio build` makes does, and a disk only when they're given one.
+- **Its command.** `foliolang run`, `check`, `test` and `tidy`, on the JIT,
   answering `ask` from the input a line at a time (read as it comes, with
   `readSync`), and ending with the number the program ended with.
-- **Published as releases are.** `make-package.mjs` stamps Moth's version on
+- **Published as releases are.** `make-package.mjs` stamps Folio's version on
   it; the npm workflow runs its tests and publishes it with npm's provenance
   when a release is published. The name has to be made on npm once, by hand,
   as PyPI's was (docs/npm-package.md). `npm pack` makes it 423 KB, 72 files.
@@ -6112,85 +6112,85 @@ top, worded each time. `to withdraw with amount where amount is greater than
 - **Where it goes.** At first it was a statement, `needs amount is greater
   than 0`. But a statement that starts with a name and a value is a call
   (`greet "Sam"`), so a program with a function called `needs` would have
-  changed meaning, and VERSIONING.md promises Moth never reserves a new word in
+  changed meaning, and VERSIONING.md promises Folio never reserves a new word in
   1.x and that a line that worked before means what it meant. After a
   function's inputs (and its `gives`) nothing could be written before, and
   `where` is a word already (`dictionary where`), so editors color it already.
 - **Only the parsers, again** (§66, §95). Both parsers read the condition and
   put an `if not ...` with a `fail with` at the start of the body, so the VM,
   the JIT, WebAssembly, machine code, the checker and the formatter have
-  nothing new; compiler.moth makes the JIT's JavaScript exactly, as before.
+  nothing new; compiler.folio makes the JIT's JavaScript exactly, as before.
   The mistake is the program's own, so a `try` catches it, and its trail says
   where the call was.
 - **What it says.** The condition as written, made again from its tokens with
   a space between each (none after `(`, nor before `)`, a comma or `'s`), the
   same in both parsers; and when the condition compares a name with something,
   `, but amount is -5`, the name's value as `+` joins it.
-- **Tested** on every engine, compiler.moth and wasm.moth, and in machine code:
+- **Tested** on every engine, compiler.folio and wasm.folio, and in machine code:
   a check that holds and one that fails, with `and`, brackets, `length of`,
   inputs with types and `or`, a kind's function and `self's`, a `try`, and a
   name and a function called `where` and `needs` that are as they were.
 
-## 144. moth.wasm, and the playground compiling with it
+## 144. folio.wasm, and the playground compiling with it
 
 Stages 3 and 4 of §125's four, done before the end of stage 2 (§139), as
-they could be: the compiler is Moth's own in the browser now, while the
+they could be: the compiler is Folio's own in the browser now, while the
 modules it makes still take most of their runtime from vm.js until stage 2
 is done.
 
-- **moth.wasm.** `moth-wasm.moth` is the compiler as a program: compiler.moth
+- **folio.wasm.** `folio-wasm.folio` is the compiler as a program: compiler.folio
   reads the program it's given (its arguments are the program's text, then
-  each file's name and text), wasm.moth makes the module, and it says the
+  each file's name and text), wasm.folio makes the module, and it says the
   module's bytes on one line, with what running it needs in its section
-  "moth", as `moth build --target wasm` writes it; or `mistake` and the
-  mistake as JSON, which `mothWasmCompiler` in moth.js throws as the
-  MothError wasm.js would.
-- **Made by itself.** `make-moth-wasm.mjs` has wasm.js make it once; that
-  module, run, makes `moth-wasm.moth` again, and what it makes is moth.wasm;
-  and moth.wasm, run, must make itself into its own bytes, or nothing is
+  "folio", as `folio build --target wasm` writes it; or `mistake` and the
+  mistake as JSON, which `folioWasmCompiler` in folio.js throws as the
+  FolioError wasm.js would.
+- **Made by itself.** `make-folio-wasm.mjs` has wasm.js make it once; that
+  module, run, makes `folio-wasm.folio` again, and what it makes is folio.wasm;
+  and folio.wasm, run, must make itself into its own bytes, or nothing is
   written. It is 1,556,161 bytes, 400 KB of them the positions and messages
   its section keeps for its own mistakes. A test makes it again and checks the
-  file is what it makes, as webpage.moth's does.
+  file is what it makes, as webpage.folio's does.
 - **The same compiler.** On every playground example, hand-written case, typed
-  program and 800 programs the generators make, broken or not, moth.wasm makes
+  program and 800 programs the generators make, broken or not, folio.wasm makes
   wasm.js's bytes exactly and stops at the same mistakes, and what it makes
   runs as the VM runs it. A program takes 17 ms to compile on average in
-  Node, as each call runs moth.wasm's program again, and makes the runtime
+  Node, as each call runs folio.wasm's program again, and makes the runtime
   every module has again with it.
-- **The playground.** The page compiles moth.wasm once, when it loads, and
+- **The playground.** The page compiles folio.wasm once, when it loads, and
   sends the compiled module with each run, so the code the browser makes of it
   is kept between runs (each run has a worker of its own). On the WebAssembly
   engine, the worker compiles the program with it, and says so: "Ran in 37 ms
-  on WebAssembly, compiled by moth.wasm". The first run after the page loads
-  takes 350 ms while the browser compiles moth.wasm's code; the runs after it,
-  40 to 60. Until moth.wasm is there, or where it can't be fetched (a page
-  `moth build --web` made, which has no moth.wasm beside it), the worker
-  compiles with wasm.js, as it would for a mistake in moth.wasm itself that
+  on WebAssembly, compiled by folio.wasm". The first run after the page loads
+  takes 350 ms while the browser compiles folio.wasm's code; the runs after it,
+  40 to 60. Until folio.wasm is there, or where it can't be fetched (a page
+  `folio build --web` made, which has no folio.wasm beside it), the worker
+  compiles with wasm.js, as it would for a mistake in folio.wasm itself that
   isn't the program's.
-- **What's left.** The modules moth.wasm makes import their checks, mistakes,
+- **What's left.** The modules folio.wasm makes import their checks, mistakes,
   dictionaries and built-ins from vm.js (§139 has the parts), so the page still
   carries the engine's JavaScript; when stage 2 is done, it's a loader, and
-  moth.wasm and what it makes can run with no JavaScript at all.
+  folio.wasm and what it makes can run with no JavaScript at all.
 
-## 145. Web pages made in Moth: page.moth
+## 145. Web pages made in Folio: page.folio
 
 A full real web page, both ways: a program in the browser makes its own page and is told what's done on
-it; and a site, served by a Moth server, makes its pages with the same library (`apps/recipes`).
+it; and a site, served by a Folio server, makes its pages with the same library (`apps/recipes`).
 
-- **A part at a time.** `tools/page.moth` builds a page as a list of HTML parts: headings, paragraphs,
+- **A part at a time.** `tools/page.folio` builds a page as a list of HTML parts: headings, paragraphs,
   links, pictures, lists, tables, boxes (`start(p, "card")` ... `finish(p)`), text boxes, text areas,
-  checkboxes, dropdowns and buttons, in a look of Moth's own, with `style()` for CSS of the page's own.
+  checkboxes, dropdowns and buttons, in a look of Folio's own, with `style()` for CSS of the page's own.
   Every text is escaped; `html()` is the one way to put HTML in as it's written. Anything left open is
   closed when the page is made.
 - **Shown by writing a file.** `show()` writes the page to `"<page>"`. The playground's worker, and so a page
-  `moth build --web` makes, keeps no file of that name: it sends the page to the page. So showing a page
+  `folio build --web` makes, keeps no file of that name: it sends the page to the page. So showing a page
   needed no new statement, and no word reserved (VERSIONING.md). Elsewhere, `html_of()` is the HTML, to
-  write to a file or for `server.moth` to send.
+  write to a file or for `server.folio` to send.
 - **One new event.** `when the page is used with what` gives one value, a dictionary: its "type" ("click",
-  "change", or "enter" for Enter in a text box), the "name" of what was used (its `data-moth`, which every
-  control page.moth makes has), its "value", and "values", every field on the page by name. With every
+  "change", or "enter" for Enter in a text box), the "name" of what was used (its `data-folio`, which every
+  control page.folio makes has), its "value", and "values", every field on the page by name. With every
   field in each event, the program never asks the page anything: it keeps what it knows, and shows the page
-  again. It's the ninth of vm.js's EVENTS and of compiler.moth's event_names; machine.moth's app_timer moved
+  again. It's the ninth of vm.js's EVENTS and of compiler.folio's event_names; machine.folio's app_timer moved
   to 9, after it.
 - **In a sandboxed frame.** The page is shown in an iframe with `sandbox="allow-scripts allow-popups
   allow-popups-to-escape-sandbox"` and no `allow-same-origin`, so it has an origin of its own: the page a
@@ -6201,27 +6201,27 @@ it; and a site, served by a Moth server, makes its pages with the same library (
   script, which puts its head and body in place of the ones before, and the focus back on the control of the
   same name, with its selection, so a page shown again on each Enter keeps the typing where it was. Chrome
   sends a change after Enter, of the same value; the script drops it, so Enter is one event.
-- **As a page of its own.** In a page `moth build --web` makes, the page is the whole window. An app that only
+- **As a page of its own.** In a page `folio build --web` makes, the page is the whole window. An app that only
   waits for its page has no drawing, so the drawing isn't shown, and the status says "use the page".
 - **The playground finds the standard library.** A file a program uses that isn't beside the page is looked
-  for in `tools/`, so `use "page.moth"`, and the other libraries that need nothing of the system, work there.
-- **Checked.** page.test.moth's 5 tests, on all three engines. moth.test.js runs a to-do app on each engine,
+  for in `tools/`, so `use "page.folio"`, and the other libraries that need nothing of the system, work there.
+- **Checked.** page.test.folio's 5 tests, on all three engines. folio.test.js runs a to-do app on each engine,
   sends it the dictionaries the frame sends, and checks what it said and the page it showed after. In the
-  browser, on WebAssembly compiled by moth.wasm: the to-do app typed into, with Enter and with Add; and the
+  browser, on WebAssembly compiled by folio.wasm: the to-do app typed into, with Enter and with Add; and the
   frame's script's messages for a text box, a dropdown, a checkbox ticked through its label, a click inside a
   named element, and Enter.
 - **What it isn't.** Programs built for Windows or Linux have no page: `when the page is used` never happens
   there, and `show()` writes a file called `<page>`, a name Windows doesn't allow. They use `html_of()`.
 - **A site's pages.** A page a server sends is used by the browser, not by the program: its links go to the
-  site's other pages, and its forms send their fields. So page.moth has `menu()` and `list_link()`, links that
+  site's other pages, and its forms send their fields. So page.folio has `menu()` and `list_link()`, links that
   open where the page is (`link()` opens a tab of its own, as a page in the playground's frame has nowhere of
   its own to go), and `start_form()` to `end_form()` with `submit()`, a POST by default or a GET for a search.
   Each `end_...()` checks that what it ends is what was started last, and says which is still open if not.
 - **apps/recipes.** A recipe box, a site of six kinds of page: home, every recipe or those a search finds,
   each recipe, a form to add one, about, and a 404, each with the same menu and footer; and the recipes as
-  JSON. `kitchen.moth` is what it does, with no network: SQLite (every value a parameter, a search's `%` and
+  JSON. `kitchen.folio` is what it does, with no network: SQLite (every value a parameter, a search's `%` and
   `_` only themselves), the checks on a new recipe, the pages, and `answer_with()`, which machine.test.js
-  runs as `guestbook` is run: its 4 tests (`kitchen.test.moth`) with moth.exe, then the site built and used
+  runs as `guestbook` is run: its 4 tests (`kitchen.test.folio`) with folio.exe, then the site built and used
   over HTTP. A refused recipe is shown again, 400, with what was wrong and what was written; an added one is
   a 303 to its own page. A browser ends a text area's lines with \r\n; `lines_of()` takes them as they come.
 
@@ -6233,29 +6233,29 @@ not by JavaScript. A module imports 62 functions, not 65: `fail`, `unset` and `f
 - **A tag of the module's own.** A WebAssembly exception tag, `mistake`, is thrown with three things: what `if it
   fails with` gets (a `fail with`'s value, or the mistake's words as text), 1 if that's a `fail with`'s value, and
   the mistake's position. `fail with x` throws it; so does a name with no value yet, and a name nothing sets.
-  wasm-binary.js and wasm.moth write tags (section 13), `throw` and `catch`, the same bytes.
+  wasm-binary.js and wasm.folio write tags (section 13), `throw` and `catch`, the same bytes.
 - **Caught in the module.** A `try` catches the tag and gives its value to `if it fails with`, restoring the call
   depth, with no call out. The checks still in vm.js (an item that isn't there, a sum of text and a list...)
-  throw JavaScript's MothError, which the same `try` catches as before, with `catch_all`, JavaScript saying
+  throw JavaScript's FolioError, which the same `try` catches as before, with `catch_all`, JavaScript saying
   whether it's one to catch: so `tryStart`, `caught` and `caughtValue` stay until those checks move in too. A
   worker's mistake is caught the same two ways, and `workerFailed` is given its value.
 - **Seen by JavaScript only when nothing caught it.** The tag is exported, and a mistake that leaves `main`, or an
-  app's handler, uncaught becomes the MothError the other engines make there: its words (or a `fail with`'s value,
+  app's handler, uncaught becomes the FolioError the other engines make there: its words (or a `fail with`'s value,
   shown, and kept as WebAssembly holds it), its position, and its trail, read from the module's own record of
   the calls in progress, which nothing has undone.
 - **Words made when they're needed.** A variable with no value yet says `'x' has no value yet (give it one with
-  'set x to ...')`. Making those words for every variable when a program starts made moth.wasm 13% bigger,
+  'set x to ...')`. Making those words for every variable when a program starts made folio.wasm 13% bigger,
   and slower to start. So each check keeps only where the variable's name is in the program's data (which every
   module now has, empty or not) and how long it is, and `noValueYet`, in the shared runtime, makes the name and
   the words around it (three texts the module is made with: `text` in wasm-runtime.js) only when one is thrown.
-  moth.wasm is 1,606,736 bytes, 3% more than it was; a module for `say 1`, 12,658 bytes, 223 more.
+  folio.wasm is 1,606,736 bytes, 3% more than it was; a module for `say 1`, 12,658 bytes, 223 more.
 - **What it gave.** On the WebAssembly engine, catching 100,000 `fail with`s in a loop went from 769 ms to 30, and
   100,000 names with no value yet from 819 ms to 37: no JavaScript error, with its stack, is made for them.
 - **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test when
   called: it catches a `fail with` and a name with no value yet, and the `fail with` it doesn't catch reaches
   JavaScript as the module's exception, with its value. Mistakes, their values and trails, on the VM and on
-  WebAssembly, the same; and every program the engines are tested with, made by wasm.js, wasm.moth and
-  moth.wasm byte for byte.
+  WebAssembly, the same; and every program the engines are tested with, made by wasm.js, wasm.folio and
+  folio.wasm byte for byte.
 
 ## 147. Dictionaries in the WebAssembly module
 
@@ -6282,38 +6282,38 @@ key's JavaScript string.
   a copy before; a Map they give back is made into a dictionary of the module's.
 - **What it gave, and cost.** On the WebAssembly engine, setting and reading 100,000 number keys went from
   35.7 ms to 18.6, and 50,000 text keys from 74.7 ms to 33.9; counting 200,000 words, each one found three
-  times, from 41.2 ms to 43.0. moth.wasm is 1,624,784 bytes, 1% more; a module for `say 1`, 13,695 bytes,
+  times, from 41.2 ms to 43.0. folio.wasm is 1,624,784 bytes, 1% more; a module for `say 1`, 13,695 bytes,
   as every module now has the dictionary's code.
 - **Checked.** A module run with every import but `say`, `grant` and `refill` failing the test: it makes a
   dictionary, sets 300 text keys, takes 290 out (making it again on the way), sets a number key that canon
-  rounds and -0, and finds them. Every program the engines are tested with, made by wasm.js, wasm.moth and
-  moth.wasm byte for byte, and saying what the VM says.
+  rounds and -0, and finds them. Every program the engines are tested with, made by wasm.js, wasm.folio and
+  folio.wasm byte for byte, and saying what the VM says.
 
 ## 148. The website, in Next.js and GSAP
 
-Moth's site is a Next.js app in `site/`, exported as static pages for GitHub Pages under /moth, with GSAP for
+Folio's site is a Next.js app in `site/`, exported as static pages for GitHub Pages under /folio, with GSAP for
 its motion. It takes everything it shows from the rest of the repository, so nothing is written twice.
 
 - **What it takes, and from where.** `site/scripts/sync.mjs`, run before each build, copies the engine into
-  `public/` (the modules make-web.mjs lists, moth.wasm, the Moth files a program may `use`, `tools/`, the apps,
+  `public/` (the modules make-web.mjs lists, folio.wasm, the Folio files a program may `use`, `tools/`, the apps,
   the pictures), and makes `src/generated/`: the lessons and examples as they are, and the pages make-docs.mjs
   and make-guides.mjs wrote (reference, cookbook, examples), each cut into its top, body and own script, its
   links pointed at the new addresses. Those generators, and their tests, are unchanged.
 - **The playground is index.html's.** Its whole behaviour is index.html's module script, which sync.mjs copies
-  word for word to `/moth/playground.js`. The new page has every element the script looks for, by the same
-  ids, in a new look, and loads it once the page is there. The page is at /moth/playground with no slash at
-  the end, so the script's own `./worker.js` and `./moth.wasm` are /moth/worker.js and /moth/moth.wasm.
+  word for word to `/folio/playground.js`. The new page has every element the script looks for, by the same
+  ids, in a new look, and loads it once the page is there. The page is at /folio/playground with no slash at
+  the end, so the script's own `./worker.js` and `./folio.wasm` are /folio/worker.js and /folio/folio.wasm.
   `site.test.mjs` checks that every id the script looks up is on the page; index.html itself, and the page
-  `moth build --web` makes of it, are as they were.
-- **Old addresses.** A shared program at /moth/#code=..., or /moth/#playground, goes to the playground before
+  `folio build --web` makes of it, are as they were.
+- **Old addresses.** A shared program at /folio/#code=..., or /folio/#playground, goes to the playground before
   the page shows; learn.html and docs/x.html are where they were (a static export writes learn.html for
-  /moth/learn); docs/ and docs/cookbook/ have pages that send a browser on to /moth/docs and the cookbook.
+  /folio/learn); docs/ and docs/cookbook/ have pages that send a browser on to /folio/docs and the cookbook.
 - **The look.** Taken from the sites Awwwards gave Site of the Day in November 2026: bone white and ink with one
   colour, the orange of a lamp; Archivo, whose width and weight move, uppercase and condensed for what's big;
   Instrument Serif in italics for what's said; JetBrains Mono for code and labels, with its ligatures off, so
   `>=` stays the two characters the page is about. Hairlines instead of cards; nothing round but the pills.
   The fonts are Fontsource's packages, served from the site.
-- **The motion.** The first visit's curtain counts to 100 as moth.wasm comes in (so the playground has it
+- **The motion.** The first visit's curtain counts to 100 as folio.wasm comes in (so the playground has it
   already), and lifts. The headline's letters come up into place, and grow heavier near the pointer. The
   reel, pinned, runs programs up through a lens, as obys.agency runs its work: the one in the lens in colour,
   the rest grey, and beside it what it says. The seal turns with the page; numbers count up; the list of
@@ -6321,14 +6321,14 @@ its motion. It takes everything it shows from the rest of the repository, so not
   of it waits for `prefers-reduced-motion` to allow it, and what it would bring in is shown anyway if it hasn't
   started in 3 seconds.
 - **What it weighs.** 63 pages; 103 kB of JavaScript every page shares, 175 kB in all for the front page; the
-  site, engine and fonts together, 13 MB, most of it the Moth files and moth.wasm the playground uses.
+  site, engine and fonts together, 13 MB, most of it the Folio files and folio.wasm the playground uses.
 - **Publishing.** `.github/workflows/site.yml` builds it on each push to main and deploys it to GitHub Pages,
   which serves it once the repository's Pages source is GitHub Actions.
 ## 149. Faster on the VM, the JIT and in machine code, measured
 
 - **Why.** The playground runs programs on the VM and the JIT as well as WebAssembly, and machine code is what
-  `moth build` makes. Each was measured first, on one set of programs, and changed where the time went.
-  §128 found 12% of moth building compiler.moth in `is` between texts; that is where machine code starts here.
+  `folio build` makes. Each was measured first, on one set of programs, and changed where the time went.
+  §128 found 12% of folio building compiler.folio in `is` between texts; that is where machine code starts here.
   (A third stage after §138's bits, said to be worth 27%, isn't on any branch, so nothing here is from it.)
 - **How it was measured.** Sixteen programs: loops, sums with fractions, primes, fib(30), calls of four
   inputs, joining text, comparing letters, adding to text, lists, dictionaries and records. Before and after
@@ -6353,7 +6353,7 @@ its motion. It takes everything it shows from the rest of the repository, so not
   written out, where one function made all four and V8 couldn't put them in line.
 - **Records in the JIT.** `record with x 1, y 2` was `record(["x", "y"], [1, 2])`, a call that set each field
   by a name in a variable. It is now `($t1 = new Record(), $t1["x"] = 1, $t1["y"] = 2, $t1)`, each field set
-  by its own name. compiler.moth writes the same, byte for byte, and moth.wasm is made again from it.
+  by its own name. compiler.folio writes the same, byte for byte, and folio.wasm is made again from it.
 - **Machine code: `is` with text the program wrote.** `kind of node is "call"` went to rt_cmp_is and
   rt_equal, about 80 instructions and `repe cmpsb`. For a text of up to 32 bytes it's now done in line:
   whether the value is text, how many bytes it has, and its bytes, four at a time against the text's, written
@@ -6392,13 +6392,128 @@ its motion. It takes everything it shows from the rest of the repository, so not
   Machine code, counted on Linux: the letters compared, 479.7 million instructions to 150.0 million; the
   1,000,000 counts, 539.6 million to 472.7 million; the keys made, 282.3 million to 246.9 million; the other
   13 programs ran exactly as many instructions as before, so their differences above (fib's 6.4 and 7.3 ms
-  among them) are the machine's own. moth building compiler.moth: 3,287 million instructions to 2,910
+  among them) are the machine's own. folio building compiler.folio: 3,287 million instructions to 2,910
   million, and 572 ms to 532 timed on Windows (the median of 11, in turns). On Linux in WSL, timed the same
   way, the letters compared took 109 ms, now 39; the counts 50, now 42; the keys 108, now 99.
-- **Tested.** All of `node --test` passes, machine.test.js too. compiler.moth writes the JIT's JavaScript
+- **Tested.** All of `node --test` passes, machine.test.js too. compiler.folio writes the JIT's JavaScript
   byte for byte on every case, and compiles itself to the same. Machine code against the VM and the JIT on
   Windows and Linux: `is` and `is not` with texts of 0 to 33 bytes (é, emoji, ÿ, a text one byte longer or
   shorter, or differing in its last byte) against texts, numbers, -0, nothing, yes, no, a list and a record,
   in `if`, `or`, `and`, `not` and `repeat while`, after a call; texts of every length compared with copies of
   themselves, slices of a longer text, and inside lists, records and `is in`; and dictionaries with text keys
   of 0 to 17 bytes and number keys, 3,000 more made as text, read, removed and gone through.
+
+## 150. Moth is Folio
+
+The language was Moth; it's Folio. The command is `folio`, a program's file is `name.folio`, the standard
+library's files are `json.folio` and the rest, the compiler for the browser is `folio.wasm`, and the packages
+for JavaScript and Python are `foliolang`. Done while nothing outside depended on it: the repositories were
+private, and nothing was published to npm or PyPI.
+
+- **The same everywhere.** Each `moth`, `Moth` and `MOTH` became `folio`, `Folio` and `FOLIO`, in every file's
+  text and in every path, by one script, so a name and every place that names it stayed in step: a file's
+  name and its `use` lines, a function and its callers, a message and the tests that expect it. Kept as it
+  was: the changelog's history (it says what each release was), the 1.11.0 release's winget manifests, and
+  the moth that's an insect (the editor's icon, an example asking about moths).
+- **Names have lengths.** `.moth` was five letters and `.folio` is six, and the command written in Folio found
+  a file's kind by its last letters: `cli_tail(path, length of path - 4) is ".moth"`. Each of those counts
+  went up by one (for `.folio`, `.test.folio`, `.bench.folio`, and `folio_` in the names a library made for
+  C exports), found by looking for a count near a renamed name, and in the original, where a name and the
+  count that went with it were on different lines.
+- **Programs from before still run.** `use "json.moth"` reads `json.moth` if there is one, and `json.folio` if
+  there's only that: in the parser in JavaScript, in the compiler written in Folio, and in the command, which
+  looks beside the program and then in its own copy of the standard library. `folio run old.moth` builds
+  `old.exe`, and `folio test` finds `.test.moth` files as well as `.test.folio` ones. Nothing else of the
+  old name is kept: there's no `moth` command, and `MOTH_POSTGRES_URL` and the like are `FOLIO_...`.
+- **What changed with it.** Every fixed value made from the name was made again: the base64 of "Folio ✓", the
+  zlib stream of a sentence about Folio, an example's "it has 5 letters", the winget and Scoop manifests.
+  The tree-sitter grammar is named in the Zed and Helix settings by the commit that holds it, which is the
+  commit after the rename. The site's own word, Folio, is now the language's: `sync.mjs` copies its text as
+  it is, and the site is at /folio, where GitHub Pages puts it once the repository is called folio.
+- **Tested.** Every suite as before, with "folio" in each name; a program that uses `math.moth` and a `.moth`
+  file of its own on the three engines and in the compiler written in Folio, the same; and folio.exe running
+  a `.moth` program and testing its `.test.moth` file.
+
+## 151. The words of a mistake, in the WebAssembly module
+
+The fourth of stage 2's parts (§139), begun: the checks that only ever made a mistake, and called JavaScript
+to word it. A mistake's words need two things the module didn't have: what a value is, in words, and the
+program's names. It has both now, and four checks are worded in it. A module imports 51 functions, not 55:
+`callable`, `checkInputs`, `checkRange` and `recordFor` are gone.
+
+- **What a value is.** `kindWords` in the shared runtime says what vm.js's `kindOf` says: nothing, yes/no,
+  text, a list, a function, a record, a dictionary, bytes, an amount's measure (a distance, a time...) or a
+  number, in kindOf's order. An amount's measure is from a table of each unit's, made from vm.js's UNITS
+  when wasm-runtime.js is read, so the two can't drift apart.
+- **The program's names.** The compiler gives each name a number as it meets it. Once the program is
+  compiled, it puts each name's UTF-16 units in the module's data, and after them a table of where each
+  starts and how long it is, which `init` makes the `names` global of; `nameText` makes a name's text from
+  it. wasm.js and wasm.folio write the same bytes for it.
+- **Worded in the module:** a call of what has no value yet ("there is no function called 'f'"), of what
+  isn't a function ("'x' is a number, not a function"), a function given the wrong number of inputs ("'f'
+  needs 1 input but got 2"), a range of what isn't numbers, and a field of what isn't a record, to read or
+  to change. Each is thrown as the module's own mistake (§146), so a `try` catches it with no call out.
+- **Still in JavaScript, for now:** a record with no such field, as "did you mean" picks from every field
+  name, and JavaScript adds names (a table's rows); the kinds a function's inputs say they are; and a repeat
+  count that isn't whole, which shows any value. Showing a value is the built-ins' part.
+- **What it cost.** Every module holds the runtime's new words and its program's names: a module for
+  `say 1` is 15,538 bytes, and folio.wasm 1,709,430, 4% more.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the
+  test, its six mistakes caught in it and said, the same as the VM says them; and every program the
+  engines are tested with, made by wasm.js, wasm.folio and folio.wasm byte for byte.
+
+## 152. A security pass: permissions, packages and broken code
+
+What a program, a project's files or a package can make folio do that it shouldn't, tried on folio.exe and on
+every front end, after the rename (§150). Two holes were found in packages, both from `folio.packages`, and
+fixed; the permissions held; and broken code found three ways to escape as a JavaScript error, or to take far
+too long, which are fixed too, but for one, below.
+
+- **Permissions held.** 38 tries at getting round `--allow-read=data`, `--allow-write=out` and
+  `--allow-net=example.invalid` on Windows: `..` and `.\..` in every spelling, a whole path, `\\?\` and `\\.\`
+  paths, a share (`\\localhost\C$`), a stream (`::$DATA`), `C:x` (relative to the drive's own folder),
+  `\Users\...` (from the drive's top), a trailing dot or space, a junction inside the allowed folder that
+  points out of it; and for sites, a user before an `@`, a `#`, a backslash, `%2f`, a trailing dot, a
+  look-alike name and `file://`. Each was refused, or was the allowed place itself.
+- **folio add held.** 21 addresses and versions made to be git's options, or a shell's (`--upload-pack=`,
+  `ext::`, `-oProxyCommand=`, `--config=`, `;`, `$(...)`, backquotes): none ran a command, as a name made from
+  one isn't a package's name, git won't take `ext::`, and the place git got as a repository didn't exist.
+- **A folio.packages line could reach out of packages/.** Its name made a path unchecked: with `../../x`,
+  `folio get` (which fetches a package with no sum again, taking its folder away first) and `folio remove`
+  took away a folder outside the project.
+- **A folio.packages line could make git run a command.** Its source went to `git clone` as it was, before
+  the folder to clone into, so one of `--upload-pack=<command>` was an option, and the folder git's
+  repository: with a repository's files at `packages/<name>.git`, which a project can hold, `folio get` ran
+  the command. folio add reads each package's own folio.packages the same way, so a package could do it too.
+  Its commit, and a version after an `@`, went to `git checkout` as options the same way.
+- **What folio takes now** (`cli_package_fault`), from a program's folio.packages, from a package's, and from
+  folio add: a package's name (no `/`, `\` or `:`, and not ending in `.`, which Windows drops, so that `...`
+  isn't `packages/` itself), a source and a version that don't start with `-`, and a commit of 40 or 64 hex
+  digits. A line that isn't is said, with why, and the command ends with 1 having done nothing. git gets the
+  source after `--`. A clone that can't go to the version asked for is taken away, not left for the next
+  folio add to find in its way.
+- **git runs nothing of a package's.** Every git folio starts has `core.hooksPath=/dev/null`,
+  `core.fsmonitor=false` and `protocol.ext.allow=never`: a `post-checkout` hook in `packages/kind/.git`, which
+  git itself runs, folio's git doesn't. What's left is a `packages/` got some other way than folio's clone,
+  in a zip say, whose `.git/config` git reads when folio fetches into it (SECURITY.md says so).
+- **git's words keep their r's.** Folio's text has only `\n` and `\t`, so `"\r"` is `"r"`, and the line made
+  of what git said dropped every r ("Could not esolve host"). It's `cli_cr` now, as the rest of folio.folio has.
+- **Broken code.** 20,000 programs broken at random, beyond the 8,000 the tests break (§60): Folio's words
+  and symbols put in, pieces cut out or copied, lines swapped, programs spliced, each through `check`,
+  `format`, the VM's, the JIT's and the WebAssembly compiler, and compiler.folio, and each that compiled run
+  on all three engines with a step limit. Only FolioErrors came of them.
+- **Deep code.** About 1,000 levels of nesting runs JavaScript's stack out. `build()` made that "the code is
+  nested too deeply", but `format()` didn't, and the compilers written in Folio, as JavaScript and as
+  folio.wasm, only made their own depth limit that mistake, so a RangeError got out. All of them do it now
+  (`ranOut`, which counts Firefox's InternalError too), and the tests check seven front ends give the same
+  mistake for four shapes of deep code. folio.exe ends every one of them with a mistake too.
+- **The checker on long sums.** It made the type of each sum in a sum again for each `+`, and worked each
+  out again for each: 3,000 terms took 3 s, 5,000 14.6 s to find them too deeply nested. A type is made once
+  for each expression now, and a sum's worked out again only once a variable's type has changed
+  (`all.round`): 1,000 terms take 20 ms, not 198, and what it finds is the same.
+- **Still slow, for later.** compiler.folio looks a name up by going through every name so far, so a
+  program of 20,000 top-level variables takes folio.exe 20 s to run (5,000: 1 s), where folio.js takes 0.2 s
+  for 50,000; and folio.exe's check takes seconds on a chain of thousands of `-` or `+` (8,000 `-`: 6 s), and
+  minutes on 50,000. They're programs no one writes by hand, but a page or a tool that checks code it's sent
+  should limit its size.
+

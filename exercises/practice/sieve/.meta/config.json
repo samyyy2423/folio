@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "sieve.moth"
+      "sieve.folio"
     ],
     "test": [
-      "sieve.test.moth"
+      "sieve.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Find the primes up to a number with Eratosthenes' sieve."

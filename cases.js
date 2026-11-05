@@ -1,6 +1,6 @@
 // The programs the tests run: each with what it should say, or the mistake it should stop at, and a fuzzer that
-// breaks them. moth.test.js runs them on the three JavaScript engines; machine.test.js holds the machine code
-// machine.moth makes up against the JavaScript VM on every one it takes.
+// breaks them. folio.test.js runs them on the three JavaScript engines; machine.test.js holds the machine code
+// machine.folio makes up against the JavaScript VM on every one it takes.
 import examples from "./examples.js";
 
 export const PROGRAMS = [
@@ -309,11 +309,11 @@ export const ERRORS = [
   ["to f with x gives a number or\n    say x\nend", "line 1: expected a new line but found 'or'"],
   ["to f with x as\n    say x\nend", "line 2: expected what kind of value it is ('a number', 'text', 'yes or no', 'a list', 'a record', 'a dictionary', 'bytes' or 'a function', or a kind's name, like 'a dog') but found 'say'"],
   // `use` only reads files in the program's folder, or folders inside it
-  ['use "../secret.moth"', "line 1: '../secret.moth' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
-  ['say 1\nuse "lib/../../x.moth" as x', "line 2: 'lib/../../x.moth' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
+  ['use "../secret.folio"', "line 1: '../secret.folio' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
+  ['say 1\nuse "lib/../../x.folio" as x', "line 2: 'lib/../../x.folio' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
   ['use "/etc/passwd"', "line 1: '/etc/passwd' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
-  ['use "C:/secret.moth"', "line 1: 'C:/secret.moth' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
-  ['use "lib\\\\..\\\\x.moth"', "line 1: 'lib\\..\\x.moth' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
+  ['use "C:/secret.folio"', "line 1: 'C:/secret.folio' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
+  ['use "lib\\\\..\\\\x.folio"', "line 1: 'lib\\..\\x.folio' isn't in the program's folder: 'use' only reads files there, or in folders inside it"],
   ["say 5 km + 2 hours", "line 1: can't use '+' on a distance and a time"],
   ["say 5 km + 3", "line 1: can't use '+' on a distance and a number"],
   ["say 5 km * 2 km", "line 1: can't use '*' on a distance and a distance"],
@@ -331,7 +331,7 @@ export const ERRORS = [
   ["to f\n    set x to 1\nend\nf\nsay x\nset x to 2", "line 5: 'x' has no value yet (give it one with 'set x to ...')"],
   ["to bump\n    add 5 to total\nend\nset total to 0\nbump", "line 2: 'total' has no value yet (give it one with 'set total to ...')"],
   ["say x\nset x to 1", "line 1: 'x' has no value yet (give it one with 'set x to ...')"],
-  // misspellings get the closest name that exists, including Moth's own words at the start of a line
+  // misspellings get the closest name that exists, including Folio's own words at the start of a line
   ["set total to 1\nsay totl", "line 2: 'totl' has no value yet. Did you mean 'total'?"],
   ["set total to 1\nadd 2 to totla", "line 2: 'totla' has no value yet. Did you mean 'total'?"],
   ["to greet with who\nend\ngreeet 1", "line 3: there is no function called 'greeet'. Did you mean 'greet'?"],
@@ -358,7 +358,7 @@ export const ERRORS = [
   ['repeat "a" times\nend', 'line 1: repeat needs a whole number of times, not "a"'],
   ['say "hi', "line 1: this text is missing its closing quote"],
   ['if yes\n    say "hi"', "line 2: 'if' from line 1 is missing its 'end'"],
-  ["set list to 5", "line 1: 'list' is a Moth word, so it can't be used as a variable name"],
+  ["set list to 5", "line 1: 'list' is a Folio word, so it can't be used as a variable name"],
   ["set x to 5 6", "line 1: expected a new line but found '6'"],
   ['if yes say "hi"\nend', "line 1: expected a new line but found 'say'"],
   ["end", "line 1: a line can't start with 'end'"],
@@ -372,7 +372,7 @@ export const ERRORS = [
   ["pen color 5", "line 1: 'pen color' needs text like \"red\", not a number"],
   ["pen width 0", "line 1: 'pen width' needs a number above 0, not 0"],
   ["move sideways 5", "line 1: expected 'forward' or 'back' or 'to' but found 'sideways'"],
-  ["set pen to 1", "line 1: 'pen' is a Moth word, so it can't be used as a variable name"],
+  ["set pen to 1", "line 1: 'pen' is a Folio word, so it can't be used as a variable name"],
   ['set p to record with name "Sam"\nsay nmae of p', "line 2: this record has no 'nmae'. Did you mean 'name'?"],
   ["say name of 5", "line 1: can't take 'name' of a number"],
   ['set s to "x"\nset name of s to 1', "line 2: can only change 'name' of a record, not text"],
@@ -391,22 +391,22 @@ export const ERRORS = [
   // stop leaves the loop it's in, and only that one
   ["stop", "line 1: 'stop' only works inside a loop (one made with 'repeat' or 'for each')"],
   ["repeat 2 times\n    to f\n        stop\n    end\nend", "line 3: 'stop' only works inside a loop (one made with 'repeat' or 'for each')"],
-  ["set stop to 1", "line 1: 'stop' is a Moth word, so it can't be used as a variable name"],
+  ["set stop to 1", "line 1: 'stop' is a Folio word, so it can't be used as a variable name"],
   // text helpers: upper and lower case, split, join, number, position
   ["say uppercase of 5", "line 1: 'uppercase of' needs text, not a number"],
   ["say split \"a,b\" by 1", "line 1: 'split ... by' needs text, not a number"],
   ["say join \"abc\" with \",\"", "line 1: 'join' needs a list, not text"],
   ["say number of \"12abc\"", "line 1: \"12abc\" isn't a number"],
   ["say position of 1 in \"abc\"", "line 1: 'position of' needs text, not a number"],
-  ["set number to 5", "line 1: 'number' is a Moth word, so it can't be used as a variable name"],
+  ["set number to 5", "line 1: 'number' is a Folio word, so it can't be used as a variable name"],
   ["say split \"a b\" \" \"", "line 1: expected 'by' but found \" \""],
   // ask needs someone to answer
   ["say ask \"x\"", "line 1: this program asks a question, but nothing can answer it here"],
-  ["set ask to 1", "line 1: 'ask' is a Moth word, so it can't be used as a variable name"],
+  ["set ask to 1", "line 1: 'ask' is a Folio word, so it can't be used as a variable name"],
   // try ... if it fails: a mistake, or a fail with, is caught and the program goes on
   ["try\n    say 1\nend", "line 3: expected 'if it fails' but found 'end'"],
   ["try say 1\nif it fails\nend", "line 1: expected a new line but found 'say'"],
-  ["set try to 1", "line 1: 'try' is a Moth word, so it can't be used as a variable name"],
+  ["set try to 1", "line 1: 'try' is a Folio word, so it can't be used as a variable name"],
   ["try\n    say 1\nif it fails\n    say 2", "line 4: 'try' from line 1 is missing its 'end'"],
   // dictionaries: look things up by key, change them, go through their keys; and `is in`
   ["say item \"Bob\" of (dictionary where \"Bo\" is 1)", "line 1: there is no \"Bob\" in this dictionary. Did you mean \"Bo\"?"],
@@ -420,7 +420,7 @@ export const ERRORS = [
   ["set item yes of empty dictionary to 1", "line 1: a dictionary's keys are text or numbers, not yes/no"],
   ["say dictionary \"a\" is 1", "line 1: expected 'where' but found \"a\""],
   ["say dictionary where \"a\" 1", "line 1: expected 'is' but found '1'"],
-  ["set keys to 1", "line 1: 'keys' is a Moth word, so it can't be used as a variable name"],
+  ["set keys to 1", "line 1: 'keys' is a Folio word, so it can't be used as a variable name"],
   ["remove \"a\" of d", "line 1: expected 'from' but found 'of'"],
   ["set d to empty dictionary\nadd 1 to d", "line 2: can't add a number to a dictionary"],
   // bytes, bits, and numbers in hex and binary
@@ -438,7 +438,7 @@ export const ERRORS = [
   ["say 5 as bytes", "line 1: 'as bytes' needs text, a list or bytes, not a number"],
   ["say (list of 1, 300) as bytes", "line 1: a byte is a whole number from 0 to 255, not 300"],
   ["say -5 as hex", "line 1: 'as hex' needs whole numbers of 0 or more, not -5"],
-  ["set as to 1", "line 1: 'as' is a Moth word, so it can't be used as a variable name"],
+  ["set as to 1", "line 1: 'as' is a Folio word, so it can't be used as a variable name"],
   ["say (5 bytes) + 1", "line 1: can't use '+' on bytes and a number"],
   ["set b to 2 bytes\nadd 1 to b", "line 2: can't add a number to bytes"],
   // files and arguments, where a run has none
@@ -447,7 +447,7 @@ export const ERRORS = [
   ["say read 5", "line 1: a file name is text, not a number"],
   ["write \"a\" to 5", "line 1: a file name is text, not a number"],
   ["say read bytes list of 1", "line 1: a file name is text, not a list"],
-  ["set arguments to 1", "line 1: 'arguments' is a Moth word, so it can't be used as a variable name"],
+  ["set arguments to 1", "line 1: 'arguments' is a Folio word, so it can't be used as a variable name"],
   ["write \"a\" \"b\"", "line 1: expected 'to' but found \"b\""],
   // expect: nothing happens when it is so; otherwise it says what each side was
   ["expect 1 + 1 is 3", "line 1: expected 2 to be 3"],
@@ -459,7 +459,7 @@ export const ERRORS = [
   ["expect nothing", "line 1: expected yes, but got nothing"],
   ["expect not yes", "line 1: expected yes, but got no"],
   ["expect 1 is less than \"a\"", "line 1: can't check if a number is less than text"],
-  ["set expect to 1", "line 1: 'expect' is a Moth word, so it can't be used as a variable name"],
+  ["set expect to 1", "line 1: 'expect' is a Folio word, so it can't be used as a variable name"],
   ["expect", "line 1: expected a value but found the end of the code"],
   ["to check with n\n    expect n is greater than 0\nend\ncheck(-1)", "line 2: expected -1 to be greater than 0"],
   // drawing for apps: move to, clear, and boxes, circles and text
@@ -470,7 +470,7 @@ export const ERRORS = [
   ["draw circle at 0, 0 size -1", "line 1: a circle's size is 0 or more, not -1"],
   ["draw \"hi\" at 0, 0 size 0", "line 1: text's size is a number above 0, not 0"],
   ["draw \"hi\"", "line 1: expected 'at' but found the end of the code"],
-  ["set clear to 1", "line 1: 'clear' is a Moth word, so it can't be used as a variable name"],
+  ["set clear to 1", "line 1: 'clear' is a Folio word, so it can't be used as a variable name"],
   // pictures from files: what it's given is checked first, then the file, which these programs can't read
   ["draw picture 5 at 0, 0", "line 1: 'draw picture' needs a file's name or its bytes, not a number"],
   ["draw picture \"cat.png\" at \"a\", 0", "line 1: 'draw picture' needs numbers, not text"],
@@ -533,7 +533,7 @@ export const ERRORS = [
   ["every 100\n    say 1\nend", "line 2: expected 'milliseconds' or 'seconds' but found 'say'"],
   ["every \"a\" seconds\n    say 1\nend", "line 1: 'every' needs a number above 0, not text"],
   ["every 0 seconds\n    say 1\nend", "line 1: 'every' needs a number above 0, not 0"],
-  ["set when to 1", "line 1: 'when' is a Moth word, so it can't be used as a variable name"],
+  ["set when to 1", "line 1: 'when' is a Folio word, so it can't be used as a variable name"],
   ["when a key is pressed\n    stop\nend", "line 2: 'stop' only works inside a loop (one made with 'repeat' or 'for each')"],
   ["set code to 255\nstop the program with code + 1", "line 2: 'stop the program with' needs a whole number from 0 to 255, not 256"],
   ["say 1 to the error put", "line 1: expected 'the error output' but found 'the'"],
@@ -568,12 +568,12 @@ export const ERRORS = [
     "line 1: 'Bad Name' can't be a header's name: it's letters, digits and - (and !#$%&'*+.^_`|~)"],
   ["say read \"notes.txt\" with headers (empty dictionary)",
     "line 1: only a site is read with headers, and 'notes.txt' isn't one (its address starts http:// or https://)"],
-  // a library's function, called where only a program moth build makes can call it, or with the wrong inputs
-  ["use the library \"kernel32\" or \"c\"\n    abs(a whole number) gives a whole number\nend\nsay abs(0 - 1)", "line 2: can't use the library 'kernel32' here: only a program made by moth build can"],
+  // a library's function, called where only a program folio build makes can call it, or with the wrong inputs
+  ["use the library \"kernel32\" or \"c\"\n    abs(a whole number) gives a whole number\nend\nsay abs(0 - 1)", "line 2: can't use the library 'kernel32' here: only a program made by folio build can"],
   ["use the library \"msvcrt\" or \"c\" as c\n    strlen(text) gives a long whole number\nend\nsay c's strlen(5)", "line 4: 'c's strlen' needs input 1 to be text, not a number"],
   ["use the library \"c\"\n    abs(a whole number, a thing) gives a whole number\nend", "line 2: expected what it takes or gives ('a number', 'a float', 'a whole number', 'a long whole number', 'a pointer', 'text', 'wide text', 'bytes', 'yes or no', 'a byte', 'a signed byte', 'a short whole number', 'an unsigned short whole number', 'an unsigned whole number', 'an unsigned long whole number' or 'a list of numbers', or a structure or callback) but found 'a'"],
   ["use the library \"c\"\n    malloc(a long whole number) gives bytes\nend", "line 2: a library's function can't give bytes: it can give a pointer to them"],
-  ["use the library \"c\"\n    remove(text) gives a whole number\nend", "line 2: 'remove' is a Moth word, so it can't be used as the name of one of the library's functions"],
+  ["use the library \"c\"\n    remove(text) gives a whole number\nend", "line 2: 'remove' is a Folio word, so it can't be used as the name of one of the library's functions"],
   ["use the library \"c\"\n    abs(a whole number) gives a whole number", "line 2: 'use' from line 1 is missing its 'end'"],
   ["if yes\n    use the library \"c\"\n    end\nend", "line 2: 'use the library' only works at the top level of a program"],
   ["use the library c\n    abs(a whole number)\nend", "line 1: expected a library's name in quotes, like \"sqlite3\" but found 'c'"],
@@ -583,7 +583,7 @@ export const ERRORS = [
   ["use the library \"x\"\n    callback c()\n    f() gives a c\nend", "line 3: only a function's input or a structure's field can be a callback"],
   ["use the library \"x\"\n    structure p with a as a whole number, a as a number\nend", "line 2: 'a' is already one of its fields"],
   ["use the library \"x\"\n    callback c(a pointer)\n    f(a c)\nend\nsay f(5)", "line 5: 'f' needs input 1 to be a function, not a number"],
-  ["say 2 to the power of 0.5", "line 1: 'to the power of' needs a whole number, not 0.5: math.moth's power(x, y) takes any"],
+  ["say 2 to the power of 0.5", "line 1: 'to the power of' needs a whole number, not 0.5: math.folio's power(x, y) takes any"],
   ["say 0 to the power of -1", "line 1: can't raise 0 to a power below 0"],
   ["say 2 to the power of \"3\"", "line 1: 'to the power of' needs a number, not text"],
   ["say items 1 to 2 of 5", "line 1: can only take items of a list, text or bytes, not a number"],
@@ -610,7 +610,7 @@ export const ERRORS = [
   ["to f with a or 1\n    return a\nend\nsay f(1, 2)", "line 4: 'f' needs 1 input but got 2"],
   ["say list of 10 / x for each x in list of 2, 0", "line 1: can't divide by zero"],
   ["set f to function with x gives\nsay f(1)", "line 2: expected a value but found 'say'"],
-  ["say list of x for each in list of 1", "line 1: 'in' is a Moth word, so it can't be used as a variable name"],
+  ["say list of x for each in list of 1", "line 1: 'in' is a Folio word, so it can't be used as a variable name"],
   ["set f to function with x gives x\nsay f()", "line 2: 'f' needs 1 input but got 0"],
   ["say \"3\" rounded", "line 1: 'rounded' needs a number, not text"],
   ["say nothing rounded down", "line 1: 'rounded down' needs a number, not nothing"],

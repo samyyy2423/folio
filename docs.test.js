@@ -38,18 +38,18 @@ test("the reference reads a library's functions, inputs and examples as they're 
 
   // a library of helpers and public functions, its example from its tests, cut down to what it needs
   const files = {
-    "tools/stats.moth": "# Statistics.\n#\n#   use \"stats.moth\" as stats\n#   say stats's mean(list of 1, 2)   # 1.5\n\n# the average\nto mean with numbers\n    return stats_sum(numbers) / length of numbers\nend\n\nto stats_sum with numbers\n    set sum to 0\n    for each x in numbers\n        set sum to sum + x\n    end\n    return sum\nend\n\n# the largest less the smallest\nto spread with numbers\n    return (largest of numbers) - (smallest of numbers)\nend\n",
-    "tools/stats.test.moth": "use \"stats.moth\" as s\n\nto test_spread\n    set xs to list of 1, 5\n    set ys to list of 2\n    add 9 to xs\n    expect s's spread(xs) is 8\nend\n",
+    "tools/stats.folio": "# Statistics.\n#\n#   use \"stats.folio\" as stats\n#   say stats's mean(list of 1, 2)   # 1.5\n\n# the average\nto mean with numbers\n    return stats_sum(numbers) / length of numbers\nend\n\nto stats_sum with numbers\n    set sum to 0\n    for each x in numbers\n        set sum to sum + x\n    end\n    return sum\nend\n\n# the largest less the smallest\nto spread with numbers\n    return (largest of numbers) - (smallest of numbers)\nend\n",
+    "tools/stats.test.folio": "use \"stats.folio\" as s\n\nto test_spread\n    set xs to list of 1, 5\n    set ys to list of 2\n    add 9 to xs\n    expect s's spread(xs) is 8\nend\n",
   };
-  const lib = readLibrary("tools/stats.moth", (file) => files[file]);
+  const lib = readLibrary("tools/stats.folio", (file) => files[file]);
   assert.deepEqual(lib.functions.map((fn) => fn.name), ["mean", "spread"]);
-  const page = pageOf("tools/stats.moth", (file) => files[file] ?? readFileSync(new URL(`./${file}`, import.meta.url), "utf8"));
+  const page = pageOf("tools/stats.folio", (file) => files[file] ?? readFileSync(new URL(`./${file}`, import.meta.url), "utf8"));
   assert.match(page, /<p>the average<\/p>/);
   assert.match(page, /class="says"><code>1\.5<\/code>/);
   // the `set` of xs and the `add` that changes it are kept, ys isn't, and `expect` is said
   const spread = page.split('id="spread"')[1].split("</section>")[0];
   const code = /<pre><code>([^]*?)<\/code><\/pre>/.exec(spread)[1].replace(/<[^>]+>/g, "").replace(/&quot;/g, '"');
-  assert.equal(code, "use \"stats.moth\" as stats\nset xs to list of 1, 5\nadd 9 to xs\nsay stats's spread(xs)");
+  assert.equal(code, "use \"stats.folio\" as stats\nset xs to list of 1, 5\nadd 9 to xs\nsay stats's spread(xs)");
   assert.match(spread, /class="says"><code>8<\/code>/);
   assert.doesNotMatch(page, /stats_sum\(numbers\)<\/code><\/a>/, "a helper has no entry of its own");
 });

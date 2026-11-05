@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>onnx.moth · Moth's standard library</title>
-  <meta name="description" content="ONNX models, run by ONNX Runtime through its C API: a model trained in PyTorch or anything else that saves ONNX, given arrays (arrays.moth) and giving arrays back.">
+  <title>onnx.folio · Folio's standard library</title>
+  <meta name="description" content="ONNX models, run by ONNX Runtime through its C API: a model trained in PyTorch or anything else that saves ONNX, given arrays (arrays.folio) and giving arrays back.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,36 +27,36 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>onnx</em>.moth</h1>
-      <p>ONNX models, run by ONNX Runtime through its C API: a model trained in PyTorch or anything else that saves ONNX, given arrays (arrays.moth) and giving arrays back.</p>
-      <p class="use"><code>use "onnx.moth" as onnx</code></p>
+      <h1><em>onnx</em>.folio</h1>
+      <p>ONNX models, run by ONNX Runtime through its C API: a model trained in PyTorch or anything else that saves ONNX, given arrays (arrays.folio) and giving arrays back.</p>
+      <p class="use"><code>use "onnx.folio" as onnx</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="onnx.moth's functions">
+    <nav class="toc" aria-label="onnx.folio's functions">
       <h2>6 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#version">version</a></li><li><a href="#load">load</a></li><li><a href="#inputs">inputs</a></li><li><a href="#outputs">outputs</a></li><li><a href="#run">run</a></li><li><a href="#close">close</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>ONNX models, run by ONNX Runtime through its C API: a model trained in PyTorch or anything else that saves ONNX, given arrays (arrays.moth) and giving arrays back. ONNX Runtime comes with Windows 11 (System32\onnxruntime.dll); elsewhere, put onnxruntime.dll (or Linux's libonnxruntime.so) from its release page, github.com/microsoft/onnxruntime/releases, beside the program.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
-<span class="k">use</span> <span class="s">&quot;arrays.moth&quot;</span> <span class="k">as</span> arrays
+          <p>ONNX models, run by ONNX Runtime through its C API: a model trained in PyTorch or anything else that saves ONNX, given arrays (arrays.folio) and giving arrays back. ONNX Runtime comes with Windows 11 (System32\onnxruntime.dll); elsewhere, put onnxruntime.dll (or Linux's libonnxruntime.so) from its release page, github.com/microsoft/onnxruntime/releases, beside the program.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+<span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
 <span class="k">say</span> onnx's inputs(model)            <span class="c"># each a record: name, type (&quot;float&quot;, &quot;double&quot; or &quot;int64&quot;) and shape,</span>
                                     <span class="c"># -1 for an axis of any length</span>
@@ -75,9 +75,9 @@ onnx's close(model)</code></pre></div>
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to version</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth#L104">onnx.moth line 104</a></p>
+          <p class="written">Written <code>to version</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L104">onnx.folio line 104</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 onnx's version()</code></pre></div>
         </section>
         <section class="fn" id="load">
@@ -87,9 +87,9 @@ onnx's version()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>path</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to load with path</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth#L149">onnx.moth line 149</a></p>
+          <p class="written">Written <code>to load with path</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L149">onnx.folio line 149</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="inputs">
@@ -99,10 +99,10 @@ onnx's version()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to inputs with model</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth#L230">onnx.moth line 230</a></p>
+          <p class="written">Written <code>to inputs with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L230">onnx.folio line 230</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
-<span class="k">use</span> <span class="s">&quot;arrays.moth&quot;</span> <span class="k">as</span> arrays
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+<span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
 <span class="k">say</span> onnx's inputs(model)            <span class="c"># each a record: name, type (&quot;float&quot;, &quot;double&quot; or &quot;int64&quot;) and shape,</span>
                                     <span class="c"># -1 for an axis of any length</span>
@@ -118,9 +118,9 @@ onnx's close(model)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to outputs with model</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth#L235">onnx.moth line 235</a></p>
+          <p class="written">Written <code>to outputs with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L235">onnx.folio line 235</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
 onnx's outputs(model)</code></pre></div>
         </section>
@@ -131,9 +131,9 @@ onnx's outputs(model)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li><li><code>given</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to run with model, given</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth#L241">onnx.moth line 241</a></p>
+          <p class="written">Written <code>to run with model, given</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L241">onnx.folio line 241</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
 <span class="k">set</span> x <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>))
 <span class="k">set</span> answers <span class="k">to</span> onnx's run(model, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;X&quot;</span> <span class="k">is</span> x)   <span class="c"># each output by its name, an array</span></code></pre></div>
@@ -145,9 +145,9 @@ onnx's outputs(model)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to close with model</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/onnx.moth#L335">onnx.moth line 335</a></p>
+          <p class="written">Written <code>to close with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L335">onnx.folio line 335</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.moth&quot;</span> <span class="k">as</span> onnx
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
 onnx's close(model)</code></pre></div>
         </section>
@@ -156,14 +156,14 @@ onnx's close(model)</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

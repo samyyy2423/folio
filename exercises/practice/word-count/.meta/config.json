@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "word_count.moth"
+      "word_count.folio"
     ],
     "test": [
-      "word_count.test.moth"
+      "word_count.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Count how many times each word comes in a sentence."

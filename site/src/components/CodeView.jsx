@@ -6,11 +6,11 @@ export function Highlighted({ code }) {
 }
 
 // A window of code: its file's name, the code, and what it says, if it's known
-export default function CodeView({ name = "program.folio", code, said, className = "", lang = "moth" }) {
+export default function CodeView({ name = "program.folio", code, said, className = "", lang = "folio" }) {
   return (
     <figure className={`codeview ${className}`}>
       <div className="bar"><i /><i /><i /><span>{name}</span></div>
-      <pre><code>{lang === "moth" ? <Highlighted code={code} /> : code}</code></pre>
+      <pre><code>{lang === "folio" ? <Highlighted code={code} /> : code}</code></pre>
       {said ? <pre className="said"><code>{said}</code></pre> : null}
     </figure>
   );

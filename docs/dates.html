@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>dates.moth · Moth's standard library</title>
+  <title>dates.folio · Folio's standard library</title>
   <meta name="description" content="Dates on the calendar: today's, one read from &quot;2026-11-03&quot;, days added and counted between, weekdays, and a date written as a person wants it.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>dates</em>.moth</h1>
+      <h1><em>dates</em>.folio</h1>
       <p>Dates on the calendar: today's, one read from &quot;2026-11-03&quot;, days added and counted between, weekdays, and a date written as a person wants it.</p>
-      <p class="use"><code>use "dates.moth" as dates</code></p>
+      <p class="use"><code>use "dates.folio" as dates</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="dates.moth's functions">
+    <nav class="toc" aria-label="dates.folio's functions">
       <h2>16 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#date">date</a></li><li><a href="#today">today</a></li><li><a href="#now">now</a></li><li><a href="#read_date">read_date</a></li><li><a href="#is_leap_year">is_leap_year</a></li><li><a href="#days_in_month">days_in_month</a></li><li><a href="#day_number">day_number</a></li><li><a href="#date_of_day">date_of_day</a></li><li><a href="#add_days">add_days</a></li><li><a href="#add_months">add_months</a></li><li><a href="#days_between">days_between</a></li><li><a href="#weekday_number">weekday_number</a></li><li><a href="#weekday_name">weekday_name</a></li><li><a href="#month_name">month_name</a></li><li><a href="#date_text">date_text</a></li><li><a href="#format_date">format_date</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Dates on the calendar: today's, one read from &quot;2026-11-03&quot;, days added and counted between, weekdays, and a date written as a person wants it. In Moth alone, so it works everywhere.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <p>Dates on the calendar: today's, one read from &quot;2026-11-03&quot;, days added and counted between, weekdays, and a date written as a person wants it. In Folio alone, so it works everywhere.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">set</span> <span class="k">start</span> <span class="k">to</span> dates's read_date(<span class="s">&quot;2026-11-03&quot;</span>)
 <span class="k">set</span> due <span class="k">to</span> dates's add_days(<span class="k">start</span>, <span class="n">30</span>)
 <span class="k">say</span> dates's format_date(due, <span class="s">&quot;dddd D MMMM YYYY&quot;</span>)       <span class="c"># Thursday 3 December 2026</span>
@@ -72,9 +72,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>year</code></li><li><code>month</code></li><li><code>day</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to date with year, month, day</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L22">dates.moth line 22</a></p>
+          <p class="written">Written <code>to date with year, month, day</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L22">dates.folio line 22</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's day_number(dates's date(<span class="n">1970</span>, <span class="n">1</span>, <span class="n">1</span>))</code></pre><pre class="says"><code>0</code></pre></div>
         </section>
         <section class="fn" id="today">
@@ -84,9 +84,9 @@
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to today</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L38">dates.moth line 38</a></p>
+          <p class="written">Written <code>to today</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L38">dates.folio line 38</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">set</span> d <span class="k">to</span> dates's today()
 <span class="k">say</span> d</code></pre><pre class="says"><code>(record with year 2026, month 1, day 2)</code></pre></div>
         </section>
@@ -97,9 +97,9 @@
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to now</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L43">dates.moth line 43</a></p>
+          <p class="written">Written <code>to now</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L43">dates.folio line 43</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's format_date(dates's now(), <span class="s">&quot;YYYY-MM-DD hh:mm:ss&quot;</span>)</code></pre><pre class="says"><code>2026-01-02 03:04:05</code></pre></div>
         </section>
         <section class="fn" id="read_date">
@@ -109,9 +109,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>written</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to read_date with written</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L52">dates.moth line 52</a></p>
+          <p class="written">Written <code>to read_date with written</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L52">dates.folio line 52</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">set</span> d <span class="k">to</span> dates's read_date(<span class="s">&quot;2026-11-03&quot;</span>)
 <span class="k">say</span> d</code></pre><pre class="says"><code>(record with year 2026, month 11, day 3)</code></pre></div>
         </section>
@@ -122,9 +122,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>year</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to is_leap_year with year</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L83">dates.moth line 83</a></p>
+          <p class="written">Written <code>to is_leap_year with year</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L83">dates.folio line 83</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's is_leap_year(<span class="n">2000</span>)</code></pre><pre class="says"><code>yes</code></pre></div>
         </section>
         <section class="fn" id="days_in_month">
@@ -134,9 +134,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>year</code></li><li><code>month</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to days_in_month with year, month</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L88">dates.moth line 88</a></p>
+          <p class="written">Written <code>to days_in_month with year, month</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L88">dates.folio line 88</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's days_in_month(<span class="n">2026</span>, <span class="n">4</span>)</code></pre><pre class="says"><code>30</code></pre></div>
         </section>
         <section class="fn" id="day_number">
@@ -146,9 +146,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to day_number with d</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L116">dates.moth line 116</a></p>
+          <p class="written">Written <code>to day_number with d</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L116">dates.folio line 116</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's day_number(dates's date(<span class="n">1970</span>, <span class="n">1</span>, <span class="n">1</span>))</code></pre><pre class="says"><code>0</code></pre></div>
         </section>
         <section class="fn" id="date_of_day">
@@ -158,9 +158,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to date_of_day with n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L134">dates.moth line 134</a></p>
+          <p class="written">Written <code>to date_of_day with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L134">dates.folio line 134</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's date_of_day(<span class="n">20395</span>)</code></pre><pre class="says"><code>(record with year 2025, month 11, day 3)</code></pre></div>
         </section>
         <section class="fn" id="add_days">
@@ -170,9 +170,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_days with d, n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L155">dates.moth line 155</a></p>
+          <p class="written">Written <code>to add_days with d, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L155">dates.folio line 155</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's add_days(dates's date(<span class="n">2024</span>, <span class="n">2</span>, <span class="n">28</span>), <span class="n">1</span>)</code></pre><pre class="says"><code>(record with year 2024, month 2, day 29)</code></pre></div>
         </section>
         <section class="fn" id="add_months">
@@ -182,9 +182,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_months with d, n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L160">dates.moth line 160</a></p>
+          <p class="written">Written <code>to add_months with d, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L160">dates.folio line 160</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's add_months(dates's date(<span class="n">2026</span>, <span class="n">1</span>, <span class="n">31</span>), <span class="n">1</span>)</code></pre><pre class="says"><code>(record with year 2026, month 2, day 28)</code></pre></div>
         </section>
         <section class="fn" id="days_between">
@@ -194,9 +194,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>first</code></li><li><code>second</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to days_between with first, second</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L173">dates.moth line 173</a></p>
+          <p class="written">Written <code>to days_between with first, second</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L173">dates.folio line 173</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's days_between(dates's date(<span class="n">2026</span>, <span class="n">1</span>, <span class="n">1</span>), dates's date(<span class="n">2027</span>, <span class="n">1</span>, <span class="n">1</span>))</code></pre><pre class="says"><code>365</code></pre></div>
         </section>
         <section class="fn" id="weekday_number">
@@ -206,9 +206,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to weekday_number with d</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L178">dates.moth line 178</a></p>
+          <p class="written">Written <code>to weekday_number with d</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L178">dates.folio line 178</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's weekday_number(dates's date(<span class="n">1970</span>, <span class="n">1</span>, <span class="n">1</span>))</code></pre><pre class="says"><code>4</code></pre></div>
         </section>
         <section class="fn" id="weekday_name">
@@ -218,9 +218,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to weekday_name with d</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L184">dates.moth line 184</a></p>
+          <p class="written">Written <code>to weekday_name with d</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L184">dates.folio line 184</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">say</span> dates's weekday_name(dates's date(<span class="n">2026</span>, <span class="n">11</span>, <span class="n">3</span>))</code></pre><pre class="says"><code>Tuesday</code></pre></div>
         </section>
         <section class="fn" id="month_name">
@@ -230,9 +230,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to month_name with d</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L189">dates.moth line 189</a></p>
+          <p class="written">Written <code>to month_name with d</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L189">dates.folio line 189</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 dates's month_name(d)</code></pre></div>
         </section>
         <section class="fn" id="date_text">
@@ -242,9 +242,9 @@ dates's month_name(d)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to date_text with d</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L194">dates.moth line 194</a></p>
+          <p class="written">Written <code>to date_text with d</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L194">dates.folio line 194</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">set</span> d <span class="k">to</span> dates's read_date(<span class="s">&quot;2026-11-03&quot;</span>)
 <span class="k">say</span> dates's date_text(d)</code></pre><pre class="says"><code>2026-11-03</code></pre></div>
         </section>
@@ -255,9 +255,9 @@ dates's month_name(d)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>d</code></li><li><code>pattern</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to format_date with d, pattern</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/dates.moth#L269">dates.moth line 269</a></p>
+          <p class="written">Written <code>to format_date with d, pattern</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/dates.folio#L269">dates.folio line 269</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.moth&quot;</span> <span class="k">as</span> dates
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;dates.folio&quot;</span> <span class="k">as</span> dates
 <span class="k">set</span> d <span class="k">to</span> dates's read_date(<span class="s">&quot;2026-11-03&quot;</span>)
 <span class="k">say</span> dates's format_date(d, <span class="s">&quot;dddd D MMMM YYYY&quot;</span>)</code></pre><pre class="says"><code>Tuesday 3 November 2026</code></pre></div>
         </section>
@@ -266,14 +266,14 @@ dates's month_name(d)</code></pre></div>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

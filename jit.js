@@ -1,4 +1,4 @@
-// The JIT: Moth's second back end. At run time it turns a program into JavaScript, which V8 then compiles
+// The JIT: Folio's second back end. At run time it turns a program into JavaScript, which V8 then compiles
 // to machine code. The VM (vm.js) stays the reference: both engines call the same checks, and the tests
 // run thousands of random programs through both and require the same output, drawings and errors.
 import { Scope } from "./scope.js";
@@ -11,8 +11,8 @@ const q = JSON.stringify; // a JavaScript literal
 const COMPARE_HELPERS = { "is": "eq", "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le", "divisible by": "dv", "in": "isIn" };
 const MATH_HELPERS = { "+": "add", "-": "sub", "*": "mul", "/": "div" };
 
-// Compiles one Moth function (or the program) to the body of a JavaScript function. Each variable becomes a
-// JavaScript `let` named after its slot, v<level>_<slot>, so Moth's scopes become JavaScript's: a function
+// Compiles one Folio function (or the program) to the body of a JavaScript function. Each variable becomes a
+// JavaScript `let` named after its slot, v<level>_<slot>, so Folio's scopes become JavaScript's: a function
 // made inside another reaches the outer one's variables through a JavaScript closure, just as the VM's
 // functions reach them through scope arrays. `ats` collects every position an error can point at.
 class JsCompiler extends Scope {
@@ -118,7 +118,7 @@ class JsCompiler extends Scope {
       case "fail":
         return `failWith(${this.expr(s.value)}, ${this.pos(s.at)});`;
       case "stop":
-        return "break;"; // every Moth loop is a JavaScript loop, and nothing else is
+        return "break;"; // every Folio loop is a JavaScript loop, and nothing else is
       case "remove":
         return `removeKey(${this.expr(s.key)}, ${this.expr(s.target)}, ${this.pos(s.at)});`;
       case "write":
@@ -144,7 +144,7 @@ class JsCompiler extends Scope {
     }
   }
 
-  // a Moth function, made from `to` (or a handler's `when`): a JavaScript function, and its name and inputs
+  // a Folio function, made from `to` (or a handler's `when`): a JavaScript function, and its name and inputs
   closure(d) {
     const inner = new JsCompiler(this, d.name, d.params, d.body, this.ats);
     const params = d.params.map((_, i) => inner.v(i + 1)).join(", ");
@@ -230,7 +230,7 @@ class JsCompiler extends Scope {
   }
 }
 
-// Thrown when Moth calls go deeper than MAX_DEPTH, so run() can hand the program to the VM. The JIT's Moth
+// Thrown when Folio calls go deeper than MAX_DEPTH, so run() can hand the program to the VM. The JIT's Folio
 // calls are JavaScript calls, and stopping at a depth of our own, well before JavaScript's stack runs out,
 // means the hand-over never happens halfway through something else, like the code that prints a line.
 export class TooDeep {}
@@ -239,10 +239,10 @@ const INSIDE = {}; // the scope of a function made inside another, as the JIT's 
 
 // What the generated code calls. The fast paths (two numbers) are written out here so V8 can inline them;
 // everything else goes to the checks the VM uses too. `k` is a position, so an error points at the right spot.
-// `host` gets an app's handlers (see run() in moth.js), and a way to call one: with steps and depth from 0.
+// `host` gets an app's handlers (see run() in folio.js), and a way to call one: with steps and depth from 0.
 // `printError` gets each line said to the error output, and `play` each sound.
 function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = seeded(), host = { handlers: [] }, printError = console.error, clock = fakeClock(), play = () => {}) {
-  // An error ends every Moth call in progress, so the depth goes back to 0: load() lets JavaScript call in again.
+  // An error ends every Folio call in progress, so the depth goes back to 0: load() lets JavaScript call in again.
   const errors = ats.map((at) => (message, value) => {
     const calls = trail();
     depth = 0;
@@ -367,7 +367,7 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     lengthOf: (v, k) => lengthOf(v, errors[k]),
     item: (target, n, k) => {
       if (Array.isArray(target) && Number.isInteger(n) && n >= 1 && n <= target.length) return target[n - 1];
-      const found = target instanceof Map && typeof n === "string" ? target.get(n) : undefined; // no Moth value is undefined
+      const found = target instanceof Map && typeof n === "string" ? target.get(n) : undefined; // no Folio value is undefined
       if (found !== undefined) return found;
       const [seq, i] = item(target, n, false, errors[k]);
       return itemAt(seq, i);
@@ -395,7 +395,7 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     record: makeRecord,
     Record,
     field: (r, name, k) => {
-      const value = r instanceof Record ? r[name] : undefined; // no Moth value is undefined, and a record's prototype is empty
+      const value = r instanceof Record ? r[name] : undefined; // no Folio value is undefined, and a record's prototype is empty
       return value !== undefined ? value : fieldOf(r, name, errors[k]);
     },
     recordFor: (r, name, k) => recordFor(r, name, errors[k]),
@@ -428,7 +428,7 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
 export const HELPER_NAMES = Object.keys(helpers([], () => {}, undefined, 0));
 
 // Compiles a parsed program to JavaScript: its source (to look at), the names of its top-level variables,
-// and a function that runs it and returns those variables' values (see load() in moth.js).
+// and a function that runs it and returns those variables' values (see load() in folio.js).
 export function jit(program) {
   const ats = [];
   const main = new JsCompiler(null, "main", [], program, ats);
@@ -442,7 +442,7 @@ function globalsCode(slots) {
   return `function $globals($s) {\nconst $o = [${slots.join(", ")}];\nif ($s) [${slots.join(", ")}] = $s;\nreturn $o;\n}\n`;
 }
 
-// Runs JavaScript made for these helpers, whoever made it: jit() above, or the compiler written in Moth.
+// Runs JavaScript made for these helpers, whoever made it: jit() above, or the compiler written in Folio.
 // `ats` are the tokens the code's positions point at.
 export function fromJs(code, ats, names) {
   const source = `"use strict";\nconst { ${HELPER_NAMES.join(", ")} } = R;\n${code}`;

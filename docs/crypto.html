@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>crypto.moth · Moth's standard library</title>
+  <title>crypto.folio · Folio's standard library</title>
   <meta name="description" content="Encryption, as Python's cryptography has it with AESGCM: AES with a 128, 192 or 256-bit key, in GCM, which hides a message and proves it wasn't changed.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,41 +27,41 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>crypto</em>.moth</h1>
+      <h1><em>crypto</em>.folio</h1>
       <p>Encryption, as Python's cryptography has it with AESGCM: AES with a 128, 192 or 256-bit key, in GCM, which hides a message and proves it wasn't changed.</p>
-      <p class="use"><code>use "crypto.moth" as crypto</code></p>
+      <p class="use"><code>use "crypto.folio" as crypto</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="crypto.moth's functions">
+    <nav class="toc" aria-label="crypto.folio's functions">
       <h2>7 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#aes_gcm_encrypt">aes_gcm_encrypt</a></li><li><a href="#aes_gcm_decrypt">aes_gcm_decrypt</a></li><li><a href="#new_key">new_key</a></li><li><a href="#new_salt">new_salt</a></li><li><a href="#encrypt">encrypt</a></li><li><a href="#decrypt">decrypt</a></li><li><a href="#key_from_password">key_from_password</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Encryption, as Python's cryptography has it with AESGCM: AES with a 128, 192 or 256-bit key, in GCM, which hides a message and proves it wasn't changed. In Moth alone, so it works everywhere.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <p>Encryption, as Python's cryptography has it with AESGCM: AES with a 128, 192 or 256-bit key, in GCM, which hides a message and proves it wasn't changed. In Folio alone, so it works everywhere.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's new_key()                          <span class="c"># 32 random bytes: keep them secret</span>
 <span class="k">set</span> sealed <span class="k">to</span> crypto's encrypt(<span class="k">key</span>, <span class="s">&quot;meet at noon&quot;</span>)    <span class="c"># a fresh nonce, the message hidden, and its tag</span>
 <span class="k">say</span> crypto's decrypt(<span class="k">key</span>, sealed) <span class="k">as</span> text              <span class="c"># a mistake if the key is wrong or a byte changed</span>
 <span class="k">set</span> salt <span class="k">to</span> crypto's new_salt()                        <span class="c"># 16 random bytes, kept with what the key locks</span>
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's key_from_password(<span class="s">&quot;correct horse&quot;</span>, salt, <span class="n">200000</span>)   <span class="c"># PBKDF2 with SHA-256</span></code></pre></div>
-          <p><a href="#aes_gcm_encrypt">aes_gcm_encrypt</a>(key, nonce, message, extra) and <a href="#aes_gcm_decrypt">aes_gcm_decrypt</a>(key, nonce, sealed, extra) are GCM itself, as NIST SP 800-38D has it: a 12-byte nonce, never used twice with one key, and <code>extra</code>, text or bytes that are checked but not hidden (or nothing). A message and a key are text or bytes; what comes back is bytes. <a href="#new_key">new_key</a>, <a href="#new_salt">new_salt</a> and encrypt take the system's own randomness, so they work in a program moth build makes.</p>
+          <p><a href="#aes_gcm_encrypt">aes_gcm_encrypt</a>(key, nonce, message, extra) and <a href="#aes_gcm_decrypt">aes_gcm_decrypt</a>(key, nonce, sealed, extra) are GCM itself, as NIST SP 800-38D has it: a 12-byte nonce, never used twice with one key, and <code>extra</code>, text or bytes that are checked but not hidden (or nothing). A message and a key are text or bytes; what comes back is bytes. <a href="#new_key">new_key</a>, <a href="#new_salt">new_salt</a> and encrypt take the system's own randomness, so they work in a program folio build makes.</p>
       </section>
       <section class="fns">
         <h2>Functions</h2>
@@ -72,9 +72,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>key</code></li><li><code>nonce</code></li><li><code>message</code></li><li><code>extra</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to aes_gcm_encrypt with key, nonce, message, extra</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L251">crypto.moth line 251</a></p>
+          <p class="written">Written <code>to aes_gcm_encrypt with key, nonce, message, extra</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L251">crypto.folio line 251</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>, <span class="n">7</span>, <span class="n">8</span>, <span class="n">9</span>, <span class="n">10</span>, <span class="n">11</span>, <span class="n">12</span>, <span class="n">13</span>, <span class="n">14</span>, <span class="n">15</span>, <span class="n">16</span>, <span class="n">17</span>, <span class="n">18</span>, <span class="n">19</span>, <span class="n">20</span>, <span class="n">21</span>, <span class="n">22</span>, <span class="n">23</span>, <span class="n">24</span>, <span class="n">25</span>, <span class="n">26</span>, <span class="n">27</span>, <span class="n">28</span>, <span class="n">29</span>, <span class="n">30</span>, <span class="n">31</span>) <span class="k">as</span> <span class="k">bytes</span>
 <span class="k">set</span> nonce <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">100</span>, <span class="n">101</span>, <span class="n">102</span>, <span class="n">103</span>, <span class="n">104</span>, <span class="n">105</span>, <span class="n">106</span>, <span class="n">107</span>, <span class="n">108</span>, <span class="n">109</span>, <span class="n">110</span>, <span class="n">111</span>) <span class="k">as</span> <span class="k">bytes</span>
 <span class="k">set</span> sealed <span class="k">to</span> crypto's aes_gcm_encrypt(<span class="k">key</span>, nonce, <span class="s">&quot;The quick brown fox jumps over the lazy dog&quot;</span>, <span class="s">&quot;header&quot;</span>)
@@ -87,9 +87,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>key</code></li><li><code>nonce</code></li><li><code>sealed</code></li><li><code>extra</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to aes_gcm_decrypt with key, nonce, sealed, extra</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L262">crypto.moth line 262</a></p>
+          <p class="written">Written <code>to aes_gcm_decrypt with key, nonce, sealed, extra</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L262">crypto.folio line 262</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>, <span class="n">7</span>, <span class="n">8</span>, <span class="n">9</span>, <span class="n">10</span>, <span class="n">11</span>, <span class="n">12</span>, <span class="n">13</span>, <span class="n">14</span>, <span class="n">15</span>, <span class="n">16</span>, <span class="n">17</span>, <span class="n">18</span>, <span class="n">19</span>, <span class="n">20</span>, <span class="n">21</span>, <span class="n">22</span>, <span class="n">23</span>, <span class="n">24</span>, <span class="n">25</span>, <span class="n">26</span>, <span class="n">27</span>, <span class="n">28</span>, <span class="n">29</span>, <span class="n">30</span>, <span class="n">31</span>) <span class="k">as</span> <span class="k">bytes</span>
 <span class="k">set</span> nonce <span class="k">to</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">100</span>, <span class="n">101</span>, <span class="n">102</span>, <span class="n">103</span>, <span class="n">104</span>, <span class="n">105</span>, <span class="n">106</span>, <span class="n">107</span>, <span class="n">108</span>, <span class="n">109</span>, <span class="n">110</span>, <span class="n">111</span>) <span class="k">as</span> <span class="k">bytes</span>
 <span class="k">set</span> sealed <span class="k">to</span> crypto's aes_gcm_encrypt(<span class="k">key</span>, nonce, <span class="s">&quot;The quick brown fox jumps over the lazy dog&quot;</span>, <span class="s">&quot;header&quot;</span>)
@@ -102,9 +102,9 @@
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to new_key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L286">crypto.moth line 286</a></p>
+          <p class="written">Written <code>to new_key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L286">crypto.folio line 286</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's new_key()                          <span class="c"># 32 random bytes: keep them secret</span></code></pre></div>
         </section>
         <section class="fn" id="new_salt">
@@ -114,9 +114,9 @@
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to new_salt</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L291">crypto.moth line 291</a></p>
+          <p class="written">Written <code>to new_salt</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L291">crypto.folio line 291</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> salt <span class="k">to</span> crypto's new_salt()                        <span class="c"># 16 random bytes, kept with what the key locks</span></code></pre></div>
         </section>
         <section class="fn" id="encrypt">
@@ -126,9 +126,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>key</code></li><li><code>message</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to encrypt with key, message</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L296">crypto.moth line 296</a></p>
+          <p class="written">Written <code>to encrypt with key, message</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L296">crypto.folio line 296</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's new_key()                          <span class="c"># 32 random bytes: keep them secret</span>
 <span class="k">set</span> sealed <span class="k">to</span> crypto's encrypt(<span class="k">key</span>, <span class="s">&quot;meet at noon&quot;</span>)    <span class="c"># a fresh nonce, the message hidden, and its tag</span></code></pre></div>
         </section>
@@ -139,9 +139,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>key</code></li><li><code>sealed</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to decrypt with key, sealed</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L308">crypto.moth line 308</a></p>
+          <p class="written">Written <code>to decrypt with key, sealed</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L308">crypto.folio line 308</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's new_key()                          <span class="c"># 32 random bytes: keep them secret</span>
 <span class="k">set</span> sealed <span class="k">to</span> crypto's encrypt(<span class="k">key</span>, <span class="s">&quot;meet at noon&quot;</span>)    <span class="c"># a fresh nonce, the message hidden, and its tag</span>
 <span class="k">say</span> crypto's decrypt(<span class="k">key</span>, sealed) <span class="k">as</span> text              <span class="c"># a mistake if the key is wrong or a byte changed</span></code></pre></div>
@@ -153,9 +153,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>password</code></li><li><code>salt</code></li><li><code>rounds</code> <span class="optional">optional: 200000 if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to key_from_password with password, salt, rounds or 200000</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/crypto.moth#L319">crypto.moth line 319</a></p>
+          <p class="written">Written <code>to key_from_password with password, salt, rounds or 200000</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/crypto.folio#L319">crypto.folio line 319</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.moth&quot;</span> <span class="k">as</span> crypto
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;crypto.folio&quot;</span> <span class="k">as</span> crypto
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's new_key()                          <span class="c"># 32 random bytes: keep them secret</span>
 <span class="k">set</span> salt <span class="k">to</span> crypto's new_salt()                        <span class="c"># 16 random bytes, kept with what the key locks</span>
 <span class="k">set</span> <span class="k">key</span> <span class="k">to</span> crypto's key_from_password(<span class="s">&quot;correct horse&quot;</span>, salt, <span class="n">200000</span>)   <span class="c"># PBKDF2 with SHA-256</span></code></pre></div>
@@ -165,14 +165,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

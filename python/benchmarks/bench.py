@@ -1,8 +1,8 @@
-"""A Moth function called from Python, against the same function in pure Python.
+"""A Folio function called from Python, against the same function in pure Python.
 
     python benchmarks/bench.py
 
-Each is timed as the best of a few runs; Moth's time includes the call from Python and converting what
+Each is timed as the best of a few runs; Folio's time includes the call from Python and converting what
 goes in and out. The library is built (or found in the cache) before the timing starts."""
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-import mothlang as moth
+import foliolang as folio
 
 
 def fib(n: int) -> int:
@@ -66,7 +66,7 @@ def best(f: Callable[..., Any], *inputs: Any, runs: int = 3) -> tuple[float, Any
 
 
 def main() -> None:
-    fast = moth.load(Path(__file__).with_name("fast.moth"))
+    fast = folio.load(Path(__file__).with_name("fast.folio"))
     numbers = [i * 0.5 for i in range(1_000_000)]
     cases = [
         ("fib(30)", "fib", (30,)),
@@ -75,12 +75,12 @@ def main() -> None:
         ("total_of(a list of 1,000,000)", "total_of", (numbers,)),
     ]
     print(f"Python {platform.python_version()} on {platform.system()} {platform.machine()}, {platform.processor() or ''}".rstrip(", "))
-    print(f"{'':32} {'Python':>10} {'Moth':>10} {'faster':>8}")
+    print(f"{'':32} {'Python':>10} {'Folio':>10} {'faster':>8}")
     for title, name, inputs in cases:
         python_time, python_gave = best(globals()[name], *inputs)
-        moth_time, moth_gave = best(getattr(fast, name), *inputs)
-        assert python_gave == moth_gave, (title, python_gave, moth_gave)
-        print(f"{title:32} {python_time * 1000:8.1f}ms {moth_time * 1000:8.1f}ms {python_time / moth_time:7.1f}x")
+        folio_time, folio_gave = best(getattr(fast, name), *inputs)
+        assert python_gave == folio_gave, (title, python_gave, folio_gave)
+        print(f"{title:32} {python_time * 1000:8.1f}ms {folio_time * 1000:8.1f}ms {python_time / folio_time:7.1f}x")
     calls = 100_000
     start = time.perf_counter()
     for _ in range(calls):

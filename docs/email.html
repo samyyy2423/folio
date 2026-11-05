@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>email.moth · Moth's standard library</title>
+  <title>email.folio · Folio's standard library</title>
   <meta name="description" content="Email, as Python's smtplib, email, poplib and imaplib have it.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>email</em>.moth</h1>
+      <h1><em>email</em>.folio</h1>
       <p>Email, as Python's smtplib, email, poplib and imaplib have it.</p>
-      <p class="use"><code>use "email.moth" as mail</code></p>
+      <p class="use"><code>use "email.folio" as mail</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="email.moth's functions">
+    <nav class="toc" aria-label="email.folio's functions">
       <h2>22 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#server">server</a></li><li><a href="#log_in">log_in</a></li><li><a href="#message">message</a></li><li><a href="#attach">attach</a></li><li><a href="#attach_bytes">attach_bytes</a></li><li><a href="#message_text">message_text</a></li><li><a href="#base64_of">base64_of</a></li><li><a href="#bytes_of_base64">bytes_of_base64</a></li><li><a href="#send">send</a></li><li><a href="#read_message">read_message</a></li><li><a href="#pop_open">pop_open</a></li><li><a href="#pop_count">pop_count</a></li><li><a href="#pop_get">pop_get</a></li><li><a href="#pop_delete">pop_delete</a></li><li><a href="#pop_close">pop_close</a></li><li><a href="#imap_open">imap_open</a></li><li><a href="#imap_folders">imap_folders</a></li><li><a href="#imap_select">imap_select</a></li><li><a href="#imap_search">imap_search</a></li><li><a href="#imap_get">imap_get</a></li><li><a href="#imap_mark">imap_mark</a></li><li><a href="#imap_close">imap_close</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Email, as Python's smtplib, email, poplib and imaplib have it: a message with text, a page of HTML and files, sent through a mail server over SMTP, secure from the start (port 465) or after STARTTLS (587), logged in; and messages read: from MIME, and from a mailbox over POP3 or IMAP. A program <code>moth build</code> makes can use it, built with --allow-libraries (and --allow-read, to attach files).</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <p>Email, as Python's smtplib, email, poplib and imaplib have it: a message with text, a page of HTML and files, sent through a mail server over SMTP, secure from the start (port 465) or after STARTTLS (587), logged in; and messages read: from MIME, and from a mailbox over POP3 or IMAP. A program <code>folio build</code> makes can use it, built with --allow-libraries (and --allow-read, to attach files).</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
@@ -100,9 +100,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>host</code></li><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to server with host, port</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L74">email.moth line 74</a></p>
+          <p class="written">Written <code>to server with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L74">email.folio line 74</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)</code></pre></div>
         </section>
         <section class="fn" id="log_in">
@@ -112,9 +112,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>server</code></li><li><code>user</code></li><li><code>password</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to log_in with server, user, password</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L84">email.moth line 84</a></p>
+          <p class="written">Written <code>to log_in with server, user, password</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L84">email.folio line 84</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)</code></pre></div>
         </section>
@@ -125,9 +125,9 @@ mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span c
             <div><h4>Inputs</h4><ul class="inputs"><li><code>sender</code></li><li><code>recipients</code></li><li><code>subject</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to message with sender, recipients, subject, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L90">email.moth line 90</a></p>
+          <p class="written">Written <code>to message with sender, recipients, subject, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L90">email.folio line 90</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="attach">
@@ -137,9 +137,9 @@ mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span c
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to attach with m, file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L100">email.moth line 100</a></p>
+          <p class="written">Written <code>to attach with m, file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L100">email.folio line 100</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
 mail's attach(m, <span class="s">&quot;report.pdf&quot;</span>)                       <span class="c"># or attach_bytes(m, &quot;notes.txt&quot;, data, &quot;text/plain&quot;)</span></code></pre></div>
         </section>
@@ -150,9 +150,9 @@ mail's attach(m, <span class="s">&quot;report.pdf&quot;</span>)                 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>name</code></li><li><code>data</code></li><li><code>type</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to attach_bytes with m, name, data, type</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L109">email.moth line 109</a></p>
+          <p class="written">Written <code>to attach_bytes with m, name, data, type</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L109">email.folio line 109</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
 mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class="s">&quot;milk, eggs&quot;</span> <span class="k">as</span> <span class="k">bytes</span>, <span class="s">&quot;text/plain&quot;</span>)</code></pre></div>
         </section>
@@ -163,22 +163,22 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to message_text with m</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L129">email.moth line 129</a></p>
+          <p class="written">Written <code>to message_text with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L129">email.folio line 129</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
 <span class="k">set</span> text <span class="k">to</span> mail's message_text(m)                   <span class="c"># the message as it's sent, in MIME</span></code></pre></div>
         </section>
         <section class="fn" id="base64_of">
           <h3><a href="#base64_of"><code>mail's base64_of(data)</code></a></h3>
-          <p>text's UTF-8, or bytes, in base64 (base64.moth's)</p>
+          <p>text's UTF-8, or bytes, in base64 (base64.folio's)</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to base64_of with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L430">email.moth line 430</a></p>
+          <p class="written">Written <code>to base64_of with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L430">email.folio line 430</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">say</span> mail's base64_of(<span class="s">&quot;hi&quot;</span>) <span class="s">&quot; &quot;</span> mail's bytes_of_base64(<span class="s">&quot;aGk=&quot;</span>) <span class="k">as</span> text   <span class="c"># aGk= hi</span></code></pre><pre class="says"><code>aGk= hi</code></pre></div>
         </section>
         <section class="fn" id="bytes_of_base64">
@@ -188,9 +188,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of_base64 with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L435">email.moth line 435</a></p>
+          <p class="written">Written <code>to bytes_of_base64 with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L435">email.folio line 435</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">say</span> mail's base64_of(<span class="s">&quot;hi&quot;</span>) <span class="s">&quot; &quot;</span> mail's bytes_of_base64(<span class="s">&quot;aGk=&quot;</span>) <span class="k">as</span> text   <span class="c"># aGk= hi</span></code></pre><pre class="says"><code>aGk= hi</code></pre></div>
         </section>
         <section class="fn" id="send">
@@ -200,9 +200,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>server</code></li><li><code>m</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to send with server, m</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L443">email.moth line 443</a></p>
+          <p class="written">Written <code>to send with server, m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L443">email.folio line 443</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
 mail's <span class="k">send</span>(server, m)</code></pre></div>
@@ -214,9 +214,9 @@ mail's <span class="k">send</span>(server, m)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>raw</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to read_message with raw</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L585">email.moth line 585</a></p>
+          <p class="written">Written <code>to read_message with raw</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L585">email.folio line 585</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">say</span> subject <span class="k">of</span> mail's read_message(text)             <span class="c"># Hello</span></code></pre></div>
         </section>
         <section class="fn" id="pop_open">
@@ -226,9 +226,9 @@ mail's <span class="k">send</span>(server, m)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>server</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to pop_open with server</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L987">email.moth line 987</a></p>
+          <p class="written">Written <code>to pop_open with server</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L987">email.folio line 987</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> pop_server <span class="k">to</span> mail's server(<span class="s">&quot;pop.example.com&quot;</span>, <span class="n">995</span>)
 <span class="k">set</span> pop_box <span class="k">to</span> mail's pop_open(pop_server)</code></pre></div>
@@ -240,9 +240,9 @@ mail's <span class="k">send</span>(server, m)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to pop_count with box</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1008">email.moth line 1008</a></p>
+          <p class="written">Written <code>to pop_count with box</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1008">email.folio line 1008</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
@@ -284,9 +284,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to pop_get with box, n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1014">email.moth line 1014</a></p>
+          <p class="written">Written <code>to pop_get with box, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1014">email.folio line 1014</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
@@ -328,9 +328,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to pop_delete with box, n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1034">email.moth line 1034</a></p>
+          <p class="written">Written <code>to pop_delete with box, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1034">email.folio line 1034</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
@@ -372,9 +372,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to pop_close with box</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1039">email.moth line 1039</a></p>
+          <p class="written">Written <code>to pop_close with box</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1039">email.folio line 1039</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> pop_server <span class="k">to</span> mail's server(<span class="s">&quot;pop.example.com&quot;</span>, <span class="n">995</span>)
 <span class="k">set</span> pop_box <span class="k">to</span> mail's pop_open(pop_server)
@@ -387,9 +387,9 @@ mail's pop_close(pop_box)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>server</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_open with server</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1094">email.moth line 1094</a></p>
+          <p class="written">Written <code>to imap_open with server</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1094">email.folio line 1094</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> inbox <span class="k">to</span> mail's server(<span class="s">&quot;imap.example.com&quot;</span>, <span class="n">993</span>)
 <span class="k">set</span> <span class="k">box</span> <span class="k">to</span> mail's imap_open(inbox)</code></pre></div>
@@ -401,9 +401,9 @@ mail's pop_close(pop_box)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_folders with box</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1118">email.moth line 1118</a></p>
+          <p class="written">Written <code>to imap_folders with box</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1118">email.folio line 1118</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> inbox <span class="k">to</span> mail's server(<span class="s">&quot;imap.example.com&quot;</span>, <span class="n">993</span>)
 <span class="k">set</span> <span class="k">box</span> <span class="k">to</span> mail's imap_open(inbox)
@@ -416,9 +416,9 @@ mail's pop_close(pop_box)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li><li><code>folder</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_select with box, folder</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1139">email.moth line 1139</a></p>
+          <p class="written">Written <code>to imap_select with box, folder</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1139">email.folio line 1139</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> inbox <span class="k">to</span> mail's server(<span class="s">&quot;imap.example.com&quot;</span>, <span class="n">993</span>)
 <span class="k">set</span> <span class="k">box</span> <span class="k">to</span> mail's imap_open(inbox)
@@ -431,9 +431,9 @@ mail's imap_select(<span class="k">box</span>, <span class="s">&quot;INBOX&quot;
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li><li><code>criteria</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_search with box, criteria</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1153">email.moth line 1153</a></p>
+          <p class="written">Written <code>to imap_search with box, criteria</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1153">email.folio line 1153</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
@@ -475,9 +475,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li><li><code>uid</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_get with box, uid</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1168">email.moth line 1168</a></p>
+          <p class="written">Written <code>to imap_get with box, uid</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1168">email.folio line 1168</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 mail's log_in(server, <span class="s">&quot;me@example.com&quot;</span>, <span class="s">&quot;an app password&quot;</span>)
 <span class="k">set</span> m <span class="k">to</span> mail's message(<span class="s">&quot;Sam &lt;me@example.com&gt;&quot;</span>, <span class="s">&quot;you@example.com&quot;</span>, <span class="s">&quot;Hello&quot;</span>, <span class="s">&quot;Hi there,\nall well?&quot;</span>)
@@ -519,9 +519,9 @@ mail's attach_bytes(m, <span class="s">&quot;notes.txt&quot;</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li><li><code>uid</code></li><li><code>flag</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_mark with box, uid, flag</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1178">email.moth line 1178</a></p>
+          <p class="written">Written <code>to imap_mark with box, uid, flag</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1178">email.folio line 1178</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> inbox <span class="k">to</span> mail's server(<span class="s">&quot;imap.example.com&quot;</span>, <span class="n">993</span>)
 <span class="k">set</span> <span class="k">box</span> <span class="k">to</span> mail's imap_open(inbox)
@@ -534,9 +534,9 @@ mail's imap_mark(<span class="k">box</span>, uid, <span class="s">&quot;\\Seen&q
             <div><h4>Inputs</h4><ul class="inputs"><li><code>box</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to imap_close with box</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/email.moth#L1183">email.moth line 1183</a></p>
+          <p class="written">Written <code>to imap_close with box</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/email.folio#L1183">email.folio line 1183</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.moth&quot;</span> <span class="k">as</span> mail
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;email.folio&quot;</span> <span class="k">as</span> mail
 <span class="k">set</span> server <span class="k">to</span> mail's server(<span class="s">&quot;smtp.example.com&quot;</span>, <span class="n">587</span>)
 <span class="k">set</span> inbox <span class="k">to</span> mail's server(<span class="s">&quot;imap.example.com&quot;</span>, <span class="n">993</span>)
 <span class="k">set</span> <span class="k">box</span> <span class="k">to</span> mail's imap_open(inbox)
@@ -547,14 +547,14 @@ mail's imap_close(<span class="k">box</span>)                               <spa
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

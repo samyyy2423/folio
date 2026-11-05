@@ -5,10 +5,10 @@
 !extension.js
 !client.js
 !debug-adapter.js
-!find-moth.js
+!find-folio.js
 !language-configuration.json
-!syntaxes/moth.tmLanguage.json
-!snippets/moth.json
+!syntaxes/folio.tmLanguage.json
+!snippets/folio.json
 !engine/**
 !images/icon.png
 !README.md

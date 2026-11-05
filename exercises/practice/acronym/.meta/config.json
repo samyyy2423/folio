@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "acronym.moth"
+      "acronym.folio"
     ],
     "test": [
-      "acronym.test.moth"
+      "acronym.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Make an acronym from a phrase."

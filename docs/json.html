@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>json.moth · Moth's standard library</title>
-  <meta name="description" content="Reads JSON, the format most of the web speaks, into Moth's own values: an object becomes a dictionary, an array a list, true and false yes and no, and null nothing.">
+  <title>json.folio · Folio's standard library</title>
+  <meta name="description" content="Reads JSON, the format most of the web speaks, into Folio's own values: an object becomes a dictionary, an array a list, true and false yes and no, and null nothing.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>json</em>.moth</h1>
-      <p>Reads JSON, the format most of the web speaks, into Moth's own values: an object becomes a dictionary, an array a list, true and false yes and no, and null nothing.</p>
-      <p class="use"><code>use "json.moth" as json</code></p>
+      <h1><em>json</em>.folio</h1>
+      <p>Reads JSON, the format most of the web speaks, into Folio's own values: an object becomes a dictionary, an array a list, true and false yes and no, and null nothing.</p>
+      <p class="use"><code>use "json.folio" as json</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="json.moth's functions">
+    <nav class="toc" aria-label="json.folio's functions">
       <h2>1 function</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#parse">parse</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/json.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/json.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Reads JSON, the format most of the web speaks, into Moth's own values: an object becomes a dictionary, an array a list, true and false yes and no, and null nothing.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;json.moth&quot;</span> <span class="k">as</span> <span class="k">json</span>
+          <p>Reads JSON, the format most of the web speaks, into Folio's own values: an object becomes a dictionary, an array a list, true and false yes and no, and null nothing.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;json.folio&quot;</span> <span class="k">as</span> <span class="k">json</span>
 <span class="k">set</span> data <span class="k">to</span> <span class="k">json</span>'s parse(<span class="k">read</span> <span class="s">&quot;data.json&quot;</span>)
 <span class="k">say</span> <span class="k">item</span> <span class="s">&quot;name&quot;</span> <span class="k">of</span> data</code></pre></div>
           <p>A mistake in the JSON is a <code>fail with</code>, which says where: catch it with <code>try</code>.</p>
@@ -69,9 +69,9 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>text</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to parse with text</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/json.moth#L15">json.moth line 15</a></p>
+          <p class="written">Written <code>to parse with text</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/json.folio#L15">json.folio line 15</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;json.moth&quot;</span> <span class="k">as</span> <span class="k">json</span>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;json.folio&quot;</span> <span class="k">as</span> <span class="k">json</span>
 <span class="k">say</span> <span class="k">json</span>'s parse(<span class="s">&quot;42&quot;</span>)</code></pre><pre class="says"><code>42</code></pre></div>
         </section>
       </section>
@@ -79,14 +79,14 @@
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

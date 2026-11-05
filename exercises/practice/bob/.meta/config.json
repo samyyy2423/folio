@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "bob.moth"
+      "bob.folio"
     ],
     "test": [
-      "bob.test.moth"
+      "bob.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Answer like a teenager: questions, yelling and silence each get their own reply."

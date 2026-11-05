@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>server.moth · Moth's standard library</title>
-  <meta name="description" content="A web server, as a program `moth build` makes can be one, on Windows and Linux.">
+  <title>server.folio · Folio's standard library</title>
+  <meta name="description" content="A web server, as a program `folio build` makes can be one, on Windows and Linux.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,38 +27,38 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>server</em>.moth</h1>
-      <p>A web server, as a program <code>moth build</code> makes can be one, on Windows and Linux.</p>
-      <p class="use"><code>use "server.moth" as web</code></p>
+      <h1><em>server</em>.folio</h1>
+      <p>A web server, as a program <code>folio build</code> makes can be one, on Windows and Linux.</p>
+      <p class="use"><code>use "server.folio" as web</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="server.moth's functions">
+    <nav class="toc" aria-label="server.folio's functions">
       <h2>13 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#serve">serve</a></li><li><a href="#serve_everywhere">serve_everywhere</a></li><li><a href="#serve_on_workers">serve_on_workers</a></li><li><a href="#stop_serving">stop_serving</a></li><li><a href="#set_timeout">set_timeout</a></li><li><a href="#set_idle_timeout">set_idle_timeout</a></li><li><a href="#set_most_bytes">set_most_bytes</a></li><li><a href="#set_most_connections">set_most_connections</a></li><li><a href="#set_most_requests">set_most_requests</a></li><li><a href="#set_keep_alive">set_keep_alive</a></li><li><a href="#set_workers">set_workers</a></li><li><a href="#serve_secure">serve_secure</a></li><li><a href="#serve_secure_everywhere">serve_secure_everywhere</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>A web server, as a program <code>moth build</code> makes can be one, on Windows and Linux: each request a browser (or any other program) makes is given to a function of the program's, which says what to send back.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <p>A web server, as a program <code>folio build</code> makes can be one, on Windows and Linux: each request a browser (or any other program) makes is given to a function of the program's, which says what to send back.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 <span class="k">to</span> answer <span class="k">with</span> request
     <span class="k">if</span> path <span class="k">of</span> request <span class="k">is</span> <span class="s">&quot;/&quot;</span>
-        <span class="k">return</span> <span class="s">&quot;&lt;h1&gt;Hello from Moth&lt;/h1&gt;&quot;</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;h1&gt;Hello from Folio&lt;/h1&gt;&quot;</span>
     <span class="k">end</span>
     <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">404</span>, body <span class="s">&quot;There's nothing at &quot;</span> + path <span class="k">of</span> request
 <span class="k">end</span>
@@ -89,12 +89,12 @@ web's stop_serving()              <span class="c"># in a handler: serve returns 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to serve with port, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L140">server.moth line 140</a></p>
+          <p class="written">Written <code>to serve with port, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L140">server.folio line 140</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 <span class="k">to</span> answer <span class="k">with</span> request
     <span class="k">if</span> path <span class="k">of</span> request <span class="k">is</span> <span class="s">&quot;/&quot;</span>
-        <span class="k">return</span> <span class="s">&quot;&lt;h1&gt;Hello from Moth&lt;/h1&gt;&quot;</span>
+        <span class="k">return</span> <span class="s">&quot;&lt;h1&gt;Hello from Folio&lt;/h1&gt;&quot;</span>
     <span class="k">end</span>
     <span class="k">return</span> <span class="k">record</span> <span class="k">with</span> status <span class="n">404</span>, body <span class="s">&quot;There's nothing at &quot;</span> + path <span class="k">of</span> request
 <span class="k">end</span>
@@ -107,9 +107,9 @@ web's serve(<span class="n">8080</span>, answer)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li><li><code>handler</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to serve_everywhere with port, handler</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L145">server.moth line 145</a></p>
+          <p class="written">Written <code>to serve_everywhere with port, handler</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L145">server.folio line 145</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's serve_everywhere(<span class="n">8080</span>, answer)              <span class="c"># from every network the computer is on</span></code></pre></div>
         </section>
         <section class="fn" id="serve_on_workers">
@@ -119,9 +119,9 @@ web's serve_everywhere(<span class="n">8080</span>, answer)              <span c
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li><li><code>handler</code></li><li><code>workers</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to serve_on_workers with port, handler, workers</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L150">server.moth line 150</a></p>
+          <p class="written">Written <code>to serve_on_workers with port, handler, workers</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L150">server.folio line 150</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's serve_on_workers(<span class="n">8080</span>, answer, <span class="n">4</span>)           <span class="c"># on 4 workers at once, each a core of its own</span></code></pre></div>
         </section>
         <section class="fn" id="stop_serving">
@@ -131,9 +131,9 @@ web's serve_on_workers(<span class="n">8080</span>, answer, <span class="n">4</s
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to stop_serving</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L156">server.moth line 156</a></p>
+          <p class="written">Written <code>to stop_serving</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L156">server.folio line 156</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's stop_serving()              <span class="c"># in a handler: serve returns once what's being sent is sent</span></code></pre></div>
         </section>
         <section class="fn" id="set_timeout">
@@ -143,9 +143,9 @@ web's stop_serving()              <span class="c"># in a handler: serve returns 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>milliseconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_timeout with milliseconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L161">server.moth line 161</a></p>
+          <p class="written">Written <code>to set_timeout with milliseconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L161">server.folio line 161</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_timeout(<span class="n">30000</span>)          <span class="c"># how long a request has to arrive, once begun, or an answer can wait</span></code></pre></div>
         </section>
         <section class="fn" id="set_idle_timeout">
@@ -155,9 +155,9 @@ web's set_timeout(<span class="n">30000</span>)          <span class="c"># how l
             <div><h4>Inputs</h4><ul class="inputs"><li><code>milliseconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_idle_timeout with milliseconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L166">server.moth line 166</a></p>
+          <p class="written">Written <code>to set_idle_timeout with milliseconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L166">server.folio line 166</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_idle_timeout(<span class="n">5000</span>)      <span class="c"># how long a kept connection may sit with nothing on it</span></code></pre></div>
         </section>
         <section class="fn" id="set_most_bytes">
@@ -167,9 +167,9 @@ web's set_idle_timeout(<span class="n">5000</span>)      <span class="c"># how l
             <div><h4>Inputs</h4><ul class="inputs"><li><code>how_many</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_most_bytes with how_many</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L171">server.moth line 171</a></p>
+          <p class="written">Written <code>to set_most_bytes with how_many</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L171">server.folio line 171</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_most_bytes(<span class="n">16777216</span>)    <span class="c"># the biggest request, headers and body together</span></code></pre></div>
         </section>
         <section class="fn" id="set_most_connections">
@@ -179,9 +179,9 @@ web's set_most_bytes(<span class="n">16777216</span>)    <span class="c"># the b
             <div><h4>Inputs</h4><ul class="inputs"><li><code>how_many</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_most_connections with how_many</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L176">server.moth line 176</a></p>
+          <p class="written">Written <code>to set_most_connections with how_many</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L176">server.folio line 176</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_most_connections(<span class="n">1024</span>)  <span class="c"># how many are held at once (by each worker)</span></code></pre></div>
         </section>
         <section class="fn" id="set_most_requests">
@@ -191,9 +191,9 @@ web's set_most_connections(<span class="n">1024</span>)  <span class="c"># how m
             <div><h4>Inputs</h4><ul class="inputs"><li><code>how_many</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_most_requests with how_many</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L181">server.moth line 181</a></p>
+          <p class="written">Written <code>to set_most_requests with how_many</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L181">server.folio line 181</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_most_requests(<span class="n">1000</span>)     <span class="c"># how many a connection answers before it's closed</span></code></pre></div>
         </section>
         <section class="fn" id="set_keep_alive">
@@ -203,9 +203,9 @@ web's set_most_requests(<span class="n">1000</span>)     <span class="c"># how m
             <div><h4>Inputs</h4><ul class="inputs"><li><code>keeping</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_keep_alive with keeping</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L186">server.moth line 186</a></p>
+          <p class="written">Written <code>to set_keep_alive with keeping</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L186">server.folio line 186</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_keep_alive(<span class="k">no</span>)          <span class="c"># a connection closed after each request, as HTTP/1.0 had it</span></code></pre></div>
         </section>
         <section class="fn" id="set_workers">
@@ -215,9 +215,9 @@ web's set_keep_alive(<span class="k">no</span>)          <span class="c"># a con
             <div><h4>Inputs</h4><ul class="inputs"><li><code>how_many</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_workers with how_many</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L191">server.moth line 191</a></p>
+          <p class="written">Written <code>to set_workers with how_many</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L191">server.folio line 191</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's set_workers(<span class="n">4</span>)              <span class="c"># answered on 4 workers; 0 for one a core</span></code></pre></div>
         </section>
         <section class="fn" id="serve_secure">
@@ -227,9 +227,9 @@ web's set_workers(<span class="n">4</span>)              <span class="c"># answe
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li><li><code>handler</code></li><li><code>certificate</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to serve_secure with port, handler, certificate, key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L199">server.moth line 199</a></p>
+          <p class="written">Written <code>to serve_secure with port, handler, certificate, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L199">server.folio line 199</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's serve_secure(<span class="n">8443</span>, answer, <span class="s">&quot;cert.pem&quot;</span>, <span class="s">&quot;key.pem&quot;</span>)   <span class="c"># HTTPS</span></code></pre></div>
         </section>
         <section class="fn" id="serve_secure_everywhere">
@@ -239,9 +239,9 @@ web's serve_secure(<span class="n">8443</span>, answer, <span class="s">&quot;ce
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li><li><code>handler</code></li><li><code>certificate</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to serve_secure_everywhere with port, handler, certificate, key</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/server.moth#L204">server.moth line 204</a></p>
+          <p class="written">Written <code>to serve_secure_everywhere with port, handler, certificate, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/server.folio#L204">server.folio line 204</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.moth&quot;</span> <span class="k">as</span> web
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;server.folio&quot;</span> <span class="k">as</span> web
 web's serve_secure_everywhere(port, handler, certificate, <span class="k">key</span>)</code></pre></div>
         </section>
       </section>
@@ -249,14 +249,14 @@ web's serve_secure_everywhere(port, handler, certificate, <span class="k">key</s
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

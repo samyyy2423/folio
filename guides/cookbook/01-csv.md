@@ -1,10 +1,10 @@
 # Read and write CSV
 
-`text.moth` reads CSV the way spreadsheets write it, quotes and commas inside them included, and writes it
+`text.folio` reads CSV the way spreadsheets write it, quotes and commas inside them included, and writes it
 back. `csv_rows` gives a list of rows, each a list of text; `csv_text` makes CSV from rows.
 
-```moth
-use "text.moth" as text
+```folio
+use "text.folio" as text
 
 set rows to list of (list of "name", "city", "score"), (list of "Ada", "London", 91), (list of "Lee, Ana", "Lisbon", 78)
 write text's csv_text(rows) to "scores.csv"
@@ -22,8 +22,8 @@ Lee, Ana from Lisbon scored 78
 
 Every value comes back as text. `number of` makes a number of one, so the scores can be added up:
 
-```moth
-use "text.moth" as text
+```folio
+use "text.folio" as text
 
 set table to text's csv_rows("name,score\nAda,91\nLee,78\nSam,85")
 set total to 0

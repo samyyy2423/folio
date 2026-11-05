@@ -1,167 +1,182 @@
 # Changelog
 
-What changed in each release of Moth, newest first. Each version links to its release on GitHub, which has
+What changed in each release of Folio, newest first. Each version links to its release on GitHub, which has
 the downloads and their SHA-256 sums. [VERSIONING.md](VERSIONING.md) says what a version number promises,
 and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for each.
 
 ## Not released yet
 
-- **A new website.** Moth's site is now a Next.js app (`site/`) with GSAP motion and a new look: the front
+- **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
+  `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
+  `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,
+  whose name isn't a package's name, whose source or version starts with `-`, or whose commit isn't one, and
+  runs git with no hooks. A clone that can't go to the version asked for isn't left behind (DESIGN §152).
+- **Deeply nested code is the same mistake everywhere.** `format` and the compilers written in Folio let
+  JavaScript's stack running out escape as a RangeError; now each says "the code is nested too deeply". The
+  checker is much faster on long sums: 1,000 terms in 20 ms, not 198.
+- **git's messages keep their r's.** What `folio add`, `get` and `update` said git said had lost every r.
+- **More mistakes worded in WebAssembly.** A call of what isn't a function, a function given the wrong number
+  of inputs, a range of what isn't numbers, and a field of what isn't a record are worded inside the module,
+  with the program's own names (DESIGN §151).
+- **Moth is now Folio.** The language, its command (`folio`), its files (`.folio`) and its packages
+  (`foliolang`) have a new name. Programs from before still run: `use "json.moth"` finds `json.folio`, and
+  `folio run`, `folio build` and `folio test` take `.moth` files as they are (DESIGN §150).
+- **A new website.** Folio's site is now a Next.js app (`site/`) with GSAP motion and a new look: the front
   page, the playground, the lessons and the whole reference, cookbook and examples. The playground is the
   same one, every feature and all; the pages are made from the same sources as before. Old links still work.
 - **Dictionaries in WebAssembly.** On the WebAssembly engine, dictionaries live inside the module, with no
-  JavaScript: number and text keys are about twice as fast to set and read. The third part of making Moth's
+  JavaScript: number and text keys are about twice as fast to set and read. The third part of making Folio's
   WebAssembly run with no JavaScript at all.
 - **Mistakes in WebAssembly.** On the WebAssembly engine, `fail with`, a name with no value yet, and `try`
   catching them happen inside the module, with no JavaScript: catching a mistake in a loop is about 25 times
-  faster. The second part of making Moth's WebAssembly run with no JavaScript at all.
+  faster. The second part of making Folio's WebAssembly run with no JavaScript at all.
 - **Faster on the VM, the JIT and in machine code.** Measured on sixteen programs, before and after in turns:
   the VM takes 1.5 to 3.6 times less time (its switch goes straight to each instruction), the JIT 1.1 to 6.4
   times less on all but calls of four inputs (adding to text 179 ms to 28, records 89 to 23), and machine code compares
   `x is "text"` in line (1,000,000 letters compared, 101 ms to 30) and hashes dictionary keys eight bytes at a
-  time (1.1 to 1.2 times faster); moth builds compiler.moth with 11% fewer instructions (DESIGN §149).
-- **Web pages, made in Moth.** `page.moth` makes a page a part at a time: headings, text, links, pictures,
-  lists, tables, boxes, text boxes, checkboxes, dropdowns and buttons, in Moth's look or with CSS of its own.
-  The playground shows it, and so does a page `moth build --web` makes, as the whole window. `when the page is
+  time (1.1 to 1.2 times faster); folio builds compiler.folio with 11% fewer instructions (DESIGN §149).
+- **Web pages, made in Folio.** `page.folio` makes a page a part at a time: headings, text, links, pictures,
+  lists, tables, boxes, text boxes, checkboxes, dropdowns and buttons, in Folio's look or with CSS of its own.
+  The playground shows it, and so does a page `folio build --web` makes, as the whole window. `when the page is
   used with what` runs when something on it is clicked, typed or chosen, with every field's value, and the
   program shows the page again. The page is in a sandboxed frame, so it can't reach the site it's shown on.
-  For a site, `html_of()` is the page's HTML for `server.moth` to send, with menus and forms.
-- **`apps/recipes`**, a whole site in Moth: pages made with `page.moth`, a menu, a search, a form that adds a
+  For a site, `html_of()` is the page's HTML for `server.folio` to send, with menus and forms.
+- **`apps/recipes`**, a whole site in Folio: pages made with `page.folio`, a menu, a search, a form that adds a
   recipe and shows it again with what was wrong, a SQLite database, its own tests, and the recipes as JSON.
-- The playground finds the standard library: `use "page.moth"`, `"json.moth"` and the rest work there.
-- **moth.wasm.** Moth's compiler, `compiler.moth` and `wasm.moth`, is a WebAssembly module of its own,
-  `moth.wasm`, made by itself and checked to make itself again. The playground compiles with it on the
-  WebAssembly engine, so the programs it runs there are compiled by Moth, not by JavaScript.
+- The playground finds the standard library: `use "page.folio"`, `"json.folio"` and the rest work there.
+- **folio.wasm.** Folio's compiler, `compiler.folio` and `wasm.folio`, is a WebAssembly module of its own,
+  `folio.wasm`, made by itself and checked to make itself again. The playground compiles with it on the
+  WebAssembly engine, so the programs it runs there are compiled by Folio, not by JavaScript.
 - **What a function needs.** `to withdraw with amount where amount is greater than 0` checks its condition at
   the start of each call: if it isn't so, the call is a mistake that says what the function needs, as written,
   and what the name was: `'withdraw' needs amount is greater than 0, but amount is -5`. `where` goes on the
   function's first line, after its inputs, so no program that worked before means anything different.
-- **New commands.** `moth new [app|web|package|library] <name>` starts a project: its code, tests that pass
-  as made, a README and a GitHub workflow that runs them. `moth explain` says what a mistake means, why it
-  happens and how to put it right, for the first mistake in a file or for a mistake's words. `moth upgrade`
-  puts the newest release in place of the moth on PATH, once its SHA-256 checks out. `moth doc` makes pages
-  of HTML from a program's comments, `moth bench` times `bench_` functions, `moth watch` runs a command again
-  on each change, and `moth publish` opens a pull request that puts a package in the package index.
-- **MCP servers, PDF files and spreadsheets.** `mcp.moth` makes servers whose tools Claude and other AI apps
-  can call; `pdf.moth` writes PDF files with text, lines, boxes and colours; `xlsx.moth` reads and writes
-  Excel workbooks. All three are in the standard library, in Moth alone.
-- **mothlang for JavaScript.** `npm install mothlang` runs Moth in Node.js on the playground's engine:
+- **New commands.** `folio new [app|web|package|library] <name>` starts a project: its code, tests that pass
+  as made, a README and a GitHub workflow that runs them. `folio explain` says what a mistake means, why it
+  happens and how to put it right, for the first mistake in a file or for a mistake's words. `folio upgrade`
+  puts the newest release in place of the folio on PATH, once its SHA-256 checks out. `folio doc` makes pages
+  of HTML from a program's comments, `folio bench` times `bench_` functions, `folio watch` runs a command again
+  on each change, and `folio publish` opens a pull request that puts a package in the package index.
+- **MCP servers, PDF files and spreadsheets.** `mcp.folio` makes servers whose tools Claude and other AI apps
+  can call; `pdf.folio` writes PDF files with text, lines, boxes and colours; `xlsx.folio` reads and writes
+  Excel workbooks. All three are in the standard library, in Folio alone.
+- **foliolang for JavaScript.** `npm install foliolang` runs Folio in Node.js on the playground's engine:
   `run(source)` gives what a program said, `load(source)` its functions as JavaScript ones, and `check`,
-  `format` and `test` are `moth check`'s, `moth tidy`'s and `moth test`'s; `npx mothlang run hello.moth` runs a
+  `format` and `test` are `folio check`'s, `folio tidy`'s and `folio test`'s; `npx foliolang run hello.folio` runs a
   file. A workflow publishes it with each release, once the name is set up on npm
   ([docs/npm-package.md](docs/npm-package.md)).
-- **Installers.** `irm https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.ps1 | iex` on
-  Windows and `curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh` on
-  Linux install the latest release, checked against its `SHA256SUMS.txt`, and put `moth` on PATH. Scoop
-  installs it from `packaging/scoop/moth.json`, and winget's manifests for `samyyy2423.Moth` are ready to
-  submit. Each release now has `moth_<version>_amd64.deb` for Debian and Ubuntu, and an image,
-  `ghcr.io/samyyy2423/moth`, on distroless Debian.
+- **Installers.** `irm https://raw.githubusercontent.com/samyyy2423/folio/main/packaging/install.ps1 | iex` on
+  Windows and `curl -fsSL https://raw.githubusercontent.com/samyyy2423/folio/main/packaging/install.sh | sh` on
+  Linux install the latest release, checked against its `SHA256SUMS.txt`, and put `folio` on PATH. Scoop
+  installs it from `packaging/scoop/folio.json`, and winget's manifests for `samyyy2423.Folio` are ready to
+  submit. Each release now has `folio_<version>_amd64.deb` for Debian and Ubuntu, and an image,
+  `ghcr.io/samyyy2423/folio`, on distroless Debian.
 - **Signed releases.** Every file of a release is signed with Sigstore (a `.sigstore.json` bundle, a `.sig`
-  and a `.pem` each), attested by GitHub, and described by an SBOM, `moth-<version>.cdx.json`.
+  and a `.pem` each), attested by GitHub, and described by an SBOM, `folio-<version>.cdx.json`.
   [docs/verifying-releases.md](docs/verifying-releases.md) says how to check them with `cosign verify-blob`
-  and `gh attestation verify`. Before signing, the release workflow builds moth from the tag's source and
+  and `gh attestation verify`. Before signing, the release workflow builds folio from the tag's source and
   checks the release's programs are those bytes, and the fixed point, on Linux and on Windows.
-- **Property-based testing.** `properties.moth` tries what should hold for every value of a sort on a hundred
+- **Property-based testing.** `properties.folio` tries what should hold for every value of a sort on a hundred
   made at random, small first, from `whole_number`, `decimal`, `yes_or_no`, `any_text`, `text_of`, `one_of`,
   `either_of`, `list_of`, `dictionary_of`, `mapped` and `kept`. A value that shows it doesn't hold is made as
   simple as it can be, and the mistake says it, with the seed that makes the same values again.
 - **Faster machine code.** `bit and`, `bit or`, `bit xor` and the shifts of whole numbers are done where
   they're written, in a few instructions, not the runtime's 60: a loop that calls a function with a `bit and`
-  in it runs twice as fast, and `moth build` 5% faster.
-- **Fixed:** in a program `moth build` makes, `shift x left by n` of a number whole only to 15 digits (as
+  in it runs twice as fast, and `folio build` 5% faster.
+- **Fixed:** in a program `folio build` makes, `shift x left by n` of a number whole only to 15 digits (as
   `0.1 * 3 * 10` is) now shifts the number as it is, as the engines do, so it gives what they give.
-- **`moth --version` and `moth version`** say which Moth this is: one line with the release version,
+- **`folio --version` and `folio version`** say which Folio this is: one line with the release version,
   taken from `package.json` and built into the standalone program.
-- **`moth build --target wasm`** makes `<file>.wasm`, a WebAssembly module, from
-  [`wasm.moth`](wasm.moth): Moth's WebAssembly back end, now written in Moth too, which makes exactly the
-  bytes the playground's WebAssembly engine makes. `runWasm` in `moth.js` runs one.
+- **`folio build --target wasm`** makes `<file>.wasm`, a WebAssembly module, from
+  [`wasm.folio`](wasm.folio): Folio's WebAssembly back end, now written in Folio too, which makes exactly the
+  bytes the playground's WebAssembly engine makes. `runWasm` in `folio.js` runs one.
 - **Text on the WebAssembly engine** lives in the module now, as UTF-16, the first part of the runtime moving
   out of JavaScript (DESIGN §139): joining text, comparing it and showing numbers in it happen in WebAssembly,
   and text that's added to grows in place. Comparing text is 12 times faster there, and joining it a little
   faster. A number joined to text is shown exactly as the other engines show it, to 15 digits.
 - **Fixed:** on the WebAssembly engine, a function that used a variable from outside it only in `ask`'s
   question, `wait`'s amount or `play note`'s note or time found it had no value.
-- **A cookbook, examples and exercises.** [The cookbook](https://samyyy2423.github.io/moth/docs/cookbook/) has
+- **A cookbook, examples and exercises.** [The cookbook](https://samyyy2423.github.io/folio/docs/cookbook/) has
   10 recipes for real work (CSV, JSON, web APIs, a web API with a database, the command line, statistics and
-  charts, dates, every core, tests and text), [the examples](https://samyyy2423.github.io/moth/docs/examples.html)
+  charts, dates, every core, tests and text), [the examples](https://samyyy2423.github.io/folio/docs/examples.html)
   8 whole programs that open in the playground with a click, and [`exercises/`](exercises/) 20 problems to
   practise on, with tests, in Exercism's track format. Every recipe and example is run, and every exercise's
-  tests checked, each time Moth changes.
-- **The standard library's reference**, at [samyyy2423.github.io/moth/docs/](https://samyyy2423.github.io/moth/docs/):
+  tests checked, each time Folio changes.
+- **The standard library's reference**, at [samyyy2423.github.io/folio/docs/](https://samyyy2423.github.io/folio/docs/):
   a page for each library, with what it's for and each of its functions, what it takes and an example with
   what it says, and a search of all 807. It's made from the libraries' own comments by `node make-docs.mjs`,
   and the tests fail when it's behind them. Every public function now has a comment, so the editors' hovers
   say what each does too.
-- **Moth from Python.** `pip install mothlang` (a wheel for Windows and one for Linux, each with `moth` in
-  it): `moth.load("fast.moth")` builds the file into a library once, caches it, and calls its functions
-  through ctypes, with Python's own values going across and Moth's mistakes raised as `MothError`;
-  `moth.run(source)` runs a program; and the wheel gives you the `moth` command. fib(30) runs 10 to 13 times as
+- **Folio from Python.** `pip install foliolang` (a wheel for Windows and one for Linux, each with `folio` in
+  it): `folio.load("fast.folio")` builds the file into a library once, caches it, and calls its functions
+  through ctypes, with Python's own values going across and Folio's mistakes raised as `FolioError`;
+  `folio.run(source)` runs a program; and the wheel gives you the `folio` command. fib(30) runs 10 to 13 times as
   fast as in Python.
-- **A library for C.** `moth build fast.moth --library` makes the program's functions a shared library,
-  `libfast.so` or `fast.dll`, and `fast.h` declares them: each takes and gives `moth_value`s through the
+- **A library for C.** `folio build fast.folio --library` makes the program's functions a shared library,
+  `libfast.so` or `fast.dll`, and `fast.h` declares them: each takes and gives `folio_value`s through the
   system's own C convention, with a value API to make, read and free text, lists, dictionaries, records and
   bytes. A mistake gives 1 and a record of it, never an end to the program that loaded it; the top level
   runs once; calls from many threads take turns; and every call has a stack as deep as a program's.
 - **Workers: every core.** `start work(x) on another core` runs the call on a worker, a thread with memory of
   its own, given copies of what it's called with and of the program's variables; `wait for` gives a copy of
-  what it gave back, or fails with its mistake. In a program `moth build` makes, workers run at the same
+  what it gave back, or fails with its mistake. In a program `folio build` makes, workers run at the same
   moment on as many cores as there are, on Windows and Linux; in the playground, as tasks do, one after
   another, giving the same.
-- **A web server for many people.** `server.moth` serves many connections at once, so a slow client holds up
+- **A web server for many people.** `server.folio` serves many connections at once, so a slow client holds up
   no one, keeps them open for the next request (HTTP/1.1 keep-alive), answers requests sent together in
   order, and limits how long a request takes and how big it is (`set_timeout`, `set_idle_timeout`,
   `set_most_bytes`, `set_most_connections`, `set_most_requests`, `set_keep_alive`). A request now has its
   `version`. `serve_on_workers(8080, answer, 4)`, or `set_workers(4)`, answers on 4 workers. From 10,500
   requests a second to 85,000, on one thread.
-- **Trusted packages.** `moth.sums`, beside `moth.packages`, keeps the SHA-256 of each package's files.
-  `moth add` and `moth update` write it and `moth get` checks it, so a package changed in `packages/`, or
-  changed where it comes from, is found. A package's own `moth.sums` is checked for the packages it brings.
-  A `moth.packages` with no sums gets them from the next `moth get`.
-- **Signed packages.** `moth add`, `moth get` and `moth update` take `--signed`, which accepts only a
+- **Trusted packages.** `folio.sums`, beside `folio.packages`, keeps the SHA-256 of each package's files.
+  `folio add` and `folio update` write it and `folio get` checks it, so a package changed in `packages/`, or
+  changed where it comes from, is found. A package's own `folio.sums` is checked for the packages it brings.
+  A `folio.packages` with no sums gets them from the next `folio get`.
+- **Signed packages.** `folio add`, `folio get` and `folio update` take `--signed`, which accepts only a
   package whose commit, or the tag it was asked for at, has a signature git trusts.
-- **`moth audit`** checks a program's packages against the advisories in the package index and says which
+- **`folio audit`** checks a program's packages against the advisories in the package index and says which
   are about the commits they're at.
-- **Packages are checked out the same way everywhere.** moth tells git to keep line ends as they were
+- **Packages are checked out the same way everywhere.** folio tells git to keep line ends as they were
   committed and to write a symbolic link as a small file, whatever the system or the person's own git
   settings, so a package's files, and their sum, are the same on Windows and Linux.
-- **Documents for depending on Moth:** a language specification ([SPEC.md](SPEC.md)), a stability promise
+- **Documents for depending on Folio:** a language specification ([SPEC.md](SPEC.md)), a stability promise
   ([VERSIONING.md](VERSIONING.md)), a security policy ([SECURITY.md](SECURITY.md)) and this changelog.
 - **Types you can add.** An input can be `a dog` (a record the kind dog makes) or `a list of numbers` (or of
   `text`, `dogs`, `lists of numbers`...), and a function can say what it `gives`. A run checks what it
-  always could; `moth check`, the playground and the editors check the rest before the program runs, as
+  always could; `folio check`, the playground and the editors check the rest before the program runs, as
   "doesn't fit", in red. They also know what a function returns, so `f() + 1`, where f gives nothing, will
   fail. Code that says nothing is checked as it was, and `gives` stays a name.
-- **`moth check` works the types out**, as the playground's checker does, and says what it says word for
+- **`folio check` works the types out**, as the playground's checker does, and says what it says word for
   word, but for what rests on a value written out (`1 / 0`).
-- **`moth lsp`, a language server**, for any editor: problems as you type, formatting as `moth tidy` writes,
+- **`folio lsp`, a language server**, for any editor: problems as you type, formatting as `folio tidy` writes,
   the outline, go to definition in the file or a file it uses, hovers that say what a variable holds and
   what a function takes and gives, and completion, after `rex's` too.
-- **Every major editor.** The VS Code extension asks `moth lsp` for the outline, definitions, hovers and
-  completion where moth is installed. New: a plugin folder for Neovim, settings for Helix, an extension for
+- **Every major editor.** The VS Code extension asks `folio lsp` for the outline, definitions, hovers and
+  completion where folio is installed. New: a plugin folder for Neovim, settings for Helix, an extension for
   Zed, a tree-sitter grammar for their colours, and how to use JetBrains' IDEs through LSP4IJ
   ([editors/README.md](editors/README.md)).
-- **`ask for 64 bytes`** gives the input's next 64 bytes without waiting for a line's end, in programs moth
+- **`ask for 64 bytes`** gives the input's next 64 bytes without waiting for a line's end, in programs folio
   builds.
-- **The VS Code extension, ready for the Visual Studio Marketplace and Open VSX.** It finds moth from the
-  `moth.path` setting, or else the PATH (`moth.exe` on Windows, paths with spaces too), and where there's none
+- **The VS Code extension, ready for the Visual Studio Marketplace and Open VSX.** It finds folio from the
+  `folio.path` setting, or else the PATH (`folio.exe` on Windows, paths with spaces too), and where there's none
   says so once, with a button to the releases, while colours, snippets, problems and Format Document go on
   without it. Run and Build keep what the program said in the terminal once it has ended, as tasks, which
   tasks.json can have too. It has an icon, a Marketplace page with a picture of each feature, and a changelog
   of its own; CI packs it with vsce and tests it in VS Code itself, and a workflow publishes it when it's run
   by hand ([docs/publishing-the-extension.md](docs/publishing-the-extension.md)).
-- **A debugger in your editor.** A debug adapter for `moth debug` gives VS Code (*Moth: Debug this file*, or
+- **A debugger in your editor.** A debug adapter for `folio debug` gives VS Code (*Folio: Debug this file*, or
   F5), Neovim, Helix and JetBrains' IDEs breakpoints, stepping, the calls in progress and the variables.
-- **Libraries for a company's work.** `postgres.moth` and `mysql.moth` query PostgreSQL and MySQL over their
-  own protocols, each value sent apart from the SQL, and `redis.moth` talks to Redis, all three on
-  `wire.moth`. `s3.moth` keeps objects in S3 and the stores that speak its language, `jwt.moth` makes and
-  checks JSON Web Tokens, `oauth.moth` signs a person in with OAuth 2 and PKCE, and `yaml.moth` reads and
+- **Libraries for a company's work.** `postgres.folio` and `mysql.folio` query PostgreSQL and MySQL over their
+  own protocols, each value sent apart from the SQL, and `redis.folio` talks to Redis, all three on
+  `wire.folio`. `s3.folio` keeps objects in S3 and the stores that speak its language, `jwt.folio` makes and
+  checks JSON Web Tokens, `oauth.folio` signs a person in with OAuth 2 and PKCE, and `yaml.folio` reads and
   writes YAML. CI tests them against real PostgreSQL, MySQL, Redis and MinIO servers.
-- **Fixes.** A package can use the standard library: `use "text.moth"` in a package, or in a file it uses,
-  is moth's own `text.moth` unless the package has one, so a package no longer needs copies of its own.
-- **`moth coverage` of tests.** `moth coverage x.test.moth`, or `moth coverage` for every `.test.moth` file
-  here, runs the tests as `moth test` does and says which lines of the files they test ran, every test's runs
+- **Fixes.** A package can use the standard library: `use "text.folio"` in a package, or in a file it uses,
+  is folio's own `text.folio` unless the package has one, so a package no longer needs copies of its own.
+- **`folio coverage` of tests.** `folio coverage x.test.folio`, or `folio coverage` for every `.test.folio` file
+  here, runs the tests as `folio test` does and says which lines of the files they test ran, every test's runs
   added up: each file's share, and the lines no test ran. `--lcov` writes `lcov.info` for CI services and
-  editors, for a program's run too. It no longer counts moth's own copies of the standard library, nor
+  editors, for a program's run too. It no longer counts folio's own copies of the standard library, nor
   packages.
 
 ## [1.11.0](https://github.com/samyyy2423/moth/releases/tag/v1.11.0) (2026-11-04)

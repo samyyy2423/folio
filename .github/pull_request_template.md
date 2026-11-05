@@ -12,4 +12,4 @@
 - [ ] New behaviour has tests.
 - [ ] A design decision has its own numbered section in DESIGN.md.
 - [ ] After changing `tools/`, I ran `node make-stdlib.mjs`; after an engine or `index.html`, `node make-web.mjs`.
-- [ ] `moth tidy --check` passes for the Moth files I changed.
+- [ ] `folio tidy --check` passes for the Folio files I changed.

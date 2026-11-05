@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "hamming.moth"
+      "hamming.folio"
     ],
     "test": [
-      "hamming.test.moth"
+      "hamming.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Count where two DNA strands differ."

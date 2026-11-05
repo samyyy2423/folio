@@ -1,6 +1,6 @@
 // What every page knows: where the site is, and its pages
-export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "/moth";
-export const GITHUB = "https://github.com/samyyy2423/moth";
+export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "/folio";
+export const GITHUB = "https://github.com/samyyy2423/folio";
 export const RELEASES = `${GITHUB}/releases`;
 
 export const PAGES = [

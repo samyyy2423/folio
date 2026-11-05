@@ -1,11 +1,11 @@
-// Writes the SBOM of a release: a CycloneDX 1.6 JSON file that names each file the release gives (moth-linux,
-// moth-windows.exe and the .deb, with their sums) and everything built into moth, which is Moth's own source:
-// each file moth.moth is compiled with, the files the standard library and the web page are made from, and
-// the DejaVu letters in machine.moth, the only part someone else made. moth links no library, so that's all:
+// Writes the SBOM of a release: a CycloneDX 1.6 JSON file that names each file the release gives (folio-linux,
+// folio-windows.exe and the .deb, with their sums) and everything built into folio, which is Folio's own source:
+// each file folio.folio is compiled with, the files the standard library and the web page are made from, and
+// the DejaVu letters in machine.folio, the only part someone else made. folio links no library, so that's all:
 //
 //     node packaging/sbom.mjs <folder with the release's files> <version> [the commit]
 //
-// It writes <folder>/moth-<version>.cdx.json. The sources are read from this checkout, so run it on the commit
+// It writes <folder>/folio-<version>.cdx.json. The sources are read from this checkout, so run it on the commit
 // the release was built from; the time in it is SOURCE_DATE_EPOCH's (else the commit's), and its serial number
 // comes from what it says, so the same release makes the same SBOM.
 import { createHash } from "node:crypto";
@@ -16,27 +16,27 @@ import { pathToFileURL } from "node:url";
 import { STANDARD } from "../make-stdlib.mjs";
 import { MODULES } from "../make-web.mjs";
 
-const REPO = "https://github.com/samyyy2423/moth";
+const REPO = "https://github.com/samyyy2423/folio";
 const root = new URL("../", import.meta.url);
 const read = (file) => readFileSync(new URL(file, root));
 
-// what moth.moth is compiled with (as bootstrap.mjs, and moth build moth.moth --include moth-debugger.moth, do),
+// what folio.folio is compiled with (as bootstrap.mjs, and folio build folio.folio --include folio-debugger.folio, do),
 // and what each is
 export const BUILT_IN = {
-  "moth.moth": "the moth command: build, run, test, check, tidy, debug, the shell and packages",
-  "machine.moth": "the compiler's back end, which writes x86-64 machine code as Windows' PE and Linux's ELF, and the runtime every program carries",
-  "compiler.moth": "the compiler written in Moth: reading a program, its names and its checks",
-  "wasm.moth": "the compiler's back end for WebAssembly, for moth build --target wasm",
-  "wasm-runtime.moth": "the part of that back end's runtime written once for it and wasm.js, made by make-wasm-runtime.mjs from wasm-runtime.js",
-  "stdlib.moth": "the standard library moth carries, made by make-stdlib.mjs from math.moth and tools/",
-  "webpage.moth": "the page moth build --web writes a program into, made by make-web.mjs from the playground and its engines",
-  "checker-rules.moth": "the types moth check works out, made by make-checker-rules.mjs from checker.js and vm.js",
-  "tools/hash.moth": "SHA-256, for the sums of packages' files in moth.sums",
-  "moth-debugger.moth": "the debugger moth debug builds into a program, built into moth with --include",
-  "moth-coverage.moth": "what moth coverage builds into a program, in the debugger's place, to count the lines that ran",
-  "package.json": "the release's manifest, built into moth with --include, which moth --version reads its version from",
+  "folio.folio": "the folio command: build, run, test, check, tidy, debug, the shell and packages",
+  "machine.folio": "the compiler's back end, which writes x86-64 machine code as Windows' PE and Linux's ELF, and the runtime every program carries",
+  "compiler.folio": "the compiler written in Folio: reading a program, its names and its checks",
+  "wasm.folio": "the compiler's back end for WebAssembly, for folio build --target wasm",
+  "wasm-runtime.folio": "the part of that back end's runtime written once for it and wasm.js, made by make-wasm-runtime.mjs from wasm-runtime.js",
+  "stdlib.folio": "the standard library folio carries, made by make-stdlib.mjs from math.folio and tools/",
+  "webpage.folio": "the page folio build --web writes a program into, made by make-web.mjs from the playground and its engines",
+  "checker-rules.folio": "the types folio check works out, made by make-checker-rules.mjs from checker.js and vm.js",
+  "tools/hash.folio": "SHA-256, for the sums of packages' files in folio.sums",
+  "folio-debugger.folio": "the debugger folio debug builds into a program, built into folio with --include",
+  "folio-coverage.folio": "what folio coverage builds into a program, in the debugger's place, to count the lines that ran",
+  "package.json": "the release's manifest, built into folio with --include, which folio --version reads its version from",
 };
-const WEB = ["index.html", "docs/moth.svg", ...MODULES];
+const WEB = ["index.html", "docs/folio.svg", ...MODULES];
 
 const sha = (bytes, algorithm) => createHash(algorithm).update(bytes).digest("hex");
 const hashes = (bytes) => [{ alg: "SHA-256", content: sha(bytes, "sha256") }, { alg: "SHA-512", content: sha(bytes, "sha512") }];
@@ -53,35 +53,35 @@ function uuidOf(text) {
 
 export function sbom({ folder, version, commit, epoch }) {
   const tag = `v${version}`;
-  const purl = `pkg:github/samyyy2423/moth@${tag}`;
+  const purl = `pkg:github/samyyy2423/folio@${tag}`;
   const source = (file, type, description, kind = "source") => ({
     type, "bom-ref": `${kind}:${file}`, name: file, version, description, hashes: hashes(read(file)), licenses: apache,
     externalReferences: [{ type: "vcs", url: `${REPO}/blob/${commit ?? tag}/${file}` }],
   });
   const dejavu = {
     type: "data", "bom-ref": "dejavu-glyphs", name: "DejaVu Sans and DejaVu Sans Mono glyph tables",
-    description: "the letters a Linux program draws text with, drawn from DejaVu's fonts into machine.moth by tools/glyph-tables.py; the only part of moth someone else made",
+    description: "the letters a Linux program draws text with, drawn from DejaVu's fonts into machine.folio by tools/glyph-tables.py; the only part of folio someone else made",
     copyright: "Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. DejaVu changes are in public domain.",
     licenses: [{ license: { id: "Bitstream-Vera" } }],
     externalReferences: [{ type: "website", url: "https://dejavu-fonts.github.io/" }, { type: "license", url: `${REPO}/blob/${commit ?? tag}/LICENSE-DejaVu` }],
   };
 
   const programs = [
-    ["moth-linux", "moth for Linux on x86-64: one static ELF program that loads no library"],
-    ["moth-windows.exe", "moth for Windows on x64: one PE program that loads only Windows' own DLLs, from System32"],
+    ["folio-linux", "folio for Linux on x86-64: one static ELF program that loads no library"],
+    ["folio-windows.exe", "folio for Windows on x64: one PE program that loads only Windows' own DLLs, from System32"],
   ].map(([name, description]) => {
     const path = join(folder, name);
     if (!existsSync(path)) throw new Error(`there's no ${name} in ${folder}`);
-    return { type: "application", "bom-ref": name, name, version, description: `${description}, built by moth from the sources this SBOM lists`, hashes: hashes(readFileSync(path)), licenses: apache, purl: `${purl}#${name}` };
+    return { type: "application", "bom-ref": name, name, version, description: `${description}, built by folio from the sources this SBOM lists`, hashes: hashes(readFileSync(path)), licenses: apache, purl: `${purl}#${name}` };
   });
-  const deb = `moth_${version}_amd64.deb`;
+  const deb = `folio_${version}_amd64.deb`;
   const packages = existsSync(join(folder, deb))
-    ? [{ type: "application", "bom-ref": deb, name: deb, version, description: "the Debian and Ubuntu package of moth-linux, as /usr/bin/moth", hashes: hashes(readFileSync(join(folder, deb))), licenses: apache, purl: `pkg:deb/moth@${version}?arch=amd64` }]
+    ? [{ type: "application", "bom-ref": deb, name: deb, version, description: "the Debian and Ubuntu package of folio-linux, as /usr/bin/folio", hashes: hashes(readFileSync(join(folder, deb))), licenses: apache, purl: `pkg:deb/folio@${version}?arch=amd64` }]
     : [];
 
   const sources = Object.entries(BUILT_IN).map(([file, description]) => source(file, "file", description));
   const library = STANDARD.map((file) => source(file, "library", `part of the standard library: use "${file.split("/").at(-1)}"`, "stdlib"));
-  const page = WEB.map((file) => source(file, "file", "part of the page moth build --web writes", "webpage"));
+  const page = WEB.map((file) => source(file, "file", "part of the page folio build --web writes", "webpage"));
   const refs = (list) => list.map((c) => c["bom-ref"]);
   const madeFrom = [...refs(sources), dejavu["bom-ref"]];
 
@@ -93,10 +93,10 @@ export function sbom({ folder, version, commit, epoch }) {
     metadata: {
       timestamp: new Date(epoch * 1000).toISOString().replace(/\.000Z$/, "Z"),
       lifecycles: [{ phase: "build" }],
-      tools: { components: [{ type: "application", name: "packaging/sbom.mjs", description: "Moth's SBOM writer", externalReferences: [{ type: "vcs", url: `${REPO}/blob/${commit ?? tag}/packaging/sbom.mjs` }] }] },
+      tools: { components: [{ type: "application", name: "packaging/sbom.mjs", description: "Folio's SBOM writer", externalReferences: [{ type: "vcs", url: `${REPO}/blob/${commit ?? tag}/packaging/sbom.mjs` }] }] },
       component: {
-        type: "application", "bom-ref": purl, name: "moth", version,
-        description: "A programming language that reads like plain English: the moth command, which builds Moth programs into Windows and Linux programs of their own",
+        type: "application", "bom-ref": purl, name: "folio", version,
+        description: "A programming language that reads like plain English: the folio command, which builds Folio programs into Windows and Linux programs of their own",
         supplier: { name: "Samyak Pudke", url: ["https://github.com/samyyy2423"] },
         authors: [{ name: "Samyak Pudke" }],
         copyright: "Copyright 2026 Samyak Pudke",
@@ -110,17 +110,17 @@ export function sbom({ folder, version, commit, epoch }) {
           { type: "issue-tracker", url: `${REPO}/issues` },
           { type: "security-contact", url: `${REPO}/security/advisories/new` },
         ],
-        ...(commit ? { properties: [{ name: "moth:commit", value: commit }] } : {}),
+        ...(commit ? { properties: [{ name: "folio:commit", value: commit }] } : {}),
       },
     },
     components: [...programs, ...packages, ...sources, ...library, ...page, dejavu],
     dependencies: [
       { ref: purl, dependsOn: refs([...programs, ...packages]) },
       ...programs.map((p) => ({ ref: p["bom-ref"], dependsOn: madeFrom })),
-      ...packages.map((p) => ({ ref: p["bom-ref"], dependsOn: ["moth-linux"] })),
+      ...packages.map((p) => ({ ref: p["bom-ref"], dependsOn: ["folio-linux"] })),
       ...sources.map((s) => ({
         ref: s["bom-ref"],
-        dependsOn: s.name === "stdlib.moth" ? refs(library) : s.name === "webpage.moth" ? refs(page) : s.name === "machine.moth" ? [dejavu["bom-ref"]] : [],
+        dependsOn: s.name === "stdlib.folio" ? refs(library) : s.name === "webpage.folio" ? refs(page) : s.name === "machine.folio" ? [dejavu["bom-ref"]] : [],
       })),
       ...[...library, ...page, dejavu].map((c) => ({ ref: c["bom-ref"], dependsOn: [] })),
     ],
@@ -137,7 +137,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const git = (...args) => { try { return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim(); } catch { return undefined; } };
   const commit = given ?? git("rev-parse", "HEAD");
   const epoch = Number(process.env.SOURCE_DATE_EPOCH ?? git("log", "-1", "--format=%ct") ?? Math.floor(Date.now() / 1000));
-  const out = join(folder, `moth-${version}.cdx.json`);
+  const out = join(folder, `folio-${version}.cdx.json`);
   const made = sbom({ folder, version, commit, epoch });
   writeFileSync(out, JSON.stringify(made, null, 2) + "\n");
   console.log(`wrote ${out}: ${made.components.length} components`);

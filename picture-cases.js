@@ -192,7 +192,7 @@ export function pngCases(seed = 1) {
   return cases;
 }
 
-// Every kind of BMP Moth reads, small: palettes of 1, 4 and 8 bits, 16, 24 and 32 bits, each header, masks
+// Every kind of BMP Folio reads, small: palettes of 1, 4 and 8 bits, 16, 24 and 32 bits, each header, masks
 // with alpha, rows from the top down
 export function bmpCases(seed = 1) {
   const r = random(seed);
@@ -305,9 +305,9 @@ export function handmadeBroken() {
     [png(ihdr(2, 2, 8, 3), chunk("PLTE", [255, 0, 0, 0, 255, 0]), idat([0, 0, 1, 0, 1, 2]), iend), PALETTE],
     [Uint8Array.from([66, 77]), "is a broken BMP: it ends too soon"],
     [bmp.slice(0, bmp.length - 1), "is a broken BMP: it ends too soon"],
-    [le(bmp, 14, 12), "is a kind of BMP Moth can't read"], // OS/2's old header
-    [le(bmp, 30, 1), "is a kind of BMP Moth can't read"], // run-length compressed
-    [le(bmp, 28, 2, 2), "is a kind of BMP Moth can't read"], // 2 bits a pixel
+    [le(bmp, 14, 12), "is a kind of BMP Folio can't read"], // OS/2's old header
+    [le(bmp, 30, 1), "is a kind of BMP Folio can't read"], // run-length compressed
+    [le(bmp, 28, 2, 2), "is a kind of BMP Folio can't read"], // 2 bits a pixel
     [le(bmp, 18, 0), "is a broken BMP: its header is wrong"],
     [le(bmp, 46, 1), "is a broken BMP: a pixel's colour isn't in its palette"], // one colour, but pixels of two
     [masked, "is a broken BMP: its header is wrong"], // a mask whose bits aren't side by side

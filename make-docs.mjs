@@ -3,64 +3,64 @@
 //     node make-docs.mjs
 //
 // A page for each library (docs/json.html, ...), and docs/index.html, which lists them and searches every
-// function. It reads what the language server's hovers read (moth.moth's cli_lsp_comment_above and
+// function. It reads what the language server's hovers read (folio.folio's cli_lsp_comment_above and
 // cli_lsp_file_comment): a file's opening comment says what it's for, and the comment lines just above a
 // `to` say what that function does. Lines in a comment indented three spaces past the # are code. Each
 // function's example is the first of: code in its own comment; a line of the file's opening comment that
-// calls it; a line of its tests (tools/x.test.moth) that does; each with the `set` lines it needs. The
+// calls it; a line of its tests (tools/x.test.folio) that does; each with the `set` lines it needs. The
 // example is run on the JavaScript engine, and what it says is shown under it. docs.test.js says when the
 // pages are behind the files they're made from, and when a public function has no comment.
 import { readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { STANDARD } from "./make-stdlib.mjs";
-import { run } from "./moth.js";
+import { run } from "./folio.js";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 
-// the libraries a program uses: the standard library, but for what `moth profile` and `moth coverage` build in
-export const LIBRARIES = STANDARD.filter((file) => !/moth-(profiler|coverage)\.moth$/.test(file));
+// the libraries a program uses: the standard library, but for what `folio profile` and `folio coverage` build in
+export const LIBRARIES = STANDARD.filter((file) => !/folio-(profiler|coverage)\.folio$/.test(file));
 
 // Each library's own helpers, which the reference leaves out, as VERSIONING.md leaves them out of what's
 // kept: a name that starts with the library's prefix (`stats_`), or one of the names listed. Everything else
 // at a library's top level is public, and needs a comment.
 export const HELPERS = {
-  "ai.moth": /^ai_/, "arrays.moth": /^arrays_/, "base64.moth": /^b64_/, "cores.moth": /^cores_/, "email.moth": /^mail_/,
-  "hash.moth": /^hash_/, "jwt.moth": /^jwt_/, "linux.moth": /^ui_/, "lists.moth": /^lists_/, "log.moth": /^log_/,
-  "oauth.moth": /^oauth_/, "onnx.moth": /^onnx_/, "options.moth": /^options_/, "redis.moth": /^redis_/, "s3.moth": /^s3_/,
-  "server.moth": /^web_/, "sockets.moth": /^net_/, "stats.moth": /^stats_/, "system.moth": /^system_/,
-  "toml.moth": /^toml_(?!of$)/, "ui.moth": /^ui_/, "websocket.moth": /^ws_/, "windows.moth": /^ui_/, "yaml.moth": /^yaml_(?!of$)/,
-  "zones.moth": /^zones_/, "dates.moth": /^dates_/, "game.moth": /^game_/, "http.moth": /^http_/,
-  "tasks.moth": /^task_/, "wire.moth": /^wire_/, "properties.moth": /^properties_/, "mcp.moth": /^mcp_/, "page.moth": /^page_/, "pdf.moth": /^pdf_/, "xlsx.moth": /^xlsx_/, "text.moth": [/^text_/, "find_all_from", "csv_value"], "python.moth": /^python_/,
-  "mysql.moth": [/^my_/, "native_scramble", "sha2_scramble", "rsa_oaep"],
-  "postgres.moth": [/^pg_/, "scram_first", "scram_final"],
-  "big.moth": ["read_big", "made_big", "written_big", "compare_parts", "add_parts", "take_parts", "times_parts", "scaled_parts",
+  "ai.folio": /^ai_/, "arrays.folio": /^arrays_/, "base64.folio": /^b64_/, "cores.folio": /^cores_/, "email.folio": /^mail_/,
+  "hash.folio": /^hash_/, "jwt.folio": /^jwt_/, "linux.folio": /^ui_/, "lists.folio": /^lists_/, "log.folio": /^log_/,
+  "oauth.folio": /^oauth_/, "onnx.folio": /^onnx_/, "options.folio": /^options_/, "redis.folio": /^redis_/, "s3.folio": /^s3_/,
+  "server.folio": /^web_/, "sockets.folio": /^net_/, "stats.folio": /^stats_/, "system.folio": /^system_/,
+  "toml.folio": /^toml_(?!of$)/, "ui.folio": /^ui_/, "websocket.folio": /^ws_/, "windows.folio": /^ui_/, "yaml.folio": /^yaml_(?!of$)/,
+  "zones.folio": /^zones_/, "dates.folio": /^dates_/, "game.folio": /^game_/, "http.folio": /^http_/,
+  "tasks.folio": /^task_/, "wire.folio": /^wire_/, "properties.folio": /^properties_/, "mcp.folio": /^mcp_/, "page.folio": /^page_/, "pdf.folio": /^pdf_/, "xlsx.folio": /^xlsx_/, "text.folio": [/^text_/, "find_all_from", "csv_value"], "python.folio": /^python_/,
+  "mysql.folio": [/^my_/, "native_scramble", "sha2_scramble", "rsa_oaep"],
+  "postgres.folio": [/^pg_/, "scram_first", "scram_final"],
+  "big.folio": ["read_big", "made_big", "written_big", "compare_parts", "add_parts", "take_parts", "times_parts", "scaled_parts",
     "divide_parts", "divided_whole", "base_of"],
-  "charts.moth": ["series_of", "new_chart", "fonts", "font_of", "glyph_of", "font_for", "width_of", "nice_step", "axis_text",
+  "charts.folio": ["series_of", "new_chart", "fonts", "font_of", "glyph_of", "font_for", "width_of", "nice_step", "axis_text",
     "with_commas", /^shape_/, "shapes_of", "y_of", "bar_shapes", "line_shapes", "parts_shapes", /^svg_(?!of$)/, "bar_path",
     "colour_numbers", "blend", "clamped", "rect_cover", /^draw_/, "distance_to_segment", "minimum_of", "maximum_of"],
-  "crypto.moth": ["as_bytes_of", "aes_round_keys", "aes_block", "words_at", "field_times", "ghash", "numbers_of", "counter_block",
+  "crypto.folio": ["as_bytes_of", "aes_round_keys", "aes_block", "words_at", "field_times", "ghash", "numbers_of", "counter_block",
     "counter_mode", "gcm_setup", "gcm_tag"],
-  "fractions.moth": ["lowest", "written_of", "read_fraction"],
-  "images.moth": ["two_to", "whole_size", "colour_of", "place_of", "read_four", "read_two", "cut_out", /^png_(?!of$)/, "unfiltered",
+  "fractions.folio": ["lowest", "written_of", "read_fraction"],
+  "images.folio": ["two_to", "whole_size", "colour_of", "place_of", "read_four", "read_two", "cut_out", /^png_(?!of$)/, "unfiltered",
     "paeth", "sample_of", "full_sample", "grey_level", "filtered_values", "add_four", "add_two", "add_chunk", "adler32",
     "huffman_table", "new_bit_reader", "next_bit", "decoded_symbol", "received", /^jpeg_(?!of$)/, "inverse_dct", "level_of",
     "scaled_steps", "new_bit_writer", "put_bits", "put_code", "size_of", "put_number", "halved"],
-  "installer.moth": ["asked_of", "ask_first", "tell", "folder_for", "joined", "put_in", "menu_file", "windows_entries", "quoted",
+  "installer.folio": ["asked_of", "ask_first", "tell", "folder_for", "joined", "put_in", "menu_file", "windows_entries", "quoted",
     "shortcut_of", "windows_uninstaller", "linux_uninstaller", "run_powershell", "run_checked", "take_away"],
-  "json.moth": ["problem", "here", "skip_spaces", "take", "shown", /^read_/, "hex_number"],
-  "sqlite.moth": ["prepared", "column_value", "pointer_in"],
-  "sets.moth": ["set_record"],
-  "xml.moth": ["problem", "here", "looking_at", "take", "is_space", "skip_spaces", "up_to", "skip_around", "skip_doctype",
+  "json.folio": ["problem", "here", "skip_spaces", "take", "shown", /^read_/, "hex_number"],
+  "sqlite.folio": ["prepared", "column_value", "pointer_in"],
+  "sets.folio": ["set_record"],
+  "xml.folio": ["problem", "here", "looking_at", "take", "is_space", "skip_spaces", "up_to", "skip_around", "skip_doctype",
     "is_name_letter", "read_name", "shown", "read_element", "read_inside", "add_text", "read_entity", "hex_number", "letter_of",
     "gather_text", "gather_named", "write_element", "escaped"],
-  "zip.moth": ["two_to", "made_crc_table", "new_reader", "bits", "huffman", "decoded", "fixed_tables", "dynamic_tables",
+  "zip.folio": ["two_to", "made_crc_table", "new_reader", "bits", "huffman", "decoded", "fixed_tables", "dynamic_tables",
     "inflate_into", "matches_of", "place_key", "note_place", "longest_match", "code_lengths", "huffman_lengths", "codes_of",
     "runs_of", "new_writer", "put_bits", "put_code", "base_code", "fixed_length", "write_block", "add_four", "read_four",
     "read_two", "add_header", "add_two"],
 };
 
 // libraries that have the same functions as another, whose examples they borrow where they have none
-export const SAME_AS = { "linux.moth": "ui.moth", "windows.moth": "ui.moth" };
+export const SAME_AS = { "linux.folio": "ui.folio", "windows.folio": "ui.folio" };
 
 // the index's sections, each library in one; a library that isn't listed goes in the last
 export const SECTIONS = [
@@ -68,14 +68,14 @@ export const SECTIONS = [
     ["json", "yaml", "toml", "xml", "text", "dates", "zones", "base64", "zip", "images", "charts", "pdf", "xlsx"]],
   ["Numbers and collections", "Maths beyond what's built in, statistics, arrays, and ways to keep things.",
     ["math", "stats", "arrays", "big", "fractions", "collections", "lists", "sets"]],
-  ["The web and networks", "Web pages made in Moth, serving and asking for them, sockets, mail, and signing in.",
+  ["The web and networks", "Web pages made in Folio, serving and asking for them, sockets, mail, and signing in.",
     ["page", "http", "server", "websocket", "sockets", "email", "oauth", "jwt", "s3", "wire"]],
   ["Databases", "SQLite in a file, and the database servers companies run.", ["sqlite", "postgres", "mysql", "redis"]],
   ["Secrets and security", "Hashes, encryption and randomness no one can guess.", ["hash", "crypto", "secrets"]],
   ["The system and programs", "Files and folders, command lines, logs, background work, and every core.",
     ["system", "options", "log", "tasks", "cores", "sync", "installer"]],
   ["Windows and games", "The system's own windows and controls, and games drawn 60 times a second.", ["ui", "windows", "linux", "game"]],
-  ["Models and other languages", "Large language models, MCP servers for AI apps, trained models and Python, from Moth.", ["ai", "mcp", "onnx", "python"]],
+  ["Models and other languages", "Large language models, MCP servers for AI apps, trained models and Python, from Folio.", ["ai", "mcp", "onnx", "python"]],
   ["More", "", []],
 ];
 
@@ -158,13 +158,13 @@ export function signatureOf(line) {
   return { inputs, gives };
 }
 
-// what a file's name is used as, by its opening comment's `use "x.moth" as y`, or its own name
-const aliasOf = (name, aboutCode) => new RegExp(`use "${name}\\.moth" as (\\w+)`).exec(aboutCode)?.[1] ?? name;
+// what a file's name is used as, by its opening comment's `use "x.folio" as y`, or its own name
+const aliasOf = (name, aboutCode) => new RegExp(`use "${name}\\.folio" as (\\w+)`).exec(aboutCode)?.[1] ?? name;
 
 export function readLibrary(file, read = here) {
   const text = read(file);
   const lines = text.split("\n");
-  const name = file.split("/").at(-1).replace(/\.moth$/, "");
+  const name = file.split("/").at(-1).replace(/\.folio$/, "");
   let top = 0;
   while (top < lines.length && lines[top].startsWith("#")) top++;
   const about = blocksOf(lines.slice(0, top));
@@ -184,14 +184,14 @@ export function readLibrary(file, read = here) {
 // ---------- examples ----------
 
 export const libraryFiles = new Map(STANDARD.map((file) => [file.split("/").at(-1), file]));
-const MOTH_WORDS = new Set(("set add say if else end repeat while for to return and or not is yes no nothing list empty length item of "
+const FOLIO_WORDS = new Set(("set add say if else end repeat while for to return and or not is yes no nothing list empty length item of "
   + "record dictionary where remove keys byte bytes as text number in from with by each use expect fail try it fails times than at least "
   + "most read write save load round rounded split join uppercase lowercase position kind give stop start wait arguments json random").split(" "));
 
 // the names a line uses, outside its text and its comment
 function namesIn(line) {
   const code = withoutComment(line).replace(/"(?:[^"\\]|\\.)*"/g, '""');
-  return new Set([...code.matchAll(/(?<!')\b[A-Za-z_]\w*\b/g)].map((m) => m[0]).filter((w) => !MOTH_WORDS.has(w)));
+  return new Set([...code.matchAll(/(?<!')\b[A-Za-z_]\w*\b/g)].map((m) => m[0]).filter((w) => !FOLIO_WORDS.has(w)));
 }
 
 const depthOf = (line) => /^\s*/.exec(line)[0].length;
@@ -298,8 +298,8 @@ function endingOf(lines, at, alias, name) {
 function candidates(lib, fn, tests) {
   const found = [];
   for (const code of fn.comment.filter((b) => b.code).map((b) => b.code)) found.push({ code, from: "comment" });
-  const use = `use "${lib.name}.moth" as ${lib.alias}`;
-  const ownUse = new RegExp(`^\\s*use "${lib.name}\\.moth" as \\w+\\s*$`);
+  const use = `use "${lib.name}.folio" as ${lib.alias}`;
+  const ownUse = new RegExp(`^\\s*use "${lib.name}\\.folio" as \\w+\\s*$`);
   const blocks = lib.about.filter((b) => b.code).map((b) => b.code.split("\n").filter((line) => !ownUse.test(line)));
   for (const lines of blocks) {
     const at = lines.findIndex((line) => callsIt(lib.alias, fn.name).test(withoutComment(line)));
@@ -309,7 +309,7 @@ function candidates(lib, fn, tests) {
     found.push({ code: depthOf(lines[at]) === 0 && !/^\s/.test(lines[at + 1] ?? "")
       ? cutDown(lines.slice(0, at), [lines[at]], 0, use, { changes: false, defined: helpersIn(lines) }) : [use, ...lines].join("\n"), from: "about" });
   }
-  const alias = tests && new RegExp(`^use "${lib.name}\\.moth" as (\\w+)`, "m").exec(tests)?.[1];
+  const alias = tests && new RegExp(`^use "${lib.name}\\.folio" as (\\w+)`, "m").exec(tests)?.[1];
   if (alias) {
     const lines = tests.split("\n");
     const helpers = helpersIn(lines);
@@ -349,7 +349,7 @@ function exampleOf(lib, fn, tests, read) {
     const twin = other.functions.find((f) => f.name === fn.name);
     if (twin) {
       all = [...candidates(other, twin, null).filter((c) => c.from !== "call").map((c) => ({ ...c,
-        code: c.code.replace(`use "${other.name}.moth" as ${other.alias}`, `use "${lib.name}.moth" as ${lib.alias}`)
+        code: c.code.replace(`use "${other.name}.folio" as ${other.alias}`, `use "${lib.name}.folio" as ${lib.alias}`)
           .replace(new RegExp(`\\b${other.alias}'s `, "g"), `${lib.alias}'s `) })), ...all];
     }
   }
@@ -367,7 +367,7 @@ const callOf = (lib, fn) => `${lib.alias}'s ${fn.name}(${fn.inputs.map((i) => i.
 
 export const escape = (text) => String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-// Moth's words, coloured as the playground colours them (highlight() in index.html)
+// Folio's words, coloured as the playground colours them (highlight() in index.html)
 const WORDS = new Set(("set add say if else end repeat while for to return and or not is yes no nothing list empty length item "
   + "move turn pen record dictionary where remove keys byte bytes as hex binary shift bit xor read write arguments expect clear draw box circle button random when every milliseconds seconds pressed clicked dragged mouse key fail stop ask use try fails uppercase lowercase split join number position by times each in from with than at least most divisible by of forward back left right up down color width "
   + "table total average largest smallest chart picture play note beep send json headers checkbox tick untick area showing choice ticked dropdown slider moved choose library gives package function power items rounded remainder divided without repeats start wait kind give match").split(" "));
@@ -404,7 +404,7 @@ export function prose(text, links = new Map()) {
     }))).join("");
 }
 
-const MOTH = `<symbol id="moth" class="moth" viewBox="0 0 64 64">
+const FOLIO = `<symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -425,7 +425,7 @@ export function page({ title, description, root, current, hero, body, script = "
   <title>${escape(title)}</title>
   <meta name="description" content="${escape(description)}">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="${root}docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="${root}docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="${root}docs/site.css">
 </head>
 <body>
@@ -433,17 +433,17 @@ export function page({ title, description, root, current, hero, body, script = "
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      ${MOTH}
+      ${FOLIO}
       <symbol id="i-github" viewBox="0 0 16 16"><path d="${GITHUB}"/></symbol>
     </defs>
   </svg>
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="${root}"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="${root}"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
 ${nav.map(([name, href]) => `      <a class="go" href="${href}"${name === current ? ' aria-current="page"' : ""}>${name}</a>`).join("\n")}
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
 ${hero}
@@ -453,14 +453,14 @@ ${hero}
 ${body}
 
   <footer class="foot wrap">
-    <a class="brand" href="${root}"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="${root}"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="${root}#playground">Playground</a>
       <a href="${root}learn.html">Learn</a>
       <a href="${root}docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
 ${script}</body>
@@ -471,7 +471,7 @@ ${script}</body>
 export const SITE_PAGES = ["Playground", "Learn", "Docs", "Cookbook", "Examples"];
 const GITHUB = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z";
 
-// a block of Moth, coloured, and what it says under it if it's known
+// a block of Folio, coloured, and what it says under it if it's known
 export const codeBlock = (code, says) => `<div class="code"><pre><code>${highlight(code)}</code></pre>${says === null || says === undefined ? "" : `<pre class="says"><code>${escape(says)}</code></pre>`}</div>`;
 
 // the first sentence of some prose, for a list: up to its first full stop; one too long for a card is cut at
@@ -505,7 +505,7 @@ function libraryPage(lib, tests, read) {
             <div><h4>Inputs</h4>${inputsOf(fn)}</div>
             ${fn.gives || fn.kind === "kind" ? `<div><h4>Gives</h4><p>${fn.gives ? escape(fn.gives) : `a record of kind ${fn.name}`}</p></div>` : ""}
           </div>
-          <p class="written">Written <code>${escape(fn.written)}</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/${lib.file}#L${fn.line}">${lib.file.split("/").at(-1)} line ${fn.line}</a></p>
+          <p class="written">Written <code>${escape(fn.written)}</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/${lib.file}#L${fn.line}">${lib.file.split("/").at(-1)} line ${fn.line}</a></p>
           <h4>Example</h4>
           ${codeBlock(example.code, example.says)}
         </section>`;
@@ -513,15 +513,15 @@ function libraryPage(lib, tests, read) {
   const toc = lib.functions.map((fn) => `<li><a href="#${fn.name}">${fn.name}</a></li>`).join("");
   const first = lib.about.find((b) => b.prose)?.prose ?? "";
   const hero = `      <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>${lib.name}</em>.moth</h1>
+      <h1><em>${lib.name}</em>.folio</h1>
       <p>${prose(summaryOf(first))}</p>
-      <p class="use"><code>use "${lib.name}.moth" as ${lib.alias}</code></p>`;
+      <p class="use"><code>use "${lib.name}.folio" as ${lib.alias}</code></p>`;
   const body = `  <div class="layout wrap">
-    <nav class="toc" aria-label="${lib.name}.moth's functions">
+    <nav class="toc" aria-label="${lib.name}.folio's functions">
       <h2>${lib.functions.length} function${lib.functions.length === 1 ? "" : "s"}</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc">${toc}</ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/${lib.file}">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/${lib.file}">The source</a></p>
     </nav>
     <main>
       <section class="about">
@@ -543,7 +543,7 @@ ${entries}
     };
   </script>
 `;
-  return page({ title: `${lib.name}.moth · Moth's standard library`, description: summaryOf(first), root: "../", current: "Docs", hero, body, script });
+  return page({ title: `${lib.name}.folio · Folio's standard library`, description: summaryOf(first), root: "../", current: "Docs", hero, body, script });
 }
 
 function indexPage(libs) {
@@ -551,13 +551,13 @@ function indexPage(libs) {
   const placed = new Set(SECTIONS.flatMap(([, , names]) => names));
   const sections = SECTIONS.map(([title, about, names]) => [title, about, title === "More" ? libs.map((l) => l.name).filter((n) => !placed.has(n)) : names.filter((n) => byName.has(n))])
     .filter(([, , names]) => names.length);
-  const card = (lib) => `<a class="card" href="${lib.name}.html" data-library="${lib.name}"><b>${lib.name}.moth</b><span>${prose(summaryOf(lib.about.find((b) => b.prose)?.prose ?? "")).replace(/<\/?a[^>]*>/g, "")}</span><i>${lib.functions.length} function${lib.functions.length === 1 ? "" : "s"}</i></a>`;
+  const card = (lib) => `<a class="card" href="${lib.name}.html" data-library="${lib.name}"><b>${lib.name}.folio</b><span>${prose(summaryOf(lib.about.find((b) => b.prose)?.prose ?? "")).replace(/<\/?a[^>]*>/g, "")}</span><i>${lib.functions.length} function${lib.functions.length === 1 ? "" : "s"}</i></a>`;
   const index = libs.flatMap((lib) => lib.functions.map((fn) => [lib.name, fn.name, summaryOf(describe(fn))]));
   const count = index.length;
   const hero = `      <p class="eyebrow">The standard library</p>
-      <h1>Everything Moth <em>carries</em>.</h1>
+      <h1>Everything Folio <em>carries</em>.</h1>
       <p>${libs.length} libraries and ${count} functions, from JSON and web servers to databases, charts and encryption,
-        each built into moth, so <code>use "json.moth" as json</code> works in any folder. Each function, what it takes,
+        each built into folio, so <code>use "json.folio" as json</code> works in any folder. Each function, what it takes,
         what it gives, and an example, made from the libraries' own comments.</p>
       <form class="search" role="search" onsubmit="return false">
         <input type="search" id="q" placeholder="Search every function: csv, parse, median, serve…" aria-label="Search every function" autocomplete="off">
@@ -600,12 +600,12 @@ ${sections.map(([title, about, names]) => `      <section class="group">
     search();
   </script>
 `;
-  return page({ title: "The standard library · Moth", description: `Moth's standard library: ${libs.length} libraries and ${count} functions, each with an example.`, root: "../", current: "Docs", hero, body, script });
+  return page({ title: "The standard library · Folio", description: `Folio's standard library: ${libs.length} libraries and ${count} functions, each with an example.`, root: "../", current: "Docs", hero, body, script });
 }
 
 // the tests of a library, if it has any
 const testsOf = (file, read) => {
-  const name = file.replace(/\.moth$/, ".test.moth");
+  const name = file.replace(/\.folio$/, ".test.folio");
   try {
     return read(name);
   } catch {

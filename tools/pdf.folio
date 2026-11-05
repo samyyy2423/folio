@@ -1,0 +1,317 @@
+# PDF files, made in Folio alone: pages of text in the 14 fonts every PDF reader has, lines, boxes and colours,
+# and text wrapped to a width, as those fonts measure it. A page's corner is its bottom left, and lengths are in
+# points, 72 to an inch: an A4 page is 595 wide and 842 high.
+#
+#   use "pdf.folio" as pdf
+#   set doc to pdf's document()
+#   set page to pdf's page(doc)
+#   pdf's text(page, 72, 770, "Invoice 42", "Helvetica-Bold", 24)
+#   pdf's colour(page, "#1a5fb4")
+#   pdf's line(page, 72, 760, 523, 760)
+#   set below to pdf's paragraph(page, 72, 740, 451, "Thanks for your order...", "Times-Roman", 12)
+#   pdf's save(doc, "invoice.pdf")
+#
+# The fonts are Helvetica, Times-Roman and Courier, each also -Bold, and -Oblique (Helvetica, Courier) or
+# -Italic (Times), and -BoldOblique or -BoldItalic. Text is in their own encoding, which has Western European
+# letters: anything else is written as ?. save() is built with --allow-write; bytes_of() gives the file's bytes.
+
+# ---------- the fonts' widths ----------
+# Each letter's width from space (32) to ~ (126), in thousandths of the font's size, as Adobe's metrics give
+# them: italic and oblique fonts are as wide as their upright ones, but Times' (whose italics differ a little),
+# and Courier's letters are all 600.
+
+set pdf_helvetica to list of 278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
+    556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833,
+    722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556,
+    556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584
+set pdf_helvetica_bold to list of 278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
+    556, 556, 556, 556, 556, 556, 333, 333, 584, 584, 584, 611, 975, 722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833,
+    722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333, 278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611,
+    611, 278, 278, 556, 278, 889, 611, 611, 611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584
+set pdf_times to list of 250, 333, 408, 500, 500, 833, 778, 180, 333, 333, 500, 564, 250, 333, 250, 278, 500, 500, 500, 500, 500,
+    500, 500, 500, 500, 500, 278, 278, 564, 564, 564, 444, 921, 722, 667, 667, 722, 611, 556, 722, 722, 333, 389, 722, 611, 889, 722,
+    722, 556, 722, 667, 556, 611, 722, 722, 944, 722, 722, 611, 333, 278, 333, 469, 500, 333, 444, 500, 444, 500, 444, 333, 500, 500,
+    278, 278, 500, 278, 778, 500, 500, 500, 500, 333, 389, 278, 500, 500, 722, 500, 500, 444, 480, 200, 480, 541
+set pdf_times_bold to list of 250, 333, 555, 500, 500, 1000, 833, 278, 333, 333, 500, 570, 250, 333, 250, 278, 500, 500, 500, 500,
+    500, 500, 500, 500, 500, 500, 333, 333, 570, 570, 570, 500, 930, 722, 667, 722, 722, 667, 611, 778, 778, 389, 500, 778, 667, 944,
+    722, 778, 611, 778, 722, 556, 667, 722, 722, 1000, 722, 722, 667, 333, 278, 333, 581, 500, 333, 500, 556, 444, 556, 444, 333, 500,
+    556, 278, 333, 556, 278, 833, 556, 500, 556, 556, 444, 389, 333, 556, 500, 722, 500, 500, 444, 394, 220, 394, 520
+set pdf_fonts to list of "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique", "Times-Roman", "Times-Bold",
+    "Times-Italic", "Times-BoldItalic", "Courier", "Courier-Bold", "Courier-Oblique", "Courier-BoldOblique"
+
+# a font's widths, by its name
+to pdf_widths_of with font
+    if not (font is in pdf_fonts)
+        fail with "pdf.folio: there's no font called " + font + " in every PDF reader: " + (join pdf_fonts with ", ")
+    end
+    if font is "Helvetica" or font is "Helvetica-Oblique"
+        return pdf_helvetica
+    else if font is "Helvetica-Bold" or font is "Helvetica-BoldOblique"
+        return pdf_helvetica_bold
+    else if font is "Times-Roman" or font is "Times-Italic"
+        return pdf_times
+    else if font is "Times-Bold" or font is "Times-BoldItalic"
+        return pdf_times_bold
+    end
+    return nothing # Courier: every letter 600
+end
+
+# how wide text is, in points, in a font of a size
+to width_of with words, font, size
+    set widths to pdf_widths_of(font)
+    set thousandths to 0
+    for each c in split words by ""
+        set code to pdf_code_of(c)
+        if widths is nothing
+            add 600 to thousandths
+        else if code is at least 32 and code is at most 126
+            add item (code - 31) of widths to thousandths
+        else
+            add item 64 of widths to thousandths # past ~, as wide as an a: near enough for wrapping
+        end
+    end
+    return thousandths * size / 1000
+end
+
+# a letter's code in the fonts' encoding (WinAnsi, as Latin-1 has it for most), or 63 (?) for one it hasn't
+to pdf_code_of with c
+    set b to c as bytes
+    if length of b is 1
+        return item 1 of b
+    end
+    if length of b is 2 and item 1 of b is at least 194 and item 1 of b is at most 195 # U+0080 to U+00FF
+        set code to (item 1 of b - 192) * 64 + item 2 of b - 128
+        if code is at least 160
+            return code
+        end
+    end
+    return 63
+end
+
+# ---------- documents and pages ----------
+
+# a document of A4 pages
+to document
+    return document_sized(595, 842)
+end
+
+# a document of US Letter pages
+to letter
+    return document_sized(612, 792)
+end
+
+# a document whose pages are so wide and high, in points
+to document_sized with width, height
+    return record with width width, height height, pages empty list
+end
+
+# a new page at the end of the document, to draw on
+to page with doc
+    set made to record with width width of doc, height height of doc, drawn empty list, fonts empty list
+    set kept to pages of doc
+    add made to kept
+    return made
+end
+
+# a number as a PDF writes it: to three decimals at most, never in powers of ten
+to pdf_number with n
+    set whole to (n * 1000) rounded
+    set negative to whole is less than 0
+    if negative
+        set whole to 0 - whole
+    end
+    set out to "" + ((whole / 1000) rounded down)
+    set rest to remainder of whole divided by 1000
+    if rest is not 0
+        set digits to "" + (rest + 1000)
+        set digits to items 2 to 4 of digits
+        repeat while item (length of digits) of digits is "0"
+            set digits to items 1 to (length of digits - 1) of digits
+        end
+        set out to out + "." + digits
+    end
+    if negative and out is not "0"
+        return "-" + out
+    end
+    return out
+end
+
+# text as a PDF string: in brackets, with \ ( ) escaped and anything past ~ as its code in octal
+to pdf_string with words
+    set out to "("
+    for each c in split words by ""
+        set code to pdf_code_of(c)
+        if c is "(" or c is ")" or c is "\\"
+            set out to out + "\\" + c
+        else if code is less than 32 or code is greater than 126
+            set out to out + "\\" + ((code / 64) rounded down) + (((remainder of code divided by 64) / 8) rounded down) + (remainder of code divided by 8)
+        else
+            set out to out + c
+        end
+    end
+    return out + ")"
+end
+
+to pdf_draw with on, line
+    set kept to drawn of on
+    add line to kept
+end
+
+# text at x, y (where its line sits), in a font of a size
+to text with on, x, y, words, font, size
+    pdf_widths_of(font)
+    set used to fonts of on
+    if not (font is in used)
+        add font to used
+    end
+    set font_number to 0
+    for each k from 1 to length of used
+        if item k of used is font
+            set font_number to k
+        end
+    end
+    pdf_draw(on, "BT /F" + font_number + " " + pdf_number(size) + " Tf " + pdf_number(x) + " " + pdf_number(y) + " Td " + pdf_string(words) + " Tj ET")
+end
+
+# text wrapped to a width, from x, y down, a line every 1.25 times the size; gives the y below the last line
+to paragraph with on, x, y, width, words, font, size
+    set at to y
+    set so_far to ""
+    for each word in split words by " "
+        set tried to word
+        if so_far is not ""
+            set tried to so_far + " " + word
+        end
+        if so_far is not "" and width_of(tried, font, size) is greater than width
+            text(on, x, at, so_far, font, size)
+            set at to at - size * 1.25
+            set so_far to word
+        else
+            set so_far to tried
+        end
+    end
+    if so_far is not ""
+        text(on, x, at, so_far, font, size)
+        set at to at - size * 1.25
+    end
+    return at
+end
+
+# a colour's red, green and blue, from 0 to 1: a name, "#rrggbb", or a list of three numbers from 0 to 255
+to pdf_rgb with c
+    set named to dictionary where "black" is "#000000", "white" is "#ffffff", "red" is "#e01b24", "green" is "#2ec27e",
+        "blue" is "#1c71d8", "grey" is "#808080", "gray" is "#808080", "orange" is "#ff7800", "yellow" is "#f6d32d", "purple" is "#9141ac"
+    set wanted to c
+    if c is in named
+        set wanted to item c of named
+    end
+    try
+        if length of wanted is 3
+            set red to item 1 of wanted
+            set green to item 2 of wanted
+            set blue to item 3 of wanted
+            return list of red / 255, green / 255, blue / 255
+        end
+    if it fails
+        set wanted to wanted # not three numbers: a name or #rrggbb, then
+    end
+    if length of wanted is not 7 or item 1 of wanted is not "#"
+        fail with "pdf.folio: a colour is a name (as \"red\"), #rrggbb, or a list of red, green and blue from 0 to 255, not " + c
+    end
+    set out to empty list
+    for each k in list of 2, 4, 6
+        set high_letter to lowercase of item k of wanted
+        set low_letter to lowercase of item (k + 1) of wanted
+        set high to (position of high_letter in "0123456789abcdef") - 1
+        set low to (position of low_letter in "0123456789abcdef") - 1
+        if high is less than 0 or low is less than 0
+            fail with "pdf.folio: " + wanted + " isn't a colour written #rrggbb"
+        end
+        add (high * 16 + low) / 255 to out
+    end
+    return out
+end
+
+# the colour what's drawn after it is drawn and filled in
+to colour with on, c
+    set rgb to pdf_rgb(c)
+    set three to pdf_number(item 1 of rgb) + " " + pdf_number(item 2 of rgb) + " " + pdf_number(item 3 of rgb)
+    pdf_draw(on, three + " rg " + three + " RG")
+end
+
+# how thick lines are drawn after it, in points
+to line_width with on, w
+    pdf_draw(on, pdf_number(w) + " w")
+end
+
+# a line from x1, y1 to x2, y2
+to line with on, x1, y1, x2, y2
+    pdf_draw(on, pdf_number(x1) + " " + pdf_number(y1) + " m " + pdf_number(x2) + " " + pdf_number(y2) + " l S")
+end
+
+# a box's outline, from its corner at x, y, so wide and high
+to box with on, x, y, w, h
+    pdf_draw(on, pdf_number(x) + " " + pdf_number(y) + " " + pdf_number(w) + " " + pdf_number(h) + " re S")
+end
+
+# a box filled in with the colour
+to filled_box with on, x, y, w, h
+    pdf_draw(on, pdf_number(x) + " " + pdf_number(y) + " " + pdf_number(w) + " " + pdf_number(h) + " re f")
+end
+
+# ---------- the file ----------
+
+# the document as the text of a PDF file: each object, then where each starts, for the reader to find them
+to pdf_written with doc
+    set objects to list of "<< /Type /Catalog /Pages 2 0 R >>", ""
+    set kids to empty list
+    for each p in pages of doc
+        set font_refs to ""
+        set used to fonts of p
+        for each k from 1 to length of used
+            set font_name to item k of used
+            add "<< /Type /Font /Subtype /Type1 /BaseFont /" + font_name + " /Encoding /WinAnsiEncoding >>" to objects
+            set made_at to length of objects
+            set font_refs to font_refs + " /F" + k + " " + made_at + " 0 R"
+        end
+        set stream to join drawn of p with "\n"
+        set stream_size to length of stream
+        add "<< /Length " + stream_size + " >>\nstream\n" + stream + "\nendstream" to objects
+        set contents to length of objects
+        set box_text to pdf_number(width of p) + " " + pdf_number(height of p)
+        add "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + box_text + "] /Resources << /Font <<" + font_refs + " >> >> /Contents " + contents + " 0 R >>" to objects
+        set page_at to length of objects
+        add "" + page_at + " 0 R" to kids
+    end
+    set kid_list to join kids with " "
+    set kid_count to length of kids
+    set item 2 of objects to "<< /Type /Pages /Kids [" + kid_list + "] /Count " + kid_count + " >>"
+    set out to "%PDF-1.4\n"
+    set starts to empty list
+    for each k from 1 to length of objects
+        add length of out to starts
+        set object_text to item k of objects
+        set out to out + k + " 0 obj\n" + object_text + "\nendobj\n"
+    end
+    set table_at to length of out
+    set object_count to length of objects + 1
+    set out to out + "xref\n0 " + object_count + "\n0000000000 65535 f \n"
+    for each s in starts
+        set digits to "" + s
+        repeat while length of digits is less than 10
+            set digits to "0" + digits
+        end
+        set out to out + digits + " 00000 n \n"
+    end
+    return out + "trailer\n<< /Size " + object_count + " /Root 1 0 R >>\nstartxref\n" + table_at + "\n%%EOF\n"
+end
+
+# the document's PDF file, as bytes
+to bytes_of with doc
+    return pdf_written(doc) as bytes
+end
+
+# the document written to a file
+to save with doc, name
+    write bytes_of(doc) as bytes to name
+end

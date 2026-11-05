@@ -1,10 +1,10 @@
-// Packs the extension into moth-<version>.vsix, which VS Code installs, with nothing to install first:
+// Packs the extension into folio-<version>.vsix, which VS Code installs, with nothing to install first:
 //
 //     node editors/vscode/make-vsix.mjs
-//     code --install-extension editors/vscode/moth-0.1.0.vsix
+//     code --install-extension editors/vscode/folio-0.1.0.vsix
 //
 // A .vsix is a zip of the extension, under extension/, with a manifest and a list of content types beside
-// it. Moth's engine goes in too, as engine/, so the extension needs nothing else: the same moth.js the
+// it. Folio's engine goes in too, as engine/, so the extension needs nothing else: the same folio.js the
 // playground runs, whose checker finds problems as you type and whose format() tidies.
 //
 // The Marketplace's own packer, vsce, makes the .vsix that's published (see docs/publishing-the-extension.md).
@@ -16,8 +16,8 @@ import { deflateRawSync, inflateRawSync } from "node:zlib";
 const here = (file) => new URL(file, import.meta.url);
 const repo = (file) => new URL(`../../${file}`, import.meta.url);
 const manifest = JSON.parse(readFileSync(here("package.json"), "utf8"));
-export const ENGINE = ["moth.js", "vm.js", "scope.js", "jit.js", "wasm.js", "wasm-binary.js", "wasm-runtime.js", "checker.js", "pictures.js"];
-const OWN = ["package.json", "extension.js", "client.js", "debug-adapter.js", "find-moth.js", "language-configuration.json", "syntaxes/moth.tmLanguage.json", "snippets/moth.json", "images/icon.png", "README.md", "CHANGELOG.md"];
+export const ENGINE = ["folio.js", "vm.js", "scope.js", "jit.js", "wasm.js", "wasm-binary.js", "wasm-runtime.js", "checker.js", "pictures.js"];
+const OWN = ["package.json", "extension.js", "client.js", "debug-adapter.js", "find-folio.js", "language-configuration.json", "syntaxes/folio.tmLanguage.json", "snippets/folio.json", "images/icon.png", "README.md", "CHANGELOG.md"];
 const ENGINE_PACKAGE = Buffer.from('{ "type": "module" }\n'); // the engine's files are modules
 // every file of the extension's folder that goes in the package, as vsce lists them (vsce ls), the engine's
 // as they are once copied to engine/; the licence is LICENSE here, which a .vsix calls LICENSE.txt
@@ -37,7 +37,7 @@ export function contents() {
     <Identity Language="en-US" Id="${manifest.name}" Version="${manifest.version}" Publisher="${manifest.publisher}" />
     <DisplayName>${escape(manifest.displayName)}</DisplayName>
     <Description xml:space="preserve">${escape(manifest.description)}</Description>
-    <Tags>moth,programming language</Tags>
+    <Tags>folio,programming language</Tags>
     <Categories>${manifest.categories.join(",")}</Categories>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
@@ -155,7 +155,7 @@ export function unzip(bytes) {
   return files;
 }
 
-// Moth's engine, copied into engine/ beside the extension, where vsce packs it from
+// Folio's engine, copied into engine/ beside the extension, where vsce packs it from
 export function copyEngine() {
   mkdirSync(here("engine/"), { recursive: true });
   for (const file of ENGINE) writeFileSync(here(`engine/${file}`), readFileSync(repo(file)));
@@ -165,11 +165,11 @@ export function copyEngine() {
 if (process.argv[1] && new URL(import.meta.url).pathname.endsWith(process.argv[1].replace(/\\/g, "/").split("/").pop())) {
   if (process.argv.includes("--engine")) {
     copyEngine();
-    console.log(`copied Moth's engine into engine/ (${ENGINE.length} files)`);
+    console.log(`copied Folio's engine into engine/ (${ENGINE.length} files)`);
     process.exit(0);
   }
-  const out = here(`moth-${manifest.version}.vsix`);
+  const out = here(`folio-${manifest.version}.vsix`);
   const bytes = zip(contents());
   writeFileSync(out, bytes);
-  console.log(`made moth-${manifest.version}.vsix (${bytes.length.toLocaleString("en")} bytes)`);
+  console.log(`made folio-${manifest.version}.vsix (${bytes.length.toLocaleString("en")} bytes)`);
 }

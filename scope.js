@@ -1,4 +1,4 @@
-// Which variable each name means. Both back ends build on this: the bytecode compiler (moth.js) and
+// Which variable each name means. Both back ends build on this: the bytecode compiler (folio.js) and
 // the JavaScript compiler (jit.js), so the two can't disagree about what a name refers to.
 import { noValue, closest } from "./vm.js";
 
@@ -83,7 +83,7 @@ export class Scope {
   }
 
   // What to say when a name nothing ever sets is used: suggest the closest name that does exist. A line
-  // that starts with an unknown name may be a misspelled Moth word instead, like `sya "hi"`, or a phrase
+  // that starts with an unknown name may be a misspelled Folio word instead, like `sya "hi"`, or a phrase
   // missing its last part, like `wait 2`.
   undefinedMessage(name, { call = false, statement = false } = {}) {
     if (call && PHRASE_HINTS.has(name)) return `there is no function called '${name}' (${PHRASE_HINTS.get(name)})`;

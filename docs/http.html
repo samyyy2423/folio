@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>http.moth · Moth's standard library</title>
+  <title>http.folio · Folio's standard library</title>
   <meta name="description" content="Asking web servers, as Python's urllib.request (and the requests package) do.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,42 +27,42 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>http</em>.moth</h1>
+      <h1><em>http</em>.folio</h1>
       <p>Asking web servers, as Python's urllib.request (and the requests package) do.</p>
-      <p class="use"><code>use "http.moth" as http</code></p>
+      <p class="use"><code>use "http.folio" as http</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="http.moth's functions">
+    <nav class="toc" aria-label="http.folio's functions">
       <h2>14 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#wait_at_most">wait_at_most</a></li><li><a href="#trust">trust</a></li><li><a href="#head">head</a></li><li><a href="#get">get</a></li><li><a href="#post">post</a></li><li><a href="#put">put</a></li><li><a href="#patch">patch</a></li><li><a href="#delete">delete</a></li><li><a href="#get_json">get_json</a></li><li><a href="#check">check</a></li><li><a href="#request">request</a></li><li><a href="#encoded">encoded</a></li><li><a href="#decoded">decoded</a></li><li><a href="#form_of">form_of</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Asking web servers, as Python's urllib.request (and the requests package) do: any method, headers of one's own, bodies of text, bytes or JSON, redirects followed, and answers sent in chunks or squeezed with gzip, over HTTP and HTTPS, on sockets.moth. A program <code>moth build</code> makes can use it, built with --allow-libraries.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <p>Asking web servers, as Python's urllib.request (and the requests package) do: any method, headers of one's own, bodies of text, bytes or JSON, redirects followed, and answers sent in chunks or squeezed with gzip, over HTTP and HTTPS, on sockets.folio. A program <code>folio build</code> makes can use it, built with --allow-libraries.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's get(<span class="s">&quot;https://example.com/&quot;</span>)
 <span class="k">say</span> status <span class="k">of</span> r                      <span class="c"># 200; reason of r is &quot;OK&quot;</span>
 <span class="k">say</span> <span class="k">item</span> <span class="s">&quot;content-type&quot;</span> <span class="k">of</span> <span class="k">headers</span> <span class="k">of</span> r   <span class="c"># each header's name in small letters</span>
 <span class="k">say</span> text <span class="k">of</span> r                        <span class="c"># what it sent, as text; body of r is its bytes; url of r where it ended</span>
 <span class="k">set</span> r <span class="k">to</span> http's request(<span class="s">&quot;PUT&quot;</span>, <span class="s">&quot;https://example.com/api/1&quot;</span>, <span class="k">record</span> <span class="k">with</span> name <span class="s">&quot;Sam&quot;</span>,
     <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;authorization&quot;</span> <span class="k">is</span> <span class="s">&quot;Bearer xyz&quot;</span>)   <span class="c"># a record, list or dictionary goes as JSON</span>
-<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;moth&quot;</span>))
+<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;folio&quot;</span>))
 http's check(r)                      <span class="c"># a mistake if the server said no (400 and up)</span>
 <span class="k">say</span> http's get_json(<span class="s">&quot;https://example.com/data.json&quot;</span>)   <span class="c"># what its JSON says</span>
 <span class="k">set</span> r <span class="k">to</span> http's put(<span class="s">&quot;https://example.com/api/1&quot;</span>, <span class="k">record</span> <span class="k">with</span> name <span class="s">&quot;Sam&quot;</span>)   <span class="c"># and patch the same way</span>
@@ -71,7 +71,7 @@ http's check(r)                      <span class="c"># a mistake if the server s
 <span class="k">say</span> http's encoded(<span class="s">&quot;a b&amp;c&quot;</span>) <span class="s">&quot; &quot;</span> http's decoded(<span class="s">&quot;a%20b%26c&quot;</span>)   <span class="c"># a%20b%26c a b&amp;c</span>
 http's wait_at_most(<span class="n">5000</span>)                <span class="c"># 5 seconds for an answer</span>
 http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span class="c"># a company's own certificates too</span></code></pre></div>
-          <p>head, get, post, put, patch and delete are request with that method. A request fails only when it can't be made or answered: an answer of 404 or 500 is a response like any other. Redirects (301, 302, 303, 307, 308) are followed, up to 10, as browsers do: after a 303, or a 301 or 302 to a POST, as a GET with no body; Authorization isn't sent on to another host. <a href="#wait_at_most">wait_at_most</a>(ms) is how long an answer may take (30000); <a href="#trust">trust</a>(file) trusts a PEM file's certificates besides the system's. HTTPS uses OpenSSL as sockets.moth does.</p>
+          <p>head, get, post, put, patch and delete are request with that method. A request fails only when it can't be made or answered: an answer of 404 or 500 is a response like any other. Redirects (301, 302, 303, 307, 308) are followed, up to 10, as browsers do: after a 303, or a 301 or 302 to a POST, as a GET with no body; Authorization isn't sent on to another host. <a href="#wait_at_most">wait_at_most</a>(ms) is how long an answer may take (30000); <a href="#trust">trust</a>(file) trusts a PEM file's certificates besides the system's. HTTPS uses OpenSSL as sockets.folio does.</p>
       </section>
       <section class="fns">
         <h2>Functions</h2>
@@ -82,9 +82,9 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>milliseconds</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to wait_at_most with milliseconds</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L36">http.moth line 36</a></p>
+          <p class="written">Written <code>to wait_at_most with milliseconds</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L36">http.folio line 36</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 http's wait_at_most(<span class="n">5000</span>)                <span class="c"># 5 seconds for an answer</span></code></pre></div>
         </section>
         <section class="fn" id="trust">
@@ -94,9 +94,9 @@ http's wait_at_most(<span class="n">5000</span>)                <span class="c">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>file</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to trust with file</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L42">http.moth line 42</a></p>
+          <p class="written">Written <code>to trust with file</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L42">http.folio line 42</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span class="c"># a company's own certificates too</span></code></pre></div>
         </section>
         <section class="fn" id="head">
@@ -106,9 +106,9 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to head with url</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L47">http.moth line 47</a></p>
+          <p class="written">Written <code>to head with url</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L47">http.folio line 47</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's delete(<span class="s">&quot;https://example.com/api/1&quot;</span>)
 <span class="k">set</span> r <span class="k">to</span> http's head(<span class="s">&quot;https://example.com/big.zip&quot;</span>)      <span class="c"># the headers alone</span></code></pre></div>
         </section>
@@ -119,9 +119,9 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to get with url</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L52">http.moth line 52</a></p>
+          <p class="written">Written <code>to get with url</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L52">http.folio line 52</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's get(<span class="s">&quot;https://example.com/&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="post">
@@ -131,11 +131,11 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li><li><code>body</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to post with url, body</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L57">http.moth line 57</a></p>
+          <p class="written">Written <code>to post with url, body</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L57">http.folio line 57</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's get(<span class="s">&quot;https://example.com/&quot;</span>)
-<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;moth&quot;</span>))</code></pre></div>
+<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;folio&quot;</span>))</code></pre></div>
         </section>
         <section class="fn" id="put">
           <h3><a href="#put"><code>http's put(url, body)</code></a></h3>
@@ -144,10 +144,10 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li><li><code>body</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to put with url, body</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L62">http.moth line 62</a></p>
+          <p class="written">Written <code>to put with url, body</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L62">http.folio line 62</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
-<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;moth&quot;</span>))
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
+<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;folio&quot;</span>))
 <span class="k">set</span> r <span class="k">to</span> http's put(<span class="s">&quot;https://example.com/api/1&quot;</span>, <span class="k">record</span> <span class="k">with</span> name <span class="s">&quot;Sam&quot;</span>)   <span class="c"># and patch the same way</span></code></pre></div>
         </section>
         <section class="fn" id="patch">
@@ -157,9 +157,9 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li><li><code>body</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to patch with url, body</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L67">http.moth line 67</a></p>
+          <p class="written">Written <code>to patch with url, body</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L67">http.folio line 67</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 http's patch(url, body)</code></pre></div>
         </section>
         <section class="fn" id="delete">
@@ -169,9 +169,9 @@ http's patch(url, body)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to delete with url</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L72">http.moth line 72</a></p>
+          <p class="written">Written <code>to delete with url</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L72">http.folio line 72</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's put(<span class="s">&quot;https://example.com/api/1&quot;</span>, <span class="k">record</span> <span class="k">with</span> name <span class="s">&quot;Sam&quot;</span>)   <span class="c"># and patch the same way</span>
 <span class="k">set</span> r <span class="k">to</span> http's delete(<span class="s">&quot;https://example.com/api/1&quot;</span>)</code></pre></div>
         </section>
@@ -182,9 +182,9 @@ http's patch(url, body)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>url</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to get_json with url</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L77">http.moth line 77</a></p>
+          <p class="written">Written <code>to get_json with url</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L77">http.folio line 77</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">say</span> http's get_json(<span class="s">&quot;https://example.com/data.json&quot;</span>)   <span class="c"># what its JSON says</span></code></pre></div>
         </section>
         <section class="fn" id="check">
@@ -194,10 +194,10 @@ http's patch(url, body)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>response</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to check with response</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L84">http.moth line 84</a></p>
+          <p class="written">Written <code>to check with response</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L84">http.folio line 84</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
-<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;moth&quot;</span>))
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
+<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;folio&quot;</span>))
 http's check(r)                      <span class="c"># a mistake if the server said no (400 and up)</span></code></pre></div>
         </section>
         <section class="fn" id="request">
@@ -207,16 +207,16 @@ http's check(r)                      <span class="c"># a mistake if the server s
             <div><h4>Inputs</h4><ul class="inputs"><li><code>method</code></li><li><code>url</code></li><li><code>body</code></li><li><code>headers</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to request with method, url, body, headers</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L93">http.moth line 93</a></p>
+          <p class="written">Written <code>to request with method, url, body, headers</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L93">http.folio line 93</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's get(<span class="s">&quot;https://example.com/&quot;</span>)
 <span class="k">say</span> status <span class="k">of</span> r                      <span class="c"># 200; reason of r is &quot;OK&quot;</span>
 <span class="k">say</span> <span class="k">item</span> <span class="s">&quot;content-type&quot;</span> <span class="k">of</span> <span class="k">headers</span> <span class="k">of</span> r   <span class="c"># each header's name in small letters</span>
 <span class="k">say</span> text <span class="k">of</span> r                        <span class="c"># what it sent, as text; body of r is its bytes; url of r where it ended</span>
 <span class="k">set</span> r <span class="k">to</span> http's request(<span class="s">&quot;PUT&quot;</span>, <span class="s">&quot;https://example.com/api/1&quot;</span>, <span class="k">record</span> <span class="k">with</span> name <span class="s">&quot;Sam&quot;</span>,
     <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;authorization&quot;</span> <span class="k">is</span> <span class="s">&quot;Bearer xyz&quot;</span>)   <span class="c"># a record, list or dictionary goes as JSON</span>
-<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;moth&quot;</span>))
+<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;folio&quot;</span>))
 http's check(r)                      <span class="c"># a mistake if the server said no (400 and up)</span>
 <span class="k">say</span> http's get_json(<span class="s">&quot;https://example.com/data.json&quot;</span>)   <span class="c"># what its JSON says</span>
 <span class="k">set</span> r <span class="k">to</span> http's put(<span class="s">&quot;https://example.com/api/1&quot;</span>, <span class="k">record</span> <span class="k">with</span> name <span class="s">&quot;Sam&quot;</span>)   <span class="c"># and patch the same way</span>
@@ -233,9 +233,9 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to encoded with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L420">http.moth line 420</a></p>
+          <p class="written">Written <code>to encoded with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L420">http.folio line 420</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">say</span> http's encoded(<span class="s">&quot;a b&amp;c&quot;</span>) <span class="s">&quot; &quot;</span> http's decoded(<span class="s">&quot;a%20b%26c&quot;</span>)   <span class="c"># a%20b%26c a b&amp;c</span></code></pre><pre class="says"><code>a%20b%26c a b&amp;c</code></pre></div>
         </section>
         <section class="fn" id="decoded">
@@ -245,9 +245,9 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to decoded with words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L434">http.moth line 434</a></p>
+          <p class="written">Written <code>to decoded with words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L434">http.folio line 434</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">say</span> http's encoded(<span class="s">&quot;a b&amp;c&quot;</span>) <span class="s">&quot; &quot;</span> http's decoded(<span class="s">&quot;a%20b%26c&quot;</span>)   <span class="c"># a%20b%26c a b&amp;c</span></code></pre><pre class="says"><code>a%20b%26c a b&amp;c</code></pre></div>
         </section>
         <section class="fn" id="form_of">
@@ -257,25 +257,25 @@ http's trust(<span class="s">&quot;company-ca.pem&quot;</span>)           <span 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>fields</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to form_of with fields</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/http.moth#L461">http.moth line 461</a></p>
+          <p class="written">Written <code>to form_of with fields</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/http.folio#L461">http.folio line 461</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.moth&quot;</span> <span class="k">as</span> http
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;http.folio&quot;</span> <span class="k">as</span> http
 <span class="k">set</span> r <span class="k">to</span> http's get(<span class="s">&quot;https://example.com/&quot;</span>)
-<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;moth&quot;</span>))</code></pre></div>
+<span class="k">set</span> r <span class="k">to</span> http's post(<span class="s">&quot;https://example.com/form&quot;</span>, http's form_of(<span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;q&quot;</span> <span class="k">is</span> <span class="s">&quot;folio&quot;</span>))</code></pre></div>
         </section>
       </section>
     </main>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

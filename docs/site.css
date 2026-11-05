@@ -27,9 +27,9 @@ code, pre { font-feature-settings: "liga" 0, "calt" 0; }
 * { scrollbar-width: thin; scrollbar-color: #3d2f20 transparent; }
 [hidden] { display: none !important; }
 .icon { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.moth .fore { fill: url(#wing-fore); } .moth .hind { fill: url(#wing-hind); }
-.moth .spot { fill: #7a4512; } .moth .body { fill: #ffe7b5; }
-.moth .feelers { fill: none; stroke: #ffe7b5; stroke-width: 1.6; stroke-linecap: round; }
+.folio .fore { fill: url(#wing-fore); } .folio .hind { fill: url(#wing-hind); }
+.folio .spot { fill: #7a4512; } .folio .body { fill: #ffe7b5; }
+.folio .feelers { fill: none; stroke: #ffe7b5; stroke-width: 1.6; stroke-linecap: round; }
 
 /* the top of the page, as learn.html has it */
 header { position: relative; overflow: hidden; isolation: isolate; border-bottom: 1px solid var(--line); background:

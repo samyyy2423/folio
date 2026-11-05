@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>options.moth · Moth's standard library</title>
+  <title>options.folio · Folio's standard library</title>
   <meta name="description" content="A program's command line read, as Python's argparse reads it: options with values, flags, and the names in order after them, with a --help made from what each is for.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,35 +27,35 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>options</em>.moth</h1>
+      <h1><em>options</em>.folio</h1>
       <p>A program's command line read, as Python's argparse reads it: options with values, flags, and the names in order after them, with a --help made from what each is for.</p>
-      <p class="use"><code>use "options.moth" as options</code></p>
+      <p class="use"><code>use "options.folio" as options</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="options.moth's functions">
+    <nav class="toc" aria-label="options.folio's functions">
       <h2>9 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#parser">parser</a></li><li><a href="#option">option</a></li><li><a href="#flag">flag</a></li><li><a href="#positional">positional</a></li><li><a href="#rest">rest</a></li><li><a href="#parse">parse</a></li><li><a href="#parse_or_fail">parse_or_fail</a></li><li><a href="#usage_text">usage_text</a></li><li><a href="#help_text">help_text</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>A program's command line read, as Python's argparse reads it: options with values, flags, and the names in order after them, with a --help made from what each is for. In Moth alone, so it works everywhere.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <p>A program's command line read, as Python's argparse reads it: options with values, flags, and the names in order after them, with a --help made from what each is for. In Folio alone, so it works everywhere.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 options's option(p, <span class="s">&quot;name&quot;</span>, <span class="s">&quot;n&quot;</span>, <span class="s">&quot;who to greet&quot;</span>, <span class="s">&quot;World&quot;</span>)   <span class="c"># --name Sam, -n Sam or --name=Sam; World if not</span>
 options's option(p, <span class="s">&quot;times&quot;</span>, <span class="s">&quot;t&quot;</span>, <span class="s">&quot;how many times&quot;</span>, <span class="n">1</span>)      <span class="c"># a default that's a number makes it a number</span>
@@ -75,9 +75,9 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>name</code></li><li><code>description</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to parser with name, description</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L22">options.moth line 22</a></p>
+          <p class="written">Written <code>to parser with name, description</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L22">options.folio line 22</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 <span class="k">say</span> p</code></pre><pre class="says"><code>(record with name &quot;greet&quot;, description &quot;Says hello to someone.&quot;, options [], positionals [], rest nothing)</code></pre></div>
         </section>
@@ -88,9 +88,9 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>name</code></li><li><code>short</code></li><li><code>help</code></li><li><code>default</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to option with p, name, short, help, default</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L28">options.moth line 28</a></p>
+          <p class="written">Written <code>to option with p, name, short, help, default</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L28">options.folio line 28</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 options's option(p, <span class="s">&quot;name&quot;</span>, <span class="s">&quot;n&quot;</span>, <span class="s">&quot;who to greet&quot;</span>, <span class="s">&quot;World&quot;</span>)   <span class="c"># --name Sam, -n Sam or --name=Sam; World if not</span></code></pre></div>
         </section>
@@ -101,9 +101,9 @@ options's option(p, <span class="s">&quot;name&quot;</span>, <span class="s">&qu
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>name</code></li><li><code>short</code></li><li><code>help</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to flag with p, name, short, help</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L34">options.moth line 34</a></p>
+          <p class="written">Written <code>to flag with p, name, short, help</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L34">options.folio line 34</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 options's flag(p, <span class="s">&quot;loud&quot;</span>, <span class="s">&quot;l&quot;</span>, <span class="s">&quot;shout it&quot;</span>)                  <span class="c"># --loud or -l: yes; no if it isn't there</span></code></pre></div>
         </section>
@@ -114,9 +114,9 @@ options's flag(p, <span class="s">&quot;loud&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>name</code></li><li><code>help</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to positional with p, name, help</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L51">options.moth line 51</a></p>
+          <p class="written">Written <code>to positional with p, name, help</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L51">options.folio line 51</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 options's positional(p, <span class="s">&quot;file&quot;</span>, <span class="s">&quot;the file to greet from&quot;</span>)   <span class="c"># needed, in order</span></code></pre></div>
         </section>
@@ -127,9 +127,9 @@ options's positional(p, <span class="s">&quot;file&quot;</span>, <span class="s"
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>name</code></li><li><code>help</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to rest with p, name, help</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L59">options.moth line 59</a></p>
+          <p class="written">Written <code>to rest with p, name, help</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L59">options.folio line 59</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot;other files&quot;</span>)                    <span class="c"># the rest, as a list, which can be empty</span></code></pre></div>
         </section>
@@ -140,9 +140,9 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>given_arguments</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to parse with p, given_arguments</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L64">options.moth line 64</a></p>
+          <p class="written">Written <code>to parse with p, given_arguments</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L64">options.folio line 64</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
 <span class="k">set</span> given <span class="k">to</span> options's parse(p, <span class="k">arguments</span>)                  <span class="c"># a dictionary: name, times, loud, file, more</span></code></pre></div>
         </section>
@@ -153,9 +153,9 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>given_arguments</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to parse_or_fail with p, given_arguments</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L81">options.moth line 81</a></p>
+          <p class="written">Written <code>to parse_or_fail with p, given_arguments</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L81">options.folio line 81</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">to</span> greeter
     <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
     options's option(p, <span class="s">&quot;name&quot;</span>, <span class="s">&quot;n&quot;</span>, <span class="s">&quot;who to greet&quot;</span>, <span class="s">&quot;World&quot;</span>)
@@ -176,9 +176,9 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to usage_text with p</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L212">options.moth line 212</a></p>
+          <p class="written">Written <code>to usage_text with p</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L212">options.folio line 212</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">to</span> greeter
     <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
     options's option(p, <span class="s">&quot;name&quot;</span>, <span class="s">&quot;n&quot;</span>, <span class="s">&quot;who to greet&quot;</span>, <span class="s">&quot;World&quot;</span>)
@@ -198,9 +198,9 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
             <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to help_text with p</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/options.moth#L234">options.moth line 234</a></p>
+          <p class="written">Written <code>to help_text with p</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/options.folio#L234">options.folio line 234</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.moth&quot;</span> <span class="k">as</span> options
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;options.folio&quot;</span> <span class="k">as</span> options
 <span class="k">to</span> greeter
     <span class="k">set</span> p <span class="k">to</span> options's parser(<span class="s">&quot;greet&quot;</span>, <span class="s">&quot;Says hello to someone.&quot;</span>)
     options's option(p, <span class="s">&quot;name&quot;</span>, <span class="s">&quot;n&quot;</span>, <span class="s">&quot;who to greet&quot;</span>, <span class="s">&quot;World&quot;</span>)
@@ -219,14 +219,14 @@ options's rest(p, <span class="s">&quot;more&quot;</span>, <span class="s">&quot
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

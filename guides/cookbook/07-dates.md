@@ -1,9 +1,9 @@
 # Dates
 
-`dates.moth` reads dates, adds days, counts the days between two, and writes a date as a person wants it.
+`dates.folio` reads dates, adds days, counts the days between two, and writes a date as a person wants it.
 
-```moth
-use "dates.moth" as dates
+```folio
+use "dates.folio" as dates
 
 set start to dates's read_date("2026-11-05")
 set due to dates's add_days(start, 30)

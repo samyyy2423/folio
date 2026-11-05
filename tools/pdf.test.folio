@@ -1,0 +1,95 @@
+use "pdf.folio" as pdf
+
+to test_widths
+    expect pdf's width_of("Hello", "Helvetica", 12) is 27.336
+    expect pdf's width_of("Hello", "Helvetica-Bold", 10) is 24.45
+    expect pdf's width_of("abc", "Courier", 10) is 18
+    expect pdf's width_of("", "Times-Roman", 12) is 0
+end
+
+to test_text_colours_and_lines
+    set doc to pdf's document()
+    set page to pdf's page(doc)
+    pdf's text(page, 72, 770.5, "Hi (there) \\ é", "Times-Bold", 24)
+    pdf's colour(page, "#ff8000")
+    pdf's colour(page, list of 0, 0, 255)
+    pdf's line_width(page, 0.25)
+    pdf's line(page, 72, 760, 523, 760)
+    pdf's box(page, 10, 20, 30, 40)
+    pdf's filled_box(page, 1, 2, 3, 4)
+    set drawn to drawn of page
+    expect item 1 of drawn is "BT /F1 24 Tf 72 770.5 Td (Hi \\(there\\) \\\\ \\351) Tj ET"
+    expect item 2 of drawn is "1 0.502 0 rg 1 0.502 0 RG"
+    expect item 3 of drawn is "0 0 1 rg 0 0 1 RG"
+    expect item 4 of drawn is "0.25 w"
+    expect item 5 of drawn is "72 760 m 523 760 l S"
+    expect item 6 of drawn is "10 20 30 40 re S"
+    expect item 7 of drawn is "1 2 3 4 re f"
+end
+
+to test_paragraphs_wrap_to_their_width
+    set doc to pdf's letter()
+    set page to pdf's page(doc)
+    set below to pdf's paragraph(page, 72, 700, 100, "the quick brown fox jumps over the lazy dog again and again", "Helvetica", 12)
+    set lines to drawn of page
+    expect length of lines is 4
+    expect below is 700 - 4 * 15
+    set said to empty list
+    for each drawn_line in lines
+        set opened to position of "(" in drawn_line
+        set closed to position of ")" in drawn_line
+        add items (opened + 1) to (closed - 1) of drawn_line to said
+    end
+    expect join said with " " is "the quick brown fox jumps over the lazy dog again and again"
+    for each k from 1 to length of said
+        expect pdf's width_of(item k of said, "Helvetica", 12) is at most 100
+        if k is less than length of said # and the next line's first word wouldn't have fitted
+            set next_word to item 1 of split item (k + 1) of said by " "
+            expect pdf's width_of(item k of said + " " + next_word, "Helvetica", 12) is greater than 100
+        end
+    end
+end
+
+# where each object starts, as the file's table says, and what's there
+to test_the_file_finds_its_objects
+    set doc to pdf's document()
+    set first to pdf's page(doc)
+    pdf's text(first, 72, 770, "One", "Helvetica", 12)
+    set second to pdf's page(doc)
+    pdf's text(second, 72, 770, "Two", "Courier", 12)
+    pdf's text(second, 72, 750, "Three", "Helvetica", 12)
+    set written to pdf's bytes_of(doc) as text
+    expect items 1 to 8 of written is "%PDF-1.4"
+    expect items (length of written - 5) to (length of written) of written is "%%EOF\n"
+    set table to position of "xref\n" in written
+    set from_table to items table to (length of written) of written
+    set rows to split from_table by "\n"
+    set sizes to split item 2 of rows by " "
+    set entries to number of item 2 of sizes
+    expect entries is 10 # the 9 objects, and the table's own first entry
+    for each k from 1 to entries - 1
+        set row to item (k + 3) of rows
+        set at to number of items 1 to 10 of row
+        set looked to items (at + 1) to (at + 9) of written
+        set wanted to "" + k + " 0 obj"
+        expect position of wanted in looked is 1
+    end
+    expect "/Count 2" is in written
+    expect "/BaseFont /Courier /Encoding /WinAnsiEncoding" is in written
+end
+
+to test_mistakes
+    set page to pdf's page(pdf's document())
+    try
+        pdf's text(page, 0, 0, "x", "Comic Sans", 12)
+        fail with "a font no reader has"
+    if it fails with why
+        expect "no font called Comic Sans" is in why
+    end
+    try
+        pdf's colour(page, "#12345")
+        fail with "a colour that isn't one"
+    if it fails with why
+        expect "a colour is a name" is in why
+    end
+end

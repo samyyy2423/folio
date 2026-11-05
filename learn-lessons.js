@@ -1,5 +1,5 @@
-// The lessons on learn.html, the page that teaches Moth a step at a time. Each has a title, what it teaches (as
-// HTML), a program to run and change, and something to try. moth.test.js runs every program on every engine, so a
+// The lessons on learn.html, the page that teaches Folio a step at a time. Each has a title, what it teaches (as
+// HTML), a program to run and change, and something to try. folio.test.js runs every program on every engine, so a
 // lesson never shows code that doesn't work: `answers` are what a test types when the program asks, `fails` is
 // the mistake a lesson means to show, and `draws` says the program draws, which the playground shows.
 
@@ -8,7 +8,7 @@ export const LESSONS = [
     title: "Say something",
     intro: `<p><code>say</code> shows whatever comes after it. Put words in quotes; numbers and sums need none. Put
       pieces side by side and they're joined exactly as written.</p>
-      <p>Moth works to 15 digits, like a spreadsheet, so <code>0.1 + 0.2</code> is exactly <code>0.3</code>.</p>`,
+      <p>Folio works to 15 digits, like a spreadsheet, so <code>0.1 + 0.2</code> is exactly <code>0.3</code>.</p>`,
     code: `say "Hello, world!"
 say "2 + 3 is " 2 + 3
 say "a week has " 7 * 24 " hours"
@@ -69,8 +69,8 @@ say "The first power of 2 past 100 is " total`,
   {
     title: "Lists",
     intro: `<p>A list keeps values in order. <code>add</code> puts one at the end, <code>item 1 of</code> takes the
-      first (Moth counts from 1), and <code>for each ... in</code> goes through them all.</p>
-      <p>The last line asks for an item that isn't there. Run it and read what Moth says: its mistakes are in
+      first (Folio counts from 1), and <code>for each ... in</code> goes through them all.</p>
+      <p>The last line asks for an item that isn't there. Run it and read what Folio says: its mistakes are in
       plain words, and point at the line.</p>`,
     code: `set fruits to list of "apple", "pear"
 add "mango" to fruits
@@ -169,7 +169,7 @@ end`,
   },
   {
     title: "Draw",
-    intro: `<p>Moth has a turtle that draws as it moves. It starts in the middle, facing up, with its pen down.
+    intro: `<p>Folio has a turtle that draws as it moves. It starts in the middle, facing up, with its pen down.
       <code>move forward</code>, <code>turn right</code> and <code>pen color</code> are all it needs.</p>
       <p>The playground shows drawings, so this one opens there.</p>`,
     code: `pen color "tomato"

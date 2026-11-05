@@ -3,21 +3,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { run, compileToWasmBytes } from "./moth.js";
+import { run, compileToWasmBytes } from "./folio.js";
 import { show } from "./vm.js";
-import { wasmRuntimeMoth } from "./make-wasm-runtime.mjs";
+import { wasmRuntimeFolio } from "./make-wasm-runtime.mjs";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 
-test("wasm-runtime.moth is what make-wasm-runtime.mjs makes of wasm-runtime.js as it is", () => {
-  assert.equal(here("wasm-runtime.moth"), wasmRuntimeMoth());
+test("wasm-runtime.folio is what make-wasm-runtime.mjs makes of wasm-runtime.js as it is", () => {
+  assert.equal(here("wasm-runtime.folio"), wasmRuntimeFolio());
 });
 
 // a module's exports, run with no imports at all: showing a number, and joining text, never need JavaScript
 function exportsOf() {
   const module = new WebAssembly.Module(compileToWasmBytes("say 1").bytes);
   const imports = new Proxy({}, { get: (_, name) => () => assert.fail(`the module called ${String(name)}`) });
-  return new WebAssembly.Instance(module, { moth: imports }).exports;
+  return new WebAssembly.Instance(module, { folio: imports }).exports;
 }
 
 test("a number in text is what the VM shows: to 15 digits, laid out as JavaScript lays numbers out", () => {
@@ -81,7 +81,7 @@ test("a program's own mistakes are thrown and caught in the module, and one noth
   const said = [];
   const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: () => said.push("say") };
   const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
-  const x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  const x = new WebAssembly.Instance(module, { folio: imports }).exports;
   x.restart();
   assert.throws(() => x.main(), (err) => err instanceof WebAssembly.Exception && err.is(x.mistake) && x.num(err.getArg(x.mistake, 0)) === 7 && err.getArg(x.mistake, 1) === 1);
   assert.deepEqual(said, ["say", "say"]);
@@ -98,9 +98,48 @@ test("dictionaries are made, changed and read in the module, with none of JavaSc
   let said = 0;
   const allowed = { grant: () => 2 ** 30, refill: () => 2 ** 30, say: () => said++ };
   const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
-  const x = new WebAssembly.Instance(module, { moth: imports }).exports;
+  const x = new WebAssembly.Instance(module, { folio: imports }).exports;
   x.restart();
   x.main();
   assert.equal(said, 6);
   assert.deepEqual(both(source), ["295", "c", "z", "yes", "no", "14"]);
 });
+
+// Stage 2's fourth part, begun (DESIGN §151): a call of what isn't a function, a function given the wrong number of
+// inputs, a range that isn't of numbers, and a field of what isn't a record are worded in the module, with the
+// program's names from its own data and each value's kind in words, as the VM words them
+test("the module words the mistakes of calls, ranges and fields itself, with the program's names", () => {
+  const source = [
+    "to f with a",
+    "    return a",
+    "end",
+    "set x to 5", // (an amount is made by a built-in, still in JavaScript)
+    "try\n    say nope()\nif it fails with why\n    say why\nend",
+    "try\n    say x(1)\nif it fails with why\n    say why\nend",
+    "try\n    say f(1, 2)\nif it fails with why\n    say why\nend",
+    "try\n    for each i from \"a\" to yes\n        say i\n    end\nif it fails with why\n    say why\nend",
+    "try\n    set size of x to 2\nif it fails with why\n    say why\nend",
+    "try\n    say size of (list of 1)\nif it fails with why\n    say why\nend",
+  ].join("\n");
+  const module = new WebAssembly.Module(compileToWasmBytes(source).bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["callable", "checkInputs", "checkRange", "recordFor"]) assert.ok(!imported.includes(gone), gone);
+  let x = null;
+  const said = [];
+  const text = (t) => String.fromCharCode(...Array.from({ length: x.textLength(t) }, (_, i) => x.textUnit(t, i)));
+  const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: (parts) => said.push(Array.from({ length: x.listLength(parts) }, (_, i) => text(x.listItem(parts, i))).join("")) };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  x = new WebAssembly.Instance(module, { folio: imports }).exports;
+  x.restart();
+  x.main();
+  assert.deepEqual(said, [
+    "there is no function called 'nope'",
+    "'x' is a number, not a function",
+    "'f' needs 1 input but got 2",
+    "'from' and 'to' need numbers, not text and yes/no",
+    "can only change 'size' of a record, not a number",
+    "can't take 'size' of a list",
+  ]);
+  assert.deepEqual(both(source), said);
+});
+

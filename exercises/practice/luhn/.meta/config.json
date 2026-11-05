@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "luhn.moth"
+      "luhn.folio"
     ],
     "test": [
-      "luhn.test.moth"
+      "luhn.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Check a number with the Luhn algorithm, as card numbers are checked."

@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "anagram.moth"
+      "anagram.folio"
     ],
     "test": [
-      "anagram.test.moth"
+      "anagram.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "Find the anagrams of a word among some candidates."

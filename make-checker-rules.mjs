@@ -1,5 +1,5 @@
-// Makes checker-rules.moth: what each of the checker's rules (RULES in checker.js) does with a value of each
-// type, for `moth check`, which works the types out as checker.js does but can't run vm.js (DESIGN §107).
+// Makes checker-rules.folio: what each of the checker's rules (RULES in checker.js) does with a value of each
+// type, for `folio check`, which works the types out as checker.js does but can't run vm.js (DESIGN §107).
 //
 //     node make-checker-rules.mjs
 //
@@ -7,7 +7,7 @@
 // the rule does on SAMPLES' values of those types: the operands whose value (not just type) can change that, by
 // place, and the message it stops with, if it does, by its number in the messages, which come after, a line
 // each. A line for "type" gives what `+`, `-`, `*` or `/` gives. A name in a message (a field's) is @NAME@.
-// moth.test.js says when the file is behind.
+// folio.test.js says when the file is behind.
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { RULES, FINE, outcome, dependsOn, resultTypeOf, sampleOf } from "./checker.js";
@@ -29,7 +29,7 @@ const SHAPES = {
 };
 for (const name of Object.keys(RULES)) if (name !== "builtin" && !SHAPES[name]) throw new Error(`make-checker-rules.mjs doesn't know the rule ${name}`);
 
-// checker-rules.moth's text, and how many rules it has
+// checker-rules.folio's text, and how many rules it has
 export function checkerRules() {
   const [lines, messages] = [[], new Map()];
   const numbered = (message) => (message ? messages.get(message) ?? messages.set(message, messages.size + 1).get(message) : "");
@@ -60,16 +60,16 @@ export function checkerRules() {
   for (const [one, many, measure] of UNITS) for (const word of new Set([one, many])) lines.push(`unit|${word}=${MEASURE_TYPES[measure]}`);
   lines.push(`actions=${TURTLE_ACTIONS.join("|")}`);
 
-  // the lines, as Moth text: a backslash, quote and brace written with a backslash before them, a new line as \n
-  const moth = (text) => `"${text.replace(/[\\"{\n]/g, (c) => (c === "\n" ? "\\n" : `\\${c}`))}"`;
+  // the lines, as Folio text: a backslash, quote and brace written with a backslash before them, a new line as \n
+  const folio = (text) => `"${text.replace(/[\\"{\n]/g, (c) => (c === "\n" ? "\\n" : `\\${c}`))}"`;
   const chunks = (all) => {
     const out = [];
-    for (let i = 0; i < all.length; i += 60) out.push(`    add ${moth(all.slice(i, i + 60).join("\n") + "\n")} to made`);
+    for (let i = 0; i < all.length; i += 60) out.push(`    add ${folio(all.slice(i, i + 60).join("\n") + "\n")} to made`);
     return out;
   };
   const made = [
     "# Made by make-checker-rules.mjs from checker.js's RULES and vm.js: what each rule the checker checks does",
-    "# with a value of each type, for moth check (DESIGN §107). Don't change it by hand: change those, then run",
+    "# with a value of each type, for folio check (DESIGN §107). Don't change it by hand: change those, then run",
     "# node make-checker-rules.mjs.",
     "",
     "# the rules, a line each: \"math|-|tn=|12\" is that text - a number fails with message 12",
@@ -92,6 +92,6 @@ export function checkerRules() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { made, count, skipped } = checkerRules();
-  writeFileSync(new URL("./checker-rules.moth", import.meta.url), made);
-  console.log(`made checker-rules.moth: ${count.toLocaleString("en")} rules, ${made.length.toLocaleString("en")} bytes (${skipped} left out)`);
+  writeFileSync(new URL("./checker-rules.folio", import.meta.url), made);
+  console.log(`made checker-rules.folio: ${count.toLocaleString("en")} rules, ${made.length.toLocaleString("en")} bytes (${skipped} left out)`);
 }

@@ -1,10 +1,10 @@
 # what the programs in tools/ make when they run
 tools/*.bmp
-# pages made from the apps (by moth build --web, in the Node.js command line Moth had until 1.5)
+# pages made from the apps (by folio build --web, in the Node.js command line Folio had until 1.5)
 apps/*.html
-# moth.moth built into a program of its own: moth.exe on Windows, moth on Linux
-/moth.exe
-/moth
+# folio.folio built into a program of its own: folio.exe on Windows, folio on Linux
+/folio.exe
+/folio
 # where npm run bench and npm run versus put the programs they time, while they do
 /.bench-*
 # the VS Code extension, packed (by node editors/vscode/make-vsix.mjs, or vsce), the engine vsce packs from,
@@ -17,9 +17,9 @@ editors/vscode/.vscode-test/
 editors/zed/target/
 editors/zed/extension.wasm
 editors/zed/grammars/
-editors/tree-sitter-moth/*.so
-editors/tree-sitter-moth/*.dll
-editors/tree-sitter-moth/*.dylib
+editors/tree-sitter-folio/*.so
+editors/tree-sitter-folio/*.dll
+editors/tree-sitter-folio/*.dylib
 # what the guestbook keeps, and its tests' database, when it's run in its folder
 apps/guestbook/*.db
 apps/guestbook/guestbook

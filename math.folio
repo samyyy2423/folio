@@ -1,0 +1,298 @@
+# Maths Folio doesn't have built in, written in Folio: random numbers, trigonometry, rounding, roots,
+# logarithms and powers of any number.
+# Any program can have them with `use "math.folio"`, as neural.folio does.
+#
+#   use "math.folio" as math
+#   say math's sqrt(2)                     # 1.41421356237309
+#   say math's sine(math's pi / 6)         # 0.5; cosine and tangent too, of angles in radians
+#   say math's degrees(math's arctangent(1))   # 45; radians(45) the other way
+#   say math's floor(-2.5) " " math's ceiling(-2.5) " " math's round(2.5)   # -3 -2 3
+#   say math's rounded(3.14159)            # 3.142: at most 3 decimals, for saying
+#   say math's power(2, 0.5)               # any power of any number; exp, ln, log10 and log2
+#   say math's absolute(-7) " " math's whole(7.9)   # 7 7
+#   say math's random()                    # from 0 up to 1, the same each run: set seed to change them
+#   say math's between(1, 6)               # from 1 up to 6
+
+# ---------- random numbers (Park and Miller, 1988) ----------
+
+set seed to 42
+
+# the whole-number part of a number that isn't negative, found one power of two at a time
+to whole with x
+    set n to 0
+    set p to 1
+    repeat while p * 2 is at most x
+        set p to p * 2
+    end
+    repeat while p is at least 1
+        if n + p is at most x
+            add p to n
+        end
+        set p to p / 2
+    end
+    return n
+end
+
+# a number between 0 and 1, different every time and the same on every run
+to random
+    set product to seed * 16807
+    set seed to product - whole(product / 2147483647) * 2147483647
+    if seed is less than 0
+        add 2147483647 to seed
+    end
+    return seed / 2147483647
+end
+
+# ---------- sine and cosine ----------
+
+set pi to 3.141592653589793
+
+# x - x³/3! + x⁵/5! - ..., after moving x between -pi and pi, where 12 terms are plenty
+to sine with x
+    repeat while x is greater than pi
+        set x to x - 2 * pi
+    end
+    repeat while x is less than 0 - pi
+        set x to x + 2 * pi
+    end
+    set term to x
+    set total to x
+    for each k from 1 to 12
+        set term to 0 - term * x * x / (2 * k * (2 * k + 1))
+        add term to total
+    end
+    return total
+end
+
+# the cosine of an angle in radians: sine a quarter turn on
+to cosine with x
+    return sine(x + pi / 2)
+end
+
+# ---------- rounding ----------
+
+# the whole-number part of a number below 0 too: -2.5 gives -3
+to floor with x
+    if x is at least 0
+        return whole(x)
+    end
+    set w to 0 - whole(0 - x)
+    if w is greater than x
+        return w - 1
+    end
+    return w
+end
+
+# a number with at most 3 decimals, for saying
+to rounded with x
+    return whole(x * 1000 + 0.5) / 1000
+end
+
+# ---------- powers and roots ----------
+
+set ln2 to 0.6931471805599453
+
+# e to the power x. With x = k·ln 2 + r, where r is small, e^x = 2^k · e^r, and 20 terms of e^r's
+# series are plenty.
+to exp with x
+    set halvings to floor(x / ln2 + 0.5)
+    set r to x - halvings * ln2
+    set term to 1
+    set total to 1
+    for each n from 1 to 20
+        set term to term * r / n
+        add term to total
+    end
+    repeat while halvings is greater than 0
+        set total to total * 2
+        set halvings to halvings - 1
+    end
+    repeat while halvings is less than 0
+        set total to total / 2
+        set halvings to halvings + 1
+    end
+    return total
+end
+
+# The square root, by Newton's method: average a guess with x / guess until it settles.
+to sqrt with x
+    if x is less than 0
+        fail with "can't take the square root of a number below 0"
+    end
+    if x is 0
+        return 0
+    end
+    set guess to x
+    if guess is less than 1
+        set guess to 1
+    end
+    repeat 60 times
+        set guess to (guess + x / guess) / 2
+    end
+    return guess
+end
+
+# a random number from low up to high
+to between with low, high
+    return low + random() * (high - low)
+end
+
+# ---------- logarithms, powers of any number, and the rest of trigonometry ----------
+
+set ln10 to 2.302585092994046
+
+# The natural logarithm. With x = m·2^k, m from 1/√2 up to √2, ln x = k·ln 2 + ln m, and ln m is
+# 2(z + z³/3 + z⁵/5 + ...) for z = (m - 1) / (m + 1), below 0.18, where 24 terms are plenty.
+to ln with x
+    if x is at most 0
+        fail with "'ln' needs a number above 0, not " + x
+    end
+    if x - x is not 0 # infinity, or NaN
+        return x
+    end
+    set m to x
+    set k to 0
+    repeat while m is greater than 1.4142135623730951
+        set m to m / 2
+        add 1 to k
+    end
+    repeat while m is less than 0.7071067811865476
+        set m to m * 2
+        set k to k - 1
+    end
+    set z to (m - 1) / (m + 1)
+    set z2 to z * z
+    set term to z
+    set total to z
+    for each n from 1 to 24
+        set term to term * z2
+        add term / (2 * n + 1) to total
+    end
+    return k * ln2 + 2 * total
+end
+
+# the logarithm to base 10, and to base 2
+to log10 with x
+    return ln(x) / ln10
+end
+
+# the logarithm of x to base 2: how many times 2 is multiplied to make it
+to log2 with x
+    return ln(x) / ln2
+end
+
+# x to the power y, y any number: a whole y as `to the power of` works it out, by squaring, and for the rest
+# e^(y·ln x), which needs x above 0
+to power with x, y
+    if y is floor(y)
+        return x to the power of y
+    end
+    if x is 0 and y is greater than 0
+        return 0
+    end
+    if x is at most 0
+        fail with "'power' can't raise " + x + " to " + y + ", which isn't a whole number"
+    end
+    return exp(y * ln(x))
+end
+
+# how far from 0, either way
+to absolute with x
+    if x is less than 0
+        return 0 - x
+    end
+    return x
+end
+
+# the whole number nearest above, and the nearest of all (a half going up)
+to ceiling with x
+    return 0 - floor(0 - x)
+end
+
+# the nearest whole number, a half going up: round(2.5) is 3 and round(-2.5) is -2
+to round with x
+    return floor(x + 0.5)
+end
+
+# tangent, and the angles back from a tangent, a sine and a cosine, in radians
+to tangent with x
+    return sine(x) / cosine(x)
+end
+
+# Past 1, from 1 / x; then halving the angle until x is below 0.1 (tan(θ/2) = x / (1 + √(1 + x²))), then x - x³/3 + x⁵/5 - ...
+to arctangent with x
+    if x is less than 0
+        return 0 - arctangent(0 - x)
+    end
+    if x is greater than 1 # infinity too, as 1 / x is 0
+        return pi / 2 - arctangent(1 / x)
+    end
+    set halvings to 0
+    repeat while x is greater than 0.1
+        set x to x / (1 + sqrt(1 + x * x))
+        add 1 to halvings
+    end
+    set x2 to x * x
+    set term to x
+    set total to x
+    for each n from 1 to 12
+        set term to 0 - term * x2
+        add term / (2 * n + 1) to total
+    end
+    repeat halvings times
+        set total to total * 2
+    end
+    return total
+end
+
+# the angle in radians, from -pi/2 to pi/2, whose sine is x, a number from -1 to 1
+to arcsine with x
+    if x is less than -1 or x is greater than 1
+        fail with "'arcsine' needs a number from -1 to 1, not " + x
+    end
+    if x is 1
+        return pi / 2
+    end
+    if x is -1
+        return 0 - pi / 2
+    end
+    return arctangent(x / sqrt(1 - x * x))
+end
+
+# the angle in radians, from 0 to pi, whose cosine is x, a number from -1 to 1
+to arccosine with x
+    if x is less than -1 or x is greater than 1
+        fail with "'arccosine' needs a number from -1 to 1, not " + x
+    end
+    return pi / 2 - arcsine(x)
+end
+
+# the angle from the x axis to the point x, y, from -pi to pi
+to angle_of with x, y
+    if x is greater than 0
+        return arctangent(y / x)
+    end
+    if x is less than 0 and y is at least 0
+        return arctangent(y / x) + pi
+    end
+    if x is less than 0
+        return arctangent(y / x) - pi
+    end
+    if y is greater than 0
+        return pi / 2
+    end
+    if y is less than 0
+        return 0 - pi / 2
+    end
+    return 0
+end
+
+# degrees as radians, and back
+to radians with angle
+    return angle * pi / 180
+end
+
+# an angle in radians, in degrees
+to degrees with angle
+    return angle * 180 / pi
+end

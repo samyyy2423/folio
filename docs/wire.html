@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>wire.moth · Moth's standard library</title>
+  <title>wire.folio · Folio's standard library</title>
   <meta name="description" content="Bytes to and from a connection a message at a time, as the protocols of databases have them.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="../docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../docs/site.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -27,36 +27,36 @@
 
   <header>
     <div class="lamp" aria-hidden="true"></div>
-    <nav class="nav wrap" aria-label="Moth">
-      <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <a class="go" href="../#playground">Playground</a>
       <a class="go" href="../learn.html">Learn</a>
       <a class="go" href="../docs/" aria-current="page">Docs</a>
       <a class="go" href="../docs/cookbook/">Cookbook</a>
       <a class="go" href="../docs/examples.html">Examples</a>
-      <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
     </nav>
     <div class="hero wrap">
       <p class="eyebrow"><a href="./">The standard library</a></p>
-      <h1><em>wire</em>.moth</h1>
+      <h1><em>wire</em>.folio</h1>
       <p>Bytes to and from a connection a message at a time, as the protocols of databases have them.</p>
-      <p class="use"><code>use "wire.moth" as wire</code></p>
+      <p class="use"><code>use "wire.folio" as wire</code></p>
     </div>
   </header>
 
   <div class="layout wrap">
-    <nav class="toc" aria-label="wire.moth's functions">
+    <nav class="toc" aria-label="wire.folio's functions">
       <h2>20 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
       <ol id="toc"><li><a href="#reader">reader</a></li><li><a href="#reader_of">reader_of</a></li><li><a href="#waiting">waiting</a></li><li><a href="#take">take</a></li><li><a href="#take_byte">take_byte</a></li><li><a href="#take_number">take_number</a></li><li><a href="#line">line</a></li><li><a href="#text_to_zero">text_to_zero</a></li><li><a href="#number_of">number_of</a></li><li><a href="#signed_of">signed_of</a></li><li><a href="#double_of">double_of</a></li><li><a href="#writer">writer</a></li><li><a href="#add_bytes">add_bytes</a></li><li><a href="#add_text">add_text</a></li><li><a href="#add_byte">add_byte</a></li><li><a href="#add_number">add_number</a></li><li><a href="#bytes_of_number">bytes_of_number</a></li><li><a href="#add_double">add_double</a></li><li><a href="#bytes_of">bytes_of</a></li><li><a href="#joined">joined</a></li></ol>
-      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth">The source</a></p>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio">The source</a></p>
     </nav>
     <main>
       <section class="about">
         <h2>What it's for</h2>
-          <p>Bytes to and from a connection a message at a time, as the protocols of databases have them: a reader that keeps what came and isn't used yet, so lines, exact counts of bytes and the numbers in them come off it as they're wanted; and a writer that puts bytes, text and numbers together, to send at once. redis.moth, postgres.moth and mysql.moth speak through it, on sockets.moth.</p>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
-<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.moth's</span>
+          <p>Bytes to and from a connection a message at a time, as the protocols of databases have them: a reader that keeps what came and isn't used yet, so lines, exact counts of bytes and the numbers in them come off it as they're wanted; and a writer that puts bytes, text and numbers together, to send at once. redis.folio, postgres.folio and mysql.folio speak through it, on sockets.folio.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
+<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.folio's</span>
 <span class="k">set</span> line <span class="k">to</span> wire's line(reader)                   <span class="c"># the bytes up to the next \r\n, as text, without it</span>
 <span class="k">set</span> block <span class="k">to</span> wire's take(reader, <span class="n">16</span>)              <span class="c"># exactly 16 bytes, waiting for them to come</span>
 <span class="k">set</span> n <span class="k">to</span> wire's number_of(block, <span class="n">1</span>, <span class="n">4</span>, <span class="s">&quot;big&quot;</span>)     <span class="c"># 4 bytes from byte 1, the highest first; or &quot;little&quot;</span>
@@ -74,10 +74,10 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to reader with connection</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L24">wire.moth line 24</a></p>
+          <p class="written">Written <code>to reader with connection</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L24">wire.folio line 24</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
-<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.moth's</span></code></pre></div>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
+<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.folio's</span></code></pre></div>
         </section>
         <section class="fn" id="reader_of">
           <h3><a href="#reader_of"><code>wire's reader_of(data)</code></a></h3>
@@ -86,9 +86,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to reader_of with data</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L29">wire.moth line 29</a></p>
+          <p class="written">Written <code>to reader_of with data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L29">wire.folio line 29</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> r <span class="k">to</span> wire's reader_of(hash's bytes_of_hex(<span class="s">&quot;2b4f4b0d0a68656c6c6f00010203fffe&quot;</span>))
 <span class="k">say</span> r</code></pre></div>
         </section>
@@ -99,9 +99,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>r</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to waiting with r</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L34">wire.moth line 34</a></p>
+          <p class="written">Written <code>to waiting with r</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L34">wire.folio line 34</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> r <span class="k">to</span> wire's reader_of(hash's bytes_of_hex(<span class="s">&quot;2b4f4b0d0a68656c6c6f00010203fffe&quot;</span>))
 <span class="k">say</span> wire's waiting(r)</code></pre></div>
         </section>
@@ -112,10 +112,10 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>r</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to take with r, n</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L87">wire.moth line 87</a></p>
+          <p class="written">Written <code>to take with r, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L87">wire.folio line 87</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
-<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.moth's</span>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
+<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.folio's</span>
 <span class="k">set</span> block <span class="k">to</span> wire's take(reader, <span class="n">16</span>)              <span class="c"># exactly 16 bytes, waiting for them to come</span></code></pre></div>
         </section>
         <section class="fn" id="take_byte">
@@ -125,9 +125,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>r</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to take_byte with r</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L98">wire.moth line 98</a></p>
+          <p class="written">Written <code>to take_byte with r</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L98">wire.folio line 98</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> r <span class="k">to</span> wire's reader_of(hash's bytes_of_hex(<span class="s">&quot;2b4f4b0d0a68656c6c6f00010203fffe&quot;</span>))
 <span class="k">say</span> wire's take_byte(r)</code></pre></div>
         </section>
@@ -138,9 +138,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>r</code></li><li><code>count</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to take_number with r, count, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L106">wire.moth line 106</a></p>
+          <p class="written">Written <code>to take_number with r, count, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L106">wire.folio line 106</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> r <span class="k">to</span> wire's reader_of(hash's bytes_of_hex(<span class="s">&quot;2b4f4b0d0a68656c6c6f00010203fffe&quot;</span>))
 <span class="k">say</span> wire's take_number(r, <span class="n">2</span>, <span class="s">&quot;big&quot;</span>)</code></pre></div>
         </section>
@@ -151,10 +151,10 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>r</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to line with r</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L114">wire.moth line 114</a></p>
+          <p class="written">Written <code>to line with r</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L114">wire.folio line 114</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
-<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.moth's</span>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
+<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.folio's</span>
 <span class="k">set</span> line <span class="k">to</span> wire's line(reader)                   <span class="c"># the bytes up to the next \r\n, as text, without it</span></code></pre></div>
         </section>
         <section class="fn" id="text_to_zero">
@@ -164,9 +164,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>r</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to text_to_zero with r</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L122">wire.moth line 122</a></p>
+          <p class="written">Written <code>to text_to_zero with r</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L122">wire.folio line 122</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> r <span class="k">to</span> wire's reader_of(hash's bytes_of_hex(<span class="s">&quot;2b4f4b0d0a68656c6c6f00010203fffe&quot;</span>))
 <span class="k">say</span> wire's text_to_zero(r)</code></pre></div>
         </section>
@@ -177,10 +177,10 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>b</code></li><li><code>from</code></li><li><code>count</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to number_of with b, from, count, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L150">wire.moth line 150</a></p>
+          <p class="written">Written <code>to number_of with b, from, count, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L150">wire.folio line 150</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
-<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.moth's</span>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
+<span class="k">set</span> reader <span class="k">to</span> wire's reader(connection)           <span class="c"># a connection of sockets.folio's</span>
 <span class="k">set</span> block <span class="k">to</span> wire's take(reader, <span class="n">16</span>)              <span class="c"># exactly 16 bytes, waiting for them to come</span>
 <span class="k">set</span> n <span class="k">to</span> wire's number_of(block, <span class="n">1</span>, <span class="n">4</span>, <span class="s">&quot;big&quot;</span>)     <span class="c"># 4 bytes from byte 1, the highest first; or &quot;little&quot;</span></code></pre></div>
         </section>
@@ -191,9 +191,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>b</code></li><li><code>from</code></li><li><code>count</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to signed_of with b, from, count, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L167">wire.moth line 167</a></p>
+          <p class="written">Written <code>to signed_of with b, from, count, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L167">wire.folio line 167</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> b <span class="k">to</span> hash's bytes_of_hex(<span class="s">&quot;0102030405060708fffffffe80&quot;</span>)
 <span class="k">say</span> wire's signed_of(b, <span class="n">9</span>, <span class="n">4</span>, <span class="s">&quot;big&quot;</span>)</code></pre></div>
         </section>
@@ -204,9 +204,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>b</code></li><li><code>from</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to double_of with b, from, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L177">wire.moth line 177</a></p>
+          <p class="written">Written <code>to double_of with b, from, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L177">wire.folio line 177</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 wire's double_of(b, <span class="k">from</span>, order)</code></pre></div>
         </section>
         <section class="fn" id="writer">
@@ -216,9 +216,9 @@ wire's double_of(b, <span class="k">from</span>, order)</code></pre></div>
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to writer</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L217">wire.moth line 217</a></p>
+          <p class="written">Written <code>to writer</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L217">wire.folio line 217</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> w <span class="k">to</span> wire's writer()
 <span class="k">say</span> w</code></pre><pre class="says"><code>(record with pieces [], size 0)</code></pre></div>
         </section>
@@ -229,9 +229,9 @@ wire's double_of(b, <span class="k">from</span>, order)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>w</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_bytes with w, b</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L222">wire.moth line 222</a></p>
+          <p class="written">Written <code>to add_bytes with w, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L222">wire.folio line 222</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> w <span class="k">to</span> wire's writer()
 wire's add_text(w, <span class="s">&quot;é&quot;</span>)
 wire's add_byte(w, <span class="n">0</span>)
@@ -247,9 +247,9 @@ wire's add_bytes(w, hash's bytes_of_hex(<span class="s">&quot;abcd&quot;</span>)
             <div><h4>Inputs</h4><ul class="inputs"><li><code>w</code></li><li><code>words</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_text with w, words</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L229">wire.moth line 229</a></p>
+          <p class="written">Written <code>to add_text with w, words</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L229">wire.folio line 229</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> out <span class="k">to</span> wire's writer()
 wire's add_text(out, <span class="s">&quot;SELECT 1&quot;</span>)                  <span class="c"># its UTF-8; add_bytes, add_byte, add_number(out, n, 4, &quot;big&quot;)</span></code></pre></div>
         </section>
@@ -260,9 +260,9 @@ wire's add_text(out, <span class="s">&quot;SELECT 1&quot;</span>)               
             <div><h4>Inputs</h4><ul class="inputs"><li><code>w</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_byte with w, b</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L234">wire.moth line 234</a></p>
+          <p class="written">Written <code>to add_byte with w, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L234">wire.folio line 234</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> w <span class="k">to</span> wire's writer()
 wire's add_text(w, <span class="s">&quot;é&quot;</span>)
 wire's add_byte(w, <span class="n">0</span>)
@@ -275,9 +275,9 @@ wire's add_byte(w, <span class="n">0</span>)
             <div><h4>Inputs</h4><ul class="inputs"><li><code>w</code></li><li><code>n</code></li><li><code>count</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_number with w, n, count, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L239">wire.moth line 239</a></p>
+          <p class="written">Written <code>to add_number with w, n, count, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L239">wire.folio line 239</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> w <span class="k">to</span> wire's writer()
 wire's add_text(w, <span class="s">&quot;é&quot;</span>)
 wire's add_byte(w, <span class="n">0</span>)
@@ -291,9 +291,9 @@ wire's add_number(w, <span class="n">1000</span>, <span class="n">4</span>, <spa
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li><li><code>count</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of_number with n, count, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L244">wire.moth line 244</a></p>
+          <p class="written">Written <code>to bytes_of_number with n, count, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L244">wire.folio line 244</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">say</span> wire's bytes_of_number(-<span class="n">2</span>, <span class="n">4</span>, <span class="s">&quot;big&quot;</span>)</code></pre><pre class="says"><code>(4 bytes: 255, 255, 255, 254)</code></pre></div>
         </section>
         <section class="fn" id="add_double">
@@ -303,9 +303,9 @@ wire's add_number(w, <span class="n">1000</span>, <span class="n">4</span>, <spa
             <div><h4>Inputs</h4><ul class="inputs"><li><code>w</code></li><li><code>x</code></li><li><code>order</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to add_double with w, x, order</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L265">wire.moth line 265</a></p>
+          <p class="written">Written <code>to add_double with w, x, order</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L265">wire.folio line 265</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 wire's add_double(w, x, order)</code></pre></div>
         </section>
         <section class="fn" id="bytes_of">
@@ -315,9 +315,9 @@ wire's add_double(w, x, order)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>w</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to bytes_of with w</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L323">wire.moth line 323</a></p>
+          <p class="written">Written <code>to bytes_of with w</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L323">wire.folio line 323</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">set</span> out <span class="k">to</span> wire's writer()
 net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre></div>
         </section>
@@ -328,9 +328,9 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>pieces</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to joined with pieces</code>, at <a href="https://github.com/samyyy2423/moth/blob/main/tools/wire.moth#L328">wire.moth line 328</a></p>
+          <p class="written">Written <code>to joined with pieces</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/wire.folio#L328">wire.folio line 328</a></p>
           <h4>Example</h4>
-          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.moth&quot;</span> <span class="k">as</span> wire
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;wire.folio&quot;</span> <span class="k">as</span> wire
 <span class="k">say</span> wire's joined(<span class="k">list</span> <span class="k">of</span> (<span class="s">&quot;ab&quot;</span> <span class="k">as</span> <span class="k">bytes</span>), <span class="n">0</span> <span class="k">bytes</span>, (<span class="s">&quot;c&quot;</span> <span class="k">as</span> <span class="k">bytes</span>))</code></pre><pre class="says"><code>(3 bytes: 97, 98, 99)</code></pre></div>
         </section>
       </section>
@@ -338,14 +338,14 @@ net's <span class="k">send</span>(connection, wire's bytes_of(out))</code></pre>
   </div>
 
   <footer class="foot wrap">
-    <a class="brand" href="../"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <p>Open source under the Apache License 2.0</p>
-    <nav aria-label="More about Moth">
+    <nav aria-label="More about Folio">
       <a href="../#playground">Playground</a>
       <a href="../learn.html">Learn</a>
       <a href="../docs/">The standard library</a>
-      <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
     </nav>
   </footer>
   <script>

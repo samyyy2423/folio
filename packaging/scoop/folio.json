@@ -1,0 +1,25 @@
+{
+    "version": "1.11.0",
+    "description": "A programming language that reads like plain English.",
+    "homepage": "https://github.com/samyyy2423/folio",
+    "license": "Apache-2.0",
+    "notes": "Run 'folio' for the Folio shell, or 'folio run hello.folio'.",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/samyyy2423/folio/releases/download/v1.11.0/folio-windows.exe#/folio.exe",
+            "hash": "0d6204ab7a8cc6451a2bb5e70c8366092eb0909113fc778b6b50de9c21929265"
+        }
+    },
+    "bin": "folio.exe",
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/samyyy2423/folio/releases/download/v$version/folio-windows.exe#/folio.exe",
+                "hash": {
+                    "url": "https://github.com/samyyy2423/folio/releases/download/v$version/SHA256SUMS.txt"
+                }
+            }
+        }
+    }
+}

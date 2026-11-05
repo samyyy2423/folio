@@ -4,13 +4,13 @@
   ],
   "files": {
     "solution": [
-      "clock.moth"
+      "clock.folio"
     ],
     "test": [
-      "clock.test.moth"
+      "clock.test.folio"
     ],
     "example": [
-      ".meta/example.moth"
+      ".meta/example.folio"
     ]
   },
   "blurb": "A clock with no date: add and take minutes, and write it as hh:mm."

@@ -1,7 +1,7 @@
 {
-  "name": "moth",
-  "displayName": "Moth",
-  "description": "Moth, the programming language that reads like plain English: colours, problems as you type, Format Document, the outline, Go to Definition, hovers, completion, a debugger, and Run and Build",
+  "name": "folio",
+  "displayName": "Folio",
+  "description": "Folio, the programming language that reads like plain English: colours, problems as you type, Format Document, the outline, Go to Definition, hovers, completion, a debugger, and Run and Build",
   "version": "0.1.0",
   "publisher": "samyyy2423",
   "license": "Apache-2.0",
@@ -10,18 +10,18 @@
     "color": "#120e0a",
     "theme": "dark"
   },
-  "homepage": "https://samyyy2423.github.io/moth/",
+  "homepage": "https://samyyy2423.github.io/folio/",
   "bugs": {
-    "url": "https://github.com/samyyy2423/moth/issues"
+    "url": "https://github.com/samyyy2423/folio/issues"
   },
   "qna": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/samyyy2423/moth",
+    "url": "https://github.com/samyyy2423/folio",
     "directory": "editors/vscode"
   },
   "keywords": [
-    "moth",
+    "folio",
     "plain english",
     "english",
     "beginners",
@@ -51,90 +51,90 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "In a folder you haven't trusted, the extension uses the moth.path from your own settings, not the folder's, so opening a folder can't choose a program for it to run.",
+      "description": "In a folder you haven't trusted, the extension uses the folio.path from your own settings, not the folder's, so opening a folder can't choose a program for it to run.",
       "restrictedConfigurations": [
-        "moth.path"
+        "folio.path"
       ]
     }
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:moth",
-    "onDebugResolve:moth"
+    "onLanguage:folio",
+    "onDebugResolve:folio"
   ],
   "contributes": {
     "languages": [
       {
-        "id": "moth",
+        "id": "folio",
         "aliases": [
-          "Moth",
-          "moth"
+          "Folio",
+          "folio"
         ],
         "extensions": [
-          ".moth"
+          ".folio"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "moth",
-        "scopeName": "source.moth",
-        "path": "./syntaxes/moth.tmLanguage.json"
+        "language": "folio",
+        "scopeName": "source.folio",
+        "path": "./syntaxes/folio.tmLanguage.json"
       }
     ],
     "snippets": [
       {
-        "language": "moth",
-        "path": "./snippets/moth.json"
+        "language": "folio",
+        "path": "./snippets/folio.json"
       }
     ],
     "commands": [
       {
-        "command": "moth.run",
+        "command": "folio.run",
         "title": "Run this file",
-        "category": "Moth"
+        "category": "Folio"
       },
       {
-        "command": "moth.debug",
+        "command": "folio.debug",
         "title": "Debug this file",
-        "category": "Moth"
+        "category": "Folio"
       },
       {
-        "command": "moth.build",
+        "command": "folio.build",
         "title": "Build this file",
-        "category": "Moth"
+        "category": "Folio"
       }
     ],
     "menus": {
       "editor/title/run": [
         {
-          "command": "moth.run",
-          "when": "resourceLangId == moth"
+          "command": "folio.run",
+          "when": "resourceLangId == folio"
         },
         {
-          "command": "moth.debug",
-          "when": "resourceLangId == moth"
+          "command": "folio.debug",
+          "when": "resourceLangId == folio"
         }
       ],
       "commandPalette": [
         {
-          "command": "moth.run",
-          "when": "editorLangId == moth"
+          "command": "folio.run",
+          "when": "editorLangId == folio"
         },
         {
-          "command": "moth.debug",
-          "when": "editorLangId == moth"
+          "command": "folio.debug",
+          "when": "editorLangId == folio"
         },
         {
-          "command": "moth.build",
-          "when": "editorLangId == moth"
+          "command": "folio.build",
+          "when": "editorLangId == folio"
         }
       ]
     },
     "taskDefinitions": [
       {
-        "type": "moth",
+        "type": "folio",
         "required": [
           "command",
           "file"
@@ -146,41 +146,41 @@
               "run",
               "build"
             ],
-            "description": "moth run or moth build."
+            "description": "folio run or folio build."
           },
           "file": {
             "type": "string",
-            "description": "The Moth file, from the workspace's folder."
+            "description": "The Folio file, from the workspace's folder."
           }
         }
       }
     ],
     "configuration": {
-      "title": "Moth",
+      "title": "Folio",
       "properties": {
-        "moth.path": {
+        "folio.path": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Where `moth`, Moth's command line, is: the path to `moth.exe` on Windows or `moth` on Linux, or to the folder it's in. Leave it empty to use the `moth` on your PATH. Run, Build, the debugger and the language server all use it."
+          "markdownDescription": "Where `folio`, Folio's command line, is: the path to `folio.exe` on Windows or `folio` on Linux, or to the folder it's in. Leave it empty to use the `folio` on your PATH. Run, Build, the debugger and the language server all use it."
         },
-        "moth.languageServer": {
+        "folio.languageServer": {
           "type": "boolean",
           "default": true,
-          "description": "Start Moth's language server (moth lsp) for the outline, Go to Definition in the file and the files it uses, hovers and completion. Without it, the outline and Go to Definition find the file's functions by their lines."
+          "description": "Start Folio's language server (folio lsp) for the outline, Go to Definition in the file and the files it uses, hovers and completion. Without it, the outline and Go to Definition find the file's functions by their lines."
         }
       }
     },
     "breakpoints": [
       {
-        "language": "moth"
+        "language": "folio"
       }
     ],
     "debuggers": [
       {
-        "type": "moth",
-        "label": "Moth",
+        "type": "folio",
+        "label": "Folio",
         "languages": [
-          "moth"
+          "folio"
         ],
         "configurationAttributes": {
           "launch": {
@@ -190,7 +190,7 @@
             "properties": {
               "program": {
                 "type": "string",
-                "description": "The Moth file to debug.",
+                "description": "The Folio file to debug.",
                 "default": "${file}"
               },
               "args": {
@@ -214,16 +214,16 @@
                 "description": "Stop before the first line runs.",
                 "default": false
               },
-              "mothPath": {
+              "folioPath": {
                 "type": "string",
-                "description": "The moth to debug with, if it isn't the one moth.path or the PATH has."
+                "description": "The folio to debug with, if it isn't the one folio.path or the PATH has."
               }
             }
           }
         },
         "initialConfigurations": [
           {
-            "type": "moth",
+            "type": "folio",
             "request": "launch",
             "name": "Debug this file",
             "program": "${file}"
@@ -231,13 +231,13 @@
         ],
         "configurationSnippets": [
           {
-            "label": "Moth: Debug a file",
-            "description": "Debug a Moth program",
+            "label": "Folio: Debug a file",
+            "description": "Debug a Folio program",
             "body": {
-              "type": "moth",
+              "type": "folio",
               "request": "launch",
               "name": "Debug ${1:program}",
-              "program": "^\"\\${workspaceFolder}/${1:program}.moth\""
+              "program": "^\"\\${workspaceFolder}/${1:program}.folio\""
             }
           }
         ]

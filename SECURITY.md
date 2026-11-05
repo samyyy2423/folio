@@ -4,10 +4,10 @@
 
 Please don't open a public issue for a security problem. Report it privately, through GitHub:
 
-**[Report a vulnerability](https://github.com/samyyy2423/moth/security/advisories/new)** (the repository's
+**[Report a vulnerability](https://github.com/samyyy2423/folio/security/advisories/new)** (the repository's
 Security tab, then "Report a vulnerability").
 
-Say what's wrong, which version of moth (and Windows or Linux) it's in, and how to make it happen: a Moth
+Say what's wrong, which version of folio (and Windows or Linux) it's in, and how to make it happen: a Folio
 program, the commands, and what it did that it shouldn't. If you can't use GitHub's form, open an issue that
 asks for a private way to send a report, with no details in it.
 
@@ -20,8 +20,8 @@ What happens then:
   against people already, say so, and it'll go faster.
 
 A problem in a package someone else wrote goes to that package's author. Once it's fixed, or if the author
-doesn't answer, an advisory about it can go in the package index, so `moth audit` finds it: see
-[Advisories](#advisories-and-moth-audit).
+doesn't answer, an advisory about it can go in the package index, so `folio audit` finds it: see
+[Advisories](#advisories-and-folio-audit).
 
 ## Supported versions
 
@@ -36,43 +36,43 @@ before it security fixes for 90 days, and once 2.0 is out, the last 1.x gets the
 
 ## Checking a download
 
-Each release has `moth-windows.exe`, `moth-linux` and `SHA256SUMS.txt`, and its notes give the same sums.
-Check one with `sha256sum moth-linux` (or `certutil -hashfile moth-windows.exe SHA256` on Windows). That
+Each release has `folio-windows.exe`, `folio-linux` and `SHA256SUMS.txt`, and its notes give the same sums.
+Check one with `sha256sum folio-linux` (or `certutil -hashfile folio-windows.exe SHA256` on Windows). That
 says the download arrived whole, not who made it.
 
 **Signed releases.** From the release after 1.11.0, the release workflow signs every file of a release with
 [Sigstore](https://www.sigstore.dev/), keyless: each file has a `.sigstore.json` bundle, a `.sig` and a
-`.pem` beside it, and the certificate names `.github/workflows/release.yml` in samyyy2423/moth, on the
+`.pem` beside it, and the certificate names `.github/workflows/release.yml` in samyyy2423/folio, on the
 release's tag. GitHub also attests where each file was built, and the release has an SBOM
-(`moth-<version>.cdx.json`, CycloneDX) of what's built into moth. Check a file with either:
+(`folio-<version>.cdx.json`, CycloneDX) of what's built into folio. Check a file with either:
 
 ```text
-cosign verify-blob moth-linux --bundle moth-linux.sigstore.json \
-  --certificate-identity https://github.com/samyyy2423/moth/.github/workflows/release.yml@refs/tags/v1.12.0 \
+cosign verify-blob folio-linux --bundle folio-linux.sigstore.json \
+  --certificate-identity https://github.com/samyyy2423/folio/.github/workflows/release.yml@refs/tags/v1.12.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
-gh attestation verify moth-linux --repo samyyy2423/moth --source-ref refs/tags/v1.12.0
+gh attestation verify folio-linux --repo samyyy2423/folio --source-ref refs/tags/v1.12.0
 ```
 
 [docs/verifying-releases.md](docs/verifying-releases.md) has the rest: cosign 2 and 3, the `.sig` and
 `.pem` alone, the Docker image, the .deb, and the SBOM. The workflow signs a release only after building
-moth from the tag's source and finding the release's programs are those same bytes, and that each builds
+folio from the tag's source and finding the release's programs are those same bytes, and that each builds
 itself and the other into the same bytes, on Linux and on Windows; it signs nothing for a release whose
 programs aren't what its source builds. (With cosign 2, add `--new-bundle-format` to the command above.)
 
-You can also make moth yourself and compare: `node bootstrap.mjs` makes moth from the source, and that moth
+You can also make folio yourself and compare: `node bootstrap.mjs` makes folio from the source, and that folio
 builds itself into exactly the bytes of the release, on Windows or Linux:
 
 ```text
-moth build moth.moth --allow-read --allow-write --allow-run --include moth-debugger.moth --include package.json
+folio build folio.folio --allow-read --allow-write --allow-run --include folio-debugger.folio --include package.json
 ```
 
 `packaging/release-build.sh dist` does all of it, the Windows program included. 1.11.0's programs were
-built without `--include moth-debugger.moth` or `--include package.json` (which `moth --version` reads, from
+built without `--include folio-debugger.folio` or `--include package.json` (which `folio --version` reads, from
 the release after 1.11.0), so for 1.11.0 leave both out.
 
 ## The permission model
 
-A program moth builds asks before it does anything outside itself, the way Deno does. It's the `--allow`
+A program folio builds asks before it does anything outside itself, the way Deno does. It's the `--allow`
 flags that decide what it may do without asking.
 
 ### What asks
@@ -88,12 +88,12 @@ flags that decide what it may do without asking.
 
 Without the flag, a person at a terminal is asked, once for each file, site, program or library (`a` says
 yes to all of them). Anywhere else, in a script, a service or a pipe, the answer is no. A no is a mistake
-the program can catch. The flags given to `moth build` are built into the program; `moth run`, `moth test`
+the program can catch. The flags given to `folio build` are built into the program; `folio run`, `folio test`
 and the others take them for that run.
 
 ### What it protects against
 
-With no flags, a Moth program you didn't write can't, without someone saying yes at a terminal:
+With no flags, a Folio program you didn't write can't, without someone saying yes at a terminal:
 
 - read or change any file, list any folder, or remove anything;
 - go online, or send anything anywhere;
@@ -110,7 +110,7 @@ With flags that name what they allow, it stays inside them:
 - **`use`** reads only files in the program's own folder or the folders inside it, never `../x`, a file
   from the top of a disk, or a link that leads out, so building a program can't read your other files into
   its mistakes.
-- **On Windows**, moth and the programs it builds load their DLLs only from System32, so a `winhttp.dll`
+- **On Windows**, folio and the programs it builds load their DLLs only from System32, so a `winhttp.dll`
   left in Downloads beside them can't run inside them; `run program "git"` never runs a `git.exe` beside the
   program or in the current folder; and an argument to a `.bat` or `.cmd` file can't slip in a command.
 - **Questions** show a file's name with anything that could move the cursor or turn the text around
@@ -118,7 +118,7 @@ With flags that name what they allow, it stays inside them:
 
 ### What it doesn't protect against
 
-- **A C library, and a program the program starts, can do anything you can.** They run outside Moth, so the
+- **A C library, and a program the program starts, can do anything you can.** They run outside Folio, so the
   flags don't reach them. `--allow-libraries` and `--allow-run` are as good as `--allow-all`; give them only
   to a program you trust.
 - **What a flag allows, it allows completely.** A program with `--allow-read` and `--allow-net` can send any
@@ -126,61 +126,68 @@ With flags that name what they allow, it stays inside them:
   rather than allowing everything.
 - **It isn't a limit on resources.** A program can use all the memory and time it's given, loop for ever,
   or fill the disk where it may write. Run untrusted code with the system's own limits too.
-- **It doesn't guard against another program on the same computer** changing a folder while a Moth program
-  checks it, or reading what a Moth program writes.
+- **It doesn't guard against another program on the same computer** changing a folder while a Folio program
+  checks it, or reading what a Folio program writes.
 - **It doesn't clean a program's own output.** What `say` writes goes to the terminal as it is, terminal
   control sequences included.
 - **Code from packages runs as part of the program**, with all the permissions the program has. Checking a
   package's sums and signatures (below) says you got the code that was pinned and who signed it, not that
   the code is safe.
 - **Built programs load at a fixed address** (no ASLR). They never run their data or change their code, and
-  Moth checks every item number and every value's kind, so this matters only if the runtime itself has a
+  Folio checks every item number and every value's kind, so this matters only if the runtime itself has a
   bug.
 - **The playground** runs a shared link's code as soon as it opens, in a worker that can't reach the page,
   and with no files but those picked for it.
-- **moth itself** is built with `--allow-read --allow-write --allow-run`: `moth run`, `moth add` and the rest
+- **folio itself** is built with `--allow-read --allow-write --allow-run`: `folio run`, `folio add` and the rest
   read and write in the folder they're run in, and start git, curl and the programs they build.
 
 ## Packages
 
-A package is a Git repository that moth clones, and its code runs with the program's permissions, so it's
+A package is a Git repository that folio clones, and its code runs with the program's permissions, so it's
 worth knowing what you get.
 
-- **Pinned.** `moth.packages` keeps each package's exact commit, so `moth get` fetches the same code
-  everywhere, and nothing changes until you run `moth update`.
-- **Checked.** `moth.sums` keeps the SHA-256 of each package's files at that commit. `moth add` and `moth
-  update` write it, and `moth get` checks it: a package changed in `packages/` (by hand, or in a cached
+- **Pinned.** `folio.packages` keeps each package's exact commit, so `folio get` fetches the same code
+  everywhere, and nothing changes until you run `folio update`.
+- **Checked.** `folio.sums` keeps the SHA-256 of each package's files at that commit. `folio add` and `folio
+  update` write it, and `folio get` checks it: a package changed in `packages/` (by hand, or in a cached
   folder) is named, with the files that changed, and one that comes back different from where it was
-  fetched isn't kept. A package's own `moth.sums` is checked for the packages it brings with it. Commit
-  `moth.sums` with `moth.packages`.
-- **Signed, when you ask.** `moth add`, `get` and `update` with `--signed` take only a package whose
+  fetched isn't kept. A package's own `folio.sums` is checked for the packages it brings with it. Commit
+  `folio.sums` with `folio.packages`.
+- **Signed, when you ask.** `folio add`, `get` and `update` with `--signed` take only a package whose
   commit, or the tag it was asked for at, has a signature `git verify-commit` or `git verify-tag` accepts:
   from a key in your GPG keyring, or, for SSH signatures, in the file git's `gpg.ssh.allowedSignersFile`
-  names. Which keys to trust is yours to set up in git; moth goes by what git says.
-- **Same everywhere.** moth checks a package out with its line ends as committed and a symbolic link as a
+  names. Which keys to trust is yours to set up in git; folio goes by what git says.
+- **Same everywhere.** folio checks a package out with its line ends as committed and a symbolic link as a
   small file holding where it points, whatever the system or your git settings, so its files and their sum
   are the same on Windows and Linux, and a link in a package can't point `use` at a file outside it.
+- **Kept to packages/.** folio takes a `folio.packages` line, a program's own or a package's, only if its name
+  is a package's name, so its folder is in `packages/` and nowhere else; where it comes from and its version
+  don't start with `-`, so git can't take them for its options; and its commit is a commit. It runs git with
+  no hooks, no fsmonitor and no `ext::`, so a package's `.git` can't make it run a command. A `packages/`
+  folder you got some other way, in a zip say, is trusted as it is, as git reads its `.git/config`: delete it
+  and let `folio get` fetch it. (Before the release after 1.11.0, a `folio.packages` could do both: see
+  [DESIGN.md](DESIGN.md) §152.)
 
-### Advisories and moth audit
+### Advisories and folio audit
 
 The package index can list advisories: known problems in packages, each saying which commits it's about.
-`moth audit` checks every package in `moth.packages` against them, and ends with 1 if any is about the
+`folio audit` checks every package in `folio.packages` against them, and ends with 1 if any is about the
 commit a package is at, so it can run in CI:
 
 ```text
-$ moth audit
-greeter at 3f2a9c1: MOTH-2026-1 (high): greet() runs any text it's given as a command
-  fixed at 8b1d2e0: moth update greeter takes its newest
+$ folio audit
+greeter at 3f2a9c1: FOLIO-2026-1 (high): greet() runs any text it's given as a command
+  fixed at 8b1d2e0: folio update greeter takes its newest
   https://github.com/someone/greeter/security/advisories/1
 1 advisory is about these packages
 ```
 
 An advisory is added to the index by a pull request to
-[moth-packages](https://github.com/samyyy2423/moth-packages), in its `advisories` list:
+[folio-packages](https://github.com/samyyy2423/folio-packages), in its `advisories` list:
 
 ```json
 {
-  "id": "MOTH-2026-1",
+  "id": "FOLIO-2026-1",
   "package": "greeter",
   "introduced": "<the first commit with the problem, or \"0\" for all of them>",
   "fixed": "<the commit that fixed it>",

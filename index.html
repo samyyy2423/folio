@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Moth · a programming language that reads like English</title>
-  <meta name="description" content="Moth is a small programming language with no symbols to learn. Write programs in plain words, draw pictures and make games, right in your browser.">
+  <title>Folio · a programming language that reads like English</title>
+  <meta name="description" content="Folio is a small programming language with no symbols to learn. Write programs in plain words, draw pictures and make games, right in your browser.">
   <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="docs/moth.svg" type="image/svg+xml">
+  <link rel="icon" href="docs/folio.svg" type="image/svg+xml">
   <!-- site only: the site's motion (site-motion.js, with GSAP from jsDelivr), which make-web.mjs leaves out of a program's page -->
   <script>
     if (matchMedia("(prefers-reduced-motion: no-preference)").matches) {
@@ -58,10 +58,10 @@
     .skip { position: absolute; z-index: 10; top: -80px; left: var(--space-3); padding: 10px 16px; border-radius: var(--radius-s); background: var(--amber); color: var(--ink); font-weight: 600; text-decoration: none; }
     .skip:focus { top: var(--space-3); }
 
-    /* the moth, drawn once in the markup for each place it appears */
-    .moth .fore { fill: url(#wing-fore); } .moth .hind { fill: url(#wing-hind); }
-    .moth .spot { fill: #7a4512; } .moth .body { fill: #ffe7b5; }
-    .moth .feelers { fill: none; stroke: #ffe7b5; stroke-width: 1.6; stroke-linecap: round; }
+    /* the folio, drawn once in the markup for each place it appears */
+    .folio .fore { fill: url(#wing-fore); } .folio .hind { fill: url(#wing-hind); }
+    .folio .spot { fill: #7a4512; } .folio .body { fill: #ffe7b5; }
+    .folio .feelers { fill: none; stroke: #ffe7b5; stroke-width: 1.6; stroke-linecap: round; }
 
     /* ---------- the front page ---------- */
     .front { position: relative; overflow: hidden; isolation: isolate; background:
@@ -84,7 +84,7 @@
     .nav .icon { width: 16px; height: 16px; fill: currentColor; stroke: none; }
 
     /* The top of the page: a lantern hanging over the middle on a long cord, swaying a little, its light on
-       the headline; and a moth that can't stay away from it (site-motion.js has it circle the lantern) */
+       the headline; and a folio that can't stay away from it (site-motion.js has it circle the lantern) */
     .hero { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; padding-top: 214px; padding-bottom: var(--space-9); text-align: center; }
     .halo { position: absolute; z-index: -4; top: -130px; left: 0; right: 0; width: min(1200px, 150vw); height: 840px; margin: 0 auto; pointer-events: none;
       background: radial-gradient(closest-side at 50% 30%, #ffb3474d, #ff8a3d1f 40%, #ff7a2f0a 62%, transparent 82%); animation: breathe 6s ease-in-out infinite alternate; }
@@ -390,13 +390,13 @@
       *, *::before, *::after { transition-duration: 0.01ms !important; }
       .btn.primary:hover, .shot:hover, .path:hover { transform: none; }
     }
-    /* a program made into a page of its own (moth build --web): only what it says and draws */
+    /* a program made into a page of its own (folio build --web): only what it says and draws */
     body.app .skip, body.app .front, body.app .outro, body.app .toolbar, body.app .workspace > .pane:first-child, body.app .pane-head, body.app #debug-panel, body.app #problems-view,
     body.app #files-view, body.app #bytecode-view, body.app .status { display: none !important; }
     body.app .playground { border-top: 0; }
     body.app .workspace { grid-template-columns: minmax(0, 1fr); }
     body.app .pane + .pane { border-left: 0; }
-    /* ...and a program that shows a page (page.moth) is that page, the whole window */
+    /* ...and a program that shows a page (page.folio) is that page, the whole window */
     body.app #page-view .title, body.app.paged #output-title { display: none; }
     body.app #page-frame { height: 100vh; }
     body.app.paged #output:empty { display: none; }
@@ -408,7 +408,7 @@
     <defs>
       <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
       <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
-      <symbol id="moth" class="moth" viewBox="0 0 64 64">
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
         <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
         <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
         <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
@@ -431,14 +431,14 @@
 
   <div class="front">
     <header class="intro">
-      <nav class="nav wrap" aria-label="Moth">
-        <a class="brand" href="#"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <nav class="nav wrap" aria-label="Folio">
+        <a class="brand" href="#"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
         <a class="go" href="#playground">Playground</a>
         <a class="go" href="learn.html">Learn</a>
         <a href="docs/">Docs</a>
-        <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-        <a href="https://github.com/samyyy2423/moth/blob/main/DESIGN.md">How it's built</a>
-        <a class="go outlined" href="https://github.com/samyyy2423/moth"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+        <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+        <a href="https://github.com/samyyy2423/folio/blob/main/DESIGN.md">How it's built</a>
+        <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
       </nav>
 
       <div class="hero wrap">
@@ -462,7 +462,7 @@
           </svg>
         </div></div>
         <div class="flight" aria-hidden="true">
-          <svg class="flyer moth" viewBox="0 0 64 64">
+          <svg class="flyer folio" viewBox="0 0 64 64">
             <g class="wings">
               <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
               <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
@@ -474,24 +474,24 @@
         </div>
 
         <h1>Programs that read like <span class="nobr"><em>English</em>.</span></h1>
-        <p class="lede">Moth is a small programming language with no symbols to learn. You write <code>say</code>, <code>if</code> and
+        <p class="lede">Folio is a small programming language with no symbols to learn. You write <code>say</code>, <code>if</code> and
           <code>repeat</code>, draw pictures, make games, and when something goes wrong, it tells you in plain words.</p>
         <div class="cta">
           <a class="btn primary" href="#playground">Try it now <span aria-hidden="true">↓</span></a>
-          <a class="btn ghost" href="learn.html">Learn Moth</a>
+          <a class="btn ghost" href="learn.html">Learn Folio</a>
         </div>
-        <p class="install"><code><span>$ </span>moth build hello.moth</code><a href="https://github.com/samyyy2423/moth/releases">Get Moth for Windows or Linux</a></p>
+        <p class="install"><code><span>$ </span>folio build hello.folio</code><a href="https://github.com/samyyy2423/folio/releases">Get Folio for Windows or Linux</a></p>
         <ul class="facts">
           <li>runs in your browser</li>
           <li>engines that agree</li>
           <li>runs without JavaScript too</li>
-          <li>a compiler written in Moth</li>
+          <li>a compiler written in Folio</li>
           <li>no dependencies</li>
         </ul>
         <figure class="card">
-          <div class="card-head"><i></i><i></i><i></i><span>welcome.moth</span><button id="try-sample" type="button"><svg class="icon" aria-hidden="true"><use href="#i-run"/></svg>Run it</button></div>
+          <div class="card-head"><i></i><i></i><i></i><span>welcome.folio</span><button id="try-sample" type="button"><svg class="icon" aria-hidden="true"><use href="#i-run"/></svg>Run it</button></div>
           <div class="card-body">
-            <pre id="sample" aria-label="An example Moth program"></pre>
+            <pre id="sample" aria-label="An example Folio program"></pre>
             <pre id="sample-said" class="said" aria-label="What it says"></pre>
           </div>
         </figure>
@@ -500,7 +500,7 @@
 
     <section class="section wrap" aria-labelledby="what">
       <div class="section-head">
-        <p class="eyebrow">Why Moth</p>
+        <p class="eyebrow">Why Folio</p>
         <h2 id="what">What it can do</h2>
         <p>Everything below runs in the playground underneath, with nothing to install.</p>
       </div>
@@ -509,8 +509,8 @@
         <div class="feature"><h3>Mistakes in plain words</h3><p>It points at the exact spot, and guesses what you meant.</p><pre>line 2: 'totl' has no value yet.
 Did you mean 'total'?</pre></div>
         <div class="feature"><h3>Games and apps</h3><p>Keys, clicks and timers. Snake is 110 lines, and runs right here.</p></div>
-        <div class="feature"><h3>Engines that agree</h3><p>A bytecode VM, a JIT to JavaScript, WebAssembly that Moth writes byte by byte, and machine code, written by a compiler in Moth. Thousands of random programs check they say the same.</p></div>
-        <div class="feature"><h3>A compiler written in Moth</h3><p>2,400 lines of Moth that compile any Moth program, itself included, to exactly what the JIT writes, byte for byte. And moth.exe, Moth in machine code, builds itself with no JavaScript at all.</p></div>
+        <div class="feature"><h3>Engines that agree</h3><p>A bytecode VM, a JIT to JavaScript, WebAssembly that Folio writes byte by byte, and machine code, written by a compiler in Folio. Thousands of random programs check they say the same.</p></div>
+        <div class="feature"><h3>A compiler written in Folio</h3><p>2,400 lines of Folio that compile any Folio program, itself included, to exactly what the JIT writes, byte for byte. And folio.exe, Folio in machine code, builds itself with no JavaScript at all.</p></div>
         <div class="feature"><h3>Debug backwards</h3><p>Step through a run in either direction: the line about to run, every variable, and the picture as it was.</p></div>
         <div class="feature"><h3>Numbers that add up</h3><p><code>0.1 + 0.2</code> is <code>0.3</code>, as in a spreadsheet. Numbers can have units: <code>5 km + 300 m</code> is <code>5.3 km</code>, and adding a time to a distance is a mistake that says so.</p></div>
         <div class="feature"><h3>Tables and charts</h3><p><code>read table "sales.csv"</code>, then <code>for each row in sales where ...</code>, <code>total of price in sales</code> and <code>draw chart of price in sales</code>.</p></div>
@@ -521,7 +521,7 @@ Did you mean 'total'?</pre></div>
     <section class="section wrap" aria-labelledby="made">
       <div class="section-head">
         <p class="eyebrow">Gallery</p>
-        <h2 id="made">Made with Moth</h2>
+        <h2 id="made">Made with Folio</h2>
         <p>Click one to open it in the playground.</p>
       </div>
       <div class="gallery" id="gallery">
@@ -529,7 +529,7 @@ Did you mean 'total'?</pre></div>
         <button class="shot" type="button" data-example="Paint"><img src="docs/paint.svg" alt="" loading="lazy"><b>Paint</b><small>drag to draw, click a colour</small></button>
         <button class="shot" type="button" data-example="Spiral"><img src="docs/spiral.svg" alt="" loading="lazy"><b>Spiral</b><small>the turtle, in colour</small></button>
         <button class="shot" type="button" data-example="Tree"><img src="docs/tree.svg" alt="" loading="lazy"><b>Tree</b><small>a function that calls itself</small></button>
-        <button class="shot" type="button" data-example="Neural network"><img src="docs/neural.svg" alt="" loading="lazy"><b>Neural network</b><small>learns, in Moth</small></button>
+        <button class="shot" type="button" data-example="Neural network"><img src="docs/neural.svg" alt="" loading="lazy"><b>Neural network</b><small>learns, in Folio</small></button>
         <button class="shot" type="button" data-example="Handwriting"><img src="docs/handwriting.svg" alt="" loading="lazy"><b>Handwriting</b><small>reads the digit you draw</small></button>
       </div>
     </section>
@@ -538,7 +538,7 @@ Did you mean 'total'?</pre></div>
 
   <section class="playground" id="playground" aria-label="Playground">
   <div class="toolbar">
-    <a class="logo" href="#" title="Back to the top"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+    <a class="logo" href="#" title="Back to the top"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
     <select id="example" aria-label="Example"></select>
     <div class="tools" role="group" aria-label="Run">
       <button id="run" type="button" title="Ctrl+Enter"><svg class="icon" aria-hidden="true"><use href="#i-run"/></svg>Run</button>
@@ -547,7 +547,7 @@ Did you mean 'total'?</pre></div>
     </div>
     <div class="tools" role="group" aria-label="Code">
       <button id="share" type="button" title="Copy a link with the code in it"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>Share</button>
-      <button id="tidy" type="button" title="Indents, spaces and blank lines, the one way Moth writes them"><svg class="icon" aria-hidden="true"><use href="#i-tidy"/></svg>Tidy</button>
+      <button id="tidy" type="button" title="Indents, spaces and blank lines, the one way Folio writes them"><svg class="icon" aria-hidden="true"><use href="#i-tidy"/></svg>Tidy</button>
       <button id="add-files" type="button" title="Files a program can read by name, like pictures for draw picture: pick them here, or drop them on the playground"><svg class="icon" aria-hidden="true"><use href="#i-files"/></svg>Files</button>
       <input id="file-picker" type="file" multiple hidden>
     </div>
@@ -562,7 +562,7 @@ Did you mean 'total'?</pre></div>
     <nav class="links" aria-label="Pages">
       <a href="learn.html">Learn</a>
       <a href="docs/">Docs</a>
-      <a href="https://github.com/samyyy2423/moth">GitHub ↗</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub ↗</a>
     </nav>
   </div>
 
@@ -586,7 +586,7 @@ Did you mean 'total'?</pre></div>
             <option value="">hidden</option>
             <option value="bytecode">bytecode (VM)</option>
             <option value="js">JavaScript (JIT)</option>
-            <option value="moth">JavaScript (compiler written in Moth)</option>
+            <option value="folio">JavaScript (compiler written in Folio)</option>
             <option value="wasm">WebAssembly</option>
           </select>
         </label>
@@ -644,28 +644,28 @@ Did you mean 'total'?</pre></div>
         <h2 id="next">Where next</h2>
       </div>
       <div class="paths">
-        <a class="path" href="learn.html"><b>Learn Moth</b><span>Eleven short lessons, each with a program to run and change, right here in your browser.</span><i>Start the lessons →</i></a>
-        <a class="path" href="https://github.com/samyyy2423/moth/releases"><b>Get Moth</b><span>For Windows and Linux. <code>moth build</code> turns your program into one of its own.</span><i>Download →</i></a>
-        <a class="path" href="https://github.com/samyyy2423/moth/blob/main/docs/guestbook.md"><b>Build a web app</b><span>A guestbook with a database, in Moth, from start to finish.</span><i>Read the guide →</i></a>
+        <a class="path" href="learn.html"><b>Learn Folio</b><span>Eleven short lessons, each with a program to run and change, right here in your browser.</span><i>Start the lessons →</i></a>
+        <a class="path" href="https://github.com/samyyy2423/folio/releases"><b>Get Folio</b><span>For Windows and Linux. <code>folio build</code> turns your program into one of its own.</span><i>Download →</i></a>
+        <a class="path" href="https://github.com/samyyy2423/folio/blob/main/docs/guestbook.md"><b>Build a web app</b><span>A guestbook with a database, in Folio, from start to finish.</span><i>Read the guide →</i></a>
       </div>
     </section>
     <footer class="foot wrap">
-      <a class="brand" href="#"><svg class="moth" aria-hidden="true"><use href="#moth"/></svg>Moth</a>
+      <a class="brand" href="#"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
       <p>Open source under the Apache License 2.0</p>
-      <nav aria-label="More about Moth">
+      <nav aria-label="More about Folio">
         <a href="learn.html">Learn</a>
         <a href="docs/">The standard library</a>
-        <a href="https://github.com/samyyy2423/moth#the-language">The language</a>
-        <a href="https://github.com/samyyy2423/moth/blob/main/DESIGN.md">How it's built</a>
-        <a href="https://github.com/samyyy2423/moth/blob/main/CONTRIBUTING.md">Help with Moth</a>
-        <a href="https://github.com/samyyy2423/moth">GitHub</a>
+        <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+        <a href="https://github.com/samyyy2423/folio/blob/main/DESIGN.md">How it's built</a>
+        <a href="https://github.com/samyyy2423/folio/blob/main/CONTRIBUTING.md">Help with Folio</a>
+        <a href="https://github.com/samyyy2423/folio">GitHub</a>
       </nav>
     </footer>
   </div>
 
   <script type="module">
     import examples from "./examples.js";
-    import { run, compile, compileToJs, compileToWasmBytes, mothCompiler, disassemble, check, timeline, memoryDisk, format, seeded, excerpt, suggestedFix, MothError, soundSamples, SOUND_RATE } from "./moth.js";
+    import { run, compile, compileToJs, compileToWasmBytes, folioCompiler, disassemble, check, timeline, memoryDisk, format, seeded, excerpt, suggestedFix, FolioError, soundSamples, SOUND_RATE } from "./folio.js";
 
     const $ = (id) => document.getElementById(id);
     const [code, output, picker, stopButton, status] = ["code", "output", "example", "stop", "status"].map($);
@@ -678,7 +678,7 @@ Did you mean 'total'?</pre></div>
     let appRunning = false; // an app is running: its picture stays put, and takes keys and clicks
     let appDraws = true; // the app has a picture: it isn't one that only waits for its page to be used
 
-    // Moth's own words, for colouring. Every piece of the code is escaped before it goes in as HTML,
+    // Folio's own words, for colouring. Every piece of the code is escaped before it goes in as HTML,
     // because the code can come from someone else's share link.
     const WORDS = new Set(("set add say if else end repeat while for to return and or not is yes no nothing list empty length item "
       + "move turn pen record dictionary where remove keys byte bytes as hex binary shift bit xor read write arguments expect clear draw box circle button random when every milliseconds seconds pressed clicked dragged mouse key fail stop ask use try fails uppercase lowercase split join number position by times each in from with than at least most divisible by of forward back left right up down color width "
@@ -686,7 +686,7 @@ Did you mean 'total'?</pre></div>
     // a unit only counts straight after a number, so `5 km` is coloured as one number, and `km` alone isn't
     const UNIT = String.raw`(?:\s+(?:mm|cm|m|km|millimetres?|centimetres?|metres?|kilometres?|millimeters?|centimeters?|meters?|kilometers?|inch|inches|foot|feet|yards?|miles?|milliseconds?|seconds?|minutes?|hours?|days?|weeks?|mg|g|kg|milligrams?|grams?|kilograms?|ounces?|pounds?|tonnes?|ml|millilitres?|litres?|milliliters?|liters?)\b)?`;
     const escape = (text) => text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-    // red: what makes moth check end with 1 (code that goes against what it says it is too); the other problems
+    // red: what makes folio check end with 1 (code that goes against what it says it is too); the other problems
     // ("never runs", "unused") are yellow
     const BAD = new Set(["fails", "error", "doesn't fit"]);
     // A value in text ("Hi {name}"): a '{' right before a letter, '_' or '(', which ends at its own '}' and
@@ -750,7 +750,7 @@ Did you mean 'total'?</pre></div>
     }
 
     // The checker runs on every change, which takes well under a millisecond for programs this size.
-    // Files the code uses (`use "math.moth"`), fetched from this site the first time; until one arrives, the
+    // Files the code uses (`use "math.folio"`), fetched from this site the first time; until one arrives, the
     // checker says it can't find it, and the editor checks again once it's here.
     const usedFiles = new Map();
     const files = (name) => usedFiles.get(name);
@@ -758,8 +758,8 @@ Did you mean 'total'?</pre></div>
     async function fetchUses(text) {
       for (const name of usesIn(text)) {
         if (usedFiles.has(name)) continue;
-        // a file beside the page, or one of the standard library's (page.moth and the rest, in tools/)
-        usedFiles.set(name, await fetchText(name).catch(() => (/^[\w-]+[.]moth$/.test(name) ? fetchText(`tools/${name}`) : undefined)).catch(() => undefined));
+        // a file beside the page, or one of the standard library's (page.folio and the rest, in tools/)
+        usedFiles.set(name, await fetchText(name).catch(() => (/^[\w-]+[.]folio$/.test(name) ? fetchText(`tools/${name}`) : undefined)).catch(() => undefined));
         await fetchUses(usedFiles.get(name) ?? "");
       }
     }
@@ -832,7 +832,7 @@ Did you mean 'total'?</pre></div>
     code.onscroll = syncScroll;
 
     // Draws what the program drew (lines, filled shapes and text: see Turtle in vm.js) from its last `clear`
-    // on, with Moth's (0, 0) in the middle and y going up, zoomed out if `fitTo` reaches past the edge.
+    // on, with Folio's (0, 0) in the middle and y going up, zoomed out if `fitTo` reaches past the edge.
     const sinceClear = (items) => items.slice(items.findLastIndex((d) => d.clear) + 1);
     const reachOf = (d) => (["box", "picture", "button", "textbox", "checkbox", "textarea", "list", "dropdown", "slider"].includes(d.shape) ? Math.max(Math.abs(d.x), Math.abs(d.y), Math.abs(d.x + d.width), Math.abs(d.y + d.height))
       : d.shape === "circle" ? Math.max(Math.abs(d.x), Math.abs(d.y)) + d.radius
@@ -1130,7 +1130,7 @@ Did you mean 'total'?</pre></div>
       finish("");
     }
 
-    // A button that puts a mistake right, where it says how (see suggestedFix in moth.js): the misspelled name
+    // A button that puts a mistake right, where it says how (see suggestedFix in folio.js): the misspelled name
     // becomes the one it meant, `>` becomes `is greater than`. The change can be undone with Ctrl+Z.
     function fixButton(mistake) {
       const fix = suggestedFix(code.value, mistake);
@@ -1150,7 +1150,7 @@ Did you mean 'total'?</pre></div>
       return button;
     }
 
-    // Moth programs kept in files of their own (compiler.moth, neural.moth), fetched the first time they're needed
+    // Folio programs kept in files of their own (compiler.folio, neural.folio), fetched the first time they're needed
     const fetched = new Map();
     async function fetchText(file) {
       if (!fetched.has(file)) {
@@ -1160,26 +1160,26 @@ Did you mean 'total'?</pre></div>
       }
       return fetched.get(file);
     }
-    let mothCompiled = null; // compiler.moth, Moth's compiler written in Moth, compiled by the JIT
-    async function compileWithMoth(source) {
-      mothCompiled ??= mothCompiler(await fetchText("compiler.moth"));
+    let folioCompiled = null; // compiler.folio, Folio's compiler written in Folio, compiled by the JIT
+    async function compileWithFolio(source) {
+      folioCompiled ??= folioCompiler(await fetchText("compiler.folio"));
       await fetchUses(source);
-      return mothCompiled(source, Object.fromEntries([...usedFiles].filter(([, text]) => text !== undefined))).source;
+      return folioCompiled(source, Object.fromEntries([...usedFiles].filter(([, text]) => text !== undefined))).source;
     }
 
     // What the compilers made of the code: the VM's bytecode, the JavaScript from the JIT, or the
-    // JavaScript from the compiler written in Moth, checked against the JIT's.
+    // JavaScript from the compiler written in Folio, checked against the JIT's.
     async function showCompiled() {
       const which = $("compiled").value;
       $("bytecode-view").hidden = !which;
       if (!which) return;
       const source = code.value;
       try {
-        if (which === "moth") {
-          const js = await compileWithMoth(source);
-          if (source !== code.value) return; // the code changed while compiler.moth loaded; that call shows it
+        if (which === "folio") {
+          const js = await compileWithFolio(source);
+          if (source !== code.value) return; // the code changed while compiler.folio loaded; that call shows it
           const same = js === compileToJs(source, { files }).source;
-          $("compiled-title").textContent = `JavaScript · written by compiler.moth, Moth's compiler in Moth: ${same ? "the same as the JIT's, byte for byte" : "DIFFERENT from the JIT's"}`;
+          $("compiled-title").textContent = `JavaScript · written by compiler.folio, Folio's compiler in Folio: ${same ? "the same as the JIT's, byte for byte" : "DIFFERENT from the JIT's"}`;
           $("bytecode").textContent = js;
           return;
         }
@@ -1194,11 +1194,11 @@ Did you mean 'total'?</pre></div>
           : "Bytecode · what the compiler made, which the virtual machine runs";
         $("bytecode").textContent = which === "js" ? compileToJs(source, { files }).source : disassemble(compile(source, { files }));
       } catch (err) {
-        if (!(err instanceof MothError) && which === "moth") {
-          $("bytecode").textContent = `(compiler.moth didn't load: ${err.message})`;
+        if (!(err instanceof FolioError) && which === "folio") {
+          $("bytecode").textContent = `(compiler.folio didn't load: ${err.message})`;
           return;
         }
-        if (!(err instanceof MothError)) throw err;
+        if (!(err instanceof FolioError)) throw err;
         $("bytecode").textContent = "(fix the mistake in the code to see it compiled)";
       }
     }
@@ -1275,7 +1275,7 @@ Did you mean 'total'?</pre></div>
         if (data.stopped !== undefined && !data.done) return finish(`The app stopped the program with ${data.stopped}`); // a handler did
         if (data.done) {
           if (data.empty && !data.app) output.append("(no output)");
-          const engine = { jit: "the JIT", wasm: data.byMothWasm ? "WebAssembly, compiled by moth.wasm" : "WebAssembly", vm: "the VM" }[$("engine").value];
+          const engine = { jit: "the JIT", wasm: data.byFolioWasm ? "WebAssembly, compiled by folio.wasm" : "WebAssembly", vm: "the VM" }[$("engine").value];
           const ms = data.ms < 10 ? data.ms.toFixed(1) : Math.round(data.ms);
           if (data.app) return startApp(data.app, `Set up in ${ms} ms on ${engine}`);
           // `stop the program with 2` just ends the run: there is no system here to hand the 2 to
@@ -1285,7 +1285,7 @@ Did you mean 'total'?</pre></div>
       current.onerror = (e) => fail(`Error: ${e.message || "the program stopped unexpectedly"}`); // e.g. it ran out of memory
       const source = code.value;
       fetchUses(source).then(() => {
-        if (worker === current) current.postMessage({ source, engine: $("engine").value, answers, files: Object.fromEntries(usedFiles), seed, disk: Object.fromEntries(pageFiles), mothWasm });
+        if (worker === current) current.postMessage({ source, engine: $("engine").value, answers, files: Object.fromEntries(usedFiles), seed, disk: Object.fromEntries(pageFiles), folioWasm });
       });
     }
 
@@ -1302,7 +1302,7 @@ Did you mean 'total'?</pre></div>
       if (appDraws) $("canvas").focus({ preventScroll: true });
     }
 
-    // The page a program shows (page.moth, DESIGN §145), in a frame of its own: sandboxed, and of no site, so
+    // The page a program shows (page.folio, DESIGN §145), in a frame of its own: sandboxed, and of no site, so
     // nothing on it can reach this page or what the site keeps, however it was written. The program's first page
     // of a run is loaded into it; each page after that goes to the script below, which puts it in place of the
     // one before, keeping what has the focus, so a page shown again as it's typed in doesn't take the typing
@@ -1312,13 +1312,13 @@ Did you mean 'total'?</pre></div>
     let pageLoaded = false;
     let pageWaiting = null; // the newest page, until the frame has loaded
     function inPage() {
-      const named = (el) => el?.closest?.("[data-moth]");
+      const named = (el) => el?.closest?.("[data-folio]");
       const isField = (el) => el.matches("input:not([type=button]):not([type=submit]):not([type=reset]), select, textarea");
       const valueOf = (el) => (el.type === "checkbox" ? el.checked : isField(el) ? el.value : el.textContent.trim());
       const send = (type, el) => {
         const values = {};
-        for (const field of document.querySelectorAll("[data-moth]")) if (isField(field)) values[field.dataset.moth] = valueOf(field);
-        parent.postMessage({ moth: "page", type, name: el.dataset.moth, value: valueOf(el), values }, "*");
+        for (const field of document.querySelectorAll("[data-folio]")) if (isField(field)) values[field.dataset.folio] = valueOf(field);
+        parent.postMessage({ folio: "page", type, name: el.dataset.folio, value: valueOf(el), values }, "*");
       };
       document.addEventListener("click", (e) => {
         const el = named(e.target);
@@ -1340,15 +1340,15 @@ Did you mean 'total'?</pre></div>
         send("enter", el);
       });
       addEventListener("message", (e) => {
-        if (e.source !== parent || e.data?.moth !== "show") return;
+        if (e.source !== parent || e.data?.folio !== "show") return;
         const had = document.activeElement;
-        const focused = had?.dataset?.moth;
+        const focused = had?.dataset?.folio;
         const [start, end] = [had?.selectionStart, had?.selectionEnd];
         const made = new DOMParser().parseFromString(e.data.html, "text/html");
         document.title = made.title;
         document.head.replaceWith(made.head);
         document.body.replaceWith(made.body);
-        const again = focused === undefined ? null : [...document.querySelectorAll("[data-moth]")].find((el) => el.dataset.moth === focused);
+        const again = focused === undefined ? null : [...document.querySelectorAll("[data-folio]")].find((el) => el.dataset.folio === focused);
         if (!again) return;
         again.focus({ preventScroll: true });
         if (typeof start === "number" && again.setSelectionRange && again.value.length >= end) again.setSelectionRange(start, end);
@@ -1363,18 +1363,18 @@ Did you mean 'total'?</pre></div>
         pageWaiting = null;
         const script = `<script>(${inPage})()<\/script>`;
         pageFrame.srcdoc = /^\s*<!doctype[^>]*>/i.test(html) ? html.replace(/^\s*<!doctype[^>]*>/i, (doctype) => doctype + script) : script + html;
-      } else if (pageLoaded) pageFrame.contentWindow.postMessage({ moth: "show", html }, "*");
+      } else if (pageLoaded) pageFrame.contentWindow.postMessage({ folio: "show", html }, "*");
       else pageWaiting = html;
     }
     pageFrame.onload = () => {
       pageLoaded = true;
-      if (pageWaiting !== null) pageFrame.contentWindow.postMessage({ moth: "show", html: pageWaiting }, "*");
+      if (pageWaiting !== null) pageFrame.contentWindow.postMessage({ folio: "show", html: pageWaiting }, "*");
       pageWaiting = null;
     };
     // what was done on the page, as a dictionary: its "type", the "name" of what was used, its "value", and
     // "values", every text box's, checkbox's and dropdown's, by name (text, or yes or no for a checkbox)
     addEventListener("message", (e) => {
-      if (e.source !== pageFrame.contentWindow || e.data?.moth !== "page") return;
+      if (e.source !== pageFrame.contentWindow || e.data?.folio !== "page") return;
       const { type, name, value, values } = e.data;
       const fits = (v) => typeof v === "string" || typeof v === "boolean";
       if (!["click", "change", "enter"].includes(type) || typeof name !== "string" || !fits(value) || typeof values !== "object" || values === null) return;
@@ -1495,7 +1495,7 @@ Did you mean 'total'?</pre></div>
       output.after(form);
     }
 
-    // A canvas to draw on with a mouse, pen or finger. text() gives the strokes the way digits.moth reads
+    // A canvas to draw on with a mouse, pen or finger. text() gives the strokes the way digits.folio reads
     // them: strokes split by ";", points by spaces, each "x,y" from 0 to 100 with y going down.
     function drawingPad() {
       const canvas = Object.assign(document.createElement("canvas"), { className: "pad", width: 440, height: 440 });
@@ -1543,7 +1543,7 @@ Did you mean 'total'?</pre></div>
       };
     }
 
-    // The time-travel debugger: Debug records the whole run first (timeline() in moth.js), then Back, Step,
+    // The time-travel debugger: Debug records the whole run first (timeline() in folio.js), then Back, Step,
     // End and the slider just show a recorded step, so going backwards is as easy as going forwards.
     function startDebugging() {
       finish("");
@@ -1555,7 +1555,7 @@ Did you mean 'total'?</pre></div>
       try {
         trace = timeline(code.value, { answers: answers.map((a) => a.text), files, disk: memoryDisk(Object.fromEntries(pageFiles)), random: seeded(seed) }); // the answers given when it last ran
       } catch (err) {
-        if (!(err instanceof MothError)) throw err;
+        if (!(err instanceof FolioError)) throw err;
         output.classList.add("error");
         return output.append(`Error: ${err.message}\n${excerpt(code.value, err)}`); // it didn't compile
       }
@@ -1643,7 +1643,7 @@ Did you mean 'total'?</pre></div>
         status.textContent = "Copy the link from the address bar";
       }
     };
-    // Tidy (format() in moth.js) leaves code with a mistake alone. It puts the tidy code in all at once: the
+    // Tidy (format() in folio.js) leaves code with a mistake alone. It puts the tidy code in all at once: the
     // browser's own undoable way, execCommand("insertText"), does slow work for every line (Chrome took 17
     // seconds for the compiler's 1,580), so Tidy keeps its own undo: Ctrl+Z puts back the code as it was, as
     // long as the tidy code hasn't been changed since (or has been undone back to it).
@@ -1653,7 +1653,7 @@ Did you mean 'total'?</pre></div>
       try {
         tidied = format(code.value).replace(/\n$/, "");
       } catch (err) {
-        status.textContent = err instanceof MothError ? `Can't tidy it yet: ${err.message}` : `Couldn't tidy it: ${err.message}`;
+        status.textContent = err instanceof FolioError ? `Can't tidy it yet: ${err.message}` : `Couldn't tidy it: ${err.message}`;
         return;
       }
       if (tidied === code.value) {
@@ -1677,7 +1677,7 @@ Did you mean 'total'?</pre></div>
     }
     $("compiled").onchange = showCompiled;
     // WebAssembly runs a program about twice as fast as the JIT, so it's the engine to begin with wherever the
-    // browser has what Moth's WebAssembly uses: its GC's structs, and exceptions (try and catch_all)
+    // browser has what Folio's WebAssembly uses: its GC's structs, and exceptions (try and catch_all)
     const wasmReady = (() => {
       try {
         return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 3, 1, 0x5f, 0]))
@@ -1687,13 +1687,13 @@ Did you mean 'total'?</pre></div>
       }
     })();
     if (wasmReady) $("engine").value = "wasm";
-    // Moth's own compiler as WebAssembly (moth.wasm, DESIGN §144), compiled here once and sent with each run, so
-    // the WebAssembly engine's programs are compiled by Moth itself. Where it can't be fetched (a page moth build
+    // Folio's own compiler as WebAssembly (folio.wasm, DESIGN §144), compiled here once and sent with each run, so
+    // the WebAssembly engine's programs are compiled by Folio itself. Where it can't be fetched (a page folio build
     // --web made, say), the worker compiles them with wasm.js.
-    let mothWasm = null;
+    let folioWasm = null;
     if (wasmReady) {
-      fetch("./moth.wasm").then((answer) => (answer.ok ? answer.arrayBuffer() : null)).then((bytes) => bytes && WebAssembly.compile(bytes))
-        .then((module) => (mothWasm = module ?? null), () => {});
+      fetch("./folio.wasm").then((answer) => (answer.ok ? answer.arrayBuffer() : null)).then((bytes) => bytes && WebAssembly.compile(bytes))
+        .then((module) => (folioWasm = module ?? null), () => {});
     }
     $("engine").onchange = runCode;
 
@@ -1751,16 +1751,16 @@ Did you mean 'total'?</pre></div>
     };
 
     // Some examples are files: two apps, a neural network that learns, the handwriting reader, and the
-    // compiler written in Moth, with a line at the end that uses it.
+    // compiler written in Folio, with a line at the end that uses it.
     const FILES = {
-      "Neural network": ["neural.moth", ""],
-      "Handwriting": ["handwriting.moth", ""],
-      "Snake": ["apps/snake.moth", ""],
-      "Paint": ["apps/paint.moth", ""],
-      "Moth's own compiler": ["compiler.moth", `\n\n# The compiler above, compiling a line of Moth to JavaScript:\nsay js of compile("say 1 + 2")\n`],
+      "Neural network": ["neural.folio", ""],
+      "Handwriting": ["handwriting.folio", ""],
+      "Snake": ["apps/snake.folio", ""],
+      "Paint": ["apps/paint.folio", ""],
+      "Folio's own compiler": ["compiler.folio", `\n\n# The compiler above, compiling a line of Folio to JavaScript:\nsay js of compile("say 1 + 2")\n`],
     };
     const [first, second, ...rest] = Object.keys(examples);
-    picker.append(...[first, second, "Snake", "Paint", "Neural network", "Handwriting", ...rest, "Moth's own compiler"].map((name) => new Option(name)));
+    picker.append(...[first, second, "Snake", "Paint", "Neural network", "Handwriting", ...rest, "Folio's own compiler"].map((name) => new Option(name)));
     picker.onchange = async () => {
       const name = picker.value;
       let text;
@@ -1819,9 +1819,9 @@ Did you mean 'total'?</pre></div>
       };
     }
 
-    // A page `moth build --web` made holds one program, and the files it uses, in window.MOTH_APP: it shows
+    // A page `folio build --web` made holds one program, and the files it uses, in window.FOLIO_APP: it shows
     // only what the program says and draws, and runs it at once.
-    const app = window.MOTH_APP;
+    const app = window.FOLIO_APP;
     let shared = null;
     try {
       if (!app && location.hash.startsWith("#code=")) shared = decodeURIComponent(location.hash.slice("#code=".length));
