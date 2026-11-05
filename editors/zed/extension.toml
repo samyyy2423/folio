@@ -9,7 +9,7 @@ repository = "https://github.com/samyyy2423/folio"
 # the colours' grammar, editors/tree-sitter-folio, at a commit of Folio's that has it
 [grammars.folio]
 repository = "https://github.com/samyyy2423/folio"
-commit = "0d4281a42eceee521ad953d832bb759fbfb38369"
+commit = "c020fc656271c69a3172bca37248b6f239e6efd9"
 path = "editors/tree-sitter-folio"
 
 [language_servers.folio]

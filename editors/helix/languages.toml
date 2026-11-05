@@ -17,7 +17,7 @@ args = ["lsp"]
 
 [[grammar]]
 name = "folio"
-source = { git = "https://github.com/samyyy2423/folio", rev = "0d4281a42eceee521ad953d832bb759fbfb38369", subpath = "editors/tree-sitter-folio" }
+source = { git = "https://github.com/samyyy2423/folio", rev = "c020fc656271c69a3172bca37248b6f239e6efd9", subpath = "editors/tree-sitter-folio" }
 
 # Folio's debugger (see editors/README.md): Node.js runs the debug adapter on `folio debug`. Take the # off these
 # lines, and put where this repository is in args.
