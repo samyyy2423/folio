@@ -4428,8 +4428,16 @@ to js_expr with scope, e
     if what is "item"
         return "item(" + js_expr(scope, subject of e) + ", " + js_expr(scope, index of e) + ", " + remember(at of e) + ")"
     end
-    if what is "record"
-        return "record(" + quote_list(fields of e) + ", [" + js_list(scope, values of e) + "])"
+    if what is "record" # made right here, each field set by its name, which V8 does far faster than by a name in a variable
+        if length of fields of e is 0
+            return "new Record()"
+        end
+        set rec_t to temp(scope)
+        set rec_parts to empty list
+        for each rec_n from 1 to length of fields of e
+            add rec_t + "[" + quote(item rec_n of fields of e) + "] = " + js_expr(scope, item rec_n of values of e) to rec_parts
+        end
+        return "(" + rec_t + " = new Record(), " + joined(rec_parts, ", ") + ", " + rec_t + ")"
     end
     if what is "dictionary"
         return "dict([" + js_list(scope, items of e) + "], " + remember(at of e) + ")"

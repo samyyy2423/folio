@@ -196,8 +196,11 @@ class JsCompiler extends Scope {
         return `lengthOf(${this.expr(e.of)}, ${this.pos(e.at)})`;
       case "item":
         return `item(${this.expr(e.of)}, ${this.expr(e.index)}, ${this.pos(e.at)})`;
-      case "record":
-        return `record(${q(e.fields)}, [${e.values.map((v) => this.expr(v)).join(", ")}])`;
+      case "record": { // made right here, each field set by its name, which V8 does far faster than by a name in a variable
+        if (!e.fields.length) return "new Record()";
+        const t = this.temp();
+        return `(${t} = new Record(), ${e.fields.map((f, i) => `${t}[${q(f)}] = ${this.expr(e.values[i])}`).join(", ")}, ${t})`;
+      }
       case "dictionary":
         return `dict([${e.items.map((x) => this.expr(x)).join(", ")}], ${this.pos(e.at)})`;
       case "field":
@@ -390,6 +393,7 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
     itemsOf: (v, k) => itemsOf(v, errors[k]),
     turtle: (action, value, k) => turtle.act(action, value, errors[k], disk),
     record: makeRecord,
+    Record,
     field: (r, name, k) => {
       const value = r instanceof Record ? r[name] : undefined; // no Moth value is undefined, and a record's prototype is empty
       return value !== undefined ? value : fieldOf(r, name, errors[k]);
