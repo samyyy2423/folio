@@ -143,3 +143,141 @@ test("the module words the mistakes of calls, ranges and fields itself, with the
   assert.deepEqual(both(source), said);
 });
 
+// Amounts, which a built-in still makes, shown and added to in the module as the VM shows and adds them: 0 of a
+// unit and 1 of it by its word for one, a number past 15 digits as 15, and an amount added in another unit of the
+// same measure in the first one's
+test("the module shows and adds amounts as the VM does", () => {
+  const source = [
+    "set t to \"\"",
+    "add 0 km to t",
+    "say t",
+    "set d to 5 km",
+    "add 300 m to d",
+    "set t to \"\"",
+    "add d to t",
+    "add \" \" to t",
+    "add 1 mile to t",
+    "add \" \" to t",
+    "add 0.30000000000000004 kg to t",
+    "say t",
+    "try\n    set g to 1 kg\n    add 1 km to g\nif it fails with why\n    say why\nend",
+    "try\n    set w to 3 kg\n    add 2 to w\nif it fails with why\n    say why\nend",
+  ].join("\n");
+  assert.deepEqual(both(source), ["0 km", "5.3 km 1 mile 0.3 kg", "can't add a distance to a weight", "can't add a number to a weight"]);
+});
+
+// DESIGN §153: what lists, text, dictionaries and bytes do, and their mistakes, in the module: a value shown as the
+// VM's show does (text quoted inside a list as JSON writes it, a list inside itself as [...]), a text's letters, a
+// dictionary's keys, `add` to text, and each mistake worded as vm.js words it, "did you mean" and all
+test("the module shows values, goes through text's letters and words the mistakes of items itself", () => {
+  const tries = (...lines) => lines.map((line) => `try\n    ${line.replace(/\n/g, "\n    ")}\nif it fails with why\n    say why\nend`).join("\n");
+  const source = [
+    "to f with a",
+    "    return a",
+    "end",
+    "to shown with v",
+    '    set t to ""',
+    "    add v to t",
+    "    return t",
+    "end",
+    'say shown(list of 1, "a\\"b", "c\\\\d", "line\\nbreak", yes, no, nothing)',
+    "set ys to list of 1",
+    "add ys to ys",
+    "say shown(ys)",
+    'say shown(record with name "Sam", pets (list of "cat"))',
+    'set d to dictionary where "apple" is 1, 2 is "b", "pear" is (list of 3)',
+    "say shown(d)",
+    'remove "pear" from d',
+    "say shown(d)",
+    "say shown(empty dictionary)",
+    "set bs to 3 bytes",
+    "set item 2 of bs to 255",
+    "say shown(bs)",
+    "say shown(1 bytes)",
+    "say shown(0 bytes)",
+    "say shown(f)",
+    'say shown("as it is")',
+    'say item 2 of "héllo"',
+    'say item 1 of "😀x"',
+    'say shown(length of "😀x")',
+    "set zs to list of 1, 2, 3",
+    "set item 2.0000000000000004 of zs to 9",
+    "say shown(zs)",
+    'for each c in "a😀b"\n    say c\nend',
+    "for each k in d\n    say shown(k)\nend",
+    tries(
+      "say item 9 of (list of 1, 2, 3)",
+      "say item 0 of (list of 1)",
+      "say item -2 of (list of 1)",
+      "say item 1.5 of (list of 1)",
+      'say item "x" of (list of 1)',
+      'say item 7 of "abc"',
+      "say item 5 of (2 bytes)",
+      'say item "aple" of d',
+      "say item (list of 1) of d",
+      "say item 1 of 5",
+      'set s to "abc"\nset item 1 of s to "x"',
+      "set item 1 of bs to 300",
+      'remove "zz" from d',
+      'remove "a" from (list of 1)',
+      "say length of 5",
+      "for each c in 5\n    say c\nend",
+      'set n to 5\nadd "x" to n',
+      "repeat 2.5 times\n    say 1\nend",
+      'repeat "x" times\n    say 1\nend',
+      'set e to dictionary where (list of 1) is 2',
+    ),
+  ].join("\n");
+  const module = new WebAssembly.Module(compileToWasmBytes(source).bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["lengthOf", "item", "itemRef", "put", "dict", "remove", "addInto", "checkRepeat", "itemsOf"]) assert.ok(!imported.includes(gone), gone);
+  let x = null;
+  const said = [];
+  const text = (t) => String.fromCharCode(...Array.from({ length: x.textLength(t) }, (_, i) => x.textUnit(t, i)));
+  const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: (parts) => said.push(Array.from({ length: x.listLength(parts) }, (_, i) => text(x.listItem(parts, i))).join("")) };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  x = new WebAssembly.Instance(module, { folio: imports }).exports;
+  x.restart();
+  x.main();
+  assert.deepEqual(said, [
+    '[1, "a\\"b", "c\\\\d", "line\\nbreak", yes, no, nothing]',
+    "[1, [...]]",
+    '(record with name "Sam", pets ["cat"])',
+    '(dictionary where "apple" is 1, 2 is "b", "pear" is [3])',
+    '(dictionary where "apple" is 1, 2 is "b")',
+    "(empty dictionary)",
+    "(3 bytes: 0, 255, 0)",
+    "(1 byte: 0)",
+    "(0 bytes)",
+    "<function f>",
+    "as it is",
+    "é",
+    "😀",
+    "2",
+    "[1, 9, 3]",
+    "a", "😀", "b",
+    "apple", "2",
+    "there is no item 9, the list only has 3 items",
+    "there is no item 0, items are counted from 1",
+    "there is no item -2, items are counted from 1",
+    "item numbers must be whole numbers, not 1.5",
+    'item numbers must be whole numbers, not "x"',
+    "there is no item 7, the text only has 3 letters",
+    "there is no item 5, there are only 2 bytes",
+    'there is no "aple" in this dictionary. Did you mean "apple"?',
+    "a dictionary's keys are text or numbers, not a list",
+    "can only take an item of a list, text, dictionary or bytes, not a number",
+    "can only change items of a list, dictionary or bytes, not text",
+    "a byte is a whole number from 0 to 255, not 300",
+    'there is no "zz" in this dictionary',
+    "can only remove from a dictionary, not a list",
+    "'length of' needs a list, text, dictionary or bytes, not a number",
+    "can only go through a list, text, dictionary or bytes, not a number",
+    "can't add text to a number",
+    "repeat needs a whole number of times, not 2.5",
+    'repeat needs a whole number of times, not "x"',
+    "a dictionary's keys are text or numbers, not a list",
+  ]);
+  assert.deepEqual(both(source), said);
+});
+

@@ -15,11 +15,11 @@ import { Scope } from "./scope.js";
 import { Module, Code, ref, refNull } from "./wasm-binary.js";
 import { RUNTIME, parseRuntime } from "./wasm-runtime.js";
 import { TooDeep } from "./jit.js";
-import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, item, compare, plus, arithmetic, negate,
-  lengthOf, addInto, checkRepeat, checkRange, itemsOf, callable, checkInputs, KINDS, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, fieldOf,
-  recordFor, failWith, BUILTINS, askFor, putItem, makeDictionary, removeKey, readFile, writeFile, trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, everyInterval,
-  Quantity, isQuantity, isRecord, Ended, exitCode, removeFile, fakeClock, nowValue, waitFor, readFolder, soundOf, BEEP, CantCopy, DEEPEST_COPY,
-  madeInside, tooDeepToCopy, workerEnded, workerResult, workerRoom, workerTaken, enterWorker, leaveWorker } from "./vm.js";
+import { FolioError, catchable, caughtValue, UNSET, Closure, Turtle, TURTLE_ACTIONS, COMPARE_OPS, fail, equal, show, compare, plus, arithmetic,
+  negate, KINDS, numberOrder, divisible, canon, noValue, stoppedMessage, makeRecord, fieldOf, failWith, BUILTINS, askFor, readFile, writeFile,
+  trailOf, expectThat, expectYes, randomWhole, seeded, EVENTS, everyInterval, Quantity, isQuantity, isRecord, Ended, exitCode, removeFile, fakeClock,
+  nowValue, waitFor, readFolder, soundOf, BEEP, CantCopy, DEEPEST_COPY, madeInside, tooDeepToCopy, workerEnded, workerResult, workerRoom,
+  workerTaken, enterWorker, leaveWorker } from "./vm.js";
 
 const EQ = refNull("eq"); // any Folio value
 const I32 = "i32";
@@ -54,15 +54,6 @@ const IMPORTS = {
   numberOrder: [[F64, F64], [I32]],
   divisible: [[F64, F64], [I32]],
   equal: [[EQ, EQ], [I32]],
-  lengthOf: [[EQ, I32], [F64]],
-  item: [[EQ, EQ, I32], [EQ]],
-  itemRef: [[EQ, EQ, I32], []],
-  put: [[EQ, EQ, EQ, I32], []], // what `set item` does that WebAssembly doesn't: where, the key, the value, and a position
-  dict: [[EQ, I32], []], // only ever throws: the mistake in a dictionary's keys (a list of each key, then its value)
-  remove: [[EQ, EQ, I32], []],
-  addInto: [[EQ, EQ, I32, I32], [EQ]],
-  checkRepeat: [[EQ, I32], [F64]],
-  itemsOf: [[EQ, I32], [EQ]],
   checkKind: [[I32, I32, EQ, I32, I32], []],
   stopped: [[I32], []],
   refill: [[I32], [I32]], // more steps, as a step count's last ran out: how many are left after this one
@@ -429,7 +420,7 @@ function declareRuntime(m, T, im) {
     bytesOf(c, T, 0).emit("array.len").emit("f64.convert_i32_s");
     c.emit("else").emit("local.get", 0).emit("ref.test", T.dict).emit("if", F64);
     c.emit("local.get", 0).emit("ref.cast", T.dict).emit("struct.get", T.dict, 3).emit("f64.convert_i32_s");
-    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", im.lengthOf).emit("end").emit("end").emit("end").emit("call", R.box);
+    c.emit("else").emit("local.get", 0).emit("local.get", 1).emit("call", R.lengthRest).emit("end").emit("end").emit("end").emit("call", R.box);
   });
 
   // The 0-based place of item n in a list, if n is a whole number from 1 to its length, or -1.
@@ -455,8 +446,7 @@ function declareRuntime(m, T, im) {
     c.emit("if", I32).emit("local.get", x).emit("i32.trunc_f64_s").emit("i32.const", 1).emit("i32.sub").emit("else").emit("i32.const", -1).emit("end");
   });
 
-  // `item n of x`: a list's item, a byte, or a dictionary's value, here; the rest, and every mistake, in the
-  // shared code
+  // `item n of x`: a list's item, a byte, or a dictionary's value, here; the rest, and every mistake, in itemRest
   fn("item", [EQ, EQ, I32], [EQ], (c, f) => {
     const at = f.local(I32);
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.place).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if");
@@ -466,22 +456,22 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
     isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.dictItem).emit("return").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.item);
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.itemRest);
   });
 
   // where `set item n of x to ...` goes: the place in a list, or -1 for a byte or a dictionary's key (see
-  // put), checked before the value is worked out; anything else fails in the shared code
+  // put), checked before the value is worked out; anything else in itemRefRest
   fn("itemRef", [EQ, EQ, I32], [I32], (c, f) => {
     const at = f.local(I32);
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.place).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if").emit("local.get", at).emit("return").emit("end");
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.bytePlace).emit("i32.const", 0).emit("i32.ge_s").emit("if").emit("i32.const", -1).emit("return").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
     isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if").emit("i32.const", -1).emit("return").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.itemRef).emit("i32.const", -1);
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.itemRefRest);
   });
 
   // a value into a byte (a whole number from 0 to 255), or into a dictionary, where itemRef said to;
-  // anything else is a mistake, which the shared code words
+  // anything else in putRest
   fn("put", [EQ, EQ, EQ, I32], [], (c, f) => {
     const [at, v] = [f.local(I32), f.local(F64)];
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.bytePlace).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s");
@@ -493,7 +483,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("ref.test", T.dict).emit("local.get", 1).emit("ref.test", T.text);
     isNum(c, T, 1).emit("i32.or").emit("i32.and").emit("if");
     c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.dictPut).emit("return").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("local.get", 3).emit("call", im.put);
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("local.get", 3).emit("call", R.putRest);
   });
 
   // `x is in d` for a dictionary, here; anything else in the shared code
@@ -619,14 +609,14 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", list).emit("local.get", n).emit("i32.const", 1).emit("i32.add").emit("struct.set", T.list, 1);
   });
 
-  // `add value to name`: numbers and lists here, text and mistakes in JavaScript; returns the new value
+  // `add value to name`: numbers and lists here, text, amounts and mistakes in addRest; returns the new value
   fn("addInto", [EQ, EQ, I32, I32], [EQ], (c) => {
     bothNums(c, T, 0, 1).emit("if");
     numOf(c, T, 0);
     numOf(c, T, 1);
     c.emit("f64.add").emit("call", R.box).emit("return").emit("end");
     c.emit("local.get", 0).emit("ref.test", T.list).emit("if").emit("local.get", 0).emit("local.get", 1).emit("call", R.push).emit("local.get", 0).emit("return").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("local.get", 3).emit("call", im.addInto);
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("local.get", 3).emit("call", R.addRest);
   });
 
   // what `for each` goes through: a copy, so adding to the list inside the loop can't make it endless
@@ -642,7 +632,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", copy).emit("local.get", i).emit("local.get", bytes).emit("local.get", i).emit("array.get_u", T.u8).emit("f64.convert_i32_u").emit("call", R.box).emit("array.set", T.items);
     c.emit("local.get", i).emit("i32.const", 1).emit("i32.add").emit("local.set", i).emit("br", 0).emit("end").emit("end");
     c.emit("local.get", copy).emit("ref.as_non_null").emit("local.get", n).emit("struct.new", T.list).emit("return").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("call", im.itemsOf).emit("ref.cast", T.list);
+    c.emit("local.get", 0).emit("local.get", 1).emit("call", R.itemsRest).emit("ref.cast", T.list);
   });
 
   fn("repeatCount", [EQ, I32], [F64], (c, f) => {
@@ -652,7 +642,7 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", x).emit("f64.const", 0).emit("f64.ge").emit("i32.and");
     c.emit("local.get", x).emit("local.get", x).emit("f64.sub").emit("f64.const", 0).emit("f64.eq").emit("i32.and"); // not infinite
     c.emit("if").emit("local.get", x).emit("return").emit("end").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("call", im.checkRepeat); // whole to 15 digits, or a mistake
+    c.emit("local.get", 0).emit("local.get", 1).emit("call", R.repeatRest); // whole to 15 digits, or a mistake
   });
 
   // where a field is in a record, or -1
@@ -1856,7 +1846,10 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
       const record = x.makeRecord();
       for (const name of Object.keys(v)) {
         let id = names.indexOf(name);
-        if (id < 0) id = names.push(name) - 1;
+        if (id < 0) {
+          id = names.push(name) - 1;
+          x.addName(x.makeTextJs(name, name.length));
+        }
         x.putField(record, id, toWasm(v[name]));
       }
       return record;
@@ -1977,25 +1970,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     },
     divisible: (a, b) => (divisible(a, b) ? 1 : 0),
     equal: (a, b) => (equal(toJs(a), toJs(b)) ? 1 : 0),
-    lengthOf: (v, k) => lengthOf(toJs(v), errors[k]),
-    // Lists, bytes and dictionaries are worked on in WebAssembly, so these are only ever mistakes (or a
-    // dictionary's key that isn't one), which the shared code words; a copy of what's there is all it needs.
-    item: (target, n, k) => {
-      const [seq, i] = item(toJs(target), toJs(n), false, errors[k]);
-      return toWasm(seq instanceof Map ? seq.get(i) : seq[i]);
-    },
-    itemRef: (target, n, k) => {
-      item(toJs(target), toJs(n), true, errors[k]);
-    },
-    put: (target, n, value, k) => {
-      const [seq, i] = item(toJs(target), toJs(n), true, errors[k]);
-      putItem(seq, i, toJs(value), errors[k]);
-    },
-    dict: (list, k) => void makeDictionary(Array.from({ length: x.listLength(list) }, (_, i) => x.listItem(list, i)), errors[k], toJs),
-    remove: (key, target, k) => removeKey(toJs(key), toJs(target), errors[k]),
-    addInto: (current, value, name, k) => toWasm(addInto(toJs(current), toJs(value), names[name], errors[k])),
-    checkRepeat: (n, k) => checkRepeat(toJs(n), errors[k]), // a count that's whole to 15 digits comes back whole
-    itemsOf: (v, k) => toWasm(itemsOf(toJs(v), errors[k])),
     // input i of a function whose inputs say what they are: its kind from its tag, so a big list isn't copied
     checkKind: (id, i, v, name, k) => {
       const wanted = kinds[id].kinds[i];

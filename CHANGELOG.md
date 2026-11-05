@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Lists, text, dictionaries and bytes stay in WebAssembly.** A text's letters, a dictionary's keys, `add` to
+  text and amounts, showing any value, and every mistake these make, "did you mean" and all, are the module's own:
+  it imports 42 functions, not 51. An item given past 15 digits, as in `set item 2.0000000000000004 of xs to 9`,
+  now changes the list on the WebAssembly engine, as on the others (DESIGN §153).
 - **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
   `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
   `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,

@@ -6517,3 +6517,39 @@ too long, which are fixed too, but for one, below.
   minutes on 50,000. They're programs no one writes by hand, but a page or a tool that checks code it's sent
   should limit its size.
 
+## 153. What a value shows as, in the WebAssembly module
+
+The rest of stage 2's fourth part (§151): what lists, text, dictionaries and bytes do that still called
+JavaScript, and every mistake they make. A module imports 42 functions, not 51: `lengthOf`, `item`, `itemRef`,
+`put`, `dict`, `remove`, `addInto`, `checkRepeat` and `itemsOf` are gone. What's left of part 4 is a function's
+inputs that say what they are (`checkKind`) and a record's "did you mean" (`field`).
+
+- **They weren't only mistakes.** A text's letters (`item 2 of "héllo"`, `for each c in words`, `length of
+  words`), a dictionary's keys for `for each`, and `add` to text went to JavaScript too. They're the module's now.
+- **Showing a value** (`show`), as vm.js's show does: text as it is, or inside a list, record or dictionary in
+  quotes as `JSON.stringify` writes them (`\"`, `\\`, `\n` and the rest, `\u` and four lowercase hex digits for
+  a unit below 32 and for half of an emoji on its own); a number as text (§139); `[1, "a"]`, `(record with ...)`,
+  `(dictionary where "a" is 1)`, past keys taken out, and `(empty record)` and `(empty dictionary)`; a list
+  inside itself as `[...]` and a record or dictionary as `(...)`, from a stack of what's being shown;
+  `(3 bytes: 0, 255, 0)`, `<function f>`, and an amount by its unit's word for one of it or for more.
+- **A text's letters,** as the VM counts them, an emoji as one: where each begins, kept for the last text asked
+  about, as vm.js's lettersOf keeps them, so going through a text a letter at a time takes as long as it is.
+- **"Did you mean"** for a dictionary's key: vm.js's distance (an edit is a unit put in, taken out or changed, or
+  two side by side swapped) and closest (within 1 edit for 3 units or fewer, 2 for more, the first nearest).
+- **Names JavaScript adds** as the program runs, a table's rows' fields, it gives the module too (`addName`), so
+  the module can show a row; a name's text is from the program's data, or past it from those.
+- **Amounts added** in the module, as vm.js's amountIn does: in the first one's unit, times the other's factor
+  over its own, from a table of each unit's factor and words made from vm.js's UNITS.
+- **A bug it fixed.** `set item 2.0000000000000004 of xs to 9`, an item given past 15 digits, changed a copy of
+  the list in JavaScript, and left the list as it was. It's changed in the module now, as the VM changes it.
+- **A hazard met.** The runtime's `canon` takes only a number above 0 that isn't whole (as §147's keys use it),
+  and with 0 it never ended. `canonAny` is vm.js's canon: a whole number, or one that isn't finite, as it is.
+  `item 0 of xs` and an amount of 0 found it; the tests have both.
+- **What it cost.** Every module holds all of the runtime, used or not: a module for `say 1` is 26,348 bytes,
+  not 15,538, and folio.wasm 1,965,287, not 1,709,430. Leaving out what a program doesn't call, in wasm.js and
+  wasm.folio alike, is for later: part 5's built-ins will make it worth more.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test:
+  each kind of value shown, letters and emoji, `for each` over text and a dictionary, and 21 mistakes, all as
+  the VM says them; amounts shown and added on both engines; and every program the engines are tested with, made
+  by wasm.js, wasm.folio and folio.wasm byte for byte, the 8,000 broken ones too.
+

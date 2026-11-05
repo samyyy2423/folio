@@ -940,7 +940,7 @@ local.get d local.get n i32.const 1 i32.add struct.set dict 2
 local.get d local.get d struct.get dict 3 i32.const 1 i32.add struct.set dict 3
 local.get d local.get h local.get n i32.const 1 i32.add call R.dictSlot
 
-;; 'item key of d', key text or a number: its value, or the mistake, which JavaScript words
+;; 'item key of d', key text or a number: its value, or the mistake
 func dictItem d:eq key:eq k:i32 -> eq
 local dd null:dict
 local kk eq
@@ -948,14 +948,14 @@ local e i32
 local.get d ref.cast dict local.tee dd local.get key call R.dictKey local.tee kk local.get kk call R.keyHash call R.dictFind local.tee e i32.const 0 i32.ge_s if
   local.get dd struct.get dict 1 local.get e array.get items return
 end
-local.get d local.get key local.get k call im.item
+local.get d local.get key local.get k call R.itemRest
 
 ;; 1 if key, text or a number, is in d
 func dictHas d:eq key:eq -> i32
 local kk eq
 local.get d ref.cast dict local.get key call R.dictKey local.tee kk local.get kk call R.keyHash call R.dictFind i32.const 0 i32.ge_s
 
-;; 'remove key from target': a key of a dictionary taken out here; anything else, and every mistake, in JavaScript
+;; 'remove key from target': a key of a dictionary taken out here; anything else, and every mistake, in removeRest
 func remove key:eq target:eq k:i32 ->
 local dd null:dict
 local kk eq
@@ -968,10 +968,10 @@ local.get target ref.test dict local.get key ref.test text local.get key call R.
     return
   end
 end
-local.get key local.get target local.get k call im.remove
+local.get key local.get target local.get k call R.removeRest
 
 ;; 'dictionary where ...': from a list of each key and then its value; a key that isn't text or a number is a
-;; mistake, which JavaScript words
+;; mistake
 func dictOf l:eq k:i32 -> eq
 local d null:dict
 local items null:items
@@ -984,7 +984,7 @@ call R.dictNew local.set d
 block loop
   local.get i local.get n i32.ge_u br_if 1
   local.get items local.get i array.get items local.tee key ref.test text local.get key call R.isNumber i32.or i32.eqz if
-    local.get l local.get k call im.dict
+    local.get key local.get k call R.keyKind
   end
   local.get d local.get key call R.dictKey local.get items local.get i i32.const 1 i32.add array.get items call R.dictSet
   local.get i i32.const 2 i32.add local.set i
@@ -1079,6 +1079,11 @@ global.get g.kindNumber
 func nameText id:i32 -> eq
 local at i32
 local n i32
+local base i32
+global.get g.names array.len i32.const 1 i32.shr_u local.set base
+local.get id local.get base i32.ge_u if
+  global.get g.moreNames local.get id local.get base i32.sub array.get items return
+end
 global.get g.names local.get id i32.const 1 i32.shl array.get ids local.set at
 global.get g.names local.get id i32.const 1 i32.shl i32.const 1 i32.add array.get ids local.set n
 local.get at local.get n array.new_data chars 0 local.get n call R.newText
@@ -1117,6 +1122,719 @@ local.get r call R.kindWords call R.concat i32.const 0 local.get k throw 0
 func notRecord r:eq name:i32 k:i32 ->
 global.get g.cantTake local.get name call R.nameText call R.concat global.get g.ofWords call R.concat
 local.get r call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; ---------- what a value shows as, and the mistakes that show one (DESIGN §153) ----------
+;; The rest of what lists, text, dictionaries and bytes do, and every mistake they make, here: a text's letters, a
+;; dictionary's keys, 'add' to text and to amounts, and each mistake worded as vm.js words it, showing a value as
+;; its show does. So these leave the module no more.
+
+text wNo "no"
+text wYes "yes"
+text wNothing "nothing"
+text wOpen "["
+text wClose "]"
+text wComma ", "
+text wParen "("
+text wParenClose ")"
+text wRecordWith "(record with "
+text wEmptyRecord "(empty record)"
+text wDictWhere "(dictionary where "
+text wIs " is "
+text wEmptyDict "(empty dictionary)"
+text wFunction "<function "
+text wAngle ">"
+text wByte "byte"
+text wItem "item"
+text wLetter "letter"
+text wColon ": "
+text wSpace " "
+text wListAgain "[...]"
+text wAgain "(...)"
+text noKey1 "there is no "
+text noKey2 " in this dictionary"
+text didYouMean ". Did you mean "
+text question "?"
+text keyKinds "a dictionary's keys are text or numbers, not "
+text lengthWords "'length of' needs a list, text, dictionary or bytes, not "
+text goThroughWords "can only go through a list, text, dictionary or bytes, not "
+text wholeWords "item numbers must be whole numbers, not "
+text noItem "there is no item "
+text fromOne ", items are counted from 1"
+text onlyBytes ", there are only "
+text theList ", the list only has "
+text theText ", the text only has "
+text changeWords "can only change items of a list, dictionary or bytes, not "
+text takeWords "can only take an item of a list, text, dictionary or bytes, not "
+text byteWords "a byte is a whole number from 0 to 255, not "
+text removeWords "can only remove from a dictionary, not "
+text addWords1 "can't add "
+text addWords2 " to "
+text repeatWords "repeat needs a whole number of times, not "
+double d255 255
+${UNITS.map((u, i) => `text unitOne${i} ${JSON.stringify(u[0])}\ntext unitMany${i} ${JSON.stringify(u[1])}\ndouble unitFactor${i} ${u[3]}`).join("\n")}
+
+;; the values being shown further up, so a list, record or dictionary inside itself shows as [...] or (...)
+global showing null:items mut ref.null items
+global showingN i32 mut i32.const 0
+;; the last text whose letters were asked about: where each letter begins, and how many there are
+global lettersText eq mut ref.null eq
+global letterStarts null:ids mut ref.null ids
+global letterN i32 mut i32.const 0
+;; names JavaScript gave ids to as the program ran (a table's rows' fields), after those in the program's data
+global moreNames null:items mut ref.null items
+global moreN i32 mut i32.const 0
+
+;; x as vm.js's canon has it: a whole number, or one that isn't finite, as it is; any other to 15 digits, its sign
+;; kept (canon itself takes only numbers above 0 that aren't whole)
+func canonAny x:f64 -> f64
+local.get x local.get x f64.trunc f64.eq local.get x local.get x f64.sub f64.const d0 f64.ne i32.or if
+  local.get x return
+end
+local.get x f64.abs call R.canon local.get x f64.copysign
+
+;; unit u's word: for one of it, or for more (many 1)
+func unitWord u:i32 many:i32 -> eq
+${UNITS.map((_, i) => `local.get u i32.const ${i} i32.eq if\n  local.get many if\n    global.get g.unitMany${i} return\n  end\n  global.get g.unitOne${i} return\nend`).join("\n")}
+global.get g.wNothing
+
+;; how many of the measure's base unit one of unit u is (vm.js's UNITS)
+func unitFactor u:i32 -> f64
+${UNITS.map((_, i) => `local.get u i32.const ${i} i32.eq if\n  f64.const unitFactor${i} return\nend`).join("\n")}
+f64.const d1
+
+;; a hex digit's unit, lowercase, as JSON writes them
+func hexDigit d:i32 -> i32
+local.get d i32.const 10 i32.lt_u if i32
+  local.get d i32.const 48 i32.add
+else
+  local.get d i32.const 87 i32.add
+end
+
+;; text t in quotes, as JSON.stringify writes it: " and \ after a \, and \b \f \n \r \t; any other unit below 32,
+;; and half of an emoji on its own, as \u and four hex digits
+func quote t:eq -> eq
+local p null:chars
+local q null:chars
+local n i32
+local i i32
+local j i32
+local c i32
+local d i32
+local.get t ref.cast text struct.get text 1 local.set n
+local.get t call R.units local.set p
+local.get n i32.const 6 i32.mul i32.const 2 i32.add array.new_default chars local.set q
+local.get q i32.const 0 i32.const 34 array.set chars
+i32.const 1 local.set j
+block loop
+  local.get i local.get n i32.ge_u br_if 1
+  local.get p local.get i array.get_u chars local.set c
+  i32.const 0 local.set d
+  ;; a high half followed by a low half: a whole emoji (d 2)
+  local.get c i32.const 64512 i32.and i32.const 55296 i32.eq local.get i i32.const 1 i32.add local.get n i32.lt_u i32.and if
+    local.get p local.get i i32.const 1 i32.add array.get_u chars i32.const 64512 i32.and i32.const 56320 i32.eq if
+      i32.const 2 local.set d
+    end
+  end
+  local.get d i32.const 2 i32.eq if
+    local.get q local.get j local.get c array.set chars
+    local.get q local.get j i32.const 1 i32.add local.get p local.get i i32.const 1 i32.add array.get_u chars array.set chars
+    local.get j i32.const 2 i32.add local.set j
+    local.get i i32.const 2 i32.add local.set i
+  else
+    ;; d: the letter after a \, or 1 for \u and four hex digits
+    local.get c i32.const 34 i32.eq local.get c i32.const 92 i32.eq i32.or if
+      local.get c local.set d
+    end
+    local.get c i32.const 8 i32.eq if
+      i32.const 98 local.set d
+    end
+    local.get c i32.const 12 i32.eq if
+      i32.const 102 local.set d
+    end
+    local.get c i32.const 10 i32.eq if
+      i32.const 110 local.set d
+    end
+    local.get c i32.const 13 i32.eq if
+      i32.const 114 local.set d
+    end
+    local.get c i32.const 9 i32.eq if
+      i32.const 116 local.set d
+    end
+    local.get d i32.eqz local.get c i32.const 32 i32.lt_u local.get c i32.const 63488 i32.and i32.const 55296 i32.eq i32.or i32.and if
+      i32.const 1 local.set d
+    end
+    local.get d i32.eqz if
+      local.get q local.get j local.get c array.set chars
+      local.get j i32.const 1 i32.add local.set j
+    else
+      local.get q local.get j i32.const 92 array.set chars
+      local.get d i32.const 1 i32.eq if
+        local.get q local.get j i32.const 1 i32.add i32.const 117 array.set chars
+        local.get q local.get j i32.const 2 i32.add local.get c i32.const 12 i32.shr_u call R.hexDigit array.set chars
+        local.get q local.get j i32.const 3 i32.add local.get c i32.const 8 i32.shr_u i32.const 15 i32.and call R.hexDigit array.set chars
+        local.get q local.get j i32.const 4 i32.add local.get c i32.const 4 i32.shr_u i32.const 15 i32.and call R.hexDigit array.set chars
+        local.get q local.get j i32.const 5 i32.add local.get c i32.const 15 i32.and call R.hexDigit array.set chars
+        local.get j i32.const 6 i32.add local.set j
+      else
+        local.get q local.get j i32.const 1 i32.add local.get d array.set chars
+        local.get j i32.const 2 i32.add local.set j
+      end
+    end
+    local.get i i32.const 1 i32.add local.set i
+  end
+  br 0
+end end
+local.get q local.get j i32.const 34 array.set chars
+local.get q local.get j i32.const 1 i32.add call R.newText
+
+;; n and then word, with an s if n isn't 1: '3 items'
+func plural n:i32 word:eq -> eq
+local w eq
+local.get n f64.convert_i32_s call R.numText global.get g.wSpace call R.concat local.get word call R.concat local.set w
+local.get n i32.const 1 i32.ne if
+  local.get w global.get g.pluralS call R.concat local.set w
+end
+local.get w
+
+;; 1 if v is being shown further up
+func showingHas v:eq -> i32
+local i i32
+block loop
+  local.get i global.get g.showingN i32.ge_u br_if 1
+  global.get g.showing local.get i array.get items local.get v ref.eq if
+    i32.const 1 return
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+i32.const 0
+
+;; v on top of what's being shown
+func showingPush v:eq ->
+local bigger null:items
+global.get g.showing ref.is_null if
+  i32.const 8 array.new_default items global.set g.showing
+end
+global.get g.showingN global.get g.showing array.len i32.eq if
+  global.get g.showingN i32.const 1 i32.shl array.new_default items local.tee bigger
+  i32.const 0 global.get g.showing i32.const 0 global.get g.showingN array.copy items items
+  local.get bigger global.set g.showing
+end
+global.get g.showing global.get g.showingN local.get v array.set items
+global.get g.showingN i32.const 1 i32.add global.set g.showingN
+
+;; v as text, as vm.js's show makes it: text as it is, or in quotes inside a list, record or dictionary (nested 1)
+func show v:eq nested:i32 -> eq
+local out eq
+local n i32
+local i i32
+local x f64
+local items null:items
+local ids null:ids
+local u null:u8
+local first i32
+local.get v ref.is_null if
+  global.get g.wNothing return
+end
+local.get v ref.test i31 if
+  local.get v ref.cast i31 i31.get_u local.tee n i32.const 2 i32.lt_u if
+    local.get n if
+      global.get g.wYes return
+    end
+    global.get g.wNo return
+  end
+  local.get v ref.cast i31 i31.get_s f64.convert_i32_s call R.numText return
+end
+local.get v ref.test num if
+  local.get v ref.cast num struct.get num 0 call R.numText return
+end
+local.get v ref.test text if
+  local.get nested if
+    local.get v call R.quote return
+  end
+  local.get v return
+end
+local.get v ref.test closure if
+  global.get g.wFunction local.get v ref.cast closure struct.get closure 3 call R.nameText call R.concat global.get g.wAngle call R.concat return
+end
+local.get v ref.test bytes if
+  local.get v ref.cast bytes struct.get bytes 0 local.tee u array.len local.set n
+  global.get g.wParen local.get n global.get g.wByte call R.plural call R.concat local.set out
+  local.get n if
+    local.get out global.get g.wColon call R.concat local.set out
+    block loop
+      local.get i local.get n i32.ge_u br_if 1
+      local.get i if
+        local.get out global.get g.wComma call R.concat local.set out
+      end
+      local.get out local.get u local.get i array.get_u u8 f64.convert_i32_s call R.numText call R.concat local.set out
+      local.get i i32.const 1 i32.add local.set i
+      br 0
+    end end
+  end
+  local.get out global.get g.wParenClose call R.concat return
+end
+local.get v ref.test qty if
+  ;; an amount: its number and its unit's word, for 1 of it or for more (1 mile, 2 miles)
+  local.get v ref.cast qty struct.get qty 0 local.tee x call R.numText global.get g.wSpace call R.concat
+  local.get v ref.cast qty struct.get qty 1 local.get x call R.canonAny f64.abs f64.const d1 f64.ne call R.unitWord call R.concat return
+end
+local.get v ref.test list local.get v ref.test record i32.or local.get v ref.test dict i32.or i32.eqz if
+  global.get g.wNothing return
+end
+local.get v call R.showingHas if
+  local.get v ref.test list if
+    global.get g.wListAgain return
+  end
+  global.get g.wAgain return
+end
+local.get v call R.showingPush
+local.get v ref.test list if
+  local.get v ref.cast list struct.get list 0 local.set items
+  local.get v ref.cast list struct.get list 1 local.set n
+  global.get g.wOpen local.set out
+  block loop
+    local.get i local.get n i32.ge_u br_if 1
+    local.get i if
+      local.get out global.get g.wComma call R.concat local.set out
+    end
+    local.get out local.get items local.get i array.get items i32.const 1 call R.show call R.concat local.set out
+    local.get i i32.const 1 i32.add local.set i
+    br 0
+  end end
+  local.get out global.get g.wClose call R.concat local.set out
+else
+  local.get v ref.test record if
+    local.get v ref.cast record struct.get record 0 local.set ids
+    local.get v ref.cast record struct.get record 1 local.set items
+    local.get v ref.cast record struct.get record 2 local.tee n if
+      global.get g.wRecordWith local.set out
+      block loop
+        local.get i local.get n i32.ge_u br_if 1
+        local.get i if
+          local.get out global.get g.wComma call R.concat local.set out
+        end
+        local.get out local.get ids local.get i array.get ids call R.nameText call R.concat global.get g.wSpace call R.concat
+        local.get items local.get i array.get items i32.const 1 call R.show call R.concat local.set out
+        local.get i i32.const 1 i32.add local.set i
+        br 0
+      end end
+      local.get out global.get g.wParenClose call R.concat local.set out
+    else
+      global.get g.wEmptyRecord local.set out
+    end
+  else
+    ;; a dictionary: its keys and values in the order they were first set, past the places of keys taken out
+    local.get v ref.cast dict struct.get dict 2 local.set n
+    i32.const 1 local.set first
+    global.get g.wDictWhere local.set out
+    block loop
+      local.get i local.get n i32.ge_u br_if 1
+      local.get v ref.cast dict struct.get dict 0 local.get i array.get items ref.is_null i32.eqz if
+        local.get first i32.eqz if
+          local.get out global.get g.wComma call R.concat local.set out
+        end
+        i32.const 0 local.set first
+        local.get out local.get v ref.cast dict struct.get dict 0 local.get i array.get items i32.const 1 call R.show call R.concat
+        global.get g.wIs call R.concat
+        local.get v ref.cast dict struct.get dict 1 local.get i array.get items i32.const 1 call R.show call R.concat local.set out
+      end
+      local.get i i32.const 1 i32.add local.set i
+      br 0
+    end end
+    local.get first if
+      global.get g.wEmptyDict local.set out
+    else
+      local.get out global.get g.wParenClose call R.concat local.set out
+    end
+  end
+end
+global.get g.showingN i32.const 1 i32.sub global.set g.showingN
+local.get out
+
+;; the letters of text t, as the VM counts them (an emoji as one): where each begins, in g.letterStarts, and how
+;; many, in g.letterN. Kept for the last text asked about, so going through a long text a letter at a time,
+;; 'item k of words' for each k, takes as long as the text is
+func letters t:eq ->
+local p null:chars
+local s null:ids
+local n i32
+local i i32
+local m i32
+local.get t global.get g.lettersText ref.eq if
+  return
+end
+local.get t ref.cast text struct.get text 1 local.set n
+local.get t call R.units local.set p
+local.get n i32.const 1 i32.add array.new_default ids local.set s
+block loop
+  local.get i local.get n i32.ge_u br_if 1
+  local.get s local.get m local.get i array.set ids
+  local.get m i32.const 1 i32.add local.set m
+  local.get p local.get i array.get_u chars i32.const 64512 i32.and i32.const 55296 i32.eq local.get i i32.const 1 i32.add local.get n i32.lt_u i32.and if
+    local.get p local.get i i32.const 1 i32.add array.get_u chars i32.const 64512 i32.and i32.const 56320 i32.eq if
+      local.get i i32.const 1 i32.add local.set i
+    end
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get s local.get m local.get n array.set ids
+local.get s global.set g.letterStarts
+local.get m global.set g.letterN
+local.get t global.set g.lettersText
+
+;; units from up to to of text t, as a text of its own
+func slice t:eq from:i32 to:i32 -> eq
+local a null:chars
+local.get to local.get from i32.sub array.new_default chars local.tee a
+i32.const 0 local.get t call R.units local.get from local.get to local.get from i32.sub array.copy chars chars
+local.get a local.get to local.get from i32.sub call R.newText
+
+;; letter i of text t, from 0
+func letterAt t:eq i:i32 -> eq
+local.get t call R.letters
+local.get t global.get g.letterStarts local.get i array.get ids global.get g.letterStarts local.get i i32.const 1 i32.add array.get ids call R.slice
+
+;; a text's letters, as a list, for 'for each'
+func lettersList t:eq -> eq
+local items null:items
+local i i32
+local n i32
+local.get t call R.letters
+global.get g.letterN local.tee n array.new_default items local.set items
+block loop
+  local.get i local.get n i32.ge_u br_if 1
+  local.get items local.get i local.get t local.get i call R.letterAt array.set items
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get items ref.as_non_null local.get n struct.new list
+
+;; a dictionary's keys, as a list, in the order they were first set, for 'for each'
+func dictKeys d:eq -> eq
+local dd null:dict
+local items null:items
+local i i32
+local m i32
+local.get d ref.cast dict local.tee dd struct.get dict 3 array.new_default items local.set items
+block loop
+  local.get i local.get dd struct.get dict 2 i32.ge_u br_if 1
+  local.get dd struct.get dict 0 local.get i array.get items ref.is_null i32.eqz if
+    local.get items local.get m local.get dd struct.get dict 0 local.get i array.get items array.set items
+    local.get m i32.const 1 i32.add local.set m
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get items ref.as_non_null local.get m struct.new list
+
+;; how many edits make text a into text b, as vm.js's distance counts them: a unit put in, taken out or changed,
+;; or two side by side swapped
+func distance a:eq b:eq -> i32
+local p null:chars
+local q null:chars
+local n i32
+local m i32
+local w i32
+local d null:ids
+local i i32
+local j i32
+local cost i32
+local best i32
+local t i32
+local.get a ref.cast text struct.get text 1 local.set n
+local.get b ref.cast text struct.get text 1 local.set m
+local.get a call R.units local.set p
+local.get b call R.units local.set q
+local.get m i32.const 1 i32.add local.set w
+local.get n i32.const 1 i32.add local.get w i32.mul array.new_default ids local.set d
+block loop
+  local.get i local.get n i32.gt_u br_if 1
+  local.get d local.get i local.get w i32.mul local.get i array.set ids
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+block loop
+  local.get j local.get m i32.gt_u br_if 1
+  local.get d local.get j local.get j array.set ids
+  local.get j i32.const 1 i32.add local.set j
+  br 0
+end end
+i32.const 1 local.set i
+block loop
+  local.get i local.get n i32.gt_u br_if 1
+  i32.const 1 local.set j
+  block loop
+    local.get j local.get m i32.gt_u br_if 1
+    local.get p local.get i i32.const 1 i32.sub array.get_u chars local.get q local.get j i32.const 1 i32.sub array.get_u chars i32.ne local.set cost
+    local.get d local.get i i32.const 1 i32.sub local.get w i32.mul local.get j i32.add array.get ids i32.const 1 i32.add local.set best
+    local.get d local.get i local.get w i32.mul local.get j i32.add i32.const 1 i32.sub array.get ids i32.const 1 i32.add local.tee t local.get best i32.lt_u if
+      local.get t local.set best
+    end
+    local.get d local.get i i32.const 1 i32.sub local.get w i32.mul local.get j i32.add i32.const 1 i32.sub array.get ids local.get cost i32.add local.tee t local.get best i32.lt_u if
+      local.get t local.set best
+    end
+    local.get i i32.const 1 i32.gt_u local.get j i32.const 1 i32.gt_u i32.and if
+      local.get p local.get i i32.const 1 i32.sub array.get_u chars local.get q local.get j i32.const 2 i32.sub array.get_u chars i32.eq
+      local.get p local.get i i32.const 2 i32.sub array.get_u chars local.get q local.get j i32.const 1 i32.sub array.get_u chars i32.eq i32.and if
+        local.get d local.get i i32.const 2 i32.sub local.get w i32.mul local.get j i32.add i32.const 2 i32.sub array.get ids i32.const 1 i32.add local.tee t local.get best i32.lt_u if
+          local.get t local.set best
+        end
+      end
+    end
+    local.get d local.get i local.get w i32.mul local.get j i32.add local.get best array.set ids
+    local.get j i32.const 1 i32.add local.set j
+    br 0
+  end end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get d local.get n local.get w i32.mul local.get m i32.add array.get ids
+
+;; of dictionary d's keys that are text, the one text key most likely meant, or null: as vm.js's closest picks,
+;; within 1 edit for 3 units or fewer and 2 for more, the first of the nearest
+func closestKey key:eq d:eq -> eq
+local dd null:dict
+local best eq
+local most i32
+local i i32
+local c eq
+local e i32
+local.get key ref.cast text struct.get text 1 i32.const 3 i32.le_u if i32
+  i32.const 2
+else
+  i32.const 3
+end
+local.set most
+local.get d ref.cast dict local.set dd
+block loop
+  local.get i local.get dd struct.get dict 2 i32.ge_u br_if 1
+  local.get dd struct.get dict 0 local.get i array.get items local.tee c ref.test text if
+    local.get key local.get c call R.distance local.tee e local.get most i32.lt_u if
+      local.get c local.set best
+      local.get e local.set most
+    end
+  end
+  local.get i i32.const 1 i32.add local.set i
+  br 0
+end end
+local.get best
+
+;; the mistake of key, which a dictionary doesn't have (as it keeps keys): 'there is no "aple" in this
+;; dictionary. Did you mean "apple"?'
+func notIn d:eq key:eq k:i32 ->
+local words eq
+local guess eq
+global.get g.noKey1 local.get key i32.const 1 call R.show call R.concat global.get g.noKey2 call R.concat local.set words
+local.get key ref.test text if
+  local.get key local.get d call R.closestKey local.tee guess ref.is_null i32.eqz if
+    local.get words global.get g.didYouMean call R.concat local.get guess i32.const 1 call R.show call R.concat global.get g.question call R.concat local.set words
+  end
+end
+local.get words i32.const 0 local.get k throw 0
+
+;; the mistake of a dictionary's key that isn't text or a number
+func keyKind key:eq k:i32 ->
+global.get g.keyKinds local.get key call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; 1 if v is text or a number, as a dictionary's keys are
+func isKey v:eq -> i32
+local.get v ref.test text local.get v call R.isNumber i32.or
+
+;; where item n is in a list, bytes or text (what 0, 1 or 2) of size items, bytes or letters: its place from 0,
+;; n a whole number from 1 to size to 15 digits, as vm.js's item finds it; or the mistake
+func placeOf n:eq size:i32 what:i32 k:i32 -> i32
+local x f64
+local shown eq
+local words eq
+local.get n local.set shown
+local.get n call R.isNumber if
+  local.get n call R.numberOf call R.canonAny local.tee x call R.box local.set shown
+end
+local.get n call R.isNumber i32.eqz local.get x local.get x f64.trunc f64.ne i32.or local.get x local.get x f64.sub f64.const d0 f64.ne i32.or if
+  global.get g.wholeWords local.get shown i32.const 1 call R.show call R.concat i32.const 0 local.get k throw 0
+end
+local.get x f64.const d1 f64.lt if
+  global.get g.noItem local.get x call R.numText call R.concat global.get g.fromOne call R.concat i32.const 0 local.get k throw 0
+end
+local.get x local.get size f64.convert_i32_s f64.gt if
+  global.get g.noItem local.get x call R.numText call R.concat local.set words
+  local.get what i32.const 1 i32.eq if
+    local.get words global.get g.onlyBytes call R.concat local.get size global.get g.wByte call R.plural call R.concat i32.const 0 local.get k throw 0
+  end
+  local.get what if
+    local.get words global.get g.theText call R.concat local.get size global.get g.wLetter call R.plural call R.concat i32.const 0 local.get k throw 0
+  end
+  local.get words global.get g.theList call R.concat local.get size global.get g.wItem call R.plural call R.concat i32.const 0 local.get k throw 0
+end
+local.get x i32.trunc_f64_s i32.const 1 i32.sub
+
+;; 'item n of target', for what the module hasn't found: a key a dictionary doesn't have, a text's letter, an item
+;; at a place given past 15 digits, or the mistake, as vm.js's item words it
+func itemRest target:eq n:eq k:i32 -> eq
+local at i32
+local.get target ref.test dict if
+  local.get n call R.isKey i32.eqz if
+    local.get n local.get k call R.keyKind
+  end
+  local.get target local.get n call R.dictKey local.get k call R.notIn
+  local.get target return
+end
+local.get target ref.test list if
+  local.get n local.get target ref.cast list struct.get list 1 i32.const 0 local.get k call R.placeOf local.set at
+  local.get target ref.cast list struct.get list 0 local.get at array.get items return
+end
+local.get target ref.test bytes if
+  local.get n local.get target ref.cast bytes struct.get bytes 0 array.len i32.const 1 local.get k call R.placeOf local.set at
+  local.get target ref.cast bytes struct.get bytes 0 local.get at array.get_u u8 f64.convert_i32_s call R.box return
+end
+local.get target ref.test text if
+  local.get target call R.letters
+  local.get n global.get g.letterN i32.const 2 local.get k call R.placeOf local.set at
+  local.get target local.get at call R.letterAt return
+end
+global.get g.takeWords local.get target call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; where 'set item n of target to ...' goes, for what the module hasn't found: a list's place for an item given past
+;; 15 digits, -1 for bytes or a dictionary (put sees to those), or the mistake
+func itemRefRest target:eq n:eq k:i32 -> i32
+local at i32
+local.get target ref.test dict if
+  local.get n call R.isKey i32.eqz if
+    local.get n local.get k call R.keyKind
+  end
+  i32.const -1 return
+end
+local.get target ref.test list if
+  local.get n local.get target ref.cast list struct.get list 1 i32.const 0 local.get k call R.placeOf return
+end
+local.get target ref.test bytes if
+  local.get n local.get target ref.cast bytes struct.get bytes 0 array.len i32.const 1 local.get k call R.placeOf local.set at
+  i32.const -1 return
+end
+global.get g.changeWords local.get target call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; a value put where 'set item n of target' said, that the module hasn't put: a dictionary's key, a list's item at a
+;; place given past 15 digits, or a byte that's a whole number from 0 to 255 to 15 digits; or the mistake
+func putRest target:eq n:eq v:eq k:i32 ->
+local at i32
+local x f64
+local shown eq
+local.get target ref.test dict if
+  local.get n call R.isKey i32.eqz if
+    local.get n local.get k call R.keyKind
+  end
+  local.get target ref.cast dict local.get n call R.dictKey local.get v call R.dictSet
+  return
+end
+local.get target ref.test list if
+  local.get n local.get target ref.cast list struct.get list 1 i32.const 0 local.get k call R.placeOf local.set at
+  local.get target ref.cast list struct.get list 0 local.get at local.get v array.set items
+  return
+end
+local.get target ref.test bytes if
+  local.get n local.get target ref.cast bytes struct.get bytes 0 array.len i32.const 1 local.get k call R.placeOf local.set at
+  local.get v local.set shown
+  local.get v call R.isNumber if
+    local.get v call R.numberOf call R.canonAny local.tee x call R.box local.set shown
+    local.get x local.get x f64.trunc f64.eq local.get x f64.const d0 f64.ge i32.and local.get x f64.const d255 f64.le i32.and if
+      local.get target ref.cast bytes struct.get bytes 0 local.get at local.get x i32.trunc_f64_s array.set u8
+      return
+    end
+  end
+  global.get g.byteWords local.get shown i32.const 1 call R.show call R.concat i32.const 0 local.get k throw 0
+end
+global.get g.changeWords local.get target call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; 'remove key from target' that the module hasn't: a key a dictionary doesn't have, or the mistake
+func removeRest key:eq target:eq k:i32 ->
+local.get target ref.test dict i32.eqz if
+  global.get g.removeWords local.get target call R.kindWords call R.concat i32.const 0 local.get k throw 0
+end
+local.get key call R.isKey i32.eqz if
+  local.get key local.get k call R.keyKind
+end
+local.get target local.get key call R.dictKey local.get k call R.notIn
+
+;; 'length of v' for what isn't a list, bytes or a dictionary: a text's letters, or the mistake
+func lengthRest v:eq k:i32 -> f64
+local.get v ref.test text if
+  local.get v call R.letters global.get g.letterN f64.convert_i32_s return
+end
+global.get g.lengthWords local.get v call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; what 'for each' goes through, for what isn't a list or bytes: a text's letters, a dictionary's keys, or the mistake
+func itemsRest v:eq k:i32 -> eq
+local.get v ref.test text if
+  local.get v call R.lettersList return
+end
+local.get v ref.test dict if
+  local.get v call R.dictKeys return
+end
+global.get g.goThroughWords local.get v call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; 'add value to name', for what the module hasn't added: text, amounts of the same measure, or the mistake; the
+;; variable's new value
+func addRest current:eq value:eq name:i32 k:i32 -> eq
+local u i32
+local w i32
+local x f64
+local.get current ref.test unset if
+  global.get g.noValue1 local.get name call R.nameText call R.concat global.get g.noValue2 call R.concat
+  local.get name call R.nameText call R.concat global.get g.noValue3 call R.concat i32.const 0 local.get k throw 0
+end
+local.get current ref.test list if
+  local.get current local.get value call R.push local.get current return
+end
+local.get current ref.test text if
+  local.get current local.get value i32.const 0 call R.show call R.concat return
+end
+local.get current ref.test qty local.get value ref.test qty i32.and if
+  global.get g.unitMeasure local.get current ref.cast qty struct.get qty 1 local.tee u array.get ids
+  global.get g.unitMeasure local.get value ref.cast qty struct.get qty 1 local.tee w array.get ids i32.eq if
+    ;; 5 km + 300 m is 5.3 km: value in current's unit, as vm.js's amountIn makes it
+    local.get value ref.cast qty struct.get qty 0 local.set x
+    local.get u local.get w i32.ne if
+      local.get x local.get w call R.unitFactor f64.mul local.get u call R.unitFactor f64.div local.set x
+    end
+    local.get current ref.cast qty struct.get qty 0 local.get x f64.add local.get u struct.new qty return
+  end
+end
+local.get current call R.isNumber local.get value call R.isNumber i32.and if
+  local.get current call R.numberOf local.get value call R.numberOf f64.add call R.box return
+end
+global.get g.addWords1 local.get value call R.kindWords call R.concat global.get g.addWords2 call R.concat
+local.get current call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; how many times 'repeat' goes round, when it isn't an exact whole number: a whole number to 15 digits, or the
+;; mistake
+func repeatRest n:eq k:i32 -> f64
+local x f64
+local shown eq
+local.get n local.set shown
+local.get n call R.isNumber if
+  local.get n call R.numberOf call R.canonAny local.tee x local.get x f64.trunc f64.eq local.get x f64.const d0 f64.ge i32.and
+  local.get x local.get x f64.sub f64.const d0 f64.eq i32.and if
+    local.get x return
+  end
+  local.get x call R.box local.set shown
+end
+global.get g.repeatWords local.get shown i32.const 1 call R.show call R.concat i32.const 0 local.get k throw 0
+
+;; for JavaScript: a name it gave the next id to as the program ran (a table's row's field)
+export addName t:eq ->
+local bigger null:items
+global.get g.moreNames ref.is_null if
+  i32.const 8 array.new_default items global.set g.moreNames
+end
+global.get g.moreN global.get g.moreNames array.len i32.eq if
+  global.get g.moreN i32.const 1 i32.shl array.new_default items local.tee bigger
+  i32.const 0 global.get g.moreNames i32.const 0 global.get g.moreN array.copy items items
+  local.get bigger global.set g.moreNames
+end
+global.get g.moreNames global.get g.moreN local.get t array.set items
+global.get g.moreN i32.const 1 i32.add global.set g.moreN
 
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so

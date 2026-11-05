@@ -692,15 +692,6 @@ to wasm_runtime
     wasm_import(m, "numberOrder", (list of f64, f64), (list of i32))
     wasm_import(m, "divisible", (list of f64, f64), (list of i32))
     wasm_import(m, "equal", (list of eq, eq), (list of i32))
-    wasm_import(m, "lengthOf", (list of eq, i32), (list of f64))
-    wasm_import(m, "item", (list of eq, eq, i32), (list of eq))
-    wasm_import(m, "itemRef", (list of eq, eq, i32), none)
-    wasm_import(m, "put", (list of eq, eq, eq, i32), none)
-    wasm_import(m, "dict", (list of eq, i32), none) # only ever throws: the mistake in a dictionary's keys
-    wasm_import(m, "remove", (list of eq, eq, i32), none)
-    wasm_import(m, "addInto", (list of eq, eq, i32, i32), (list of eq))
-    wasm_import(m, "checkRepeat", (list of eq, i32), (list of f64))
-    wasm_import(m, "itemsOf", (list of eq, i32), (list of eq))
     wasm_import(m, "checkKind", (list of i32, i32, eq, i32, i32), none)
     wasm_import(m, "stopped", (list of i32), none)
     wasm_import(m, "refill", (list of i32), (list of i32))
@@ -890,7 +881,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 ref.test list if f64 local.get 0 ref.cast list struct.get list 1 f64.convert_i32_s")
     wasm_asm(f, "else local.get 0 ref.test bytes if f64 " + wasm_bytes_of(0) + " array.len f64.convert_i32_s")
     wasm_asm(f, "else local.get 0 ref.test dict if f64 local.get 0 ref.cast dict struct.get dict 3 f64.convert_i32_s")
-    wasm_asm(f, "else local.get 0 local.get 1 call im.lengthOf end end end call R.box")
+    wasm_asm(f, "else local.get 0 local.get 1 call R.lengthRest end end end call R.box")
 
     # The 0-based place of item n in a list, if n is a whole number from 1 to its length, or -1.
     set f to wasm_rt(m, "place", (list of eq, eq), (list of i32))
@@ -917,7 +908,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, wasm_bytes_of(0) + " local.get at array.get_u u8 f64.convert_i32_u call R.box return end")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if local.get 0 local.get 1 local.get 2 call R.dictItem return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.item")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call R.itemRest")
 
     # where `set item n of x to ...` goes: the place in a list, or -1 for a byte or a dictionary's key (see
     # put), checked before the value is worked out; anything else fails in the shared code
@@ -926,7 +917,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 1 call R.place local.tee at i32.const 0 i32.ge_s if local.get at return end")
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace i32.const 0 i32.ge_s if i32.const -1 return end")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if i32.const -1 return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.itemRef i32.const -1")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call R.itemRefRest")
 
     # a value into a byte (a whole number from 0 to 255), or into a dictionary, where itemRef said to;
     # anything else is a mistake, which the shared code words
@@ -937,7 +928,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, wasm_num_of(2) + " local.set v " + wasm_whole_in("v", "0", "255") + " if")
     wasm_asm(f, wasm_bytes_of(0) + " local.get at local.get v i32.trunc_f64_s array.set u8 return end end")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if local.get 0 local.get 1 local.get 2 call R.dictPut return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call im.put")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call R.putRest")
 
     # `x is in d` for a dictionary, here; anything else in the shared code
     set f to wasm_rt(m, "isIn", (list of eq, eq, i32), (list of i32))
@@ -1036,7 +1027,7 @@ to wasm_runtime_functions with m
     set f to wasm_rt(m, "addInto", (list of eq, eq, i32, i32), (list of eq))
     wasm_asm(f, wasm_both_nums(0, 1) + " if " + wasm_num_of(0) + wasm_num_of(1) + " f64.add call R.box return end")
     wasm_asm(f, "local.get 0 ref.test list if local.get 0 local.get 1 call R.push local.get 0 return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call im.addInto")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call R.addRest")
 
     # what `for each` goes through: a copy, so adding to the list inside the loop can't make it endless
     set f to wasm_rt(m, "itemsOf", (list of eq, i32), (list of wasm_ref_null(wasm_t_list)))
@@ -1052,13 +1043,13 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get copy local.get i local.get bs local.get i array.get_u u8 f64.convert_i32_u call R.box array.set items")
     wasm_asm(f, "local.get i i32.const 1 i32.add local.set i br 0 end end")
     wasm_asm(f, "local.get copy ref.as_non_null local.get n struct.new list return end")
-    wasm_asm(f, "local.get 0 local.get 1 call im.itemsOf ref.cast list")
+    wasm_asm(f, "local.get 0 local.get 1 call R.itemsRest ref.cast list")
 
     set f to wasm_rt(m, "repeatCount", (list of eq, i32), (list of f64))
     wasm_named(f, "x", f64)
     wasm_asm(f, wasm_is_num(0) + " if " + wasm_num_of(0) + " local.tee x local.get x f64.trunc f64.eq local.get x f64.const 0 f64.ge i32.and")
     wasm_asm(f, "local.get x local.get x f64.sub f64.const 0 f64.eq i32.and if local.get x return end end") # not infinite
-    wasm_asm(f, "local.get 0 local.get 1 call im.checkRepeat") # whole to 15 digits, or a mistake
+    wasm_asm(f, "local.get 0 local.get 1 call R.repeatRest") # whole to 15 digits, or a mistake
 
     # where a field is in a record, or -1
     set f to wasm_rt(m, "find", (list of eq, i32), (list of i32))
