@@ -12,7 +12,7 @@ export const metadata = {
 const Icon = ({ name }) => <svg className="icon" aria-hidden="true"><use href={`#i-${name}`} /></svg>;
 
 // The playground: every element the playground's own script works with (index.html's, word for word, in
-// /playground.js), by the ids it finds them by, in a new look. The script does the rest.
+// /playground.js), by the ids it finds them by, laid out as a workbench in the site's look. The script does the rest.
 export default function Playground() {
   return (
     <div className="studio">
@@ -30,11 +30,21 @@ export default function Playground() {
         </defs>
       </svg>
 
+      <header className="pg-top">
+        <a className="brand" href={`${BASE}/`} title="Moth's front page"><MothMark />Moth<sup>®</sup></a>
+        <p className="pg-title">Playground</p>
+        <nav aria-label="Pages">
+          <Link href="/learn">Learn</Link>
+          <Link href="/docs">Docs</Link>
+          <Link href="/docs/cookbook">Cookbook</Link>
+          <Link href="/docs/examples">Examples</Link>
+          <a className="btn small" href={GITHUB}><span>GitHub</span></a>
+        </nav>
+      </header>
+
       <section className="playground" id="playground" aria-label="Playground">
         <div className="toolbar">
-          <a className="logo" href={`${BASE}/`} title="Moth's front page"><MothMark />Moth</a>
-          <select id="example" aria-label="Example" />
-          <div className="tools" role="group" aria-label="Run">
+          <div className="tools run-tools" role="group" aria-label="Run">
             <button id="run" type="button" title="Ctrl+Enter"><Icon name="run" />Run</button>
             <button id="debug" type="button" title="Go through the program a step at a time, backwards too"><Icon name="debug" />Debug</button>
             <button id="stop" type="button" disabled><Icon name="stop" />Stop</button>
@@ -45,25 +55,20 @@ export default function Playground() {
             <button id="add-files" type="button" title="Files a program can read by name, like pictures for draw picture: pick them here, or drop them on the playground"><Icon name="files" />Files</button>
             <input id="file-picker" type="file" multiple hidden />
           </div>
-          <label className="toggle"><span>Engine</span>
+          <span className="spacer" />
+          <label className="field"><span>Example</span><select id="example" aria-label="Example" /></label>
+          <label className="field"><span>Engine</span>
             <select id="engine" aria-label="Engine" title="All three run the same program the same way, at different speeds" defaultValue="jit">
-              <option value="jit">JIT (JavaScript)</option>
+              <option value="jit">JIT · JavaScript</option>
               <option value="wasm">WebAssembly</option>
-              <option value="vm">VM (bytecode)</option>
+              <option value="vm">VM · bytecode</option>
             </select>
           </label>
-          <span className="spacer" />
-          <nav className="links" aria-label="Pages">
-            <Link href="/learn">Learn</Link>
-            <Link href="/docs">Docs</Link>
-            <Link href="/docs/cookbook">Cookbook</Link>
-            <a href={GITHUB}>GitHub ↗</a>
-          </nav>
         </div>
 
         <main className="workspace">
-          <section className="pane" aria-label="Code">
-            <div className="pane-head">Code</div>
+          <section className="pane code-pane" aria-label="Code">
+            <div className="pane-head"><span className="tag">(01)</span>Code<span className="grow" /><span className="keys">Ctrl+Enter runs</span></div>
             <div className="editor" id="editor">
               <pre className="gutter" id="gutter" aria-hidden="true" />
               <div className="code">
@@ -75,7 +80,7 @@ export default function Playground() {
           </section>
 
           <section className="pane side" aria-label="Results">
-            <div className="pane-head">Results
+            <div className="pane-head"><span className="tag">(02)</span>Results<span className="grow" />
               <label className="toggle"><span>Compiled</span>
                 <select id="compiled" aria-label="Compiled" defaultValue="">
                   <option value="">hidden</option>
@@ -87,31 +92,31 @@ export default function Playground() {
               </label>
             </div>
             <div className="side-body">
-              <div id="page-view" hidden>
+              <div id="page-view" className="sheet" hidden>
                 <div className="title">Page</div>
                 <iframe id="page-frame" title="The page the program made" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" />
               </div>
-              <div id="drawing-view" hidden>
+              <div id="drawing-view" className="sheet ink" hidden>
                 <div className="title">Drawing</div>
                 <canvas id="canvas" width="500" height="500" tabIndex="0" role="img" aria-label="What the program drew; an app takes keys and clicks here" />
               </div>
-              <div id="debug-panel" hidden>
+              <div id="debug-panel" className="sheet" hidden>
                 <div className="title">Variables</div>
                 <pre id="variables" />
               </div>
-              <div id="problems-view" hidden>
+              <div id="problems-view" className="sheet" hidden>
                 <div className="title">Problems · found without running</div>
                 <ul id="problems" />
               </div>
-              <div id="files-view" hidden>
+              <div id="files-view" className="sheet" hidden>
                 <div className="title">Files · a program reads them by name</div>
                 <ul id="files" />
               </div>
-              <div>
+              <div className="sheet out-sheet">
                 <div className="title" id="output-title">Output</div>
                 <pre id="output" aria-live="polite" />
               </div>
-              <div id="bytecode-view" hidden>
+              <div id="bytecode-view" className="sheet" hidden>
                 <div className="title" id="compiled-title" />
                 <pre id="bytecode" />
               </div>
