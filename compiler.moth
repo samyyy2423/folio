@@ -1635,11 +1635,14 @@ to parse with tokens, reading
                 else if phrase is "the mouse is dragged"
                     set event to "drag"
                     set gives to 2
+                else if phrase is "the page is used" # what was done on the page a program made (page.moth)
+                    set event to "page"
+                    set gives to 1
                 end
             end
             if event is ""
                 set pos to start
-                expected("'a key is pressed', 'the mouse is clicked', 'the mouse is dragged', 'the button ... is clicked', 'enter is pressed in the text box ...', 'the checkbox ... is clicked', 'an item is chosen in the list ...' or 'the slider ... is moved'")
+                expected("'a key is pressed', 'the mouse is clicked', 'the mouse is dragged', 'the button ... is clicked', 'enter is pressed in the text box ...', 'the checkbox ... is clicked', 'an item is chosen in the list ...', 'the slider ... is moved' or 'the page is used'")
             end
             set params to empty list
             if gives is not 0 and word("with")
@@ -4097,7 +4100,7 @@ end
 
 set ats to empty list # every token an error can point at; a position in the code is its number here
 set js_workers to no # whether the program starts a worker, so needs $globals
-set event_names to list of "key", "click", "drag", "button", "enter", "checkbox", "choice", "slider" # in the order of EVENTS in vm.js
+set event_names to list of "key", "click", "drag", "button", "enter", "checkbox", "choice", "slider", "page" # in the order of EVENTS in vm.js
 set turtle_actions to list of "forward", "back", "left", "right", "up", "down", "color", "width", "to", "clear", "box", "circle", "text",
     "chart", "picture", "button", "text box", "clear text box", "checkbox", "tick", "untick", "text area", "list", "dropdown", "slider",
     "set slider"

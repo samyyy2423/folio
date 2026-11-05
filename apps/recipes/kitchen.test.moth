@@ -1,0 +1,106 @@
+# The recipe box's tests, with no network: moth test kitchen.test.moth --allow-libraries --allow-read --allow-write
+
+use "kitchen.moth" as kitchen
+
+# a carriage return, as a browser sends one at the end of each line of a text area but the last
+set cr to item "x" of kitchen's form_fields("x=%0D")
+
+to test_text_from_forms
+    set fields to kitchen's form_fields("title=Fish+%26+chips&minutes=30&empty=")
+    expect item "title" of fields is "Fish & chips"
+    expect item "minutes" of fields is "30"
+    expect item "empty" of fields is ""
+    expect kitchen's field_of(fields, "nowhere") is ""
+    set lines to kitchen's lines_of("  one " + cr + "\n" + cr + "\ntwo\n   \n")
+    expect lines is list of "one", "two"
+    expect kitchen's like_pattern("50%_off\\") is "%50\\%\\_off\\\\%"
+end
+
+to test_problems
+    set good to dictionary where "title" is "Soup", "minutes" is " 30 ", "serves" is "4", "ingredients" is "water", "steps" is "boil"
+    expect kitchen's problem_with(good) is ""
+    set item "title" of good to "  "
+    expect kitchen's problem_with(good) is "Please give the recipe a name."
+    set item "title" of good to "Soup"
+    for each wrong in list of "", "0", "1441", "3.5", "ten", "-2"
+        set item "minutes" of good to wrong
+        expect kitchen's problem_with(good) is "Minutes is a whole number, from 1 to 1440."
+    end
+    set item "minutes" of good to "1440"
+    set item "serves" of good to "101"
+    expect kitchen's problem_with(good) is "Serves is a whole number, from 1 to 100."
+    set item "serves" of good to "1"
+    set item "ingredients" of good to " " + cr + "\n "
+    expect kitchen's problem_with(good) is "Please write the ingredients, one to a line."
+    set item "ingredients" of good to "water"
+    set long to ""
+    repeat 4001 times
+        set long to long + "x"
+    end
+    set item "steps" of good to long
+    expect kitchen's problem_with(good) is "The steps can be at most 4000 letters."
+end
+
+# a recipe box of the test's own, made again from nothing
+to fresh_kitchen
+    try
+        remove the file "kitchen-test.db"
+    if it fails
+    end
+    return kitchen's open_kitchen("kitchen-test.db")
+end
+
+to request with method, where, query, body
+    return record with method method, path where, query query, headers empty dictionary, body body
+end
+
+to get with db, where
+    return kitchen's answer_with(request("GET", where, empty dictionary, ""), db)
+end
+
+to test_pages
+    set db to fresh_kitchen()
+    set home to get(db, "/")
+    expect "<title>Home · Recipe box</title>" is in home
+    expect "<nav class=\"menu\"><a href=\"/\">Home</a><a href=\"/recipes\">Recipes</a>" is in home
+    expect "<li><a href=\"/recipes/3\">Chickpea curry · 40 minutes · serves 4</a></li>" is in home
+    set soup to get(db, "/recipes/1")
+    expect "<h1>Tomato soup</h1>" is in soup
+    expect "<li>1 kg ripe tomatoes</li>" is in soup
+    expect "<ol>\n<li>Soften the onion and garlic in a little oil.</li>" is in soup
+    set asked to dictionary where "q" is " LEMON "
+    set found to kitchen's answer_with(request("GET", "/recipes", asked, ""), db)
+    expect "Recipes with “LEMON”" is in found
+    expect "Lemon pancakes" is in found
+    expect not ("Tomato soup" is in found)
+    set asked to dictionary where "q" is "%"
+    set none to kitchen's answer_with(request("GET", "/recipes", asked, ""), db)
+    expect "Nothing has that in it." is in none
+    expect "Every recipe" is in get(db, "/recipes")
+    expect "server.moth answers each request" is in get(db, "/about")
+    expect status of get(db, "/recipes/99") is 404
+    expect status of get(db, "/nowhere") is 404
+    expect "There's nothing at /nowhere." is in body of get(db, "/nowhere")
+end
+
+to test_adding
+    set db to fresh_kitchen()
+    expect "<form method=\"post\" action=\"/new\">" is in get(db, "/new")
+    set added to kitchen's answer_with(request("POST", "/new", empty dictionary, "title=%3Cscript%3EToast&minutes=5&serves=1&ingredients=Bread%0D%0AButter&steps=Toast+it.%0D%0ASpread+it."), db)
+    expect status of added is 303
+    expect item "location" of headers of added is "/recipes/4"
+    set toast to get(db, "/recipes/4")
+    expect "<h1>&lt;script&gt;Toast</h1>" is in toast
+    expect not ("<script>" is in toast)
+    expect "<li>Bread</li>\n<li>Butter</li>" is in toast
+    set refused to kitchen's answer_with(request("POST", "/new", empty dictionary, "title=Tea&minutes=lots&serves=1&ingredients=tea&steps=brew"), db)
+    expect status of refused is 400
+    expect "<p>Minutes is a whole number, from 1 to 1440.</p>" is in body of refused
+    expect "value=\"Tea\"" is in body of refused
+    expect ">tea</textarea>" is in body of refused
+    set listed to get(db, "/api/recipes")
+    expect length of listed is 4
+    expect item "title" of item 4 of listed is "<script>Toast"
+    expect item "steps" of item 4 of listed is list of "Toast it.", "Spread it."
+    expect item "minutes" of item 1 of listed is 30
+end

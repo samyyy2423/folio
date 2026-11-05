@@ -1387,7 +1387,7 @@ export function askFor(question, answer, error) {
 // `when the button "Start" is clicked` and `when enter is pressed in the text box "Name"`. A handler is
 // { event, closure }, with the label it waits for as `label` for the last two, or for `every`, { event:
 // "every", interval (in milliseconds), closure }.
-export const EVENTS = ["key", "click", "drag", "button", "enter", "checkbox", "choice", "slider"];
+export const EVENTS = ["key", "click", "drag", "button", "enter", "checkbox", "choice", "slider", "page"];
 export const LABELLED = new Set(["button", "enter", "checkbox", "choice", "slider"].map((event) => EVENTS.indexOf(event)));
 
 // `every 100 milliseconds`: how often, in milliseconds (`unit` is 1000 for seconds)
@@ -1566,6 +1566,7 @@ export class Turtle {
   // the focus and moves it there, as a drag from it does; the arrows, Home and End move it while it has the
   // focus. Moving it to a new value goes to its handlers, with the value.
   route(event, inputs) {
+    if (event === "page") return [event, undefined, inputs]; // what was done on the page a program made (page.moth)
     const focused = this.focus === null ? null : this.widgets.findLast((w) => w.label === this.focus && FOCUSABLE.has(w.kind));
     if (this.focus !== null && !focused) this.focus = null; // its box is gone
     const opened = this.open === null ? null : this.widgets.findLast((w) => w.kind === "dropdown" && w.label === this.open);

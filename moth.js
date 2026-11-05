@@ -173,7 +173,7 @@ const BIT_WORDS = ["and", "or", "xor"];
 const AS_WORDS = ["bytes", "text", "hex", "binary", "json"];
 // what `when` can wait for, and how many values each gives its handler
 const EVENT_PHRASES = new Map([["a key is pressed", { event: "key", gives: 1 }], ["the mouse is clicked", { event: "click", gives: 2 }],
-  ["the mouse is dragged", { event: "drag", gives: 2 }]]);
+  ["the mouse is dragged", { event: "drag", gives: 2 }], ["the page is used", { event: "page", gives: 1 }]]); // page.moth's page
 // buttons and text boxes (DESIGN §36): `when enter is pressed in the text box "Name"`, `the text in the text box
 // "Name"`, and the words that can follow a value, so `draw button at 0, 0` still draws a variable called button
 const ENTER_PHRASE = ["enter", "is", "pressed", "in", "the", "text", "box"];
@@ -772,7 +772,7 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       }
       if (!known) {
         pos = start;
-        expected("'a key is pressed', 'the mouse is clicked', 'the mouse is dragged', 'the button ... is clicked', 'enter is pressed in the text box ...', 'the checkbox ... is clicked', 'an item is chosen in the list ...' or 'the slider ... is moved'");
+        expected("'a key is pressed', 'the mouse is clicked', 'the mouse is dragged', 'the button ... is clicked', 'enter is pressed in the text box ...', 'the checkbox ... is clicked', 'an item is chosen in the list ...', 'the slider ... is moved' or 'the page is used'");
       }
       const params = [];
       if (known.gives && word("with")) do params.push(name("an input name")); while (match(",") || word("and"));

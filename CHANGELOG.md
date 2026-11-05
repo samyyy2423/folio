@@ -6,6 +6,15 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Web pages, made in Moth.** `page.moth` makes a page a part at a time: headings, text, links, pictures,
+  lists, tables, boxes, text boxes, checkboxes, dropdowns and buttons, in Moth's look or with CSS of its own.
+  The playground shows it, and so does a page `moth build --web` makes, as the whole window. `when the page is
+  used with what` runs when something on it is clicked, typed or chosen, with every field's value, and the
+  program shows the page again. The page is in a sandboxed frame, so it can't reach the site it's shown on.
+  For a site, `html_of()` is the page's HTML for `server.moth` to send, with menus and forms.
+- **`apps/recipes`**, a whole site in Moth: pages made with `page.moth`, a menu, a search, a form that adds a
+  recipe and shows it again with what was wrong, a SQLite database, its own tests, and the recipes as JSON.
+- The playground finds the standard library: `use "page.moth"`, `"json.moth"` and the rest work there.
 - **moth.wasm.** Moth's compiler, `compiler.moth` and `wasm.moth`, is a WebAssembly module of its own,
   `moth.wasm`, made by itself and checked to make itself again. The playground compiles with it on the
   WebAssembly engine, so the programs it runs there are compiled by Moth, not by JavaScript.

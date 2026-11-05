@@ -6171,3 +6171,56 @@ is done.
   dictionaries and built-ins from vm.js (§139 has the parts), so the page still
   carries the engine's JavaScript; when stage 2 is done, it's a loader, and
   moth.wasm and what it makes can run with no JavaScript at all.
+
+## 145. Web pages made in Moth: page.moth
+
+A full real web page, both ways: a program in the browser makes its own page and is told what's done on
+it; and a site, served by a Moth server, makes its pages with the same library (`apps/recipes`).
+
+- **A part at a time.** `tools/page.moth` builds a page as a list of HTML parts: headings, paragraphs,
+  links, pictures, lists, tables, boxes (`start(p, "card")` ... `finish(p)`), text boxes, text areas,
+  checkboxes, dropdowns and buttons, in a look of Moth's own, with `style()` for CSS of the page's own.
+  Every text is escaped; `html()` is the one way to put HTML in as it's written. Anything left open is
+  closed when the page is made.
+- **Shown by writing a file.** `show()` writes the page to `"<page>"`. The playground's worker, and so a page
+  `moth build --web` makes, keeps no file of that name: it sends the page to the page. So showing a page
+  needed no new statement, and no word reserved (VERSIONING.md). Elsewhere, `html_of()` is the HTML, to
+  write to a file or for `server.moth` to send.
+- **One new event.** `when the page is used with what` gives one value, a dictionary: its "type" ("click",
+  "change", or "enter" for Enter in a text box), the "name" of what was used (its `data-moth`, which every
+  control page.moth makes has), its "value", and "values", every field on the page by name. With every
+  field in each event, the program never asks the page anything: it keeps what it knows, and shows the page
+  again. It's the ninth of vm.js's EVENTS and of compiler.moth's event_names; machine.moth's app_timer moved
+  to 9, after it.
+- **In a sandboxed frame.** The page is shown in an iframe with `sandbox="allow-scripts allow-popups
+  allow-popups-to-escape-sandbox"` and no `allow-same-origin`, so it has an origin of its own: the page a
+  shared link's program makes can't read what the site keeps, or reach the playground. A script put before
+  the program's HTML is the only way between them: it posts what was done to the page, which takes only a
+  message from the frame, of only text and yes or no, and sends it to the worker as the event's dictionary.
+- **Shown again in place.** A run's first page loads into the frame; each page after it goes to the frame's
+  script, which puts its head and body in place of the ones before, and the focus back on the control of the
+  same name, with its selection, so a page shown again on each Enter keeps the typing where it was. Chrome
+  sends a change after Enter, of the same value; the script drops it, so Enter is one event.
+- **As a page of its own.** In a page `moth build --web` makes, the page is the whole window. An app that only
+  waits for its page has no drawing, so the drawing isn't shown, and the status says "use the page".
+- **The playground finds the standard library.** A file a program uses that isn't beside the page is looked
+  for in `tools/`, so `use "page.moth"`, and the other libraries that need nothing of the system, work there.
+- **Checked.** page.test.moth's 5 tests, on all three engines. moth.test.js runs a to-do app on each engine,
+  sends it the dictionaries the frame sends, and checks what it said and the page it showed after. In the
+  browser, on WebAssembly compiled by moth.wasm: the to-do app typed into, with Enter and with Add; and the
+  frame's script's messages for a text box, a dropdown, a checkbox ticked through its label, a click inside a
+  named element, and Enter.
+- **What it isn't.** Programs built for Windows or Linux have no page: `when the page is used` never happens
+  there, and `show()` writes a file called `<page>`, a name Windows doesn't allow. They use `html_of()`.
+- **A site's pages.** A page a server sends is used by the browser, not by the program: its links go to the
+  site's other pages, and its forms send their fields. So page.moth has `menu()` and `list_link()`, links that
+  open where the page is (`link()` opens a tab of its own, as a page in the playground's frame has nowhere of
+  its own to go), and `start_form()` to `end_form()` with `submit()`, a POST by default or a GET for a search.
+  Each `end_...()` checks that what it ends is what was started last, and says which is still open if not.
+- **apps/recipes.** A recipe box, a site of six kinds of page: home, every recipe or those a search finds,
+  each recipe, a form to add one, about, and a 404, each with the same menu and footer; and the recipes as
+  JSON. `kitchen.moth` is what it does, with no network: SQLite (every value a parameter, a search's `%` and
+  `_` only themselves), the checks on a new recipe, the pages, and `answer_with()`, which machine.test.js
+  runs as `guestbook` is run: its 4 tests (`kitchen.test.moth`) with moth.exe, then the site built and used
+  over HTTP. A refused recipe is shown again, 400, with what was wrong and what was written; an added one is
+  a 303 to its own page. A browser ends a text area's lines with \r\n; `lines_of()` takes them as they come.

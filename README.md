@@ -539,6 +539,11 @@ bytes and dictionaries:
   prompts that Claude and other AI apps use, served over the Model Context
   Protocol on the program's input and output. `moth build` makes the server a
   program of its own, for the app's settings to start.
+- [`page.moth`](tools/page.moth) makes web pages: headings, text, lists,
+  tables, text boxes, checkboxes, dropdowns and buttons, shown in the playground
+  and in pages `moth build --web` makes; what's clicked, typed or chosen on them
+  comes back to `when the page is used`. A site's pages have menus and forms,
+  for `server.moth` to send.
 - [`pdf.moth`](tools/pdf.moth) writes PDF files: pages of text in the 14 fonts
   every reader has, lines, boxes and colours, and paragraphs wrapped by the
   fonts' own widths.
@@ -971,7 +976,9 @@ lists, dropdowns, sliders and boxes to type in. [`apps/snake.moth`](apps/snake.m
 [`apps/todo.moth`](apps/todo.moth) a to-do list in 38.
 [`apps/guestbook`](apps/guestbook) is a web app with a SQLite database, in
 about 160 lines, and [docs/guestbook.md](docs/guestbook.md) walks through
-building it.
+building it. [`apps/recipes`](apps/recipes) is a whole site: pages made with
+`page.moth`, a menu, a search, a form that adds a recipe, its own tests, and the
+recipes as JSON.
 
 ```
 move to 50, -20                             # straight to a spot, drawing if the pen is down

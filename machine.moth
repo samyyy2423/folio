@@ -12431,7 +12431,7 @@ end
 # the order the program made them, 32 bytes: what it waits for (0 a key, 1 a click, 2 a drag, 3 a button,
 # and on as front's event_names has them, or app_timer for a timer), the function, how many inputs it takes,
 # and for a timer how many milliseconds apart, or for a button or text box its label.
-set app_timer to 8 # after the last of event_names, so a timer is never taken for a button
+set app_timer to 9 # after the last of event_names, so a timer is never taken for a button
 
 to emit_app_setup with a
     # rt_on: rcx what it waits for, rax the function, rdx how many inputs it takes; rt_every: the same for a

@@ -24,6 +24,8 @@ let app = null; // the running app, once the program has set it up
 let lines = [];
 let drawn = [];
 let played = [];
+let page = null; // the newest page the program showed (page.moth, DESIGN §145) since the last message
+let pages = 0; // pages shown this run
 let sent = 0;
 // A picture drawn again and again (a game's sprite) goes to the page once: the drawing names it by number.
 const pictureIds = new Map();
@@ -36,8 +38,9 @@ const pictureId = (image) => {
   return pictureIds.get(image);
 };
 const flush = () => {
-  if (lines.length || drawn.length || played.length) postMessage({ lines, drawn, pictures, played });
+  if (lines.length || drawn.length || played.length || page !== null) postMessage({ lines, drawn, pictures, played, page });
   lines = [];
+  page = null;
   drawn = [];
   pictures = [];
   played = [];
@@ -51,7 +54,7 @@ let files = {};
 // A mistake ends the program, or the app; anything else that goes wrong is Moth's own.
 // A page's files are the ones picked or dropped on it (`start`, by name), and `write` makes more, for this
 // run. `read "https://..."` reads a site, if the site lets pages read it; the browser keeps the program to
-// what any page can do.
+// what any page can do. What's written to "<page>" isn't kept: it's the page the program shows (page.moth).
 function pageDisk(start) {
   const files = memoryDisk(start);
   return {
@@ -85,7 +88,12 @@ function pageDisk(start) {
       if (request.status >= 300) throw new Error(`the site answered ${request.status}`);
       return request.responseText;
     },
-    write: files.write,
+    write: (name, data) => {
+      if (name !== "<page>") return files.write(name, data);
+      page = typeof data === "string" ? data : new TextDecoder().decode(data);
+      pages++;
+      due();
+    },
     remove: files.remove,
     folder: files.folder,
   };
@@ -139,6 +147,7 @@ onmessage = ({ data }) => {
     }
   });
   let said = 0;
+  pages = 0;
   let total = 0;
   let pictured = 0; // drawn since the last clear
   let sounds = 0;
@@ -195,7 +204,7 @@ onmessage = ({ data }) => {
       },
     }) ?? null;
     flush();
-    postMessage({ done: true, app: app?.waits, empty: said === 0 && total === 0 && sounds === 0, ms: performance.now() - start, stopped, byMothWasm: !!compiled });
+    postMessage({ done: true, app: app?.waits, empty: said === 0 && total === 0 && sounds === 0 && pages === 0, ms: performance.now() - start, stopped, byMothWasm: !!compiled });
     app?.waits.forEach((wait, i) => wait.event === "every" && setInterval(() => handle(() => app.handle(i)), Math.max(FASTEST, wait.interval)));
   } catch (err) {
     if (err instanceof Waiting) return; // the page asks, and runs it again

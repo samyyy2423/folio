@@ -1048,6 +1048,7 @@ when enter is pressed in the text box "Name" with words
 when the checkbox "Dark" is clicked
 when an item is chosen in the list "Fruits" with fruit     # or in the dropdown
 when the slider "Volume" is moved with volume
+when the page is used with what           # the page page.moth shows: what was done on it
 every 100 milliseconds                    # or any amount of time above 0
 ```
 
@@ -1059,6 +1060,12 @@ until it's closed or `stop the program` runs. A mistake in a handler ends the pr
 The controls of section 6.16 are drawn where they're placed and found by their label. A text box holds one
 line of up to 40 letters and a text area 2,000; a slider's value is a whole number, kept between its ends;
 `the choice in the list` is nothing until there is one.
+
+`when the page is used` is for the page `page.moth` shows on the web, in the playground and in a page `moth
+build --web` makes. Its one value is a dictionary: the "type" of what was done (`"click"`, `"change"`, or
+`"enter"` for Enter in a text box), the "name" of what was used, its "value", and "values", every text box's,
+checkbox's and dropdown's value on the page by its name (text, or yes or no for a checkbox). Anywhere else it
+never happens.
 
 ## 13. Tasks and workers
 

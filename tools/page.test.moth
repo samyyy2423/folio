@@ -1,0 +1,118 @@
+use "page.moth" as page
+
+to test_text_is_shown_as_it_is
+    expect page's escaped("<b> & \"x\"") is "&lt;b&gt; &amp; &quot;x&quot;"
+    expect page's escaped(3) is "3"
+    set p to page's new("A <page>")
+    page's heading(p, "Fish & chips")
+    page's subheading(p, "<i>")
+    page's paragraph(p, "<script>")
+    page's bold(p, "Big")
+    page's code_block(p, "a < b")
+    page's link(p, "Moth", "https://example.com/?a=1&b=2")
+    page's picture(p, "cat.png", "A \"cat\"")
+    page's rule(p)
+    set made to page's html_of(p)
+    expect "<title>A &lt;page&gt;</title>" is in made
+    expect "<body>\n<h1>Fish &amp; chips</h1>\n<h2>&lt;i&gt;</h2>\n<p>&lt;script&gt;</p>\n<p><strong>Big</strong></p>\n<pre><code>a &lt; b</code></pre>\n" is in made
+    expect "<p><a href=\"https://example.com/?a=1&amp;b=2\" target=\"_blank\" rel=\"noopener\">Moth</a></p>\n<img src=\"cat.png\" alt=\"A &quot;cat&quot;\">\n<hr>\n</body>\n</html>\n" is in made
+    expect "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">" is in made
+end
+
+to test_controls_are_named
+    set p to page's new("Form")
+    page's text_box(p, "who", "Your name", "Sam")
+    page's text_box(p, "where", "Town")
+    page's text_area(p, "notes", "Notes", "a\nb")
+    page's checkbox(p, "tea", "Tea", yes)
+    page's checkbox(p, "milk", "Milk")
+    set sizes to list of "S", "M", "L"
+    page's dropdown(p, "size", sizes, "M")
+    page's dropdown(p, "any", sizes)
+    page's button(p, "go", "Go & see")
+    set parts to parts of p
+    expect item 1 of parts is "<input type=\"text\" data-moth=\"who\" name=\"who\" placeholder=\"Your name\" value=\"Sam\">"
+    expect item 2 of parts is "<input type=\"text\" data-moth=\"where\" name=\"where\" placeholder=\"Town\" value=\"\">"
+    expect item 3 of parts is "<textarea rows=\"4\" data-moth=\"notes\" name=\"notes\" placeholder=\"Notes\">a\nb</textarea>"
+    expect item 4 of parts is "<label class=\"row\"><input type=\"checkbox\" data-moth=\"tea\" name=\"tea\" checked> Tea</label>"
+    expect item 5 of parts is "<label class=\"row\"><input type=\"checkbox\" data-moth=\"milk\" name=\"milk\"> Milk</label>"
+    expect item 6 of parts is "<select data-moth=\"size\" name=\"size\"><option>S</option><option selected>M</option><option>L</option></select>"
+    expect item 7 of parts is "<select data-moth=\"any\" name=\"any\"><option>S</option><option>M</option><option>L</option></select>"
+    expect item 8 of parts is "<button type=\"button\" data-moth=\"go\" name=\"go\">Go &amp; see</button>"
+end
+
+to test_boxes_lists_and_tables
+    set p to page's new("Boxes")
+    page's start(p, "card")
+    page's start_list(p)
+    page's list_item(p, "one")
+    page's end_list(p)
+    page's start_list(p, yes)
+    page's list_item(p, "first")
+    page's end_list(p)
+    set headings to list of "Name", "Age"
+    page's start_table(p, headings)
+    set row to list of "Sam", 20
+    page's table_row(p, row)
+    page's end_table(p)
+    page's finish(p)
+    page's start(p, "row")
+    page's paragraph(p, "left open")
+    set made to page's html_of(p)
+    expect "<body>\n<div class=\"card\">\n<ul>\n<li>one</li>\n</ul>\n<ol>\n<li>first</li>\n</ol>\n<table><thead><tr><th>Name</th><th>Age</th></tr></thead><tbody>\n<tr><td>Sam</td><td>20</td></tr>\n</tbody></table>\n</div>\n<div class=\"row\">\n<p>left open</p></div>\n</body>" is in made
+end
+
+to test_style_and_html
+    set p to page's new("Styled")
+    page's style(p, "h1 \{ color: red; }")
+    page's style(p, ".big \{ font-size: 2rem; }")
+    page's html(p, "<p class=\"big\" data-moth=\"hello\">Hi <em>there</em></p>")
+    set made to page's html_of(p)
+    expect "form \{ display: grid; gap: .7rem; max-width: 30rem; }\n.card \{ background: #fff; border: 1px solid #e3dfd5; border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }\nh1 \{ color: red; }\n.big \{ font-size: 2rem; }\n</style>" is in made
+    expect "<body>\n<p class=\"big\" data-moth=\"hello\">Hi <em>there</em></p>\n</body>" is in made
+end
+
+to test_a_sites_menus_links_and_forms
+    set p to page's new("Site")
+    set names to list of "Home", "About & us"
+    set addresses to list of "/", "/about?x=1&y=2"
+    page's menu(p, names, addresses)
+    page's start_list(p)
+    page's list_link(p, "Soup <hot>", "/recipes/3")
+    page's end_list(p)
+    page's start_form(p, "/recipes", "get")
+    page's text_box(p, "q", "Find")
+    page's submit(p, "Search")
+    page's end_form(p)
+    page's start_form(p, "/new")
+    page's end_form(p)
+    set made to page's html_of(p)
+    expect "<body>\n<nav class=\"menu\"><a href=\"/\">Home</a><a href=\"/about?x=1&amp;y=2\">About &amp; us</a></nav>\n<ul>\n<li><a href=\"/recipes/3\">Soup &lt;hot&gt;</a></li>\n</ul>\n<form method=\"get\" action=\"/recipes\">\n<input type=\"text\" data-moth=\"q\" name=\"q\" placeholder=\"Find\" value=\"\">\n<button type=\"submit\">Search</button>\n</form>\n<form method=\"post\" action=\"/new\">\n</form>\n</body>" is in made
+end
+
+to test_mistakes
+    set p to page's new("Nothing")
+    try
+        page's finish(p)
+        fail with "finished what wasn't started"
+    if it fails with why
+        expect "page.moth: there's no box started to end" is in why
+    end
+    page's start(p, "card")
+    page's start_list(p)
+    try
+        page's finish(p)
+        fail with "finished a box with a list in it still open"
+    if it fails with why
+        expect "page.moth: the list started last isn't ended yet" is in why
+    end
+    page's end_list(p)
+    page's finish(p)
+    set one to list of "Home"
+    try
+        page's menu(p, one, empty list)
+        fail with "a menu with a name and no address"
+    if it fails with why
+        expect "page.moth: a menu needs an address for each name" is in why
+    end
+end

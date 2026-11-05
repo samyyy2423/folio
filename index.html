@@ -246,7 +246,8 @@
     .title { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 9px 16px 7px; background: #0f0b08; border-bottom: 1px solid var(--line);
       color: var(--faint); font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
     .title::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--edge); }
-    #drawing-view .title::before, #output-title::before { background: var(--amber); box-shadow: 0 0 6px #f4b54a99; }
+    #drawing-view .title::before, #output-title::before, #page-view .title::before { background: var(--amber); box-shadow: 0 0 6px #f4b54a99; }
+    #page-frame { display: block; width: 100%; height: 62vh; border: 0; background: #fff; }
 
     /* editor: line numbers, plus a coloured copy of the code under a see-through textarea */
     .editor { display: flex; flex: 1; min-height: 0; }
@@ -395,6 +396,10 @@
     body.app .playground { border-top: 0; }
     body.app .workspace { grid-template-columns: minmax(0, 1fr); }
     body.app .pane + .pane { border-left: 0; }
+    /* ...and a program that shows a page (page.moth) is that page, the whole window */
+    body.app #page-view .title, body.app.paged #output-title { display: none; }
+    body.app #page-frame { height: 100vh; }
+    body.app.paged #output:empty { display: none; }
   </style>
 </head>
 <body>
@@ -587,6 +592,10 @@ Did you mean 'total'?</pre></div>
         </label>
       </div>
       <div class="side-body">
+        <div id="page-view" hidden>
+          <div class="title">Page</div>
+          <iframe id="page-frame" title="The page the program made" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>
+        </div>
         <div id="drawing-view" hidden>
           <div class="title">Drawing</div>
           <canvas id="canvas" width="500" height="500" tabindex="0" role="img" aria-label="What the program drew; an app takes keys and clicks here"></canvas>
@@ -667,6 +676,7 @@ Did you mean 'total'?</pre></div>
     let shownDrawn = 0; // how much it has drawn in all, counting what a `clear` wiped
     let shownPlayed = 0; // how many sounds it has made, which a run after an answer makes again
     let appRunning = false; // an app is running: its picture stays put, and takes keys and clicks
+    let appDraws = true; // the app has a picture: it isn't one that only waits for its page to be used
 
     // Moth's own words, for colouring. Every piece of the code is escaped before it goes in as HTML,
     // because the code can come from someone else's share link.
@@ -748,7 +758,8 @@ Did you mean 'total'?</pre></div>
     async function fetchUses(text) {
       for (const name of usesIn(text)) {
         if (usedFiles.has(name)) continue;
-        usedFiles.set(name, await fetchText(name).catch(() => undefined));
+        // a file beside the page, or one of the standard library's (page.moth and the rest, in tools/)
+        usedFiles.set(name, await fetchText(name).catch(() => (/^[\w-]+[.]moth$/.test(name) ? fetchText(`tools/${name}`) : undefined)).catch(() => undefined));
         await fetchUses(usedFiles.get(name) ?? "");
       }
     }
@@ -833,7 +844,7 @@ Did you mean 'total'?</pre></div>
       const half = canvas.width / 2;
       const reach = Math.max(0, ...sinceClear(fitTo).map(reachOf));
       const scale = appRunning ? 1 : Math.min(1, (half - 10) / reach); // an app's view never moves: it's where its clicks land
-      $("drawing-view").hidden = !appRunning && !fitTo.length;
+      $("drawing-view").hidden = !(appRunning && appDraws) && !fitTo.length;
       pen.setTransform(1, 0, 0, 1, 0, 0);
       pen.clearRect(0, 0, canvas.width, canvas.height);
       pen.setTransform(scale, 0, 0, -scale, half, half);
@@ -1211,6 +1222,9 @@ Did you mean 'total'?</pre></div>
       shownPlayed = 0;
       answers = [];
       shownLines = 0;
+      pageFresh = true;
+      $("page-view").hidden = true;
+      document.body.classList.remove("paged");
       startRun();
     }
 
@@ -1255,6 +1269,7 @@ Did you mean 'total'?</pre></div>
             queueSounds(data.played.slice(skip));
           }
         }
+        if (data.page != null) showPage(data.page);
         if (data.question !== undefined) return waitForAnswer(data.question);
         if (data.error) fail(data.error, data.mistake);
         if (data.stopped !== undefined && !data.done) return finish(`The app stopped the program with ${data.stopped}`); // a handler did
@@ -1278,11 +1293,94 @@ Did you mean 'total'?</pre></div>
     // the focus, clicks and drags. Stop ends it.
     function startApp(waits, done) {
       appRunning = true;
-      const wants = [waits.some((w) => w.event === "key") && "press keys", waits.some((w) => w.event !== "key" && w.event !== "every") && "click the picture"].filter(Boolean);
+      const paged = waits.some((w) => w.event === "page");
+      appDraws = !paged || waits.some((w) => !["page", "every"].includes(w.event));
+      const wants = [waits.some((w) => w.event === "key") && "press keys", waits.some((w) => !["key", "every", "page"].includes(w.event)) && "click the picture",
+        paged && "use the page"].filter(Boolean);
       status.textContent = `${done} · an app, running${wants.length ? `: ${wants.join(" or ")}` : ""} · Stop ends it`;
       render(); // now, not on the next frame: a hidden picture can't take the focus
-      $("canvas").focus({ preventScroll: true });
+      if (appDraws) $("canvas").focus({ preventScroll: true });
     }
+
+    // The page a program shows (page.moth, DESIGN §145), in a frame of its own: sandboxed, and of no site, so
+    // nothing on it can reach this page or what the site keeps, however it was written. The program's first page
+    // of a run is loaded into it; each page after that goes to the script below, which puts it in place of the
+    // one before, keeping what has the focus, so a page shown again as it's typed in doesn't take the typing
+    // away. What's clicked, typed or chosen on it comes back as `when the page is used`.
+    const pageFrame = $("page-frame");
+    let pageFresh = true; // the next page is the run's first
+    let pageLoaded = false;
+    let pageWaiting = null; // the newest page, until the frame has loaded
+    function inPage() {
+      const named = (el) => el?.closest?.("[data-moth]");
+      const isField = (el) => el.matches("input:not([type=button]):not([type=submit]):not([type=reset]), select, textarea");
+      const valueOf = (el) => (el.type === "checkbox" ? el.checked : isField(el) ? el.value : el.textContent.trim());
+      const send = (type, el) => {
+        const values = {};
+        for (const field of document.querySelectorAll("[data-moth]")) if (isField(field)) values[field.dataset.moth] = valueOf(field);
+        parent.postMessage({ moth: "page", type, name: el.dataset.moth, value: valueOf(el), values }, "*");
+      };
+      document.addEventListener("click", (e) => {
+        const el = named(e.target);
+        if (!el || isField(el)) return;
+        e.preventDefault();
+        send("click", el);
+      });
+      let entered = null; // the text box Enter was pressed in, and what was in it: its change after that isn't news
+      document.addEventListener("change", (e) => {
+        const el = named(e.target);
+        if (!el || !isField(el) || (entered?.el === el && entered.value === el.value)) return;
+        send("change", el);
+      });
+      document.addEventListener("keydown", (e) => {
+        const el = named(e.target);
+        if (e.key !== "Enter" || !el?.matches("input")) return;
+        e.preventDefault();
+        entered = { el, value: el.value };
+        send("enter", el);
+      });
+      addEventListener("message", (e) => {
+        if (e.source !== parent || e.data?.moth !== "show") return;
+        const had = document.activeElement;
+        const focused = had?.dataset?.moth;
+        const [start, end] = [had?.selectionStart, had?.selectionEnd];
+        const made = new DOMParser().parseFromString(e.data.html, "text/html");
+        document.title = made.title;
+        document.head.replaceWith(made.head);
+        document.body.replaceWith(made.body);
+        const again = focused === undefined ? null : [...document.querySelectorAll("[data-moth]")].find((el) => el.dataset.moth === focused);
+        if (!again) return;
+        again.focus({ preventScroll: true });
+        if (typeof start === "number" && again.setSelectionRange && again.value.length >= end) again.setSelectionRange(start, end);
+      });
+    }
+    function showPage(html) {
+      $("page-view").hidden = false;
+      document.body.classList.add("paged");
+      if (pageFresh) {
+        pageFresh = false;
+        pageLoaded = false;
+        pageWaiting = null;
+        const script = `<script>(${inPage})()<\/script>`;
+        pageFrame.srcdoc = /^\s*<!doctype[^>]*>/i.test(html) ? html.replace(/^\s*<!doctype[^>]*>/i, (doctype) => doctype + script) : script + html;
+      } else if (pageLoaded) pageFrame.contentWindow.postMessage({ moth: "show", html }, "*");
+      else pageWaiting = html;
+    }
+    pageFrame.onload = () => {
+      pageLoaded = true;
+      if (pageWaiting !== null) pageFrame.contentWindow.postMessage({ moth: "show", html: pageWaiting }, "*");
+      pageWaiting = null;
+    };
+    // what was done on the page, as a dictionary: its "type", the "name" of what was used, its "value", and
+    // "values", every text box's, checkbox's and dropdown's, by name (text, or yes or no for a checkbox)
+    addEventListener("message", (e) => {
+      if (e.source !== pageFrame.contentWindow || e.data?.moth !== "page") return;
+      const { type, name, value, values } = e.data;
+      const fits = (v) => typeof v === "string" || typeof v === "boolean";
+      if (!["click", "change", "enter"].includes(type) || typeof name !== "string" || !fits(value) || typeof values !== "object" || values === null) return;
+      const fields = new Map(Object.entries(values).filter(([, v]) => fits(v)));
+      sendEvent("page", [new Map([["type", type], ["name", name], ["value", value], ["values", fields]])]);
+    });
     const KEYS = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", " ": "space", Enter: "enter", Escape: "escape", Backspace: "backspace" };
     const sendEvent = (event, inputs) => appRunning && worker?.postMessage({ event, inputs });
     // A key: with Shift, an arrow, Home or End goes as "shift+left", for a text box to select with; with Ctrl

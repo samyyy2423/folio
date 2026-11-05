@@ -5515,6 +5515,53 @@ test("apps/guestbook: a web app with a database, built by moth.exe, tested, then
   assert.match(out, /^The guestbook is at http:\/\/localhost:\d+\/ \(Ctrl\+C stops it\)\n/);
 });
 
+// apps/recipes (DESIGN §145): a site of pages made by page.moth, served by server.moth and kept in SQLite, built by
+// moth.exe from its own folder: its own tests, then its pages over HTTP, a search, a recipe added with a form and
+// shown at the address it was sent to, one refused with what was written kept, the recipes as JSON, and a 404
+test("apps/recipes: a site of page.moth pages with a form and a database, built by moth.exe, tested, then used over HTTP", { skip: skip || (!sqliteHere && "SQLite isn't installed") }, async () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "recipes");
+  mkdirSync(sub);
+  for (const name of ["recipes.moth", "kitchen.moth", "kitchen.test.moth"]) writeFileSync(join(sub, name), here(`apps/recipes/${name}`));
+  const allow = ["--allow-libraries", "--allow-read", "--allow-write"];
+  const tested = spawnSync(exe, ["test", "kitchen.test.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  assert.deepEqual([tested.stdout.split("\n").at(-2), tested.status], ["4 passed", 0], tested.stdout + tested.stderr);
+  const built = spawnSync(exe, ["build", "recipes.moth", ...allow], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  assert.equal(built.status, 0, built.stdout + built.stderr);
+  const port = 23000 + ((process.pid + 300) % 2000);
+  const running = spawn(executable(sub, "recipes"), [String(port)], { cwd: sub, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", err = "";
+  running.stdout.on("data", (d) => (out += d));
+  running.stderr.on("data", (d) => (err += d));
+  try {
+    for (let waited = 0; !err.includes("listening") && waited < 10000; waited += 20) await new Promise((r) => setTimeout(r, 20));
+    const site = `http://127.0.0.1:${port}`;
+    const form = (fields) => ({ method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(fields).toString(), redirect: "manual" });
+    const home = await fetch(`${site}/`);
+    assert.match(home.headers.get("content-type"), /^text\/html/);
+    const homePage = await home.text();
+    assert.match(homePage, /^<!doctype html>/);
+    assert.match(homePage, /<a href="\/recipes\/3">Chickpea curry · 40 minutes · serves 4<\/a>/);
+    assert.match(await (await fetch(`${site}/recipes?q=coconut`)).text(), /Chickpea curry/);
+    const added = await fetch(`${site}/new`, form({ title: "Toast & jam", minutes: "5", serves: "1", ingredients: "Bread\r\nJam", steps: "Toast the bread.\r\nSpread the jam." }));
+    assert.deepEqual([added.status, added.headers.get("location")], [303, "/recipes/4"]);
+    const toast = await (await fetch(`${site}/recipes/4`)).text();
+    assert.ok(toast.includes("<h1>Toast &amp; jam</h1>") && toast.includes("<li>Bread</li>\n<li>Jam</li>"), toast);
+    const refused = await fetch(`${site}/new`, form({ title: "<b>Tea</b>", minutes: "", serves: "1", ingredients: "tea", steps: "brew" }));
+    assert.equal(refused.status, 400);
+    const again = await refused.text();
+    assert.ok(again.includes("Minutes is a whole number, from 1 to 1440.") && again.includes('value="&lt;b&gt;Tea&lt;/b&gt;"'), again);
+    const recipes = await (await fetch(`${site}/api/recipes`)).json();
+    assert.deepEqual(recipes.map((r) => [r.id, r.title]), [[1, "Tomato soup"], [2, "Lemon pancakes"], [3, "Chickpea curry"], [4, "Toast & jam"]]);
+    assert.deepEqual(recipes[3].steps, ["Toast the bread.", "Spread the jam."]);
+    assert.equal((await fetch(`${site}/nowhere`)).status, 404);
+    assert.ok(existsSync(join(sub, "recipes.db")));
+  } finally {
+    running.kill();
+  }
+  assert.match(out, /^The recipe box is at http:\/\/localhost:\d+\/ \(Ctrl\+C stops it\)\n/);
+});
+
 // tools/server.moth with HTTPS: a certificate made for the test by the openssl command, OpenSSL 3's libraries
 // (Linux's own; on Windows, each beside the program in turn: Python's, built with Visual C++, and Git's, built with
 // MinGW, which once found no randomness when its libraries were looked for only in the program's folder), and
