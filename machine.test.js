@@ -1459,6 +1459,70 @@ test("moth.exe runs a program, passing its arguments, input, output and exit cod
   }
 });
 
+// moth new (DESIGN §140): a project of each kind in a folder of its own, whose tests pass as it's made, and whose
+// program runs
+test("moth.exe new makes a project of each kind, whose tests pass and whose program runs", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "new");
+  mkdirSync(sub);
+  const moth = (cwd, ...args) => spawnSync(exe, args, { cwd, encoding: "utf8" });
+  for (const kind of ["app", "web", "package", "library"]) {
+    const made = moth(sub, "new", kind, `my_${kind}`);
+    assert.equal(made.status, 0, made.stderr);
+    assert.match(made.stdout, new RegExp(`^made my_${kind}/, `));
+    const folder = join(sub, `my_${kind}`);
+    for (const file of [`my_${kind}.moth`, `my_${kind}.test.moth`, "README.md", ".gitignore", join(".github", "workflows", "test.yml")]) {
+      assert.ok(existsSync(join(folder, file)), `${kind}: ${file}`);
+    }
+    const tested = moth(folder, "test");
+    assert.equal(tested.status, 0, `${kind}: ${tested.stdout}${tested.stderr}`);
+    assert.match(tested.stdout, /\d+ passed/);
+  }
+  assert.equal(moth(join(sub, "my_app"), "run", "main.moth").stdout, "Hello, world!\n");
+  assert.equal(moth(sub, "new", "plain").status, 0); // an app, unless it says
+  assert.ok(existsSync(join(sub, "plain", "main.moth")));
+  const again = moth(sub, "new", "plain");
+  assert.deepEqual([again.status, again.stderr], [1, "moth: there's already something called plain here\n"]);
+  assert.equal(moth(sub, "new", "9lives").status, 1);
+  assert.equal(moth(sub, "new", "gadget", "thing").status, 2); // no such kind: how to use moth
+});
+
+// moth explain (DESIGN §141): the first mistake moth check finds in a file, said as check says it, then what it
+// means, why it happens and how to put it right; or the mistake a message is from
+test("moth.exe explains the first mistake moth check finds in a file, or the mistake a message is from", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "explain");
+  mkdirSync(sub);
+  const moth = (...args) => spawnSync(exe, args, { cwd: sub, encoding: "utf8" });
+  writeFileSync(join(sub, "slip.moth"), "say totl\nset total to 1\nsay total\n");
+  const slip = moth("explain", "slip.moth");
+  assert.equal(slip.status, 0);
+  assert.match(slip.stdout, /^slip\.moth:1:5: will fail: 'totl' has no value yet\. Did you mean 'total'\?\nsay totl\n {4}\^\n\nA name is used before anything gives it a value\.\n/);
+  assert.match(slip.stdout, /This makes the mistake:\n\n {4}say total\n {4}set total to 5\n\nand this puts it right:\n\n {4}set total to 5\n {4}say total\n$/);
+  writeFileSync(join(sub, "symbol.moth"), "if x > 3\n    say x\nend\n");
+  assert.match(moth("explain", "symbol.moth").stdout, /error: I don't understand '>'[^]*A symbol Moth doesn't have\./);
+  assert.match(moth("explain", "can't", "divide", "by", "zero").stdout, /^\nA division by 0\.\n/);
+  assert.match(moth("explain", "line 4: there is no item 0, items are counted from 1").stdout, /An item number below 1\./);
+  const unknown = moth("explain", "something odd happened");
+  assert.deepEqual([unknown.status, unknown.stdout.startsWith("\nmoth has no more to say")], [1, true]);
+  writeFileSync(join(sub, "fine.moth"), 'say "fine"\n');
+  assert.equal(moth("explain", "fine.moth").status, 1);
+});
+
+// moth explain's examples, put right, are Moth that reads; each is in moth.moth as a Moth text
+test("moth explain's examples put right are Moth that reads without a mistake", () => {
+  const literal = (text) => JSON.parse(text.replace(/\\\{/g, "{"));
+  const quoted = '("(?:[^"\\\\]|\\\\.)*")';
+  const entries = [...here("moth.moth").matchAll(new RegExp(`add record with has cli_has, title ${quoted}, why ${quoted}, wrong ${quoted}, right ${quoted} to cli_known`, "g"))];
+  assert.ok(entries.length >= 30, `only ${entries.length}`);
+  for (const [, title, , , right] of entries) {
+    const code = literal(right);
+    if (code.startsWith("moth ")) continue; // a command to type, not a program; any other file it uses is there, empty
+    const errors = check(code, { files: (name) => (name === "math.moth" ? here("math.moth") : "") }).filter((p) => p.kind === "error");
+    assert.deepEqual(errors, [], `${literal(title)}\n${code}`);
+  }
+});
+
 // `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
 // here is tidy already, so --check must say so; then messy and randomly broken programs, each tidied to
 // exactly the bytes format() makes of it.
