@@ -1563,6 +1563,72 @@ test("moth.exe upgrade puts a newer release in place of the moth on PATH, only o
   assert.equal(readFileSync(installed, "utf8"), "the new moth");
 });
 
+// moth doc (DESIGN §140): a page for each file from its comments, and an index for more than one
+test("moth.exe doc makes a page of HTML for each file from its comments, and an index for more than one", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "doc");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "shapes.moth"), "# Shapes & sizes: areas of <things>.\n#\n#   say area(2, 3)\n\n# the area of a rectangle,\n# its width times its height\nto area with width, height\n    return width * height\nend\n\nto untold\n    return 1\nend\n");
+  writeFileSync(join(sub, "more.moth"), "# More of them.\n\nkind square with side\n    to area with self\n        return side * side\n    end\nend\n");
+  const made = spawnSync(exe, ["doc", "shapes.moth", "more.moth", "--into", "pages"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([made.status, made.stdout, made.stderr], [0, "wrote pages/shapes.html\nwrote pages/more.html\nwrote pages/index.html\n", ""]);
+  const page = readFileSync(join(sub, "pages", "shapes.html"), "utf8");
+  assert.match(page, /^<!doctype html>\n/);
+  assert.match(page, /<h1>shapes<\/h1>\n<p>Shapes &amp; sizes: areas of &lt;things&gt;\.<\/p>\n<pre><code>say area\(2, 3\)\n<\/code><\/pre>\n/);
+  assert.match(page, /<pre class="called"><code>to area with width, height<\/code><\/pre>\n<p>the area of a rectangle, its width times its height<\/p>\n<\/section>/);
+  assert.match(page, /<section id="untold">\n<h2><code>untold<\/code><\/h2>\n<pre class="called"><code>to untold<\/code><\/pre>\n<\/section>/);
+  assert.match(readFileSync(join(sub, "pages", "more.html"), "utf8"), /<pre class="called"><code>kind square with side<\/code><\/pre>/);
+  assert.match(readFileSync(join(sub, "pages", "index.html"), "utf8"), /<li><a href="shapes\.html"><code>shapes<\/code><\/a> Shapes &amp; sizes: areas of &lt;things&gt;\.<\/li>/);
+  assert.equal(spawnSync(exe, ["doc", "shapes.moth"], { cwd: sub, encoding: "utf8" }).stdout, "wrote doc/shapes.html\n");
+});
+
+// moth bench (DESIGN §140): each bench_ function's time a call, from five samples of as many calls as take 50 ms
+test("moth.exe bench times each bench_ function, as the mean of five samples, with their spread", { skip }, () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "bench");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "fast.bench.moth"), "set numbers to list of 5, 3, 8, 1\n\nto bench_add\n    set s to 0\n    for each n in numbers\n        add n to s\n    end\nend\n\nto bench_order\n    set put to numbers in order\nend\n");
+  const ran = spawnSync(exe, ["bench"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([ran.status, ran.stderr], [0, ""]);
+  const line = (name) => `${name} +[\\d.]+ (ns|µs|ms|s) ± \\d+%  \\(5 samples of \\d+ calls, \\d+ a second\\)\\n`;
+  assert.match(ran.stdout, new RegExp(`^fast\\.bench\\.moth\\n${line("bench_add  ")}${line("bench_order")}$`));
+  writeFileSync(join(sub, "none.moth"), "say 1\n");
+  const none = spawnSync(exe, ["bench", "none.moth"], { cwd: sub, encoding: "utf8" });
+  assert.deepEqual([none.status, none.stderr], [1, "moth: none.moth has no bench_ functions to time\n"]);
+  const empty = join(sub, "empty");
+  mkdirSync(empty);
+  const nothing = spawnSync(exe, ["bench"], { cwd: empty, encoding: "utf8" });
+  assert.deepEqual([nothing.status, nothing.stderr], [1, "moth: no benchmarks found: name a file, or put bench_ functions in files ending in .bench.moth\n"]);
+});
+
+// moth watch (DESIGN §140): a command, run again each time a .moth file changes, until it's stopped
+test("moth.exe watch runs a command again each time a .moth file here changes", { skip }, async () => {
+  const { dir, exe } = mothExe();
+  const sub = join(dir, "watch");
+  mkdirSync(sub);
+  writeFileSync(join(sub, "w.moth"), 'say "one"\n');
+  const child = spawn(exe, ["watch", "run", "w.moth"], { cwd: sub });
+  let out = "";
+  let said = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (said += d));
+  const seen = async (text) => {
+    for (let waited = 0; !out.includes(text); waited += 50) {
+      if (waited > 60000) assert.fail(`'${text}' never came: ${out} ${said}`);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  };
+  try {
+    await seen("one\n");
+    writeFileSync(join(sub, "w.moth"), 'say "two"\n');
+    await seen("two\n");
+  } finally {
+    child.kill();
+  }
+  assert.equal(out, "one\ntwo\n");
+  assert.match(said, /^moth watch: that ended with 0; it runs again when a \.moth file here changes \(Ctrl\+C stops\)\n/);
+});
+
 // `moth tidy`: the one way Moth writes code, which is what format() in moth.js writes. Every Moth file
 // here is tidy already, so --check must say so; then messy and randomly broken programs, each tidied to
 // exactly the bytes format() makes of it.

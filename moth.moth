@@ -34,6 +34,8 @@ set cli_usage to cli_usage + "\n  moth --version | moth version: say which Moth 
 set cli_usage to cli_usage + "\n  moth new [app|web|package|library] <name>: start a project, in a folder of its own: its code, tests, a\n    README and a GitHub workflow that runs them. An app unless it says, a web server, a package or a library."
 set cli_usage to cli_usage + "\n  moth explain <file.moth> | moth explain <a mistake's words>: what a mistake means, why it happens and how\n    to put it right, with code that makes it and the same code put right: the first mistake moth check finds in\n    a file, or the one a message is from."
 set cli_usage to cli_usage + "\n  moth upgrade [--check]: the newest release in place of the moth on PATH, checked against its SHA256SUMS.txt\n    first (or, for a moth a package manager put there, what to run instead); --check only says if there is one."
+set cli_usage to cli_usage + "\n  moth bench [files.bench.moth...] [--allow-...]: each bench_ function timed, as the mean of five samples of as\n    many calls as take 50 ms, with how far they spread; with no file, every .bench.moth file here and inside.\n  moth watch <a moth command>: the command, run again each time a .moth file here or inside changes: moth\n    watch test, moth watch run app.moth. Ctrl+C stops it."
+set cli_usage to cli_usage + "\n  moth doc <files.moth...> [--into <folder>]: a page of HTML for each file, from its comments: what the file is\n    for, and each function it makes, how it's called and what it does; and index.html for more than one. In doc/."
 
 # the folder a file is in, with its last / or \, or "" for the folder moth runs in
 to cli_folder_of with cli_path
@@ -6880,8 +6882,364 @@ to cli_upgrade with cli_only_check
     return 0
 end
 
-to cli_main
-    set cli_given to arguments
+# ---------- moth doc ----------
+# moth doc <files.moth...> [--into <folder>] (DESIGN §140): a page of HTML for each file, with what its opening
+# comment says it's for and, for each function and kind it makes at its top level, how it's called and what the
+# comment just above it says; and, for more than one file, index.html, which lists them. A comment's lines
+# indented three spaces past the # are code. The pages go in doc/, unless --into names another folder.
+
+# text as HTML has it: & < > and " as their names
+to cli_html with cli_text
+    set cli_out to ""
+    for each cli_c in cli_text
+        if cli_c is "&"
+            add "&amp;" to cli_out
+        else if cli_c is "<"
+            add "&lt;" to cli_out
+        else if cli_c is ">"
+            add "&gt;" to cli_out
+        else if cli_c is "\""
+            add "&quot;" to cli_out
+        else
+            add cli_c to cli_out
+        end
+    end
+    return cli_out
+end
+
+# what a comment line says, without its # and the space after it
+to cli_doc_said with cli_line
+    set cli_rest to cli_trimmed(cli_trimmed_front(cli_line))
+    if length of cli_rest is 0
+        return ""
+    end
+    set cli_rest to cli_tail(cli_rest, 2)
+    if length of cli_rest is greater than 0 and item 1 of cli_rest is " "
+        set cli_rest to cli_tail(cli_rest, 2)
+    end
+    return cli_rest
+end
+
+# a comment's lines as HTML: its words in paragraphs (a line with nothing on it ends one), and lines indented
+# two spaces or more as code
+to cli_doc_comment_html with cli_said
+    set cli_out to ""
+    set cli_words to ""
+    set cli_code to ""
+    set cli_all_lines to empty list
+    for each cli_line in cli_said
+        add cli_line to cli_all_lines
+    end
+    add "" to cli_all_lines # so what's left at the end is written too
+    for each cli_line in cli_all_lines
+        set cli_is_code to length of cli_line is greater than 1 and cli_first(cli_line, 2) is "  "
+        if cli_is_code
+            if cli_words is not ""
+                add "<p>" + cli_html(cli_words) + "</p>\n" to cli_out
+                set cli_words to ""
+            end
+            add cli_tail(cli_line, 3) + "\n" to cli_code
+        else
+            if cli_code is not ""
+                add "<pre><code>" + cli_html(cli_code) + "</code></pre>\n" to cli_out
+                set cli_code to ""
+            end
+            if cli_trimmed(cli_line) is ""
+                if cli_words is not ""
+                    add "<p>" + cli_html(cli_words) + "</p>\n" to cli_out
+                    set cli_words to ""
+                end
+            else
+                if cli_words is not ""
+                    add " " to cli_words
+                end
+                add cli_trimmed(cli_line) to cli_words
+            end
+        end
+    end
+    return cli_out
+end
+
+# the comment lines just above line n, each as it says it
+to cli_doc_above with cli_lines, cli_n
+    set cli_from to cli_n
+    repeat while cli_from is greater than 1 and cli_begins_with(cli_trimmed_front(item (cli_from - 1) of cli_lines), "#")
+        set cli_from to cli_from - 1
+    end
+    set cli_said to empty list
+    for each cli_k from cli_from to cli_n - 1
+        add cli_doc_said(item cli_k of cli_lines) to cli_said
+    end
+    return cli_said
+end
+
+# a file's name, without its folder or .moth
+to cli_doc_name with cli_path
+    set cli_stem_of to cli_stem(cli_path)
+    return cli_tail(cli_stem_of, length of cli_folder_of(cli_stem_of) + 1)
+end
+
+# a file's page, and what it's for in a line (for the index)
+to cli_doc_page with cli_path, cli_source
+    set cli_lines to split cli_source by "\n"
+    set cli_opening to empty list
+    set cli_k to 1
+    repeat while cli_k is at most length of cli_lines and cli_begins_with(cli_trimmed_front(item cli_k of cli_lines), "#")
+        add cli_doc_said(item cli_k of cli_lines) to cli_opening
+        add 1 to cli_k
+    end
+    set cli_name to cli_doc_name(cli_path)
+    set cli_entries to ""
+    set cli_contents to ""
+    for each cli_n from 1 to length of cli_lines
+        set cli_line to item cli_n of cli_lines
+        if cli_begins_with(cli_line, "to ") or cli_begins_with(cli_line, "kind ")
+            set cli_heading to cli_trimmed(cli_line)
+            set cli_called to item 2 of split cli_heading by " "
+            set cli_comment to cli_doc_above(cli_lines, cli_n)
+            if cli_n - (length of cli_comment) is 1 # the file's opening comment is the file's, not the function's
+                set cli_comment to empty list
+            end
+            add "<li><a href=\"#" + cli_html(cli_called) + "\"><code>" + cli_html(cli_called) + "</code></a></li>\n" to cli_contents
+            add "<section id=\"" + cli_html(cli_called) + "\">\n<h2><code>" + cli_html(cli_called) + "</code></h2>\n" to cli_entries
+            add "<pre class=\"called\"><code>" + cli_html(cli_heading) + "</code></pre>\n" to cli_entries
+            add cli_doc_comment_html(cli_comment) + "</section>\n" to cli_entries
+        end
+    end
+    set cli_page to cli_doc_top(cli_name) + "<h1>" + cli_html(cli_name) + "</h1>\n" + cli_doc_comment_html(cli_opening)
+    if cli_contents is not ""
+        set cli_page to cli_page + "<ul class=\"contents\">\n" + cli_contents + "</ul>\n" + cli_entries
+    end
+    set cli_line_said to ""
+    for each cli_said in cli_opening
+        if cli_line_said is "" and cli_trimmed(cli_said) is not ""
+            set cli_line_said to cli_trimmed(cli_said)
+        end
+    end
+    return record with page cli_page + cli_doc_bottom(), name cli_name, about cli_line_said
+end
+
+to cli_doc_top with cli_title
+    set cli_style to "body \{ font: 16px/1.55 system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; color: #1b1b1f; }\n"
+    add "code, pre \{ font: 14px/1.5 ui-monospace, Consolas, monospace; }\npre \{ background: #f4f3ef; padding: .7rem 1rem; border-radius: 6px; overflow-x: auto; }\n" to cli_style
+    add "pre.called \{ background: #ece9fb; }\nsection \{ border-top: 1px solid #ddd; margin-top: 1.6rem; }\nh2 \{ margin-bottom: .3rem; }\n" to cli_style
+    add ".contents \{ columns: 3; list-style: none; padding: 0; }\nfooter \{ margin-top: 3rem; color: #777; font-size: 14px; }\n" to cli_style
+    return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" + cli_html(cli_title) + "</title>\n<style>\n" + cli_style + "</style>\n</head>\n<body>\n"
+end
+
+to cli_doc_bottom
+    return "<footer>Made by <code>moth doc</code>.</footer>\n</body>\n</html>\n"
+end
+
+to cli_doc with cli_paths, cli_into
+    set cli_folder to cli_into
+    if cli_folder is nothing
+        set cli_folder to "doc"
+    end
+    if not cli_folder_here(cli_folder)
+        if not cli_make_folder(cli_folder)
+            say "moth: can't make the folder " + cli_folder to the error output
+            return 1
+        end
+    end
+    set cli_made to empty list
+    for each cli_path in cli_paths
+        set cli_source to cli_text_of(cli_path)
+        if cli_source is nothing
+            return 1
+        end
+        set cli_doc_made to cli_doc_page(cli_path, cli_source)
+        set cli_out to cli_folder + "/" + name of cli_doc_made + ".html"
+        write page of cli_doc_made to cli_out
+        add cli_doc_made to cli_made
+        say "wrote " + cli_out
+    end
+    if length of cli_made is greater than 1
+        set cli_list to ""
+        for each cli_doc_made in cli_made
+            set cli_name to cli_html(name of cli_doc_made)
+            add "<li><a href=\"" + cli_name + ".html\"><code>" + cli_name + "</code></a> " + cli_html(about of cli_doc_made) + "</li>\n" to cli_list
+        end
+        set cli_index_page to cli_doc_top("Reference") + "<h1>Reference</h1>\n<ul>\n" + cli_list + "</ul>\n" + cli_doc_bottom()
+        set cli_index_path to cli_folder + "/index.html"
+        write cli_index_page to cli_index_path
+        say "wrote " + cli_folder + "/index.html"
+    end
+    return 0
+end
+
+# ---------- moth bench ----------
+# moth bench [files.bench.moth...] [--allow-...] (DESIGN §140): each bench_ function in the files (with none named,
+# every file ending in .bench.moth here and in the folders inside) timed: called as many times as takes 50 ms
+# or more, then that many times again five times over, each call's time the mean of those, with how far the
+# five samples spread, and how many calls go in a second. The file runs as a program with a driver at its end.
+
+# the .bench.moth files in a folder ("" for the one moth runs in) and those inside it
+to cli_find_benches with cli_folder, cli_sep, cli_found
+    set cli_looked to cli_folder
+    if cli_looked is ""
+        set cli_looked to "."
+    end
+    for each cli_entry in cli_sorted_entries(read the folder cli_looked)
+        set cli_name to name of cli_entry
+        set cli_path to cli_name
+        if cli_folder is not ""
+            set cli_path to cli_folder + cli_sep + cli_name
+        end
+        if cli_first(cli_name, 1) is not "." and cli_name is not "node_modules" and cli_name is not "packages"
+            if folder of cli_entry
+                cli_find_benches(cli_path, cli_sep, cli_found)
+            else if length of cli_name is greater than 11 and cli_tail(cli_name, length of cli_name - 10) is ".bench.moth"
+                add cli_path to cli_found
+            end
+        end
+    end
+    return cli_found
+end
+
+# the lines that go at the end of the file: each bench_ function measured, and said, its name padded so the
+# times line up
+to cli_bench_driver with cli_names
+    set cli_widest to 0
+    for each cli_name in cli_names
+        set cli_widest to largest of (list of cli_widest, length of cli_name)
+    end
+    set cli_out to "to moth_bench_calls with moth_bench_f, moth_bench_n\n    set moth_bench_start to the clock\n"
+    add "    repeat moth_bench_n times\n        moth_bench_f()\n    end\n    return the clock - moth_bench_start\nend\n" to cli_out
+    add "to moth_bench_root with moth_bench_x\n    set moth_bench_r to moth_bench_x\n    if moth_bench_r is at most 0\n        return 0\n    end\n" to cli_out
+    add "    repeat 60 times\n        set moth_bench_r to (moth_bench_r + moth_bench_x / moth_bench_r) / 2\n    end\n    return moth_bench_r\nend\n" to cli_out
+    add "to moth_bench_digits with moth_bench_v\n    if moth_bench_v is at least 100\n        return \"\" + (moth_bench_v rounded)\n    end\n" to cli_out
+    add "    if moth_bench_v is at least 10\n        return \"\" + ((moth_bench_v * 10) rounded) / 10\n    end\n    return \"\" + ((moth_bench_v * 100) rounded) / 100\nend\n" to cli_out
+    add "to moth_bench_shown with moth_bench_s\n    if moth_bench_s is less than 0.000001\n        return moth_bench_digits(moth_bench_s * 1000000000) + \" ns\"\n    end\n" to cli_out
+    add "    if moth_bench_s is less than 0.001\n        return moth_bench_digits(moth_bench_s * 1000000) + \" µs\"\n    end\n" to cli_out
+    add "    if moth_bench_s is less than 1\n        return moth_bench_digits(moth_bench_s * 1000) + \" ms\"\n    end\n    return moth_bench_digits(moth_bench_s) + \" s\"\nend\n" to cli_out
+    add "to moth_bench with moth_bench_label, moth_bench_f\n    set moth_bench_n to 1\n" to cli_out
+    add "    repeat while moth_bench_calls(moth_bench_f, moth_bench_n) is less than 0.05 and moth_bench_n is less than 1000000000\n" to cli_out
+    add "        set moth_bench_n to moth_bench_n * 2\n    end\n    set moth_bench_each to empty list\n    repeat 5 times\n" to cli_out
+    add "        add moth_bench_calls(moth_bench_f, moth_bench_n) / moth_bench_n to moth_bench_each\n    end\n" to cli_out
+    add "    set moth_bench_mean to (total of moth_bench_each) / 5\n    set moth_bench_spread to 0\n    for each moth_bench_s in moth_bench_each\n" to cli_out
+    add "        add (moth_bench_s - moth_bench_mean) * (moth_bench_s - moth_bench_mean) to moth_bench_spread\n    end\n" to cli_out
+    add "    set moth_bench_off to 0\n    if moth_bench_mean is greater than 0\n        set moth_bench_off to (moth_bench_root(moth_bench_spread / 4) / moth_bench_mean * 100) rounded\n    end\n" to cli_out
+    add "    set moth_bench_rate to \"\"\n    if moth_bench_mean is greater than 0\n        set moth_bench_rate to \", \" + ((1 / moth_bench_mean) rounded) + \" a second\"\n    end\n" to cli_out
+    add "    say moth_bench_label + \"  \" + moth_bench_shown(moth_bench_mean) + \" ± \" + moth_bench_off + \"%  (5 samples of \" + moth_bench_n + \" calls\" + moth_bench_rate + \")\"\nend\n" to cli_out
+    for each cli_name in cli_names
+        set cli_padded to cli_name
+        repeat while length of cli_padded is less than cli_widest
+            add " " to cli_padded
+        end
+        add "moth_bench(\"" + cli_padded + "\", " + cli_name + ")\n" to cli_out
+    end
+    return cli_out
+end
+
+# one file's benchmarks: 0, or 1 if it can't be read or built, or has none, or one fails
+to cli_bench_file with cli_path, cli_target, cli_allowing
+    say cli_path
+    set cli_source to cli_text_of(cli_path)
+    if cli_source is nothing
+        return 1
+    end
+    set cli_used to cli_sources_of(cli_path, cli_source)
+    set cli_names to empty list
+    try
+        for each cli_s in machine's read_program(cli_source, cli_files_of(names of cli_used, texts of cli_used))
+            if kind of cli_s is "define" and length of name of cli_s is greater than 6 and cli_first(name of cli_s, 6) is "bench_"
+                add name of cli_s to cli_names
+            end
+        end
+    if it fails with cli_why
+        if cli_is_problem(cli_why)
+            cli_report(cli_why, cli_path, cli_source, names of cli_used, texts of cli_used)
+        else
+            say "moth: " + cli_path + ": " + cli_why to the error output
+        end
+        return 1
+    end
+    if length of cli_names is 0
+        say "moth: " + cli_path + " has no bench_ functions to time" to the error output
+        return 1
+    end
+    set cli_temp to cli_temp_for(cli_path, cli_target, "-bench")
+    if cli_in_the_way(cli_temp)
+        return 1
+    end
+    if not cli_build_source(cli_path, cli_source + "\n" + cli_bench_driver(cli_names), cli_target, cli_allowing, cli_temp, no, cli_path)
+        return 1
+    end
+    return cli_run_built(cli_temp, empty list)
+end
+
+to cli_bench_all with cli_paths, cli_target, cli_allowing
+    set cli_ended to 0
+    for each cli_path in cli_paths
+        if cli_bench_file(cli_path, cli_target, cli_allowing) is not 0
+            set cli_ended to 1
+        end
+    end
+    return cli_ended
+end
+
+# ---------- moth watch ----------
+# moth watch <a moth command> (DESIGN §140): the command, run again each time a .moth file here or in the
+# folders inside changes (but those in packages/ and folders starting with a .): moth watch test, moth watch run
+# app.moth. Ctrl+C stops it. A command that doesn't end (a server, say) is run again only once it has.
+
+# every .moth file here and inside, by its path, with its text
+to cli_watched_texts with cli_folder, cli_sep, cli_texts
+    set cli_looked to cli_folder
+    if cli_looked is ""
+        set cli_looked to "."
+    end
+    try
+        set cli_entries to cli_sorted_entries(read the folder cli_looked)
+    if it fails
+        return cli_texts
+    end
+    for each cli_entry in cli_entries
+        set cli_name to name of cli_entry
+        set cli_path to cli_name
+        if cli_folder is not ""
+            set cli_path to cli_folder + cli_sep + cli_name
+        end
+        if cli_first(cli_name, 1) is not "." and cli_name is not "node_modules" and cli_name is not "packages"
+            if folder of cli_entry
+                cli_watched_texts(cli_path, cli_sep, cli_texts)
+            else if length of cli_name is greater than 5 and cli_tail(cli_name, length of cli_name - 4) is ".moth"
+                try
+                    set item cli_path of cli_texts to read cli_path
+                if it fails
+                    set item cli_path of cli_texts to ""
+                end
+            end
+        end
+    end
+    return cli_texts
+end
+
+to cli_watch with cli_command_words
+    set cli_sep to "/"
+    if cli_host() is "windows"
+        set cli_sep to "\\"
+    end
+    set cli_seen to cli_watched_texts("", cli_sep, empty dictionary)
+    repeat while yes
+        set cli_code to cli_dispatch(cli_command_words)
+        say "moth watch: that ended with " + cli_code + "; it runs again when a .moth file here changes (Ctrl+C stops)" to the error output
+        set cli_changed to no
+        repeat while not cli_changed
+            wait 0.25 seconds
+            set cli_now to cli_watched_texts("", cli_sep, empty dictionary)
+            if cli_now is not cli_seen
+                set cli_seen to cli_now
+                set cli_changed to yes
+            end
+        end
+    end
+end
+
+# A moth command: what it was given, in, and the number moth ends with, out. moth watch runs one again and
+# again, so nothing here stops the program itself.
+to cli_dispatch with cli_given
     set cli_target to nothing
     set cli_flags to empty list
     set cli_file to nothing
@@ -6898,7 +7256,7 @@ to cli_main
         # package.json is built into moth: read finds it before any file in the current folder.
         set cli_release to json from read "package.json"
         say "moth " + item "version" of cli_release
-        stop the program with 0
+        return 0
     end
     if length of cli_given is 0 or cli_command is "shell" or cli_command is "kernel" # the shell, or the kernel, with what
         # its entries may do
@@ -6907,14 +7265,14 @@ to cli_main
             set cli_arg to item cli_k of cli_given
             if not cli_allow_flag(cli_arg)
                 say cli_usage to the error output
-                stop the program with 2
+                return 2
             end
             add cli_arg to cli_shell_flags
         end
         if cli_command is "kernel"
-            stop the program with cli_kernel(cli_shell_flags)
+            return cli_kernel(cli_shell_flags)
         end
-        stop the program with cli_shell(cli_shell_flags)
+        return cli_shell(cli_shell_flags)
     end
     if cli_command is "new" and (length of cli_given is 2 or length of cli_given is 3) # a project to start from
         set cli_kind to "app"
@@ -6924,7 +7282,7 @@ to cli_main
             set cli_name to item 3 of cli_given
         end
         if cli_kind is in cli_new_kinds
-            stop the program with cli_new(cli_kind, cli_name)
+            return cli_new(cli_kind, cli_name)
         end
     end
     if cli_command is "explain" and length of cli_given is at least 2 # what a mistake means
@@ -6932,20 +7290,78 @@ to cli_main
         for each cli_k from 2 to length of cli_given
             add item cli_k of cli_given to cli_rest
         end
-        stop the program with cli_explain(cli_rest)
+        return cli_explain(cli_rest)
     end
     if cli_command is "upgrade" and (length of cli_given is 1 or (length of cli_given is 2 and item 2 of cli_given is "--check"))
-        stop the program with cli_upgrade(length of cli_given is 2)
+        return cli_upgrade(length of cli_given is 2)
+    end
+    if cli_command is "doc" and length of cli_given is at least 2 # pages of HTML from a program's comments
+        set cli_doc_files to empty list
+        set cli_doc_into to nothing
+        set cli_doc_fine to yes
+        set cli_k to 2
+        repeat while cli_k is at most length of cli_given
+            set cli_arg to item cli_k of cli_given
+            if cli_arg is "--into" and cli_k is less than length of cli_given and cli_doc_into is nothing
+                set cli_doc_into to item (cli_k + 1) of cli_given
+                add 2 to cli_k
+            else
+                if cli_begins_with(cli_arg, "--")
+                    set cli_doc_fine to no
+                end
+                add cli_arg to cli_doc_files
+                add 1 to cli_k
+            end
+        end
+        if cli_doc_fine and length of cli_doc_files is greater than 0
+            return cli_doc(cli_doc_files, cli_doc_into)
+        end
+    end
+    if cli_command is "watch" and length of cli_given is at least 2 and item 2 of cli_given is not "watch" # again on each change
+        set cli_rest to empty list
+        for each cli_k from 2 to length of cli_given
+            add item cli_k of cli_given to cli_rest
+        end
+        return cli_watch(cli_rest)
+    end
+    if cli_command is "bench" # each bench_ function timed
+        set cli_bench_paths to empty list
+        set cli_bench_flags to empty list
+        set cli_bench_fine to yes
+        for each cli_k from 2 to length of cli_given
+            set cli_arg to item cli_k of cli_given
+            if cli_allow_flag(cli_arg)
+                add cli_arg to cli_bench_flags
+            else if cli_begins_with(cli_arg, "--")
+                set cli_bench_fine to no
+            else
+                add cli_arg to cli_bench_paths
+            end
+        end
+        if cli_bench_fine
+            if length of cli_bench_paths is 0
+                set cli_sep to "/"
+                if cli_host() is "windows"
+                    set cli_sep to "\\"
+                end
+                set cli_bench_paths to cli_find_benches("", cli_sep, empty list)
+                if length of cli_bench_paths is 0
+                    say "moth: no benchmarks found: name a file, or put bench_ functions in files ending in .bench.moth" to the error output
+                    return 1
+                end
+            end
+            return cli_bench_all(cli_bench_paths, cli_host(), cli_bench_flags)
+        end
     end
     if cli_command is "lsp" and length of cli_given is 1 # the language server, for an editor
-        stop the program with cli_lsp()
+        return cli_lsp()
     end
     if cli_command is "add" or cli_command is "get" or cli_command is "update" or cli_command is "remove" or cli_command is "packages" or cli_command is "search" or cli_command is "audit"
         set cli_rest to empty list
         for each cli_k from 2 to length of cli_given
             add item cli_k of cli_given to cli_rest
         end
-        stop the program with cli_package_command(cli_command, cli_rest)
+        return cli_package_command(cli_command, cli_rest)
     end
     set cli_fine to (length of cli_given is at least 2 and (cli_command is "build" or cli_command is "run" or cli_command is "debug" or cli_command is "profile" or cli_command is "notebook" or cli_command is "tidy" or cli_command is "check")) or cli_command is "test" or cli_command is "coverage"
     set cli_k to 2
@@ -7035,64 +7451,65 @@ to cli_main
     end
     if not cli_fine # wrong usage: how to use it, and 2
         say cli_usage to the error output
-        stop the program with 2
+        return 2
     end
     if cli_command is "tidy"
-        stop the program with cli_tidy_all(cli_paths, cli_checking)
+        return cli_tidy_all(cli_paths, cli_checking)
     end
     if cli_command is "check"
-        stop the program with cli_check_file(cli_file)
+        return cli_check_file(cli_file)
     end
     if cli_command is "notebook"
-        stop the program with cli_notebook(cli_file, cli_flags)
+        return cli_notebook(cli_file, cli_flags)
     end
     if cli_web
-        stop the program with cli_build_web(cli_file)
+        return cli_build_web(cli_file)
     end
     if cli_target is "wasm"
-        stop the program with cli_build_wasm(cli_file)
+        return cli_build_wasm(cli_file)
     end
     if cli_command is "test" or cli_paths_given
         if length of cli_paths is 0 # none named: every one here and in the folders inside
             set cli_paths to cli_tests_here()
             if cli_paths is nothing
-                stop the program with 1
+                return 1
             end
         end
         set cli_covering to nothing
         if cli_command is "coverage"
             set cli_covering to record with files empty list, counts empty dictionary, lcov cli_lcov
         end
-        stop the program with cli_test_all(cli_paths, cli_host(), cli_flags, cli_covering)
+        return cli_test_all(cli_paths, cli_host(), cli_flags, cli_covering)
     end
     if cli_target is nothing
         set cli_target to cli_host()
     end
     if cli_command is "run"
-        stop the program with cli_run(cli_file, cli_target, cli_flags, cli_passed)
+        return cli_run(cli_file, cli_target, cli_flags, cli_passed)
     end
     if cli_command is "debug"
-        stop the program with cli_debug(cli_file, cli_target, cli_flags, cli_passed)
+        return cli_debug(cli_file, cli_target, cli_flags, cli_passed)
     end
     if cli_command is "profile"
-        stop the program with cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-profiler.moth", no)
+        return cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-profiler.moth", no)
     end
     if cli_command is "coverage"
-        stop the program with cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-coverage.moth", cli_lcov)
+        return cli_profile(cli_file, cli_target, cli_flags, cli_passed, "moth-coverage.moth", cli_lcov)
     end
     if library of cli_asked
-        stop the program with cli_build_library(cli_file, cli_target, cli_flags)
+        return cli_build_library(cli_file, cli_target, cli_flags)
     end
     set cli_out to cli_out_for(cli_file, cli_target)
     if not cli_build(cli_file, cli_target, cli_flags, cli_out, yes) # a mistake in the program, or a file that can't be read: 1
-        stop the program with 1
+        return 1
     end
     if not cli_signed(cli_out)
-        stop the program with 1
+        return 1
     end
     if installer of cli_asked
-        stop the program with cli_build_installer(cli_file, cli_target, cli_out)
+        return cli_build_installer(cli_file, cli_target, cli_out)
     end
+    return 0
 end
 
-cli_main()
+stop the program with cli_dispatch(arguments)
