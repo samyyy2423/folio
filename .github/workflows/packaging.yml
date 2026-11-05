@@ -5,6 +5,10 @@ name: packaging
 # Scoop finding and writing the next version), the .deb installed on Debian and Ubuntu, the image running
 # programs, and install.sh and install.ps1 installing the real release and refusing a download whose sum isn't
 # the release's. The release's own workflow, release.yml, does a dry run of the rest.
+#
+# What downloads the release (the manifests' downloads, install-sh and windows) runs only while the repository is
+# public: a private repository's releases can't be downloaded by anyone, so there's nothing to install. Since the
+# rename (DESIGN.md §150) they ask for folio-* files, which the first release called Folio has; 1.11.0's are moth-*.
 on:
   push:
     paths:
@@ -47,6 +51,7 @@ jobs:
           python -m pip install --quiet pyyaml==6.0.3 jsonschema==4.26.0 referencing==0.37.0
           python packaging/check-schemas.py
       - name: the manifests' downloads are there, and are the sums they say
+        if: ${{ !github.event.repository.private }}
         run: |
           check() { # a URL and the SHA-256 it should have
             curl -fsSL --retry 3 -o "$RUNNER_TEMP/download" "$1"
@@ -134,6 +139,7 @@ jobs:
           test "$(./hello)" = "Hello from the image"
 
   install-sh:
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -160,6 +166,7 @@ jobs:
             test "$(folio run hello.folio)" = "Hello from Alpine"'
 
   windows:
+    if: ${{ !github.event.repository.private }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
