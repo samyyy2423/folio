@@ -70,6 +70,8 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   added up: each file's share, and the lines no test ran. `--lcov` writes `lcov.info` for CI services and
   editors, for a program's run too. It no longer counts moth's own copies of the standard library, nor
   packages.
+- **Fixes.** A package can use the standard library: `use "text.moth"` in a package, or in a file it uses,
+  is moth's own `text.moth` unless the package has one, so a package no longer needs copies of its own.
 
 ## [1.11.0](https://github.com/samyyy2423/moth/releases/tag/v1.11.0) (2026-11-04)
 
