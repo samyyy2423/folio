@@ -7565,7 +7565,7 @@ say sync's wait_for_all(list of (start nap(20) on another core), (start nap(10) 
 
 // Four workers, each doing what four calls one after another do a quarter of, take far less time, where there are cores
 test("workers use every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, () => {
-  const ran = taskRun(`to busy with n
+  const source = `to busy with n
     set sum to 0
     for each i from 1 to n
         set sum to sum + (remainder of i divided by 7)
@@ -7587,10 +7587,17 @@ for each j in jobs
     set r to wait for j
 end
 set together to the clock - t0
-say together / alone`);
-  assert.equal(ran.status, 0, ran.stderr);
-  const ratio = Number(ran.stdout);
-  assert.ok(ratio < (availableParallelism() >= 4 ? 0.6 : 0.8), `four workers took ${ratio} of the time four calls one after another did`);
+say together / alone`;
+  // Best of three: one busy moment on a shared CI runner can leave the workers no spare core, so a single
+  // measurement sometimes shows no speed-up. The speed-up is real if it shows even once.
+  const want = availableParallelism() >= 4 ? 0.6 : 0.8;
+  let best = Infinity;
+  for (let attempt = 0; attempt < 3 && best >= want; attempt++) {
+    const ran = taskRun(source);
+    assert.equal(ran.status, 0, ran.stderr);
+    best = Math.min(best, Number(ran.stdout));
+  }
+  assert.ok(best < want, `four workers took ${best} of the time four calls one after another did (best of 3)`);
 });
 
 test("a program with workers takes its threads and its workers' memory from the system, on Windows as on Linux", () => {
