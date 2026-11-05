@@ -6,6 +6,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Faster on the VM, the JIT and in machine code.** Measured on sixteen programs, before and after in turns:
+  the VM takes 1.5 to 3.6 times less time (its switch goes straight to each instruction), the JIT 1.1 to 6.4
+  times less on all but calls of four inputs (adding to text 179 ms to 28, records 89 to 23), and machine code compares
+  `x is "text"` in line (1,000,000 letters compared, 101 ms to 30) and hashes dictionary keys eight bytes at a
+  time (1.1 to 1.2 times faster); moth builds compiler.moth with 11% fewer instructions (DESIGN §146).
 - **Web pages, made in Moth.** `page.moth` makes a page a part at a time: headings, text, links, pictures,
   lists, tables, boxes, text boxes, checkboxes, dropdowns and buttons, in Moth's look or with CSS of its own.
   The playground shows it, and so does a page `moth build --web` makes, as the whole window. `when the page is
