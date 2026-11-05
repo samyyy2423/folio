@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **More mistakes worded in WebAssembly.** A call of what isn't a function, a function given the wrong number
+  of inputs, a range of what isn't numbers, and a field of what isn't a record are worded inside the module,
+  with the program's own names (DESIGN §151).
 - **Moth is now Folio.** The language, its command (`folio`), its files (`.folio`) and its packages
   (`foliolang`) have a new name. Programs from before still run: `use "json.moth"` finds `json.folio`, and
   `folio run`, `folio build` and `folio test` take `.moth` files as they are (DESIGN §150).

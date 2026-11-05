@@ -62,10 +62,7 @@ const IMPORTS = {
   remove: [[EQ, EQ, I32], []],
   addInto: [[EQ, EQ, I32, I32], [EQ]],
   checkRepeat: [[EQ, I32], [F64]],
-  checkRange: [[EQ, EQ, I32], []],
   itemsOf: [[EQ, I32], [EQ]],
-  callable: [[EQ, I32, I32], []],
-  checkInputs: [[EQ, I32, I32, I32], []],
   checkKind: [[I32, I32, EQ, I32, I32], []],
   stopped: [[I32], []],
   refill: [[I32], [I32]], // more steps, as a step count's last ran out: how many are left after this one
@@ -73,7 +70,6 @@ const IMPORTS = {
   tooDeep: [[], []],
   turtle: [[I32, EQ, I32], []],
   field: [[EQ, I32, I32], []],
-  recordFor: [[EQ, I32, I32], []],
   builtin: [[I32, EQ, I32], [EQ]], // which one, its inputs as a list, and a position
   ask: [[EQ, I32], [EQ]],
   read: [[EQ, I32, I32], [EQ]], // the file's name, 1 for bytes or 0 for text, and a position
@@ -698,7 +694,8 @@ function declareRuntime(m, T, im) {
     c.emit("local.get", 0).emit("local.get", 1).emit("call", R.find).emit("local.tee", at).emit("i32.const", 0).emit("i32.ge_s").emit("if");
     c.emit("local.get", 0).emit("ref.cast", T.record).emit("struct.get", T.record, 1).emit("local.get", at).emit("array.get", T.items).emit("return");
     c.emit("end").emit("end");
-    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.field).emit("unreachable");
+    c.emit("local.get", 0).emit("ref.test", T.record).emit("i32.eqz").emit("if").emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", R.notRecord).emit("end");
+    c.emit("local.get", 0).emit("local.get", 1).emit("local.get", 2).emit("call", im.field).emit("unreachable"); // a record without it: JavaScript guesses what was meant
   });
 
   shared.finish(im);
@@ -1159,7 +1156,7 @@ class WasmCompiler extends Scope {
         this.expr(s.to);
         this.e("local.set", to);
         bothNums(this.c, T, from, to);
-        this.e("i32.eqz").e("if").e("local.get", from).e("local.get", to).e("i32.const", k).e("call", im.checkRange).e("unreachable").e("end");
+        this.e("i32.eqz").e("if").e("local.get", from).e("local.get", to).e("i32.const", k).e("call", R.checkRange).e("unreachable").e("end");
         numOf(this.c, T, from);
         this.e("local.set", i);
         numOf(this.c, T, to);
@@ -1231,7 +1228,7 @@ class WasmCompiler extends Scope {
         const [target, value] = [this.temp(), this.temp()];
         this.expr(s.target);
         this.e("local.tee", target).e("ref.test", T.record).e("i32.eqz");
-        this.e("if").e("local.get", target).e("i32.const", this.id(s.name)).e("i32.const", k).e("call", im.recordFor).e("unreachable").e("end");
+        this.e("if").e("local.get", target).e("i32.const", this.id(s.name)).e("i32.const", k).e("call", R.recordFor).e("unreachable").e("end");
         this.expr(s.value);
         this.e("local.set", value);
         this.e("local.get", target).e("i32.const", this.id(s.name)).e("local.get", value).e("call", R.setField);
@@ -1345,13 +1342,13 @@ class WasmCompiler extends Scope {
     const args = e.args.map(() => this.temp());
     this.load(e.name);
     this.e("local.tee", f).e("ref.test", T.closure).e("i32.eqz");
-    this.e("if").e("local.get", f).e("i32.const", this.id(e.name)).e("i32.const", k).e("call", im.callable).e("unreachable").e("end");
+    this.e("if").e("local.get", f).e("i32.const", this.id(e.name)).e("i32.const", k).e("call", this.ctx.R.callable).e("unreachable").e("end");
     e.args.forEach((arg, i) => {
       this.expr(arg);
       this.e("local.set", args[i]);
     });
     this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 2).e("i32.const", args.length).e("i32.ne");
-    this.e("if").e("local.get", f).e("i32.const", args.length).e("i32.const", this.id(e.name)).e("i32.const", k).e("call", im.checkInputs).e("unreachable").e("end");
+    this.e("if").e("local.get", f).e("i32.const", args.length).e("i32.const", this.id(e.name)).e("i32.const", k).e("call", this.ctx.R.checkInputs).e("unreachable").e("end");
     if (args.length) { // a function whose inputs say what they are: each one checked
       this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 4).e("if");
       args.forEach((a, i) => {
@@ -1387,13 +1384,13 @@ class WasmCompiler extends Scope {
     const made = this.temp();
     this.load(call.name);
     this.e("local.tee", f).e("ref.test", T.closure).e("i32.eqz");
-    this.e("if").e("local.get", f).e("i32.const", this.id(call.name)).e("i32.const", k).e("call", im.callable).e("unreachable").e("end");
+    this.e("if").e("local.get", f).e("i32.const", this.id(call.name)).e("i32.const", k).e("call", this.ctx.R.callable).e("unreachable").e("end");
     call.args.forEach((arg, i) => {
       this.expr(arg);
       this.e("local.set", args[i]);
     });
     this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 2).e("i32.const", args.length).e("i32.ne");
-    this.e("if").e("local.get", f).e("i32.const", args.length).e("i32.const", this.id(call.name)).e("i32.const", k).e("call", im.checkInputs).e("unreachable").e("end");
+    this.e("if").e("local.get", f).e("i32.const", args.length).e("i32.const", this.id(call.name)).e("i32.const", k).e("call", this.ctx.R.checkInputs).e("unreachable").e("end");
     if (args.length) {
       this.e("local.get", f).e("ref.cast", T.closure).e("struct.get", T.closure, 4).e("if");
       args.forEach((a, i) => {
@@ -1675,6 +1672,17 @@ export function compileToWasmModule(program) {
   ctx.data = m.data(ctx.units); // the program's text, as UTF-16 units: in every module, as the runtime reads names from it
   const main = new WasmCompiler(null, "main", [], program, ctx);
   m.export("main", main.f.index);
+  // the program's names, for the words of a mistake (R.nameText): each one's units in the data, then where each
+  // starts and how many units it has, which init makes the names global of
+  const table = [];
+  for (const name of names) {
+    table.push(ctx.units.length, name.length);
+    for (let i = 0; i < name.length; i++) ctx.units.push(name.charCodeAt(i) & 255, name.charCodeAt(i) >> 8);
+  }
+  const tableAt = ctx.units.length;
+  for (const v of table) ctx.units.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255);
+  ctx.init.code.emit("i32.const", tableAt).emit("i32.const", table.length).emit("array.new_data", T.ids, ctx.data)
+    .emit("global.set", SHARED.globals.findIndex((g) => g.name === "names"));
   // the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
   // and the name of its function
   for (const [label, params, write] of [
@@ -1987,10 +1995,7 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     remove: (key, target, k) => removeKey(toJs(key), toJs(target), errors[k]),
     addInto: (current, value, name, k) => toWasm(addInto(toJs(current), toJs(value), names[name], errors[k])),
     checkRepeat: (n, k) => checkRepeat(toJs(n), errors[k]), // a count that's whole to 15 digits comes back whole
-    checkRange: (from, to, k) => checkRange(toJs(from), toJs(to), errors[k]),
     itemsOf: (v, k) => toWasm(itemsOf(toJs(v), errors[k])),
-    callable: (f, name, k) => callable(toJs(f), names[name], errors[k]),
-    checkInputs: (f, argc, name, k) => checkInputs(toJs(f), argc, names[name], errors[k]),
     // input i of a function whose inputs say what they are: its kind from its tag, so a big list isn't copied
     checkKind: (id, i, v, name, k) => {
       const wanted = kinds[id].kinds[i];
@@ -2018,7 +2023,6 @@ function instantiate(module, { ats, names, kinds }, print, draw, maxSteps, answe
     },
     turtle: (action, value, k) => turtle.act(action, toJs(value), errors[k], disk),
     field: (r, name, k) => fieldOf(toJs(r), names[name], errors[k]),
-    recordFor: (r, name, k) => recordFor(toJs(r), names[name], errors[k]),
     tryStart: () => {
       lastError = null;
     },

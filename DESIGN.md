@@ -6434,3 +6434,31 @@ private, and nothing was published to npm or PyPI.
   file of its own on the three engines and in the compiler written in Folio, the same; and folio.exe running
   a `.moth` program and testing its `.test.moth` file.
 
+## 151. The words of a mistake, in the WebAssembly module
+
+The fourth of stage 2's parts (§139), begun: the checks that only ever made a mistake, and called JavaScript
+to word it. A mistake's words need two things the module didn't have: what a value is, in words, and the
+program's names. It has both now, and four checks are worded in it. A module imports 51 functions, not 55:
+`callable`, `checkInputs`, `checkRange` and `recordFor` are gone.
+
+- **What a value is.** `kindWords` in the shared runtime says what vm.js's `kindOf` says: nothing, yes/no,
+  text, a list, a function, a record, a dictionary, bytes, an amount's measure (a distance, a time...) or a
+  number, in kindOf's order. An amount's measure is from a table of each unit's, made from vm.js's UNITS
+  when wasm-runtime.js is read, so the two can't drift apart.
+- **The program's names.** The compiler gives each name a number as it meets it. Once the program is
+  compiled, it puts each name's UTF-16 units in the module's data, and after them a table of where each
+  starts and how long it is, which `init` makes the `names` global of; `nameText` makes a name's text from
+  it. wasm.js and wasm.folio write the same bytes for it.
+- **Worded in the module:** a call of what has no value yet ("there is no function called 'f'"), of what
+  isn't a function ("'x' is a number, not a function"), a function given the wrong number of inputs ("'f'
+  needs 1 input but got 2"), a range of what isn't numbers, and a field of what isn't a record, to read or
+  to change. Each is thrown as the module's own mistake (§146), so a `try` catches it with no call out.
+- **Still in JavaScript, for now:** a record with no such field, as "did you mean" picks from every field
+  name, and JavaScript adds names (a table's rows); the kinds a function's inputs say they are; and a repeat
+  count that isn't whole, which shows any value. Showing a value is the built-ins' part.
+- **What it cost.** Every module holds the runtime's new words and its program's names: a module for
+  `say 1` is 15,538 bytes, and folio.wasm 1,709,430, 4% more.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the
+  test, its six mistakes caught in it and said, the same as the VM says them; and every program the
+  engines are tested with, made by wasm.js, wasm.folio and folio.wasm byte for byte.
+

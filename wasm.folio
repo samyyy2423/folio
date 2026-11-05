@@ -700,10 +700,7 @@ to wasm_runtime
     wasm_import(m, "remove", (list of eq, eq, i32), none)
     wasm_import(m, "addInto", (list of eq, eq, i32, i32), (list of eq))
     wasm_import(m, "checkRepeat", (list of eq, i32), (list of f64))
-    wasm_import(m, "checkRange", (list of eq, eq, i32), none)
     wasm_import(m, "itemsOf", (list of eq, i32), (list of eq))
-    wasm_import(m, "callable", (list of eq, i32, i32), none)
-    wasm_import(m, "checkInputs", (list of eq, i32, i32, i32), none)
     wasm_import(m, "checkKind", (list of i32, i32, eq, i32, i32), none)
     wasm_import(m, "stopped", (list of i32), none)
     wasm_import(m, "refill", (list of i32), (list of i32))
@@ -711,7 +708,6 @@ to wasm_runtime
     wasm_import(m, "tooDeep", none, none)
     wasm_import(m, "turtle", (list of i32, eq, i32), none)
     wasm_import(m, "field", (list of eq, i32, i32), none)
-    wasm_import(m, "recordFor", (list of eq, i32, i32), none)
     wasm_import(m, "builtin", (list of i32, eq, i32), (list of eq))
     wasm_import(m, "ask", (list of eq, i32), (list of eq))
     wasm_import(m, "read", (list of eq, i32, i32), (list of eq))
@@ -1097,7 +1093,8 @@ to wasm_runtime_functions with m
     wasm_named(f, "at", i32)
     wasm_asm(f, "local.get 0 ref.test record if local.get 0 local.get 1 call R.find local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, "local.get 0 ref.cast record struct.get record 1 local.get at array.get items return end end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.field unreachable")
+    wasm_asm(f, "local.get 0 ref.test record i32.eqz if local.get 0 local.get 1 local.get 2 call R.notRecord end")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.field unreachable") # a record without it: JavaScript guesses what was meant
 end
 
 # What JavaScript calls to look inside Folio's values, and to make them, when a check or `say` needs them.
@@ -1914,7 +1911,7 @@ to wasm_statement with fc, s
         wasm_x(fc, "local.set " + low)
         wasm_expr(fc, limit of s)
         wasm_x(fc, "local.set " + high)
-        wasm_x(fc, wasm_both_nums(low, high) + " i32.eqz if local.get " + low + " local.get " + high + " i32.const " + k + " call im.checkRange unreachable end")
+        wasm_x(fc, wasm_both_nums(low, high) + " i32.eqz if local.get " + low + " local.get " + high + " i32.const " + k + " call R.checkRange unreachable end")
         wasm_x(fc, wasm_num_of(low) + " local.set " + i + wasm_num_of(high) + " local.set " + last)
         # as vm.js's atMost: i <= last, and only when it isn't, the comparison to 15 digits, which an end that
         # isn't whole needs; so a loop's turn makes no call
@@ -1999,7 +1996,7 @@ to wasm_statement with fc, s
         set value to wasm_temp(fc, wasm_eq)
         wasm_expr(fc, target of s)
         wasm_x(fc, "local.tee " + target + " ref.test record i32.eqz")
-        wasm_x(fc, "if local.get " + target + " i32.const " + wasm_id(fc, name of s) + " i32.const " + k + " call im.recordFor unreachable end")
+        wasm_x(fc, "if local.get " + target + " i32.const " + wasm_id(fc, name of s) + " i32.const " + k + " call R.recordFor unreachable end")
         wasm_expr(fc, value of s)
         wasm_x(fc, "local.set " + value + " local.get " + target + " i32.const " + wasm_id(fc, name of s) + " local.get " + value + " call R.setField")
     else if what is "fail"
@@ -2136,7 +2133,7 @@ to wasm_call with fc, e, statement
     end
     wasm_load(fc, name of e)
     wasm_x(fc, "local.tee " + callee + " ref.test closure i32.eqz")
-    wasm_x(fc, "if local.get " + callee + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.callable unreachable end")
+    wasm_x(fc, "if local.get " + callee + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.callable unreachable end")
     set n to length of args of e
     for each i from 1 to n
         wasm_expr(fc, item i of args of e)
@@ -2144,7 +2141,7 @@ to wasm_call with fc, e, statement
     end
     set get_closure to "local.get " + callee + " ref.cast closure struct.get closure "
     wasm_x(fc, get_closure + "2 i32.const " + n + " i32.ne")
-    wasm_x(fc, "if local.get " + callee + " i32.const " + n + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.checkInputs unreachable end")
+    wasm_x(fc, "if local.get " + callee + " i32.const " + n + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.checkInputs unreachable end")
     if n is greater than 0 # a function whose inputs say what they are: each one checked
         wasm_x(fc, get_closure + "4 if")
         for each i from 1 to n
@@ -2185,7 +2182,7 @@ to wasm_start_worker with fc, e
     set made to wasm_temp(fc, wasm_eq)
     wasm_load(fc, name of e)
     wasm_x(fc, "local.tee " + callee + " ref.test closure i32.eqz")
-    wasm_x(fc, "if local.get " + callee + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.callable unreachable end")
+    wasm_x(fc, "if local.get " + callee + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.callable unreachable end")
     set n to length of args of e
     for each i from 1 to n
         wasm_expr(fc, item i of args of e)
@@ -2193,7 +2190,7 @@ to wasm_start_worker with fc, e
     end
     set get_closure to "local.get " + callee + " ref.cast closure struct.get closure "
     wasm_x(fc, get_closure + "2 i32.const " + n + " i32.ne")
-    wasm_x(fc, "if local.get " + callee + " i32.const " + n + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.checkInputs unreachable end")
+    wasm_x(fc, "if local.get " + callee + " i32.const " + n + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.checkInputs unreachable end")
     if n is greater than 0
         wasm_x(fc, get_closure + "4 if")
         for each i from 1 to n
@@ -2596,6 +2593,22 @@ to wasm_module with program
     add units of cx to segments # the program's text, as UTF-16 units: in every module, as the runtime reads names from it
     set main to wasm_function(cx, nothing, "main", empty list, program, 0)
     wasm_export(m, "main", index of f of main)
+    # the program's names, for the words of a mistake (R.nameText): each one's units in the data, then where each
+    # starts and how many units it has, which init makes the names global of
+    set units to units of cx
+    set table to empty list
+    for each name in names of cx
+        add length of units to table
+        add wasm_units(units, name) to table
+    end
+    set table_at to length of units
+    for each v in table
+        add v bit and 255 to units
+        add (shift v right by 8) bit and 255 to units
+        add (shift v right by 16) bit and 255 to units
+        add (shift v right by 24) bit and 255 to units
+    end
+    wasm_asm(init, "i32.const " + table_at + " i32.const " + length of table + " array.new_data ids 0 global.set g.names")
     # the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
     # and the name of its function
     wasm_out(m, "callDepth", empty list, (list of wasm_i32), "global.get g.depth")

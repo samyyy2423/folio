@@ -20,6 +20,8 @@
 // What's here: text, which lives in the module as UTF-16, numbers as text, to 15 digits as the VM shows them,
 // the mistake a variable with no value yet is, and dictionaries.
 
+import { UNITS, MEASURES } from "./vm.js";
+
 export const SOURCE = String.raw`
 ;; where text crosses to JavaScript and back, 32,768 units at a time
 memory memory 1
@@ -1006,6 +1008,115 @@ local.get d ref.cast dict struct.get dict 0 local.get i array.get items
 
 export dictValueAt d:eq i:i32 -> eq
 local.get d ref.cast dict struct.get dict 1 local.get i array.get items
+
+;; ---------- the words of a mistake: what a value is, and the program's names (DESIGN §151) ----------
+;; What vm.js's kindOf says a value is, and each unit's measure (vm.js's UNITS), by the unit's number
+text kindNothing "nothing"
+text kindYesNo "yes/no"
+text kindText "text"
+text kindList "a list"
+text kindFunction "a function"
+text kindRecord "a record"
+text kindDictionary "a dictionary"
+text kindBytes "bytes"
+text kindNumber "a number"
+${MEASURES.map((m, i) => `text measure${i} ${JSON.stringify(m)}`).join("\n")}
+global unitMeasure ref:ids const ${UNITS.map((u) => `i32.const ${u[2]}`).join(" ")} array.new_fixed ids ${UNITS.length}
+;; the program's names, as places in its data: for each, where its units start and how many there are (init
+;; makes this, from what the compiler put in the data last)
+global names null:ids mut ref.null ids
+;; the pieces of the mistakes' words
+text quoted "'"
+text noFunction "there is no function called '"
+text isA "' is "
+text notAFunction ", not a function"
+text needs "' needs "
+text inputWord " input"
+text pluralS "s"
+text butGot " but got "
+text rangeWords "'from' and 'to' need numbers, not "
+text andWords " and "
+text canOnlyChange "can only change '"
+text ofARecordNot "' of a record, not "
+text cantTake "can't take '"
+text ofWords "' of "
+
+;; what a value is, in words, as kindOf in vm.js says it
+func kindWords v:eq -> eq
+local.get v ref.is_null if
+  global.get g.kindNothing return
+end
+local.get v ref.test i31 if
+  local.get v ref.cast i31 i31.get_u i32.const 2 i32.lt_u if
+    global.get g.kindYesNo return
+  end
+  global.get g.kindNumber return
+end
+local.get v ref.test text if
+  global.get g.kindText return
+end
+local.get v ref.test list if
+  global.get g.kindList return
+end
+local.get v ref.test closure if
+  global.get g.kindFunction return
+end
+local.get v ref.test record if
+  global.get g.kindRecord return
+end
+local.get v ref.test dict if
+  global.get g.kindDictionary return
+end
+local.get v ref.test bytes if
+  global.get g.kindBytes return
+end
+local.get v ref.test qty if
+  ${MEASURES.map((_, i) => `global.get g.unitMeasure local.get v ref.cast qty struct.get qty 1 array.get ids i32.const ${i} i32.eq if\n    global.get g.measure${i} return\n  end`).join("\n  ")}
+end
+global.get g.kindNumber
+
+;; name number id as text, from the program's data
+func nameText id:i32 -> eq
+local at i32
+local n i32
+global.get g.names local.get id i32.const 1 i32.shl array.get ids local.set at
+global.get g.names local.get id i32.const 1 i32.shl i32.const 1 i32.add array.get ids local.set n
+local.get at local.get n array.new_data chars 0 local.get n call R.newText
+
+;; A call of name id, at position k, that can't be made: there's no function called that, or it's something else
+func callable f:eq name:i32 k:i32 ->
+local.get f ref.test unset if
+  global.get g.noFunction local.get name call R.nameText call R.concat global.get g.quoted call R.concat i32.const 0 local.get k throw 0
+end
+global.get g.quoted local.get name call R.nameText call R.concat global.get g.isA call R.concat local.get f call R.kindWords call R.concat
+global.get g.notAFunction call R.concat i32.const 0 local.get k throw 0
+
+;; a call of f given argc inputs, when it takes another number of them
+func checkInputs f:eq argc:i32 name:i32 k:i32 ->
+local n i32
+local words eq
+local.get f ref.cast closure struct.get closure 2 local.set n
+global.get g.quoted local.get name call R.nameText call R.concat global.get g.needs call R.concat
+local.get n f64.convert_i32_s call R.numText call R.concat global.get g.inputWord call R.concat local.set words
+local.get n i32.const 1 i32.ne if
+  local.get words global.get g.pluralS call R.concat local.set words
+end
+local.get words global.get g.butGot call R.concat local.get argc f64.convert_i32_s call R.numText call R.concat i32.const 0 local.get k throw 0
+
+;; 'for each n from a to b' with a or b that isn't a number
+func checkRange from:eq to:eq k:i32 ->
+global.get g.rangeWords local.get from call R.kindWords call R.concat global.get g.andWords call R.concat
+local.get to call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; 'set name of r to ...' when r isn't a record
+func recordFor r:eq name:i32 k:i32 ->
+global.get g.canOnlyChange local.get name call R.nameText call R.concat global.get g.ofARecordNot call R.concat
+local.get r call R.kindWords call R.concat i32.const 0 local.get k throw 0
+
+;; 'name of r' when r isn't a record
+func notRecord r:eq name:i32 k:i32 ->
+global.get g.cantTake local.get name call R.nameText call R.concat global.get g.ofWords call R.concat
+local.get r call R.kindWords call R.concat i32.const 0 local.get k throw 0
 
 ;; ---------- text ----------
 ;; Text is a view of the first 'len' units of a buffer: its UTF-16 units, and how many of them are in use, so

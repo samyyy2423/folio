@@ -104,3 +104,42 @@ test("dictionaries are made, changed and read in the module, with none of JavaSc
   assert.equal(said, 6);
   assert.deepEqual(both(source), ["295", "c", "z", "yes", "no", "14"]);
 });
+
+// Stage 2's fourth part, begun (DESIGN §151): a call of what isn't a function, a function given the wrong number of
+// inputs, a range that isn't of numbers, and a field of what isn't a record are worded in the module, with the
+// program's names from its own data and each value's kind in words, as the VM words them
+test("the module words the mistakes of calls, ranges and fields itself, with the program's names", () => {
+  const source = [
+    "to f with a",
+    "    return a",
+    "end",
+    "set x to 5", // (an amount is made by a built-in, still in JavaScript)
+    "try\n    say nope()\nif it fails with why\n    say why\nend",
+    "try\n    say x(1)\nif it fails with why\n    say why\nend",
+    "try\n    say f(1, 2)\nif it fails with why\n    say why\nend",
+    "try\n    for each i from \"a\" to yes\n        say i\n    end\nif it fails with why\n    say why\nend",
+    "try\n    set size of x to 2\nif it fails with why\n    say why\nend",
+    "try\n    say size of (list of 1)\nif it fails with why\n    say why\nend",
+  ].join("\n");
+  const module = new WebAssembly.Module(compileToWasmBytes(source).bytes);
+  const imported = WebAssembly.Module.imports(module).map((i) => i.name);
+  for (const gone of ["callable", "checkInputs", "checkRange", "recordFor"]) assert.ok(!imported.includes(gone), gone);
+  let x = null;
+  const said = [];
+  const text = (t) => String.fromCharCode(...Array.from({ length: x.textLength(t) }, (_, i) => x.textUnit(t, i)));
+  const allowed = { tryStart: () => {}, grant: () => 2 ** 30, refill: () => 2 ** 30, say: (parts) => said.push(Array.from({ length: x.listLength(parts) }, (_, i) => text(x.listItem(parts, i))).join("")) };
+  const imports = new Proxy({}, { get: (_, name) => allowed[name] ?? (() => assert.fail(`the module called ${String(name)}`)) });
+  x = new WebAssembly.Instance(module, { folio: imports }).exports;
+  x.restart();
+  x.main();
+  assert.deepEqual(said, [
+    "there is no function called 'nope'",
+    "'x' is a number, not a function",
+    "'f' needs 1 input but got 2",
+    "'from' and 'to' need numbers, not text and yes/no",
+    "can only change 'size' of a record, not a number",
+    "can't take 'size' of a list",
+  ]);
+  assert.deepEqual(both(source), said);
+});
+
