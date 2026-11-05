@@ -15,6 +15,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **MCP servers, PDF files and spreadsheets.** `mcp.moth` makes servers whose tools Claude and other AI apps
   can call; `pdf.moth` writes PDF files with text, lines, boxes and colours; `xlsx.moth` reads and writes
   Excel workbooks. All three are in the standard library, in Moth alone.
+- **mothlang for JavaScript.** `npm install mothlang` runs Moth in Node.js on the playground's engine:
+  `run(source)` gives what a program said, `load(source)` its functions as JavaScript ones, and `check`,
+  `format` and `test` are `moth check`'s, `moth tidy`'s and `moth test`'s; `npx mothlang run hello.moth` runs a
+  file. A workflow publishes it with each release, once the name is set up on npm
+  ([docs/npm-package.md](docs/npm-package.md)).
 - **Installers.** `irm https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.ps1 | iex` on
   Windows and `curl -fsSL https://raw.githubusercontent.com/samyyy2423/moth/main/packaging/install.sh | sh` on
   Linux install the latest release, checked against its `SHA256SUMS.txt`, and put `moth` on PATH. Scoop

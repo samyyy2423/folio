@@ -6075,3 +6075,30 @@ templates, also asked for, were packages in the index already: `markdown` and
   takes what Excel writes too: shared strings, rich text in runs, cells and
   rows left out, a formula's last value, a sheet found by its relationship
   rather than its place. openpyxl reads what it writes back exactly.
+
+## 142. Moth from JavaScript: mothlang on npm
+
+Python could call Moth (§136); JavaScript, where Moth's engine was born,
+couldn't, but for copying `moth.js` out of the repository. `npm/` is the
+package.
+
+- **What it is.** The engine as the VS Code extension carries it (the same
+  `ENGINE` list, so the two can't differ), the standard library's files in
+  `lib/`, where `use "json.moth"` finds them after the program's own, and
+  `mothlang.js`: `run` (what a program said, a line each, or a `MothError`),
+  `load` (a program's top level by name, its functions JavaScript ones, as
+  `moth.js`'s `load` gives Moth's compiler to the tests), `runFile` and
+  `loadFile` (with `use` finding files beside them), `check`, `format` and
+  `test`. Programs get the computer's own clock and randomness, as a program
+  `moth build` makes does, and a disk only when they're given one.
+- **Its command.** `mothlang run`, `check`, `test` and `tidy`, on the JIT,
+  answering `ask` from the input a line at a time (read as it comes, with
+  `readSync`), and ending with the number the program ended with.
+- **Published as releases are.** `make-package.mjs` stamps Moth's version on
+  it; the npm workflow runs its tests and publishes it with npm's provenance
+  when a release is published. The name has to be made on npm once, by hand,
+  as PyPI's was (docs/npm-package.md). `npm pack` makes it 423 KB, 72 files.
+- **Tested** as it would be installed: the package made in a folder of its
+  own, its files checked against what the engine imports, every engine run
+  through it, a function loaded and called with lists and dictionaries, and
+  its command run, checked, tested and tidied with.
