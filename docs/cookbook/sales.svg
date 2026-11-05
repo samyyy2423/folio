@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" font-family="DejaVu Sans, Verdana, sans-serif">
+<title>Ice creams sold, by month</title>
+<rect width="720" height="440" fill="#fcfcfb"/>
+<text x="16" y="30" font-size="16" font-weight="bold" fill="#0b0b0b" text-anchor="start">Ice creams sold, by month</text>
+<line x1="50" y1="404" x2="704" y2="404" stroke="#e1e0d9" stroke-width="1" shape-rendering="crispEdges"/>
+<text x="42" y="408" font-size="13" fill="#52514e" text-anchor="end">0</text>
+<line x1="50" y1="316" x2="704" y2="316" stroke="#e1e0d9" stroke-width="1" shape-rendering="crispEdges"/>
+<text x="42" y="320" font-size="13" fill="#52514e" text-anchor="end">200</text>
+<line x1="50" y1="228" x2="704" y2="228" stroke="#e1e0d9" stroke-width="1" shape-rendering="crispEdges"/>
+<text x="42" y="232" font-size="13" fill="#52514e" text-anchor="end">400</text>
+<line x1="50" y1="140" x2="704" y2="140" stroke="#e1e0d9" stroke-width="1" shape-rendering="crispEdges"/>
+<text x="42" y="144" font-size="13" fill="#52514e" text-anchor="end">600</text>
+<line x1="50" y1="52" x2="704" y2="52" stroke="#e1e0d9" stroke-width="1" shape-rendering="crispEdges"/>
+<text x="42" y="56" font-size="13" fill="#52514e" text-anchor="end">800</text>
+<text x="77.25" y="426" font-size="13" fill="#52514e" text-anchor="middle">Jan</text>
+<text x="131.75" y="426" font-size="13" fill="#52514e" text-anchor="middle">Feb</text>
+<text x="186.25" y="426" font-size="13" fill="#52514e" text-anchor="middle">Mar</text>
+<text x="240.75" y="426" font-size="13" fill="#52514e" text-anchor="middle">Apr</text>
+<text x="295.25" y="426" font-size="13" fill="#52514e" text-anchor="middle">May</text>
+<text x="349.75" y="426" font-size="13" fill="#52514e" text-anchor="middle">Jun</text>
+<text x="404.25" y="426" font-size="13" fill="#52514e" text-anchor="middle">Jul</text>
+<text x="458.75" y="426" font-size="13" fill="#52514e" text-anchor="middle">Aug</text>
+<text x="513.25" y="426" font-size="13" fill="#52514e" text-anchor="middle">Sep</text>
+<text x="567.75" y="426" font-size="13" fill="#52514e" text-anchor="middle">Oct</text>
+<text x="622.25" y="426" font-size="13" fill="#52514e" text-anchor="middle">Nov</text>
+<text x="676.75" y="426" font-size="13" fill="#52514e" text-anchor="middle">Dec</text>
+<path d="M65.25 404V314.72Q65.25 310.72 69.25 310.72H85.25Q89.25 310.72 89.25 314.72V404Z" fill="#2a78d6"><title>Jan: 212</title></path>
+<path d="M119.75 404V306.8Q119.75 302.8 123.75 302.8H139.75Q143.75 302.8 143.75 306.8V404Z" fill="#2a78d6"><title>Feb: 230</title></path>
+<path d="M174.25 404V275.56Q174.25 271.56 178.25 271.56H194.25Q198.25 271.56 198.25 275.56V404Z" fill="#2a78d6"><title>Mar: 301</title></path>
+<path d="M228.75 404V237.28Q228.75 233.28 232.75 233.28H248.75Q252.75 233.28 252.75 237.28V404Z" fill="#2a78d6"><title>Apr: 388</title></path>
+<path d="M283.25 404V199Q283.25 195 287.25 195H303.25Q307.25 195 307.25 199V404Z" fill="#2a78d6"><title>May: 475</title></path>
+<path d="M337.75 404V148.4Q337.75 144.4 341.75 144.4H357.75Q361.75 144.4 361.75 148.4V404Z" fill="#2a78d6"><title>Jun: 590</title></path>
+<path d="M392.25 404V117.16Q392.25 113.16 396.25 113.16H412.25Q416.25 113.16 416.25 117.16V404Z" fill="#2a78d6"><title>Jul: 661</title></path>
+<path d="M446.75 404V124.2Q446.75 120.2 450.75 120.2H466.75Q470.75 120.2 470.75 124.2V404Z" fill="#2a78d6"><title>Aug: 645</title></path>
+<path d="M501.25 404V182.72Q501.25 178.72 505.25 178.72H521.25Q525.25 178.72 525.25 182.72V404Z" fill="#2a78d6"><title>Sep: 512</title></path>
+<path d="M555.75 404V231.12Q555.75 227.12 559.75 227.12H575.75Q579.75 227.12 579.75 231.12V404Z" fill="#2a78d6"><title>Oct: 402</title></path>
+<path d="M610.25 404V284.8Q610.25 280.8 614.25 280.8H630.25Q634.25 280.8 634.25 284.8V404Z" fill="#2a78d6"><title>Nov: 280</title></path>
+<path d="M664.75 404V304.16Q664.75 300.16 668.75 300.16H684.75Q688.75 300.16 688.75 304.16V404Z" fill="#2a78d6"><title>Dec: 236</title></path>
+</svg>
