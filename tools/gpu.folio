@@ -262,7 +262,7 @@ to matmul with a, b, rows, inner, columns
     end
     set made to gpu_allocate(rows * columns)
     if rows * columns is greater than 0
-        gpu_launch("matmul", gpu_ceiling(columns / 16), gpu_ceiling(rows / 16), 16, 16, (list of made's at, a's at, b's at, rows, inner, columns),
+        gpu_launch("matmul", gpu_ceiling(columns / 64), gpu_ceiling(rows / 64), 16, 16, (list of made's at, a's at, b's at, rows, inner, columns),
             (list of "pointer", "pointer", "pointer", "whole", "whole", "whole"))
     end
     return made
@@ -569,35 +569,82 @@ to gpu_code
         "DONE:", "ret;", "}", ""
         add line to lines
     end
-    # c = a times b, a m by k, b k by n: each block works out a 16 by 16 tile of c, a tile of a and of b at a time
-    for each line in list of ".visible .entry matmul(.param .u64 p_c, .param .u64 p_a, .param .u64 p_b, .param .u32 p_m, .param .u32 p_k, .param .u32 p_n)", "\{",
-        ".shared .align 4 .f32 ta[256];", ".shared .align 4 .f32 tb[256];",
-        ".reg .pred %p<6>;", ".reg .b32 %r<32>;", ".reg .f32 %f<8>;", ".reg .b64 %rd<16>;",
+    for each line in gpu_matmul_code()
+        add line to lines
+    end
+    return join lines with "\n"
+end
+
+# c = a times b, a m by k, b k by n. Each block of 16 by 16 threads works out a 64 by 64 tile of c, each thread a 4
+# by 4 of it, 16 apart, in registers: a 64 by 16 tile of a and a 16 by 64 of b are loaded into the card's fast
+# memory in turn, and each of their 16 steps takes 8 numbers from it for 16 multiplications, where one each took 2
+to gpu_matmul_code
+    set lines to list of ".visible .entry matmul(.param .u64 p_c, .param .u64 p_a, .param .u64 p_b, .param .u32 p_m, .param .u32 p_k, .param .u32 p_n)", "\{"
+    for each line in list of ".shared .align 4 .f32 sa[1024];", ".shared .align 4 .f32 sb[1024];",
+        ".reg .pred %p<5>;", ".reg .b32 %r<24>;", ".reg .f32 %c<16>;", ".reg .f32 %x<4>;", ".reg .f32 %y<4>;", ".reg .f32 %v;", ".reg .b64 %rd<10>;",
         "ld.param.u64 %rd1, [p_c];", "ld.param.u64 %rd2, [p_a];", "ld.param.u64 %rd3, [p_b];",
         "ld.param.u32 %r1, [p_m];", "ld.param.u32 %r2, [p_k];", "ld.param.u32 %r3, [p_n];",
         "cvta.to.global.u64 %rd4, %rd1;", "cvta.to.global.u64 %rd5, %rd2;", "cvta.to.global.u64 %rd6, %rd3;",
         "mov.u32 %r4, %tid.x;", "mov.u32 %r5, %tid.y;", "mov.u32 %r6, %ctaid.x;", "mov.u32 %r7, %ctaid.y;",
-        "shl.b32 %r8, %r7, 4;", "add.u32 %r8, %r8, %r5;", "shl.b32 %r9, %r6, 4;", "add.u32 %r9, %r9, %r4;",
-        "mov.u32 %r20, ta;", "mov.u32 %r21, tb;",
-        "shl.b32 %r10, %r5, 4;", "add.u32 %r10, %r10, %r4;", "shl.b32 %r10, %r10, 2;", "add.u32 %r22, %r20, %r10;", "add.u32 %r23, %r21, %r10;",
-        "mov.f32 %f1, 0f00000000;", "mov.u32 %r11, 0;",
-        "TILE:", "setp.ge.u32 %p1, %r11, %r2;", "@%p1 bra WRITE;",
-        "add.u32 %r12, %r11, %r4;", "setp.lt.u32 %p2, %r8, %r1;", "setp.lt.u32 %p3, %r12, %r2;", "and.pred %p2, %p2, %p3;",
-        "mov.f32 %f2, 0f00000000;", "@!%p2 bra LOADB;",
-        "mad.lo.s32 %r13, %r8, %r2, %r12;", "mul.wide.u32 %rd7, %r13, 4;", "add.s64 %rd8, %rd5, %rd7;", "ld.global.f32 %f2, [%rd8];",
-        "LOADB:", "st.shared.f32 [%r22], %f2;",
-        "add.u32 %r14, %r11, %r5;", "setp.lt.u32 %p2, %r14, %r2;", "setp.lt.u32 %p3, %r9, %r3;", "and.pred %p2, %p2, %p3;",
-        "mov.f32 %f3, 0f00000000;", "@!%p2 bra STOREB;",
-        "mad.lo.s32 %r15, %r14, %r3, %r9;", "mul.wide.u32 %rd9, %r15, 4;", "add.s64 %rd10, %rd6, %rd9;", "ld.global.f32 %f3, [%rd10];",
-        "STOREB:", "st.shared.f32 [%r23], %f3;", "bar.sync 0;",
-        "shl.b32 %r16, %r5, 6;", "add.u32 %r16, %r20, %r16;", "shl.b32 %r17, %r4, 2;", "add.u32 %r17, %r21, %r17;", "mov.u32 %r18, 0;",
-        "INNER:", "ld.shared.f32 %f4, [%r16];", "ld.shared.f32 %f5, [%r17];", "fma.rn.f32 %f1, %f4, %f5, %f1;",
-        "add.u32 %r16, %r16, 4;", "add.u32 %r17, %r17, 64;", "add.u32 %r18, %r18, 1;", "setp.lt.u32 %p4, %r18, 16;", "@%p4 bra INNER;",
-        "bar.sync 0;", "add.u32 %r11, %r11, 16;", "bra TILE;",
-        "WRITE:", "setp.lt.u32 %p2, %r8, %r1;", "setp.lt.u32 %p3, %r9, %r3;", "and.pred %p2, %p2, %p3;", "@!%p2 bra DONE;",
-        "mad.lo.s32 %r19, %r8, %r3, %r9;", "mul.wide.u32 %rd11, %r19, 4;", "add.s64 %rd12, %rd4, %rd11;", "st.global.f32 [%rd12], %f1;",
-        "DONE:", "ret;", "}", ""
+        "shl.b32 %r8, %r7, 6;", "shl.b32 %r9, %r6, 6;", "mov.u32 %r20, sa;", "mov.u32 %r21, sb;", "mov.u32 %r11, 0;"
         add line to lines
     end
-    return join lines with "\n"
+    for each k from 0 to 15
+        add "mov.f32 %c" + k + ", 0f00000000;" to lines
+    end
+    add "TILE:" to lines
+    add "setp.ge.u32 %p1, %r11, %r2;" to lines
+    add "@%p1 bra WRITE;" to lines
+    # a's tile: rows 16 apart from the thread's, the column the thread's along this step
+    for each i from 0 to 3
+        for each line in list of "add.u32 %r12, %r8, %r5;", "add.u32 %r12, %r12, " + (16 * i) + ";", "add.u32 %r13, %r11, %r4;", "mov.f32 %v, 0f00000000;",
+            "setp.lt.u32 %p2, %r12, %r1;", "setp.lt.u32 %p3, %r13, %r2;", "and.pred %p2, %p2, %p3;",
+            "@%p2 mad.lo.s32 %r14, %r12, %r2, %r13;", "@%p2 mul.wide.u32 %rd7, %r14, 4;", "@%p2 add.s64 %rd8, %rd5, %rd7;", "@%p2 ld.global.f32 %v, [%rd8];",
+            "add.u32 %r15, %r5, " + (16 * i) + ";", "shl.b32 %r15, %r15, 4;", "add.u32 %r15, %r15, %r4;", "shl.b32 %r15, %r15, 2;", "add.u32 %r15, %r15, %r20;",
+            "st.shared.f32 [%r15], %v;"
+            add line to lines
+        end
+    end
+    # b's tile: the thread's row along this step, columns 16 apart
+    for each j from 0 to 3
+        for each line in list of "add.u32 %r12, %r11, %r5;", "add.u32 %r13, %r9, %r4;", "add.u32 %r13, %r13, " + (16 * j) + ";", "mov.f32 %v, 0f00000000;",
+            "setp.lt.u32 %p2, %r12, %r2;", "setp.lt.u32 %p3, %r13, %r3;", "and.pred %p2, %p2, %p3;",
+            "@%p2 mad.lo.s32 %r14, %r12, %r3, %r13;", "@%p2 mul.wide.u32 %rd7, %r14, 4;", "@%p2 add.s64 %rd8, %rd6, %rd7;", "@%p2 ld.global.f32 %v, [%rd8];",
+            "shl.b32 %r15, %r5, 6;", "add.u32 %r15, %r15, %r4;", "add.u32 %r15, %r15, " + (16 * j) + ";", "shl.b32 %r15, %r15, 2;", "add.u32 %r15, %r15, %r21;",
+            "st.shared.f32 [%r15], %v;"
+            add line to lines
+        end
+    end
+    for each line in list of "bar.sync 0;", "shl.b32 %r16, %r5, 6;", "add.u32 %r16, %r16, %r20;", "shl.b32 %r17, %r4, 2;", "add.u32 %r17, %r17, %r21;",
+        "mov.u32 %r18, 0;", "INNER:"
+        add line to lines
+    end
+    for each i from 0 to 3
+        add "ld.shared.f32 %x" + i + ", [%r16+" + (1024 * i) + "];" to lines
+    end
+    for each j from 0 to 3
+        add "ld.shared.f32 %y" + j + ", [%r17+" + (64 * j) + "];" to lines
+    end
+    for each i from 0 to 3
+        for each j from 0 to 3
+            add "fma.rn.f32 %c" + (4 * i + j) + ", %x" + i + ", %y" + j + ", %c" + (4 * i + j) + ";" to lines
+        end
+    end
+    for each line in list of "add.u32 %r16, %r16, 4;", "add.u32 %r17, %r17, 256;", "add.u32 %r18, %r18, 1;", "setp.lt.u32 %p4, %r18, 16;", "@%p4 bra INNER;",
+        "bar.sync 0;", "add.u32 %r11, %r11, 16;", "bra TILE;", "WRITE:"
+        add line to lines
+    end
+    for each i from 0 to 3
+        for each j from 0 to 3
+            for each line in list of "add.u32 %r12, %r8, %r5;", "add.u32 %r12, %r12, " + (16 * i) + ";", "add.u32 %r13, %r9, %r4;", "add.u32 %r13, %r13, " + (16 * j) + ";",
+                "setp.lt.u32 %p2, %r12, %r1;", "setp.lt.u32 %p3, %r13, %r3;", "and.pred %p2, %p2, %p3;",
+                "@%p2 mad.lo.s32 %r14, %r12, %r3, %r13;", "@%p2 mul.wide.u32 %rd7, %r14, 4;", "@%p2 add.s64 %rd8, %rd4, %rd7;", "@%p2 st.global.f32 [%rd8], %c" + (4 * i + j) + ";"
+                add line to lines
+            end
+        end
+    end
+    for each line in list of "ret;", "}", ""
+        add line to lines
+    end
+    return lines
 end

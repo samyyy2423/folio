@@ -6650,9 +6650,13 @@ it with thousands of threads at once.
   for `sm_50` (every card since 2014, the newer ones by the driver's own compiling): `binary` (+ - * /, the larger
   and the smaller of two), `scalar` (the same with a number), `unary` (negate, relu, exp, ln, tanh, sigmoid, sqrt,
   absolute, square and relu's slope), `fill`, `sum` (each thread a stride of the numbers, a block of 256 added up in
-  the card's fast memory, then added to the answer) and `matmul` (each block a 16 by 16 tile of the answer, tiles of
-  the two matrices loaded into fast memory in turn). A mistake in the PTX comes back with the driver's own words,
-  from its log.
+  the card's fast memory, then added to the answer) and `matmul`. A mistake in the PTX comes back with the driver's
+  own words, from its log.
+- **The multiply, as fast ones are made.** Each block of 16 by 16 threads works out a 64 by 64 tile of the answer,
+  each thread a 4 by 4 of it, 16 apart, in registers. A 64 by 16 tile of one matrix and a 16 by 64 of the other
+  are loaded into the card's fast memory in turn; each of their 16 steps takes 8 numbers from it for 16
+  multiplications, where a first version, each thread one number of the answer, took 2 for 1. That was 3 to 4
+  times as slow (2,048 by 2,048 in 49 ms). The 16 sums and the 4 by 4 loads are written out by loops in Folio.
 - **Floats.** A card keeps numbers as 32-bit floats, about 7 digits, as machine learning wants them; Folio's are
   doubles to 15 (§24). `numbers_convert` (§118) turns a list into floats for the card and back. exp, ln, tanh and
   sigmoid are the card's quick ones (ex2.approx and lg2.approx), good to a float's last digit or two.
@@ -6665,18 +6669,18 @@ it with thousands of threads at once.
 
 | | 256 | 512 | 1,024 | 2,048 |
 |:--|--:|--:|--:|--:|
-| matrix multiply, on the card | 0.1 ms | 1 ms | 8.2 ms | 49 ms |
-| arrays.folio, in machine code | 5 ms | 39 ms | 452 ms | 3,971 ms |
-| times as fast | 50 | 39 | 55 | 81 |
+| matrix multiply, on the card | 0.1 ms | 0.3 ms | 2.8 ms | 13 ms |
+| arrays.folio, in machine code | 5 ms | 39 ms | 461 ms | 3,552 ms |
+| times as fast | 50 | 130 | 167 | 270 |
 
-  2,048 by 2,048 is about 350 billion operations a second, an eighth of what the card can do: each thread works
-  out one number of the answer, where the fastest work out 64, in registers. A million numbers take 125 ms to go up
-  to the card, mostly making the floats in Folio; the card adds them in 1.
+  2,048 by 2,048 is 1.3 trillion operations a second, about 45% of what the card can do. A million numbers go up
+  to the card in 2 ms and come back in 7, and the card adds them in 1; the first call takes about a tenth of a
+  second, as the driver starts.
 - **Checked**, in machine code, where there's a driver (it's skipped where there isn't): each operation against
   Folio's own arithmetic, the quick ones within a millionth of arrays.folio's, a 37 by 29 times 29 by 41 multiply
   (past a tile's edge both ways) the same as arrays.folio's, a sum of 100,000 numbers, nothing on the card, numbers
   given back, and its mistakes. CI has no card, so it runs on a computer that has one.
 - **Next**: arrays that live on the card, with their shapes, in arrays.folio; a gradient for each operation, so a
   network of arrays learns (neural.folio's, micrograd's way, is one number at a time); layers, Adam, and a small
-  GPT trained on the card; and a faster multiply, more of the answer to each thread.
+  GPT trained on the card.
 
