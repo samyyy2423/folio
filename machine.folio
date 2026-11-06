@@ -46670,6 +46670,27 @@ to gen_math with fc, e
         end
         return gen_math_pair(fc, e, kl, gen_name_into(fc, right, xmm1))
     end
+    if kind of left is "name" and kind of right is not "value" and pure_math(right) # `s + i * 0.5`: the right first
+        set found to front's resolve(scope of fc, name of left)
+        if found is not nothing
+            set key to fact_key(fc, found)
+            set kl to fact_of(fc, key)
+            if is_number_kind(kl) # set, and a number, so reading it can't fail, and nothing on the right can change it
+                set kr to gen_expr(fc, right)
+                set r to reg_of(fc, key)
+                if is_number_kind(kr) and (op is "+" or op is "*") # the same either way round, for two numbers
+                    if r is nothing
+                        sse_math(a, op, xmm0, place_of(fc, found))
+                    else
+                        sse_math(a, op, xmm0, reg_at(r))
+                    end
+                    return math_kind(op, kl, kr)
+                end
+                movapd(a, xmm1, xmm0)
+                return gen_math_pair(fc, e, gen_name_into(fc, left, xmm0), kr)
+            end
+        end
+    end
     if (op is "+" or op is "*") and not left_number and kind of right is not "value"
         set kl to gen_expr(fc, left)
         push_value(fc)
@@ -46737,6 +46758,22 @@ to zero_bits with eight
         end
     end
     return (item 8 of eight bit and 127) is 0
+end
+
+# whether working e out can't change a variable or run anything of the program's: numbers, names and maths on
+# them, so what's on the left of it can be read after it
+to pure_math with e
+    set what to kind of e
+    if what is "name"
+        return yes
+    end
+    if what is "value"
+        return type of e is "number"
+    end
+    if what is "math"
+        return pure_math(left of e) and pure_math(right of e)
+    end
+    return no
 end
 
 # `x op y` with x in xmm0 and y in xmm1, of kinds kl and kr
