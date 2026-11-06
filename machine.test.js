@@ -7753,7 +7753,40 @@ say sync's wait_for_all(list of (start nap(20) on another core), (start nap(10) 
 });
 
 // Four workers, each doing what four calls one after another do a quarter of, take far less time, where there are cores
-test("workers use every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, () => {
+// How much of the time four copies of a program take one after another they take all at once, here: on a runner
+// whose two "cores" are two threads of one, as GitHub's are for a private repository, nearly all of it, and no
+// program can do better there.
+async function parallelCapacity(source) {
+  const dir = mkdtempSync(join(tmpdir(), "folio-cores-"));
+  try {
+    const exe = executable(dir, "p");
+    writeFileSync(exe, machine(source, { target, name: "p.folio" }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    spawnSync(exe, []);
+    let start = process.hrtime.bigint();
+    for (let k = 0; k < 4; k++) spawnSync(exe, []);
+    const alone = Number(process.hrtime.bigint() - start);
+    start = process.hrtime.bigint();
+    await Promise.all([0, 1, 2, 3].map(() => new Promise((done) => spawn(exe, []).on("close", done))));
+    return Number(process.hrtime.bigint() - start) / alone;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("workers use every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, async (t) => {
+  const capacity = await parallelCapacity(`to busy with n
+    set sum to 0
+    for each i from 1 to n
+        set sum to sum + (remainder of i divided by 7)
+    end
+    return sum
+end
+say busy(40000000)`);
+  if (capacity > 0.7) {
+    t.skip(`four programs at once took ${capacity.toFixed(2)} of the time one after another did: this computer can't run them side by side`);
+    return;
+  }
   const source = `to busy with n
     set sum to 0
     for each i from 1 to n
@@ -7778,15 +7811,16 @@ end
 set together to the clock - t0
 say together / alone`;
   // Best of three: one busy moment on a shared CI runner can leave the workers no spare core, so a single
-  // measurement sometimes shows no speed-up. The speed-up is real if it shows even once.
-  const want = availableParallelism() >= 4 ? 0.6 : 0.8;
+  // measurement sometimes shows no speed-up. The speed-up is real if it shows even once, and near what four
+  // programs at once get here.
+  const want = Math.min(0.8, capacity * 1.3 + 0.1);
   let best = Infinity;
   for (let attempt = 0; attempt < 3 && best >= want; attempt++) {
     const ran = taskRun(source);
     assert.equal(ran.status, 0, ran.stderr);
     best = Math.min(best, Number(ran.stdout));
   }
-  assert.ok(best < want, `four workers took ${best} of the time four calls one after another did (best of 3)`);
+  assert.ok(best < want, `four workers took ${best} of the time four calls one after another did (best of 3), and four programs ${capacity.toFixed(2)}`);
 });
 
 test("a program with workers takes its threads and its workers' memory from the system, on Windows as on Linux", () => {
