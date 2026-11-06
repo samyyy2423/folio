@@ -22,7 +22,7 @@ use "machine.folio" as machine
 use "wasm.folio" as webassembly # folio build --target wasm
 use "stdlib.folio" as standard # the libraries a program anywhere can use (see cli_sources_of)
 use "webpage.folio" as webpage # the page folio build --web writes a program into
-use "checker-rules.folio" as checker_rules # what the checker's rules do with each type (see cli_rules)
+use "checker-rules.folio" as checker_rules # what the checker's rules do with each type (see cli_rules_of)
 use "tools/hash.folio" as cli_hashing # SHA-256, for the sums of packages' files in folio.sums
 use "folio-coverage.folio" as cli_coverage # what folio coverage says of a program's tests, added up (see cli_say_coverage)
 
@@ -1340,24 +1340,54 @@ set cli_measure_words to list of "a distance", "a time", "a weight", "a volume"
 set cli_item_words to dictionary where "numbers" is "number", "text" is "text", "texts" is "text", "yes or no" is "yes/no",
     "lists" is "list", "records" is "record", "dictionaries" is "dictionary", "bytes" is "bytes", "functions" is "function"
 # checker-rules.folio's lines, as a dictionary, and its messages, made the first time they're wanted
-set cli_rules_kept to record with cached nothing, messages nothing
+set cli_rules_kept to record with families empty dictionary, messages nothing
 # the letter checker-rules.folio writes each type as
 set cli_type_codes to dictionary where "number" is "n", "text" is "t", "yes/no" is "y", "nothing" is "0", "list" is "l", "record" is "r",
     "dictionary" is "d", "bytes" is "b", "distance" is "D", "time" is "T", "weight" is "W", "volume" is "V"
 
-to cli_rules
-    if cached of cli_rules_kept is nothing
+to cli_rules_of with cli_key
+    set cli_family to cli_key
+    set cli_bar to position of "|" in cli_key
+    if cli_bar is greater than 0
+        set cli_family to cli_first(cli_key, cli_bar - 1)
+        if cli_family is "builtin" # builtin| and the builtin's name
+            set cli_rest to cli_tail(cli_key, cli_bar + 1)
+            set cli_bar to position of "|" in cli_rest
+            if cli_bar is greater than 0
+                set cli_rest to cli_first(cli_rest, cli_bar - 1)
+            end
+            set cli_family to "builtin|" + cli_rest
+        end
+    end
+    set cli_families to families of cli_rules_kept
+    if not (cli_family is in cli_families)
         set cli_table to empty dictionary
-        for each cli_line in split checker_rules's rules_text() by "\n"
+        for each cli_line in split checker_rules's rules_text(cli_family) by "\n"
             set cli_cut to position of "=" in cli_line
             if cli_cut is greater than 0
                 set item (cli_first(cli_line, cli_cut - 1)) of cli_table to cli_tail(cli_line, cli_cut + 1)
             end
         end
-        set messages of cli_rules_kept to split checker_rules's messages_text() by "\n"
-        set cached of cli_rules_kept to cli_table
+        set item cli_family of cli_families to cli_table
     end
-    return cached of cli_rules_kept
+    return item cli_family of cli_families
+end
+
+# whether there's a rule for a key, and what it says
+to cli_rule_has with cli_key
+    return cli_key is in cli_rules_of(cli_key)
+end
+
+to cli_rule_text with cli_key
+    return item cli_key of cli_rules_of(cli_key)
+end
+
+# a rule's message, by its number
+to cli_rule_message with cli_number
+    if messages of cli_rules_kept is nothing
+        set messages of cli_rules_kept to split checker_rules's messages_text() by "\n"
+    end
+    return item cli_number of messages of cli_rules_kept
 end
 
 # whether a text starts with another
@@ -1488,7 +1518,7 @@ to cli_new_state
     return record with found empty list, made empty dictionary, used empty dictionary, scopes 0, sources empty dictionary,
         sure empty dictionary, said empty dictionary, mode "sure", checks empty list, defines empty dictionary,
         declared empty dictionary, gives empty list, kinds empty dictionary, makers empty dictionary, fields_set empty dictionary,
-        unknown_kinds empty dictionary, rulebook cli_rules(), places empty dictionary
+        unknown_kinds empty dictionary, places empty dictionary
 end
 
 # Where a variable, an input or what a function gives is made, so folio lsp can say its type once they're all
@@ -1650,8 +1680,8 @@ to cli_type_of with cli_state, cli_frame, cli_e
             return "?"
         end
         set cli_key to "type|" + op of cli_e + "|" + item cli_a of cli_type_codes + item cli_b of cli_type_codes
-        if cli_key is in rulebook of cli_state
-            return item cli_key of rulebook of cli_state
+        if cli_rule_has(cli_key)
+            return cli_rule_text(cli_key)
         end
         return "?"
     else if cli_what is "compare" or cli_what is "not"
@@ -1671,11 +1701,11 @@ to cli_type_of with cli_state, cli_frame, cli_e
         return "number"
     else if cli_what is "builtin"
         if name of cli_e is "unit" or name of cli_e is "in" # `5 km`, `trip in miles`
-            return item ("unit|" + value of item 2 of args of cli_e) of rulebook of cli_state
+            return cli_rule_text("unit|" + value of item 2 of args of cli_e)
         end
         set cli_key to "gives|" + name of cli_e
-        if cli_key is in rulebook of cli_state
-            return item cli_key of rulebook of cli_state
+        if cli_rule_has(cli_key)
+            return cli_rule_text(cli_key)
         end
         return "?"
     else if cli_what is "ask"
@@ -2011,16 +2041,16 @@ to cli_apply with cli_state, cli_name, cli_args, cli_operands, cli_types
     for each cli_t in cli_types
         set cli_key to cli_key + item (cli_base_type(cli_t)) of cli_type_codes
     end
-    if not (cli_key is in rulebook of cli_state)
+    if not cli_rule_has(cli_key)
         return nothing
     end
-    set cli_rule_said to item cli_key of rulebook of cli_state
+    set cli_rule_said to cli_rule_text(cli_key)
     set cli_bar to position of "|" in cli_rule_said
     set cli_number to cli_tail(cli_rule_said, cli_bar + 1)
     if cli_number is ""
         return nothing
     end
-    set cli_message to item (number of cli_number) of messages of cli_rules_kept
+    set cli_message to cli_rule_message(number of cli_number)
     for each cli_k from 1 to length of cli_operands
         if cli_written(item cli_k of cli_operands) and ("" + cli_k) is in cli_first(cli_rule_said, cli_bar - 1)
             return ""
@@ -2035,7 +2065,7 @@ end
 # the turtle's actions, in vm.js's order, by name: what the rules call each
 to cli_action_number with cli_state, cli_action
     set cli_n to 0
-    for each cli_a in split item "actions" of rulebook of cli_state by "|"
+    for each cli_a in split cli_rule_text("actions") by "|"
         if cli_a is cli_action
             return cli_n
         end

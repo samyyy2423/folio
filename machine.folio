@@ -27459,8 +27459,8 @@ end
 
 # ---------- the system's DLLs a program may not use, loaded when it first does (DESIGN §159) ----------
 # Windows loads every DLL a program imports before it starts, which takes time even when the program never opens a
-# window or goes online: folio, which can do both, took 35 ms to say its version, where with them loaded late it
-# takes 24, as long as Windows takes to start a program that does nothing at all. So a program's functions in these DLLs each have a slot
+# window or goes online: folio, which can do both, took 25 ms to say its version, where with them loaded late it
+# takes 16, and a C program that says hello 15. So a program's functions in these DLLs each have a slot
 # of their own, in the zeroed memory, which rt_late_init points at a stub as the program starts. The first call
 # goes there: rt_late_resolve loads the DLL from System32 (as the load configuration has Windows load the others),
 # finds the function, puts it in the slot and goes on to it, with every input as it was. Every call after goes

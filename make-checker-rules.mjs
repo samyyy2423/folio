@@ -7,6 +7,8 @@
 // the rule does on SAMPLES' values of those types: the operands whose value (not just type) can change that, by
 // place, and the message it stops with, if it does, by its number in the messages, which come after, a line
 // each. A line for "type" gives what `+`, `-`, `*` or `/` gives. A name in a message (a field's) is @NAME@.
+// The lines come by family, the text before a line's first |, or builtin| and the builtin's name, so folio check
+// reads only the families a program needs: all 9,500 lines took it 19 ms, before it looked at the program.
 // folio.test.js says when the file is behind.
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -67,15 +69,25 @@ export function checkerRules() {
     for (let i = 0; i < all.length; i += 60) out.push(`    add ${folio(all.slice(i, i + 60).join("\n") + "\n")} to made`);
     return out;
   };
+  const family = (line) => {
+    const parts = line.slice(0, line.indexOf("=")).split("|");
+    return parts[0] === "builtin" ? `builtin|${parts[1]}` : parts[0];
+  };
+  const families = new Map();
+  for (const line of lines) {
+    if (!families.has(family(line))) families.set(family(line), []);
+    families.get(family(line)).push(line);
+  }
   const made = [
     "# Made by make-checker-rules.mjs from checker.js's RULES and vm.js: what each rule the checker checks does",
     "# with a value of each type, for folio check (DESIGN §107). Don't change it by hand: change those, then run",
     "# node make-checker-rules.mjs.",
     "",
-    "# the rules, a line each: \"math|-|tn=|12\" is that text - a number fails with message 12",
-    "to rules_text",
+    "# the rules of a family, a line each: \"math|-|tn=|12\" is that text - a number fails with message 12. A",
+    "# family is what's before a rule's first |, or builtin| and the builtin's name, as \"builtin|split\"",
+    "to rules_text with family",
     '    set made to ""',
-    ...chunks(lines),
+    ...[...families].flatMap(([name, all]) => [`    if family is ${folio(name)}`, ...chunks(all).map((line) => "    " + line), "        return made", "    end"]),
     "    return made",
     "end",
     "",

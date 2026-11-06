@@ -6686,10 +6686,10 @@ it with thousands of threads at once.
 
 ## 159. The system's DLLs, loaded when a program first uses them
 
-`folio version` took 35 ms on Windows. A copy of folio.exe whose first instruction goes straight back took 24,
-and folio's own work before it writes, the collector's memory, the clock and the dispatch, takes 1. The other 11
-were Windows loading the DLLs folio imports, USER32, GDI32, GDI+, the file dialogs, WinHTTP and WINMM, before the
-program starts, for every command, though `folio version` opens no window and goes nowhere.
+`folio version` took 25 ms on Windows, where a C program that says hello takes 15. folio's own work before it
+writes, the collector's memory, the clock and the dispatch, takes 1. The other 9 were Windows loading the DLLs
+folio imports, USER32, GDI32, GDI+, the file dialogs, WinHTTP and WINMM, before the program starts, for every
+command, though `folio version` opens no window and goes nowhere.
 
 - **Late.** Those six are no longer in a program's imports. Each of its functions in them has a slot of its own, in
   the zeroed memory, which `rt_late_init`, the first thing `start` does, points at a stub. The first call goes
@@ -6700,12 +6700,13 @@ program starts, for every command, though `folio version` opens no window and go
 - **From System32 only**, as the load configuration has Windows load the rest (§38): a winmm.dll beside the
   program is never the one it loads, as the test that plants three of them checks. A DLL of Windows' own that
   isn't there, or hasn't the function, ends the program with 75.
-- **What it gave.** `folio version` takes 24 ms, a 59 KB program that says hello 25, and Windows' hostname.exe 18:
-  what's left is Windows starting a program at all, and looking over one it hasn't signed. On Linux, where a
-  program has no DLLs to load, `folio version` takes 3 ms.
-- **Measured** with Node's `spawnSync`, 20 runs at a time, each program run 5 times first: Git Bash takes 80 to
-  180 ms to start a program itself, and Windows' virus checker looks over a program it hasn't seen in its first
-  few runs.
+- **What it gave.** `folio version` takes 16.4 ms, a C program built with MSVC that says hello 15.5, Folio's
+  hello 15.2, and Windows' own hostname.exe 16.2: what's left is Windows starting a program at all. On Linux,
+  where a program has no DLLs to load, `folio version` takes 3 ms.
+- **Measured** with Node's `spawnSync`, the best of 20 runs, each program run 5 times first, in a folder of the
+  user's: in the temporary folder Windows' virus checker looks over a program every time it starts, 9 ms more
+  for each of these (35 ms against 24), and in its first few runs anywhere. Git Bash takes 80 to 180 ms to start
+  a program itself, so it can't time one.
 
 ## 160. Memory as C has it: memory.folio
 
@@ -6745,4 +6746,17 @@ signed or not, floats and doubles, in either byte order, and reading one meant a
 - **Checked**: every kind, both orders and both ways, in bytes past their first and through an address, against
   what Node's Buffer writes, to the bit; everything the loop refuses; a NaN with nothing's bits read as a NaN;
   and memory.folio's own tests on every engine and in machine code, with and without the loop.
+
+## 161. folio check reads only the rules a program needs
+
+`folio check` on an empty file took 37 ms, where 1.11.0's took 26, and folio's other commands take 16. All 20
+went on the checker's rulebook (§107): 9,504 lines of what each rule does with each type, made into a dictionary
+before the program was looked at, every run.
+
+- **By family.** make-checker-rules.mjs writes the lines in families, what's before a line's first `|` (`math`,
+  `compare`, `type`), or `builtin|` and the builtin's name, 75 of them, the biggest 1,725 lines (`items`). folio
+  check makes a family's dictionary the first time it looks a rule up in it, and the messages the first time it
+  says one. A program uses a few families, and an empty one none.
+- **What it gave.** `folio check` takes 16.8 ms on a one-line file, not 37, and 84 ms on arrays.folio's 1,300
+  lines, not 97. Every one of the 117 Folio files in the repository is checked with the same words as before.
 

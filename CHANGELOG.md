@@ -14,8 +14,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   number")`, `get`, `get_many` and `put_many`, `take`, `copy`, `fill`, `address_of` and `give_back`. In a program
   folio builds, a loop of Folio's own in machine code puts a million floats in a millisecond (DESIGN §160).
 - **Programs start sooner on Windows.** The DLLs a program uses for windows, pictures, sound and going online are
-  loaded the first time it uses them, not as it starts: `folio version` takes 24 ms, not 35, as long as Windows
-  takes to start a program that does nothing (DESIGN §159).
+  loaded the first time it uses them, not as it starts: `folio version` takes 16 ms, not 25, where a C program
+  that says hello takes 15 (DESIGN §159).
+- **`folio check` starts at once.** It reads the checker's rules for the parts of the language a program uses,
+  not all 9,500 of them first: 17 ms on a short file, not 37 (DESIGN §161).
 - **Lists, text, dictionaries and bytes stay in WebAssembly.** A text's letters, a dictionary's keys, `add` to
   text and amounts, showing any value, and every mistake these make, "did you mean" and all, are the module's own:
   it imports 42 functions, not 51. An item given past 15 digits, as in `set item 2.0000000000000004 of xs to 9`,
