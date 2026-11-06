@@ -14,7 +14,8 @@
 #
 # For learn.folio, which trains networks on the card: transpose, add_rows (a row added to each row),
 # column_sums, softmax_rows, cross_entropy (each row's softmax against its label, its loss and gradient at
-# once), argmax_rows, relu_gradient, add_scaled (in place) and adam_step. Memory free gives back is kept for
+# once), argmax_rows, relu_gradient, add_scaled (in place) and adam_step; matmul_turned (a side turned over,
+# into a gradient), column_sums_into and adam_many (every parameter in a launch). Memory free gives back is kept for
 # the next numbers of as many, as a training loop makes the same sizes over and over; give_back_memory()
 # hands it to the driver. For transformers: gather_rows and scatter_add_rows (an embedding and its gradient),
 # gelu and gelu_gradient, layer_norm and layer_norm_gradient, and attention and attention_gradient, with a causal

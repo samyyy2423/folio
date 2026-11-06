@@ -5,7 +5,7 @@
 #
 #     folio run --allow-read --allow-write --allow-libraries gpt.folio [steps]
 #
-# It saves what it learned to gpt.safetensors. On a GTX 1650, 2,000 steps take about a minute.
+# It saves what it learned to gpt.safetensors. On a GTX 1650, 2,000 steps take about 6 seconds.
 
 use "math.folio"
 use "learn.folio" as learn

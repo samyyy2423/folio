@@ -274,13 +274,16 @@ to cross_entropy with scores, labels
             end
         end
         set total to 0
+        set exps to empty list
         for each j from 1 to c
-            set total to total + learn_math's exp(item ((i - 1) * c + j) of xs - top)
+            set e to learn_math's exp(item ((i - 1) * c + j) of xs - top)
+            add e to exps
+            set total to total + e
         end
         set label to item i of labels
         set loss to loss + top + learn_math's ln(total) - item ((i - 1) * c + label + 1) of xs
         for each j from 1 to c
-            set p to learn_math's exp(item ((i - 1) * c + j) of xs - top) / total
+            set p to item j of exps / total
             if j - 1 is label
                 set p to p - 1
             end
@@ -1040,15 +1043,7 @@ to learn_adam_one with opt, k, p
         learn_gpu's adam_step(p's data, p's grad, item k of opt's m, item k of opt's v, opt's rate, b1, b2, eps, opt's t)
         return nothing
     end
-    set g to p's grad
-    set m to learn_arrays's plus(learn_arrays's times(item k of opt's m, b1), learn_arrays's times(g, 1 - b1))
-    set v to learn_arrays's plus(learn_arrays's times(item k of opt's v, b2), learn_arrays's times(learn_arrays's times(g, g), 1 - b2))
-    set item k of opt's m to m
-    set item k of opt's v to v
-    set c1 to 1 / (1 - (b1 to the power of opt's t))
-    set c2 to 1 / (1 - (b2 to the power of opt's t))
-    set moved to learn_arrays's divided_by(learn_arrays's times(m, c1 * opt's rate), learn_arrays's plus(learn_arrays's sqrt(learn_arrays's times(v, c2)), eps))
-    set p's data to learn_arrays's minus(p's data, moved)
+    learn_arrays's adam_step(p's data, p's grad, item k of opt's m, item k of opt's v, opt's rate, b1, b2, eps, opt's t)
 end
 
 to learn_free_grad with p

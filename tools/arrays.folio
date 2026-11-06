@@ -32,6 +32,7 @@ use the library "folio"
     "numbers_binary" as arrays_k_binary(a long whole number, a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
     "numbers_matmul" as arrays_k_matmul(a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
     "numbers_reduce" as arrays_k_reduce(a long whole number, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_adam" as arrays_k_adam(a list of numbers, a list of numbers, a list of numbers, a list of numbers, a list of numbers, a long whole number) gives a long whole number
 end
 
 # whether they're there: in machine code, yes; on the JavaScript engines, which can't call a library, no
@@ -1207,6 +1208,32 @@ to arrays_whole with x
 end
 
 # an array, or a mistake that says what wanted one
+# Adam's step for an array of parameters p, from g, their gradient, and m and v, its running averages, for
+# step t (from 1), as learn.folio's adam moves a parameter: p, m and v changed in place. In a program folio build
+# makes, one loop over the numbers, not ten arrays one after another, and no new ones (DESIGN §168)
+to adam_step with p, g, m, v, rate, b1, b2, eps, t
+    set p to arrays_need(p, "adam_step")
+    set n to size(p)
+    for each x in list of g, m, v
+        if size(arrays_need(x, "adam_step")) is not n
+            fail with "'adam_step' needs g, m and v as big as p, " + n + " numbers, not " + size(x)
+        end
+    end
+    set c1 to 1 / (1 - (b1 to the power of t))
+    set c2 to 1 / (1 - (b2 to the power of t))
+    if arrays_native and n is greater than 0
+        if arrays_k_adam(p's data, g's data, m's data, v's data, (list of b1, 1 - b1, b2, 1 - b2, c1 * rate, c2, eps), n) is 0
+            return nothing
+        end
+    end
+    set new_m to plus(times(m, b1), times(g, 1 - b1))
+    set new_v to plus(times(v, b2), times(times(g, g), 1 - b2))
+    set moved to divided_by(times(new_m, c1 * rate), plus(sqrt(times(new_v, c2)), eps))
+    set p's data to minus(p, moved)'s data
+    set m's data to new_m's data
+    set v's data to new_v's data
+end
+
 to arrays_need with t, what
     if arrays_is_array(t)
         return t
