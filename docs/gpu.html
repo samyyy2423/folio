@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gpu.folio · Folio's standard library</title>
+  <meta name="description" content="Numbers on the graphics card, worked on there: NVIDIA's, through CUDA's driver (DESIGN §158).">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
+      <a class="go" href="../#playground">Playground</a>
+      <a class="go" href="../learn.html">Learn</a>
+      <a class="go" href="../docs/" aria-current="page">Docs</a>
+      <a class="go" href="../docs/cookbook/">Cookbook</a>
+      <a class="go" href="../docs/examples.html">Examples</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The standard library</a></p>
+      <h1><em>gpu</em>.folio</h1>
+      <p>Numbers on the graphics card, worked on there: NVIDIA's, through CUDA's driver (DESIGN §158).</p>
+      <p class="use"><code>use "gpu.folio" as gpu</code></p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="gpu.folio's functions">
+      <h2>27 functions</h2>
+      <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
+      <ol id="toc"><li><a href="#available">available</a></li><li><a href="#device">device</a></li><li><a href="#finish">finish</a></li><li><a href="#upload">upload</a></li><li><a href="#download">download</a></li><li><a href="#zeros">zeros</a></li><li><a href="#filled">filled</a></li><li><a href="#free">free</a></li><li><a href="#copy_of">copy_of</a></li><li><a href="#plus">plus</a></li><li><a href="#minus">minus</a></li><li><a href="#times">times</a></li><li><a href="#divided_by">divided_by</a></li><li><a href="#maximum">maximum</a></li><li><a href="#minimum">minimum</a></li><li><a href="#negate">negate</a></li><li><a href="#relu">relu</a></li><li><a href="#exp">exp</a></li><li><a href="#ln">ln</a></li><li><a href="#tanh">tanh</a></li><li><a href="#sigmoid">sigmoid</a></li><li><a href="#sqrt">sqrt</a></li><li><a href="#absolute">absolute</a></li><li><a href="#square">square</a></li><li><a href="#step">step</a></li><li><a href="#sum">sum</a></li><li><a href="#matmul">matmul</a></li></ol>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio">The source</a></p>
+    </nav>
+    <main>
+      <section class="about">
+        <h2>What it's for</h2>
+          <p>Numbers on the graphics card, worked on there: NVIDIA's, through CUDA's driver (DESIGN §158). Lists of numbers go up to the card, as 32-bit floats, as graphics cards keep them, are added, multiplied, matrix-multiplied and summed there, thousands at a time, and come back as lists. The card's code is written here in PTX, which the driver makes the card's own as it loads, so nothing but the driver is needed: no CUDA toolkit.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+          <p>A program that uses it is run or built with --allow-libraries. On a computer with no NVIDIA card, or no driver, <a href="#available">available</a>() is no and the rest is a <code>fail with</code> that says so. Numbers on the card are floats: about 7 digits, not Folio's 15, as machine learning wants them.</p>
+      </section>
+      <section class="fns">
+        <h2>Functions</h2>
+        <section class="fn" id="available">
+          <h3><a href="#available"><code>gpu's available()</code></a></h3>
+          <p>whether there's an NVIDIA card with a driver to work on numbers with</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
+            
+          </div>
+          <p class="written">Written <code>to available</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L67">gpu.folio line 67</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+        </section>
+        <section class="fn" id="device">
+          <h3><a href="#device"><code>gpu's device()</code></a></h3>
+          <p>the card: its name, memory in bytes, the CUDA capability it has (as &quot;7.5&quot;) and how many processors it has</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
+            
+          </div>
+          <p class="written">Written <code>to device</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L73">gpu.folio line 73</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+        </section>
+        <section class="fn" id="finish">
+          <h3><a href="#finish"><code>gpu's finish()</code></a></h3>
+          <p>waits until the card has done all it was asked to</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
+            
+          </div>
+          <p class="written">Written <code>to finish</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L92">gpu.folio line 92</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's finish()</code></pre></div>
+        </section>
+        <section class="fn" id="upload">
+          <h3><a href="#upload"><code>gpu's upload(numbers)</code></a></h3>
+          <p>a list of numbers, put on the card</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>numbers</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to upload with numbers</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L100">gpu.folio line 100</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+        </section>
+        <section class="fn" id="download">
+          <h3><a href="#download"><code>gpu's download(g)</code></a></h3>
+          <p>numbers on the card, as a list</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>g</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to download with g</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L113">gpu.folio line 113</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+        </section>
+        <section class="fn" id="zeros">
+          <h3><a href="#zeros"><code>gpu's zeros(count)</code></a></h3>
+          <p>count numbers on the card, each 0</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>count</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to zeros with count</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L130">gpu.folio line 130</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's zeros(count)</code></pre></div>
+        </section>
+        <section class="fn" id="filled">
+          <h3><a href="#filled"><code>gpu's filled(count, value)</code></a></h3>
+          <p>count numbers on the card, each value</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>count</code></li><li><code>value</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to filled with count, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L135">gpu.folio line 135</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's filled(count, value)</code></pre></div>
+        </section>
+        <section class="fn" id="free">
+          <h3><a href="#free"><code>gpu's free(g)</code></a></h3>
+          <p>the card's memory for numbers given back, for others to use</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>g</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to free with g</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L142">gpu.folio line 142</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's free(g)</code></pre></div>
+        </section>
+        <section class="fn" id="copy_of">
+          <h3><a href="#copy_of"><code>gpu's copy_of(g)</code></a></h3>
+          <p>a copy, on the card</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>g</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to copy_of with g</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L152">gpu.folio line 152</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's copy_of(g)</code></pre></div>
+        </section>
+        <section class="fn" id="plus">
+          <h3><a href="#plus"><code>gpu's plus(a, b)</code></a></h3>
+          <p>each number plus the other's at its place, or plus a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to plus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L163">gpu.folio line 163</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+        </section>
+        <section class="fn" id="minus">
+          <h3><a href="#minus"><code>gpu's minus(a, b)</code></a></h3>
+          <p>each number less the other's at its place, or less a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to minus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L168">gpu.folio line 168</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's minus(a, b)</code></pre></div>
+        </section>
+        <section class="fn" id="times">
+          <h3><a href="#times"><code>gpu's times(a, b)</code></a></h3>
+          <p>each number times the other's at its place, or times a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to times with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L173">gpu.folio line 173</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's <span class="k">times</span>(a, b)</code></pre></div>
+        </section>
+        <section class="fn" id="divided_by">
+          <h3><a href="#divided_by"><code>gpu's divided_by(a, b)</code></a></h3>
+          <p>each number divided by the other's at its place, or by a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to divided_by with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L178">gpu.folio line 178</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's divided_by(a, b)</code></pre></div>
+        </section>
+        <section class="fn" id="maximum">
+          <h3><a href="#maximum"><code>gpu's maximum(a, b)</code></a></h3>
+          <p>the larger of each number and the other's at its place, or a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to maximum with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L183">gpu.folio line 183</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's maximum(a, b)</code></pre></div>
+        </section>
+        <section class="fn" id="minimum">
+          <h3><a href="#minimum"><code>gpu's minimum(a, b)</code></a></h3>
+          <p>the smaller of each number and the other's at its place, or a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to minimum with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L188">gpu.folio line 188</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's minimum(a, b)</code></pre></div>
+        </section>
+        <section class="fn" id="negate">
+          <h3><a href="#negate"><code>gpu's negate(a)</code></a></h3>
+          <p>each number the other way: 3 is -3</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to negate with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L193">gpu.folio line 193</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's negate(a)</code></pre></div>
+        </section>
+        <section class="fn" id="relu">
+          <h3><a href="#relu"><code>gpu's relu(a)</code></a></h3>
+          <p>each number, or 0 if it's below 0: the rectifier neural networks learn with</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to relu with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L198">gpu.folio line 198</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's relu(a)</code></pre></div>
+        </section>
+        <section class="fn" id="exp">
+          <h3><a href="#exp"><code>gpu's exp(a)</code></a></h3>
+          <p>e to the power of each number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to exp with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L203">gpu.folio line 203</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's exp(a)</code></pre></div>
+        </section>
+        <section class="fn" id="ln">
+          <h3><a href="#ln"><code>gpu's ln(a)</code></a></h3>
+          <p>the natural logarithm of each number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to ln with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L208">gpu.folio line 208</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's ln(a)</code></pre></div>
+        </section>
+        <section class="fn" id="tanh">
+          <h3><a href="#tanh"><code>gpu's tanh(a)</code></a></h3>
+          <p>the hyperbolic tangent of each number, from -1 to 1</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to tanh with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L213">gpu.folio line 213</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's tanh(a)</code></pre></div>
+        </section>
+        <section class="fn" id="sigmoid">
+          <h3><a href="#sigmoid"><code>gpu's sigmoid(a)</code></a></h3>
+          <p>1 over 1 plus e to the minus each number: from 0 to 1</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to sigmoid with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L218">gpu.folio line 218</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's sigmoid(a)</code></pre></div>
+        </section>
+        <section class="fn" id="sqrt">
+          <h3><a href="#sqrt"><code>gpu's sqrt(a)</code></a></h3>
+          <p>the square root of each number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to sqrt with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L223">gpu.folio line 223</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's sqrt(a)</code></pre></div>
+        </section>
+        <section class="fn" id="absolute">
+          <h3><a href="#absolute"><code>gpu's absolute(a)</code></a></h3>
+          <p>each number without its sign</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to absolute with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L228">gpu.folio line 228</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's absolute(a)</code></pre></div>
+        </section>
+        <section class="fn" id="square">
+          <h3><a href="#square"><code>gpu's square(a)</code></a></h3>
+          <p>each number times itself</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to square with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L233">gpu.folio line 233</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's square(a)</code></pre></div>
+        </section>
+        <section class="fn" id="step">
+          <h3><a href="#step"><code>gpu's step(a)</code></a></h3>
+          <p>1 where a number is above 0, and 0 where it isn't: what relu's slope is, for learning</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to step with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L238">gpu.folio line 238</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's step(a)</code></pre></div>
+        </section>
+        <section class="fn" id="sum">
+          <h3><a href="#sum"><code>gpu's sum(a)</code></a></h3>
+          <p>all the numbers added up</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to sum with a</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L243">gpu.folio line 243</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+<span class="k">if</span> gpu's available()
+    <span class="k">say</span> gpu's device()                          <span class="c"># its name, memory, capability and processors</span>
+    <span class="k">set</span> a <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># on the card</span>
+    <span class="k">set</span> b <span class="k">to</span> gpu's upload(<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>)
+    <span class="k">say</span> gpu's download(gpu's plus(a, b))        <span class="c"># [11, 22, 33]</span>
+    <span class="k">say</span> gpu's sum(a)                            <span class="c"># 6</span>
+<span class="k">end</span></code></pre></div>
+        </section>
+        <section class="fn" id="matmul">
+          <h3><a href="#matmul"><code>gpu's matmul(a, b, rows, inner, columns)</code></a></h3>
+          <p>a matrix times a matrix, each its numbers row after row: a is rows by inner, b inner by columns, and what it gives rows by columns</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li><li><code>rows</code></li><li><code>inner</code></li><li><code>columns</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to matmul with a, b, rows, inner, columns</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/gpu.folio#L259">gpu.folio line 259</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;gpu.folio&quot;</span> <span class="k">as</span> gpu
+gpu's matmul(a, b, rows, inner, columns)</code></pre></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Folio">
+      <a href="../#playground">Playground</a>
+      <a href="../learn.html">Learn</a>
+      <a href="../docs/">The standard library</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
+    </nav>
+  </footer>
+  <script>
+    // the list of functions, filtered as a name is typed
+    const filter = document.getElementById("filter");
+    filter.oninput = () => {
+      const wanted = filter.value.trim().toLowerCase();
+      for (const li of document.getElementById("toc").children) li.hidden = !li.textContent.toLowerCase().includes(wanted);
+    };
+  </script>
+</body>
+</html>

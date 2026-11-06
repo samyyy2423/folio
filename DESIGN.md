@@ -6635,3 +6635,48 @@ and `divisible` are gone. Checked against JavaScript's `%` on 3,000,000 pairs of
 subnormals, whole numbers, both signs, 0, infinities and NaN, every one the same to the bit, through
 `remainderOf`, which the runtime exports for that, as it does `numberText`.
 
+## 158. Numbers on the graphics card: gpu.folio
+
+The first step of making Folio able to train real neural networks: its numbers worked on by an NVIDIA card,
+thousands at a time. arrays.folio (§118) does a matrix multiply in machine code, two numbers at a time; a card does
+it with thousands of threads at once.
+
+- **Through the driver alone.** CUDA has two layers: the toolkit (nvcc, the runtime, cuBLAS), which a program
+  would have to ship, and the driver, which every NVIDIA card's driver installs (nvcuda.dll on Windows,
+  libcuda.so.1 on Linux). gpu.folio uses only the driver, through `use the library` (§45): cuInit, the device
+  and its primary context, cuMemAlloc and the copies, cuModuleLoadDataEx and cuLaunchKernel.
+- **The card's code in PTX.** NVIDIA's cards run code the driver makes for each, from PTX, NVIDIA's assembly for
+  all of them, which the driver compiles as it loads a module. So the card's code is written in gpu.folio, as text,
+  for `sm_50` (every card since 2014, the newer ones by the driver's own compiling): `binary` (+ - * /, the larger
+  and the smaller of two), `scalar` (the same with a number), `unary` (negate, relu, exp, ln, tanh, sigmoid, sqrt,
+  absolute, square and relu's slope), `fill`, `sum` (each thread a stride of the numbers, a block of 256 added up in
+  the card's fast memory, then added to the answer) and `matmul` (each block a 16 by 16 tile of the answer, tiles of
+  the two matrices loaded into fast memory in turn). A mistake in the PTX comes back with the driver's own words,
+  from its log.
+- **Floats.** A card keeps numbers as 32-bit floats, about 7 digits, as machine learning wants them; Folio's are
+  doubles to 15 (§24). `numbers_convert` (§118) turns a list into floats for the card and back. exp, ln, tanh and
+  sigmoid are the card's quick ones (ex2.approx and lg2.approx), good to a float's last digit or two.
+- **Kernel inputs.** cuLaunchKernel takes where each input is: each one's 8 bytes in a row (a place on the card, a
+  whole number, or a float's 4 bytes), and a list of where each starts, which `memcpy` with 0 bytes gives, as it
+  gives back where it copied to.
+- **Asked first, and none.** A program that uses it needs `--allow-libraries`, as any library does. Where there's no
+  driver, or no card, `available()` is no and every other function a `fail with` that says which.
+- **What it gave**, on a GTX 1650 (4 GB, 14 processors) against arrays.folio's matmul in machine code:
+
+| | 256 | 512 | 1,024 | 2,048 |
+|:--|--:|--:|--:|--:|
+| matrix multiply, on the card | 0.1 ms | 1 ms | 8.2 ms | 49 ms |
+| arrays.folio, in machine code | 5 ms | 39 ms | 452 ms | 3,971 ms |
+| times as fast | 50 | 39 | 55 | 81 |
+
+  2,048 by 2,048 is about 350 billion operations a second, an eighth of what the card can do: each thread works
+  out one number of the answer, where the fastest work out 64, in registers. A million numbers take 125 ms to go up
+  to the card, mostly making the floats in Folio; the card adds them in 1.
+- **Checked**, in machine code, where there's a driver (it's skipped where there isn't): each operation against
+  Folio's own arithmetic, the quick ones within a millionth of arrays.folio's, a 37 by 29 times 29 by 41 multiply
+  (past a tile's edge both ways) the same as arrays.folio's, a sum of 100,000 numbers, nothing on the card, numbers
+  given back, and its mistakes. CI has no card, so it runs on a computer that has one.
+- **Next**: arrays that live on the card, with their shapes, in arrays.folio; a gradient for each operation, so a
+  network of arrays learns (neural.folio's, micrograd's way, is one number at a time); layers, Adam, and a small
+  GPT trained on the card; and a faster multiply, more of the answer to each thread.
+

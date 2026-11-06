@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 
 // the libraries: each file a program uses for what it does, not a program, an example or a test; and the
 // profiler `folio profile` builds into a program
-export const STANDARD = ["math.folio", "folio-profiler.folio", "folio-coverage.folio", ...["ai", "arrays", "base64", "big", "charts", "collections", "cores", "crypto", "dates", "email", "fractions", "game", "hash", "http", "images", "installer", "json", "jwt", "linux", "lists", "log", "mcp", "mysql", "oauth", "onnx", "options", "page", "pdf", "postgres", "properties", "python", "redis", "s3", "secrets", "server", "sets", "sockets", "sqlite", 
+export const STANDARD = ["math.folio", "folio-profiler.folio", "folio-coverage.folio", ...["ai", "arrays", "base64", "big", "charts", "collections", "cores", "crypto", "dates", "email", "fractions", "game", "gpu", "hash", "http", "images", "installer", "json", "jwt", "linux", "lists", "log", "mcp", "mysql", "oauth", "onnx", "options", "page", "pdf", "postgres", "properties", "python", "redis", "s3", "secrets", "server", "sets", "sockets", "sqlite", 
   "stats", "sync", "system", "tasks", "text", "toml", "ui", "websocket", "windows", "wire", "xlsx", "xml", "yaml", "zip", "zones"].map((name) => `tools/${name}.folio`)];
 
 // a file's text as a Folio text: \ " and { escaped, line ends and tabs as \n and \t

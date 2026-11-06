@@ -3090,6 +3090,106 @@ fails: yes
   }
 });
 
+// tools/gpu.folio (DESIGN §158): numbers on an NVIDIA card through CUDA's driver, the card's code PTX the driver makes
+// its own. Each operation as Folio's own arithmetic has it (the card's exp and the rest to a float's precision), a
+// matrix multiply past a tile's edge as arrays.folio's, a sum of more than a block, and its mistakes. Where there's a
+// driver and no card, available() is no; where there's no driver, it's skipped.
+const cudaHere = target === "windows" ? existsSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "nvcuda.dll"))
+  : ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib", "/usr/local/lib"].some((d) => existsSync(join(d, "libcuda.so.1")) || existsSync(join(d, "libcuda.so")));
+test("tools/gpu.folio works on numbers on the graphics card, as Folio does to a float's precision", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-gpu-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+    const exe = executable(dir, "p");
+    writeFileSync(exe, machine(`use "gpu.folio" as gpu
+use "arrays.folio" as arrays
+
+# whether each number is the exact one to 6 digits
+to close with xs, exact
+    for each k from 1 to length of xs
+        set gap to item k of xs - item k of exact
+        if gap is less than 0
+            set gap to 0 - gap
+        end
+        if gap is greater than 0.000001 * (1 + item k of exact)
+            return no
+        end
+    end
+    return yes
+end
+
+if not gpu's available()
+    say "no card"
+else
+    set card to gpu's device()
+    say length of card's name is greater than 0 and card's memory is greater than 0 and card's processors is greater than 0
+    set a to gpu's upload(list of 1, 2, 3, 4)
+    set b to gpu's upload(list of 10, 20, 30, 40)
+    say gpu's download(gpu's plus(a, b))
+    say gpu's download(gpu's minus(b, a))
+    say gpu's download(gpu's times(a, b))
+    say gpu's download(gpu's divided_by(b, a))
+    say gpu's download(gpu's maximum(a, 2.5))
+    say gpu's download(gpu's minimum(a, b))
+    say gpu's download(gpu's relu(gpu's minus(a, 2.5)))
+    say gpu's download(gpu's step(gpu's minus(a, 2.5)))
+    say gpu's download(gpu's square(a))
+    say gpu's download(gpu's absolute(gpu's negate(a)))
+    set x to arrays's array(list of 1, 2, 3, 4)
+    say close(gpu's download(gpu's exp(a)), arrays's numbers_of(arrays's exp(x)))
+    say close(gpu's download(gpu's ln(a)), arrays's numbers_of(arrays's ln(x)))
+    say close(gpu's download(gpu's sqrt(a)), arrays's numbers_of(arrays's sqrt(x)))
+    say close(gpu's download(gpu's tanh(a)), arrays's numbers_of(arrays's tanh(x)))
+    say close(gpu's download(gpu's sigmoid(a)), arrays's numbers_of(arrays's sigmoid(x)))
+    say gpu's sum(a)
+    say gpu's download(gpu's filled(3, 0.5))
+    say gpu's download(gpu's copy_of(b))
+    say gpu's download(gpu's matmul(gpu's upload(list of 1, 2, 3, 4, 5, 6), gpu's upload(list of 7, 8, 9, 10, 11, 12), 2, 3, 2))
+    set left to empty list
+    for each k from 1 to 37 * 29
+        add remainder of (k * 7) divided by 11 - 5 to left
+    end
+    set right to empty list
+    for each k from 1 to 29 * 41
+        add remainder of (k * 5) divided by 13 - 6 to right
+    end
+    set want to arrays's numbers_of(arrays's matmul(arrays's shaped(left, list of 37, 29), arrays's shaped(right, list of 29, 41)))
+    say gpu's download(gpu's matmul(gpu's upload(left), gpu's upload(right), 37, 29, 41)) is want
+    set many to empty list
+    for each k from 1 to 100000
+        add remainder of k divided by 7 to many
+    end
+    say gpu's sum(gpu's upload(many))
+    say gpu's upload(list of 1, 2)
+    say gpu's download(gpu's upload(empty list))
+    gpu's free(a)
+    say gpu's download(a)
+    try
+        say gpu's plus(b, gpu's upload(list of 1))
+    if it fails with why
+        say why
+    end
+    try
+        say gpu's matmul(b, b, 3, 3, 3)
+    if it fails with why
+        say why
+    end
+end
+`, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+    if (ran.stdout === "no card\n") return; // a driver, and no card it can use
+    assert.deepEqual([ran.stdout, ran.stderr, ran.status], [["yes", "[11, 22, 33, 44]", "[9, 18, 27, 36]", "[10, 40, 90, 160]", "[10, 10, 10, 10]",
+      "[2.5, 2.5, 3, 4]", "[1, 2, 3, 4]", "[0, 0, 0.5, 1.5]", "[0, 0, 1, 1]", "[1, 4, 9, 16]", "[1, 2, 3, 4]", "yes", "yes", "yes", "yes", "yes", "10",
+      "[0.5, 0.5, 0.5]", "[10, 20, 30, 40]", "[58, 64, 139, 154]", "yes", "300000", "2 numbers on the graphics card", "[]", "[]",
+      "'+' on the card needs as many numbers on each side, not 4 and 1", "matmul needs 3 by 3 numbers and 3 by 3, not 4 and 4", ""].join("\n"), "", 0]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program
 function numpyBlas() {
   const asked = spawnSync("python", ["-E", "-c", "import numpy, os; print(os.path.dirname(numpy.__file__) + '.libs')"], { encoding: "utf8", cwd: tmpdir() });

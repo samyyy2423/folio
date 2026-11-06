@@ -26,7 +26,7 @@ export const LIBRARIES = STANDARD.filter((file) => !/folio-(profiler|coverage)\.
 export const HELPERS = {
   "ai.folio": /^ai_/, "arrays.folio": /^arrays_/, "base64.folio": /^b64_/, "cores.folio": /^cores_/, "email.folio": /^mail_/,
   "hash.folio": /^hash_/, "jwt.folio": /^jwt_/, "linux.folio": /^ui_/, "lists.folio": /^lists_/, "log.folio": /^log_/,
-  "oauth.folio": /^oauth_/, "onnx.folio": /^onnx_/, "options.folio": /^options_/, "redis.folio": /^redis_/, "s3.folio": /^s3_/,
+  "gpu.folio": /^gpu_/, "oauth.folio": /^oauth_/, "onnx.folio": /^onnx_/, "options.folio": /^options_/, "redis.folio": /^redis_/, "s3.folio": /^s3_/,
   "server.folio": /^web_/, "sockets.folio": /^net_/, "stats.folio": /^stats_/, "system.folio": /^system_/,
   "toml.folio": /^toml_(?!of$)/, "ui.folio": /^ui_/, "websocket.folio": /^ws_/, "windows.folio": /^ui_/, "yaml.folio": /^yaml_(?!of$)/,
   "zones.folio": /^zones_/, "dates.folio": /^dates_/, "game.folio": /^game_/, "http.folio": /^http_/,
@@ -75,7 +75,8 @@ export const SECTIONS = [
   ["The system and programs", "Files and folders, command lines, logs, background work, and every core.",
     ["system", "options", "log", "tasks", "cores", "sync", "installer"]],
   ["Windows and games", "The system's own windows and controls, and games drawn 60 times a second.", ["ui", "windows", "linux", "game"]],
-  ["Models and other languages", "Large language models, MCP servers for AI apps, trained models and Python, from Folio.", ["ai", "mcp", "onnx", "python"]],
+  ["Models and other languages", "Large language models, MCP servers for AI apps, trained models, the graphics card and Python, from Folio.",
+    ["ai", "mcp", "onnx", "gpu", "python"]],
   ["More", "", []],
 ];
 
