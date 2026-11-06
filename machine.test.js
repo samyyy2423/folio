@@ -3652,6 +3652,37 @@ show(loss_matmul, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (li
 show(loss_layer, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.15, 0.2, 0.3)))
 show(loss_entropy, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.1, -0.2, 0.3)))
 show(loss_squares, list of (list of (list of 1, 2), (list of -1, 0.5)), (list of (list of 0.3, -2), (list of 4, 1)))
+
+# Adam, a few steps: an embedding, a layer norm's gamma and beta, a weight whose gradient is shared out over
+# 160 rows, a bias, and a parameter left out of one step; on the card each gradient's added to the zeros the
+# last step left, and all of them move in one launch
+set table to learn's parameter(learn's matrix(list of (list of 0.1, -0.2, 0.3, 0.05), (list of -0.3, 0.2, 0.1, 0.4), (list of 0.25, 0.15, -0.1, -0.2)))
+set w to learn's parameter(learn's matrix(list of (list of 0.2, -0.1, 0.4), (list of 0.3, 0.5, -0.2), (list of -0.4, 0.1, 0.2), (list of 0.1, 0.3, 0.6)))
+set b to learn's parameter(learn's matrix(list of (list of 0.01, -0.02, 0.03)))
+set gamma to learn's parameter(learn's matrix(list of (list of 1, 1.5, 0.5, 1)))
+set beta to learn's parameter(learn's matrix(list of (list of 0, 0.1, -0.1, 0.2)))
+set extra to learn's parameter(learn's matrix(list of (list of 0.5, -0.5, 0.25)))
+set ids to empty list
+set targets to empty list
+for each r from 1 to 160
+    add r * 7 - ((r * 7 / 3) rounded down) * 3 to ids
+    add r * 5 - ((r * 5 / 3) rounded down) * 3 to targets
+end
+set opt to learn's adam((list of table, w, b, gamma, beta, extra), 0.01)
+for each s from 1 to 4
+    set h to learn's layer_norm(learn's embedding(table, ids), gamma, beta)
+    set scores to learn's add_row(learn's matmul(h, w), b)
+    if s is not 2
+        set scores to learn's add_row(scores, extra)
+    end
+    set loss to learn's cross_entropy(scores, targets)
+    learn's backward(loss)
+    say learn's value(loss)
+    learn's step(opt)
+end
+for each p in list of table, w, b, gamma, beta, extra
+    say learn's numbers_of(p)
+end
 `;
 
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program

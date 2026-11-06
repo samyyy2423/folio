@@ -39,7 +39,7 @@ use "json.folio" as learn_json
 
 # a matrix: rows by columns numbers, row after row, on the card (data gpu.folio's numbers) or not (an array);
 # learns if it's a parameter, tracks if a parameter went into it, and made_by, inputs and extra say how
-kind learn_matrix with rows, columns, data, card, grad, learns, tracks, made_by, inputs, extra, gone
+kind learn_matrix with rows, columns, data, card, grad, learns, tracks, made_by, inputs, extra, gone, zeroed
     to shown with self
         if self's gone
             return "(a matrix that was let go)"
@@ -143,7 +143,7 @@ to parameter with m
 end
 
 to learn_made with data, rows, columns
-    return learn_matrix(rows, columns, data, learn_on_card(), nothing, no, no, nothing, empty list, nothing, no)
+    return learn_matrix(rows, columns, data, learn_on_card(), nothing, no, no, nothing, empty list, nothing, no, no)
 end
 
 # ---------- operations ----------
@@ -489,7 +489,7 @@ end
 # how a loss backward() started from changes with each of a parameter's numbers, a matrix of its shape
 to gradient_of with p
     learn_live(p, "gradient_of")
-    if p's grad is nothing
+    if p's grad is nothing or p's zeroed
         return zeros(p's rows, p's columns)
     end
     return learn_made(learn_copy(p's grad, p's card), p's rows, p's columns)
@@ -569,14 +569,20 @@ to learn_back with m
     if how is "matmul"
         set b to item 2 of m's inputs
         if a's tracks # g times b turned over
-            set turned to learn_t(b)
-            learn_add_grad(a, learn_mm(g, turned, m's rows, m's columns, b's rows, m's card))
-            learn_drop(turned, m's card)
+            if m's card
+                learn_add_grad_mm(a, g, b's data, m's rows, m's columns, b's rows, no, yes)
+            else
+                set turned to learn_t(b)
+                learn_add_grad(a, learn_mm(g, turned, m's rows, m's columns, b's rows, m's card))
+            end
         end
         if b's tracks # a turned over times g
-            set turned to learn_t(a)
-            learn_add_grad(b, learn_mm(turned, g, a's columns, a's rows, m's columns, m's card))
-            learn_drop(turned, m's card)
+            if m's card
+                learn_add_grad_mm(b, a's data, g, a's columns, a's rows, m's columns, yes, no)
+            else
+                set turned to learn_t(a)
+                learn_add_grad(b, learn_mm(turned, g, a's columns, a's rows, m's columns, m's card))
+            end
         end
     else if how is "plus" or how is "minus"
         set b to item 2 of m's inputs
@@ -609,7 +615,7 @@ to learn_back with m
         end
         if b's tracks
             if m's card
-                learn_add_grad(b, learn_gpu's column_sums(g, m's rows, m's columns))
+                learn_add_grad_columns(b, g, m's rows, m's columns)
             else
                 learn_add_grad(b, learn_arrays's reshape(learn_arrays's sum(g, 1), (list of 1, m's columns)))
             end
@@ -636,7 +642,10 @@ to learn_back with m
         end
     else if how is "embedding"
         if a's tracks
-            if m's card
+            if m's card and a's grad is not nothing # added where it is, kept zeros or what it has
+                learn_gpu's scatter_add_rows(a's grad, g, m's extra, a's columns)
+                set a's zeroed to no
+            else if m's card
                 set g_table to learn_gpu's zeros(a's rows * a's columns)
                 learn_gpu's scatter_add_rows(g_table, g, m's extra, a's columns)
                 learn_add_grad(a, g_table)
@@ -728,11 +737,11 @@ to learn_back_layer_norm with m, g
         end
         if gamma's tracks
             set both to learn_gpu's times(g, xhat)
-            learn_add_grad(gamma, learn_gpu's column_sums(both, rows, c))
+            learn_add_grad_columns(gamma, both, rows, c)
             learn_gpu's free(both)
         end
         if beta's tracks
-            learn_add_grad(beta, learn_gpu's column_sums(g, rows, c))
+            learn_add_grad_columns(beta, g, rows, c)
         end
         return nothing
     end
@@ -838,6 +847,11 @@ end
 
 # a gradient added to a matrix's: the first is its own, the rest added in place on the card
 to learn_add_grad with m, g
+    if m's grad is not nothing and m's zeroed # a parameter's zeros, kept from the last step, aren't needed
+        learn_gpu's free(m's grad)
+        set m's grad to nothing
+        set m's zeroed to no
+    end
     if m's grad is nothing
         set m's grad to g
     else if m's card
@@ -846,6 +860,22 @@ to learn_add_grad with m, g
     else
         set m's grad to learn_arrays's plus(m's grad, g)
     end
+end
+
+# a gradient worked out on the card by a matmul with one side turned over, added to m's in the same launch
+to learn_add_grad_mm with m, a, b, rows, inner, columns, a_turned, b_turned
+    set m's grad to learn_gpu's matmul_turned(a, b, rows, inner, columns, a_turned, b_turned, m's grad)
+    set m's zeroed to no
+end
+
+# a, rows by columns, its column sums added to m's gradient on the card, a row: kept zeros or what it has
+to learn_add_grad_columns with m, a, rows, columns
+    if m's grad is nothing
+        set m's grad to learn_gpu's column_sums(a, rows, columns)
+    else
+        learn_gpu's column_sums_into(m's grad, a, rows, columns)
+    end
+    set m's zeroed to no
 end
 
 to learn_mm with a, b, rows, inner, columns, card
@@ -957,9 +987,20 @@ end
 to step with opt
     set opt's t to opt's t + 1
     set k to 0
+    set together to empty list
     for each p in opt's parameters
         add 1 to k
-        if p's grad is not nothing
+        if p's grad is not nothing and p's zeroed
+            # no gradient since the last step
+        else if p's grad is not nothing and p's card and opt's way is "adam" # on the card, all in a launch or two,
+            # and its gradient left zeros, to be added to next time
+            if item k of opt's m is nothing
+                set item k of opt's m to learn_gpu's zeros(p's rows * p's columns)
+                set item k of opt's v to learn_gpu's zeros(p's rows * p's columns)
+            end
+            add (list of p's data, p's grad, item k of opt's m, item k of opt's v) to together
+            set p's zeroed to yes
+        else if p's grad is not nothing
             if opt's way is "sgd"
                 learn_sgd_one(p, opt's rate)
             else
@@ -967,6 +1008,9 @@ to step with opt
             end
             learn_free_grad(p)
         end
+    end
+    if length of together is greater than 0
+        learn_gpu's adam_many(together, opt's rate, 0.9, 0.999, 0.00000001, opt's t, yes)
     end
     forget()
 end
@@ -1012,6 +1056,7 @@ to learn_free_grad with p
         learn_gpu's free(p's grad)
     end
     set p's grad to nothing
+    set p's zeroed to no
 end
 
 # every matrix worked out since the last step let go, and its memory on the card given back
@@ -1206,7 +1251,7 @@ to learn_result with data, rows, columns, how, inputs, extra
             set tracks to yes
         end
     end
-    set made to learn_matrix(rows, columns, data, learn_card, nothing, no, tracks, how, inputs, extra, no)
+    set made to learn_matrix(rows, columns, data, learn_card, nothing, no, tracks, how, inputs, extra, no, no)
     if tracks
         add made to learn_tape
     end
