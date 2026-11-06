@@ -6876,3 +6876,26 @@ lose each other's changes.
 - **Checked**: layouts against C's for mixed and nested structures, views' bounds, read-only refusals, a view of a
   block given back, taken() back to where it was, the atomics' answers on every engine, and the workers' count.
 
+## 166. matmul with AVX, on every core
+
+After §164, arrays.folio's matmul in machine code worked out 2 numbers to an instruction on one core: 512 by 512
+in 31 ms, 8.7 billion operations a second, where the processor has 256-bit registers and twelve cores.
+
+- **AVX.** Where CPUID says the processor has AVX and XGETBV that the system keeps the upper halves of the
+  registers, found once a run, the blocks are 4 rows by 8 columns, each 4 numbers of a row in a ymm register:
+  vbroadcastsd a's number, vmulpd, vaddpd, so each number is still 0 + a's first times b's first + ..., a
+  multiply then an add (no fused multiply-add, which rounds once where Folio rounds twice), in the same order.
+  machine.folio writes the VEX prefix itself (`vex`), as it writes REX. vzeroupper before the SSE code after it.
+- **Every core.** When there's enough to do (m times n times k from 2^21 on) and at least two fours of rows, the
+  rows are shared out among as many threads as the program may run on, at most 8 (GetSystemInfo on Windows,
+  sched_getaffinity on Linux): CreateThread, or clone with a stack of its own and CLONE_CHILD_CLEARTID to wait on,
+  each thread its own run of out's rows and its own copy of b's columns on its own stack, and this thread the
+  last run. Nothing is written by two threads, so every number is the one one thread would work out. A thread
+  the system won't start has its run done here.
+- **Checked** byte for byte against the single-threaded SSE2 loop and against Folio's own loop on the JavaScript
+  engine, over shapes with every remainder of rows and columns, k past the copy's 1,024, and a thread per four
+  rows: 357,287 numbers the same on Windows and Linux.
+- **What it gave**, on 12 cores: 512 by 512 in 5 ms, not 31 (54 billion a second); 1,024 by 1,024 in 59 ms.
+  The digit reader's training on the processor takes 3.7 s, not 4.5: its multiplies are small, and the rest of
+  each step, arrays made and the operations between them, is most of it now.
+

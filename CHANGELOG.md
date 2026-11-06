@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **matmul with AVX, on every core.** arrays.folio's matrix multiply in machine code uses AVX where the processor
+  has it and shares big ones out over up to 8 cores, every number still Folio's own sum to the last bit: 512 by
+  512 in 5 ms, where it took 42 at the start of the day (DESIGN §166).
 - **Numbers on the graphics card: `gpu.folio`.** Lists of numbers go up to an NVIDIA card, are added, multiplied,
   matrix-multiplied and summed there, and come back, through CUDA's driver alone: no toolkit. A 2,048 by 2,048
   matrix multiply on a GTX 1650 takes 13 ms, where arrays.folio's machine code takes 3.5 seconds (DESIGN §158).

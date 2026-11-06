@@ -3020,6 +3020,38 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   assert.equal(ran.stdout.split("\n").at(-2), "26 passed");
 });
 
+// arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
+// and enough work spread over every core, each number still the sum Folio's own loop works out, in the same order,
+// to the last bit: 40 by 300 times 300 by 200 is enough to start threads, and its 8,000 numbers' bits are the
+// JavaScript engine's, where Folio's own loop does it
+test("arrays.folio's matmul on every core, with AVX where there is it, gives Folio's own sums to the last bit", { skip }, () => {
+  const files = {};
+  for (const name of ["arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+  files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+  const source = `use "arrays.folio" as arrays
+use "memory.folio" as memory
+use "math.folio" as m
+set xs to empty list
+for each k from 1 to 40 * 300
+    add m's sine(k * 1.37) * 3.1 to xs
+end
+set ys to empty list
+for each k from 1 to 300 * 200
+    add m's cosine(k * 0.71) / 1.7 to ys
+end
+set got to arrays's numbers_of(arrays's matmul(arrays's shaped(xs, (list of 40, 300)), arrays's shaped(ys, (list of 300, 200))))
+set b to (8 * length of got) bytes
+memory's put_many(b, 1, got, "a number")
+say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") with " "`;
+  const native = taskRun(source, { allow: [], files });
+  assert.deepEqual([native.stderr, native.status], ["", 0]);
+  let folio = "";
+  run(source, (line) => (folio += `${line}
+`), { engine: "jit", files: (name) => files[name] });
+  assert.equal(native.stdout.split(" ").length, 16000);
+  assert.ok(native.stdout === folio, "machine code's sums aren't Folio's own");
+});
+
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
 // numbers given to C as where its numbers are
 test("a program uses Folio's own library without --allow-libraries, and gives C a list of numbers where they are", { skip }, () => {
