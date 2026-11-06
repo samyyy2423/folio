@@ -192,6 +192,31 @@ test("garbage: programs that make far more than they keep say what the JavaScrip
   }
 });
 
+// Lists that grow where they are, as the last of the heap's pages, and lists that can't, two growing at once;
+// and `for each` going through a list's own numbers where nothing in the loop can change them, and through a
+// copy where something can or an item isn't a number (DESIGN §169)
+const LISTS_IN_PLACE = [
+  "set a to empty list\nset b to empty list\nfor each i from 1 to 300000\n    add i to a\n    if i is divisible by 3\n        add \"t\" + i to b\n    end\nend\nset c to empty list\nfor each i from 1 to 200000\n    add i * 2 to c\nend\nadd 5 to a\nsay length of a\nsay item 300001 of a\nsay item 150000 of a\nsay length of b\nsay item 100000 of b\nsay item 200000 of c\nset junk to 0\nfor each r from 1 to 30\n    set tmp to empty list\n    for each i from 1 to 50000\n        add i to tmp\n    end\n    add length of tmp to junk\nend\nsay junk\nsay item 299999 of a",
+  "set xs to empty list\nfor each i from 1 to 100000\n    add i * 0.5 to xs\nend\nset total to 0\nfor each x in xs\n    add x to total\nend\nsay total\nset seen to 0\nfor each x in xs\n    set item 1 of xs to 1000000\n    add x to seen\nend\nsay seen\nsay item 1 of xs\nset mixed to list of 1, 2, \"three\", 4\nset count to 0\nfor each m in mixed\n    set count to count + 1\nend\nsay count\nset ys to list of 1, 2, 3\nfor each y in ys\n    add y to ys\nend\nsay ys\nset words to \"\"\nfor each x in list of 1, 2, 3\n    set words to words + x\nend\nsay words\nset grid to 0\nfor each x in list of 1, 2, 3\n    for each y in list of 10, 20\n        add x * y to grid\n    end\nend\nsay grid\nset firsts to 0\nfor each x in xs\n    if x is greater than 10\n        stop\n    end\n    add x to firsts\nend\nsay firsts\nset most to 0\nfor each x in xs\n    if x is greater than most\n        set most to x\n    end\nend\nsay most",
+];
+
+test("lists grown where they are, and gone through without a copy, say what the JavaScript engine says", { skip }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
+  try {
+    LISTS_IN_PLACE.forEach((source, i) => {
+      let want = "";
+      run(source, (line) => (want += `${line}\n`));
+      const exe = executable(dir, `l${i}`);
+      writeFileSync(exe, machine(source, { target, name: `l${i}.folio` }));
+      if (target === "linux") chmodSync(exe, 0o755);
+      const got = spawnSync(exe, [], { encoding: "utf8", timeout: 60_000 });
+      assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: want, stderr: "", status: 0 }, source);
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // A line is kept once for every place on it a mistake can happen, so a long one with thousands of them (a
 // trained network's weights, say) stays small, and a mistake at its end still shows it as the JavaScript engine does.
 test("a long line with thousands of places a mistake can happen stays small", { skip }, () => {

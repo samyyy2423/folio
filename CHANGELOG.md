@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Lists that grow where they are, and `for each` without a copy.** A list that's full and is the last block of
+  the heap gets the pages after it, with no copy, and `for each` goes through a list's own numbers when nothing
+  in the loop can change them: making a list of 10 million numbers takes 30 ms, not 71, adding them up 18, not
+  34, and a program that turns them into floats and back 145 ms, not 241 (DESIGN §169).
 - **Training faster than PyTorch on the graphics card.** gpt.folio's step on a GTX 1650 is 3.1 ms, to PyTorch's
   9.1 with the same model: matmuls that read a matrix turned over and share a long sum out over many blocks,
   attention and layer norm a thread for each number or a warp for each row, and Adam for every parameter in one

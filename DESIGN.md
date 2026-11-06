@@ -6988,3 +6988,37 @@ every number the same to the last bit:
   be unloaded with its threads waiting, still starts them for each run.
 
 PyTorch is still ahead there: its numbers are 32-bit and MKL's, Folio's 64-bit and its own.
+
+## 169. Lists that grow where they are, and `for each` without a copy
+
+A program that turned 10 million numbers into floats and back, through memory.folio, took 241 ms, where C took
+62. Most of it was lists: `add` to a full list made a block twice as big and copied the list into it, so a list
+of 10 million had made blocks of 16, 32, ... 128 MB, each new memory the system had to give it page by page,
+and the collector ran over them; `for each` copied the list it went through, 80 MB for 10 million numbers, so
+the loop could change the list and still see it as it was; and memory.folio's `get_many` made its list of
+zeros with `add`.
+
+- **Growing where it is.** A list's numbers in a big block (pages of their own) that are the last of the heap's
+  pages get the pages after them, never used and so 0, when the list is full: `rt_gc_extend`. No new block, no
+  copy, and the block a `for each` holds stays where it is. A list that isn't last, as when two grow at once,
+  is copied as before.
+- **`for each` over the list itself.** When nothing in the loop can change a list (it sets variables and adds
+  numbers to ones that hold numbers, in ifs and loops of the same, with no call, `say`, item set or try, and a
+  `+` only of numbers, as text joined to a record could run its `shown`), and every item is a number
+  (`rt_items_view` looks, and copies if not), it goes through the list's own numbers.
+
+| 10 million numbers | before | now |
+|:--|--:|--:|
+| `add i * 0.5 to xs` | 71 ms | 30 ms |
+| `for each x in xs`, adding them up | 34 ms | 18 ms |
+| `get_many` of 10 million floats | 103 ms | 45 ms |
+| the whole program | 241 ms | 145 ms (C 62, Rust 62) |
+
+On Linux the same: `add` 176 ms to 80 under WSL, and `for each` 120 to 37.
+
+- **Checked**: lists grown where they are and where they can't be (two at once), a loop that sets an item of the
+  list it goes through still seeing it as it was, lists with an item that isn't a number, adding to the list
+  gone through, nested loops and `stop`, each against the JavaScript engine, on Windows and Linux.
+- **Calls**: `fib(32)`, 7 million calls, is 15 ms of work in Folio to C's 10, with C's numbers doubles too, as
+  Folio's are, so the difference is in the call: the calls in progress counted, the function's number pushed
+  for a mistake's trail, and its inputs kept in its frame. Keeping a function's inputs in registers is next.
