@@ -3011,13 +3011,45 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   const { dir, exe } = folioExe();
   const sub = join(dir, "arrays");
   mkdirSync(sub);
-  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "learn.folio", "learn.test.folio", "gpu.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
+  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "learn.folio", "learn.test.folio", "gpu.folio", "json.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "26 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "28 passed");
+});
+
+// arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
+// and enough work spread over every core, each number still the sum Folio's own loop works out, in the same order,
+// to the last bit: 40 by 300 times 300 by 200 is enough to start threads, and its 8,000 numbers' bits are the
+// JavaScript engine's, where Folio's own loop does it
+test("arrays.folio's matmul on every core, with AVX where there is it, gives Folio's own sums to the last bit", { skip }, () => {
+  const files = {};
+  for (const name of ["arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+  files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+  const source = `use "arrays.folio" as arrays
+use "memory.folio" as memory
+use "math.folio" as m
+set xs to empty list
+for each k from 1 to 40 * 300
+    add m's sine(k * 1.37) * 3.1 to xs
+end
+set ys to empty list
+for each k from 1 to 300 * 200
+    add m's cosine(k * 0.71) / 1.7 to ys
+end
+set got to arrays's numbers_of(arrays's matmul(arrays's shaped(xs, (list of 40, 300)), arrays's shaped(ys, (list of 300, 200))))
+set b to (8 * length of got) bytes
+memory's put_many(b, 1, got, "a number")
+say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") with " "`;
+  const native = taskRun(source, { allow: [], files });
+  assert.deepEqual([native.stderr, native.status], ["", 0]);
+  let folio = "";
+  run(source, (line) => (folio += `${line}
+`), { engine: "jit", files: (name) => files[name] });
+  assert.equal(native.stdout.split(" ").length, 16000);
+  assert.ok(native.stdout === folio, "machine code's sums aren't Folio's own");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
@@ -3284,7 +3316,7 @@ test("learn.folio works out the same losses and gradients on the graphics card a
   const dir = mkdtempSync(join(tmpdir(), "folio-learn-"));
   try {
     const files = {};
-    for (const name of ["gpu.folio", "arrays.folio", "learn.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of ["gpu.folio", "arrays.folio", "learn.folio", "memory.folio", "json.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
     const run = (source, name) => {
       const exe = executable(dir, name);
@@ -3309,6 +3341,88 @@ test("learn.folio works out the same losses and gradients on the graphics card a
     rmSync(dir, { recursive: true, force: true });
   }
 });
+// learn.folio's transformer operations (DESIGN §167) on the card: embedding, GELU, layer norm and attention with
+// its mask, each loss and gradient the processor's to a float's precision; and gpt.folio, 30 steps on the card,
+// learning, saving its weights and writing
+test("learn.folio's transformer operations work out on the graphics card what they do on the processor, and gpt.folio learns", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-gpt-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "arrays.folio", "learn.folio", "memory.folio", "json.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+    const run = (source, name, args = [], allow = ["--allow-libraries"]) => {
+      const exe = executable(dir, name);
+      writeFileSync(exe, machine(source, { target, name: `${name}.folio`, files, allow }));
+      if (target === "linux") chmodSync(exe, 0o755);
+      const ran = spawnSync(exe, args, { cwd: dir, encoding: "utf8", timeout: 300_000 });
+      assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
+      return ran.stdout.trim().split("\n");
+    };
+    const card = run(TRANSFORMER.replace("WHERE", "yes"), "card");
+    const processor = run(TRANSFORMER.replace("WHERE", "no"), "processor");
+    assert.deepEqual([card[0], processor[0]], ["on the card: yes", "on the card: no"]);
+    const numbers = (line) => line.replace(/[\[\]]/g, "").split(", ").map(Number);
+    for (let k = 1; k < processor.length; k++) {
+      const [got, want] = [numbers(card[k]), numbers(processor[k])];
+      assert.equal(got.length, want.length);
+      got.forEach((g, i) => assert.ok(Math.abs(g - want[i]) <= 0.00002 * (1 + Math.abs(want[i])), `line ${k}: ${card[k]} on the card, ${processor[k]} on the processor`));
+    }
+    writeFileSync(join(dir, "README.md"), readFileSync(new URL("./README.md", import.meta.url), "utf8"));
+    const said = run(readFileSync(new URL("./gpt.folio", import.meta.url), "utf8"), "gpt", ["30"], ["--allow-read", "--allow-write", "--allow-libraries"]);
+    const loss = (step) => Number(said.find((l) => l.startsWith(`step ${step}:`)).match(/loss ([0-9.]+)/)[1]);
+    assert.ok(said.some((l) => l.startsWith("a GPT of 2 blocks, 4 heads, 64 wide: ") && l.endsWith("on the card: yes")), said.join("\n"));
+    assert.ok(loss(1) > 4 && said.some((l) => /^learned in /.test(l)), said.join("\n"));
+    assert.ok(existsSync(join(dir, "gpt.safetensors")));
+    assert.ok(said.indexOf("----") > 0 && said.at(-1).length > 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+const TRANSFORMER = `use "learn.folio" as learn
+learn's use_card(WHERE)
+say "on the card: " + learn's on_card()
+to loss_embedding with ps
+    set target to learn's matrix(list of (list of 1, 0, 2), (list of 0.5, 1, -1), (list of 2, 2, 0), (list of 1, 0, 2))
+    return learn's mean_squared_error(learn's embedding(item 1 of ps, list of 2, 0, 2, 1), target)
+end
+
+to loss_gelu with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5), (list of 3, 1, -1))
+    return learn's sum(learn's times(learn's gelu(item 1 of ps), w))
+end
+
+to loss_layer_norm with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5, 2), (list of 3, 1, -1, 0.25), (list of -1, 1, 2, 1))
+    return learn's sum(learn's times(learn's layer_norm(item 1 of ps, item 2 of ps, item 3 of ps), w))
+end
+
+to loss_attention with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5, 2), (list of 3, 1, -1, 0.25), (list of -1, 1, 2, 1),
+        (list of 0.5, 0.5, -2, 1), (list of 2, -1, 1, 1), (list of -0.5, 1.5, 1, -1))
+    return learn's sum(learn's times(learn's attention(item 1 of ps, item 2 of ps, item 3 of ps, 2, 3, 2), w))
+end
+
+
+to show with make_loss, starts
+    set params to empty list
+    for each s in starts
+        add learn's parameter(learn's matrix(s)) to params
+    end
+    set loss to make_loss(params)
+    learn's backward(loss)
+    say learn's value(loss)
+    for each p in params
+        say learn's numbers_of(learn's gradient_of(p))
+    end
+    learn's forget()
+end
+set qkv to list of (list of 0.1, 0.4, -0.3, 0.2), (list of 0.5, -0.1, 0.2, 0.3), (list of -0.2, 0.3, 0.4, -0.5),
+    (list of 0.3, 0.2, -0.1, 0.6), (list of -0.4, 0.1, 0.5, 0.2), (list of 0.2, -0.3, 0.1, 0.4)
+show(loss_embedding, list of (list of (list of 0.1, 0.2, 0.3), (list of -1, 0.5, 2), (list of 1, 1, 1)))
+show(loss_gelu, list of (list of (list of 0.3, -1.2, 2), (list of 0.01, 1, -0.4)))
+show(loss_layer_norm, list of (list of (list of 1, 2, 4, -1), (list of 0.5, -0.5, 3, 2), (list of 2, 0, 1, 1.5)), (list of (list of 1, 0.5, 2, 1)), (list of (list of 0, 0.1, -0.2, 0.3)))
+show(loss_attention, list of qkv, qkv, qkv)
+`;
 const KERNELS = `use "gpu.folio" as gpu
 use "math.folio" as m
 
@@ -3538,6 +3652,37 @@ show(loss_matmul, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (li
 show(loss_layer, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.15, 0.2, 0.3)))
 show(loss_entropy, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.1, -0.2, 0.3)))
 show(loss_squares, list of (list of (list of 1, 2), (list of -1, 0.5)), (list of (list of 0.3, -2), (list of 4, 1)))
+
+# Adam, a few steps: an embedding, a layer norm's gamma and beta, a weight whose gradient is shared out over
+# 160 rows, a bias, and a parameter left out of one step; on the card each gradient's added to the zeros the
+# last step left, and all of them move in one launch
+set table to learn's parameter(learn's matrix(list of (list of 0.1, -0.2, 0.3, 0.05), (list of -0.3, 0.2, 0.1, 0.4), (list of 0.25, 0.15, -0.1, -0.2)))
+set w to learn's parameter(learn's matrix(list of (list of 0.2, -0.1, 0.4), (list of 0.3, 0.5, -0.2), (list of -0.4, 0.1, 0.2), (list of 0.1, 0.3, 0.6)))
+set b to learn's parameter(learn's matrix(list of (list of 0.01, -0.02, 0.03)))
+set gamma to learn's parameter(learn's matrix(list of (list of 1, 1.5, 0.5, 1)))
+set beta to learn's parameter(learn's matrix(list of (list of 0, 0.1, -0.1, 0.2)))
+set extra to learn's parameter(learn's matrix(list of (list of 0.5, -0.5, 0.25)))
+set ids to empty list
+set targets to empty list
+for each r from 1 to 160
+    add r * 7 - ((r * 7 / 3) rounded down) * 3 to ids
+    add r * 5 - ((r * 5 / 3) rounded down) * 3 to targets
+end
+set opt to learn's adam((list of table, w, b, gamma, beta, extra), 0.01)
+for each s from 1 to 4
+    set h to learn's layer_norm(learn's embedding(table, ids), gamma, beta)
+    set scores to learn's add_row(learn's matmul(h, w), b)
+    if s is not 2
+        set scores to learn's add_row(scores, extra)
+    end
+    set loss to learn's cross_entropy(scores, targets)
+    learn's backward(loss)
+    say learn's value(loss)
+    learn's step(opt)
+end
+for each p in list of table, w, b, gamma, beta, extra
+    say learn's numbers_of(p)
+end
 `;
 
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program

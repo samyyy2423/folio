@@ -6876,3 +6876,115 @@ lose each other's changes.
 - **Checked**: layouts against C's for mixed and nested structures, views' bounds, read-only refusals, a view of a
   block given back, taken() back to where it was, the atomics' answers on every engine, and the workers' count.
 
+## 166. matmul with AVX, on every core
+
+After §164, arrays.folio's matmul in machine code worked out 2 numbers to an instruction on one core: 512 by 512
+in 31 ms, 8.7 billion operations a second, where the processor has 256-bit registers and twelve cores.
+
+- **AVX.** Where CPUID says the processor has AVX and XGETBV that the system keeps the upper halves of the
+  registers, found once a run, the blocks are 4 rows by 8 columns, each 4 numbers of a row in a ymm register:
+  vbroadcastsd a's number, vmulpd, vaddpd, so each number is still 0 + a's first times b's first + ..., a
+  multiply then an add (no fused multiply-add, which rounds once where Folio rounds twice), in the same order.
+  machine.folio writes the VEX prefix itself (`vex`), as it writes REX. vzeroupper before the SSE code after it.
+- **Every core.** When there's enough to do (m times n times k from 2^21 on) and at least two fours of rows, the
+  rows are shared out among as many threads as the program may run on, at most 8 (GetSystemInfo on Windows,
+  sched_getaffinity on Linux): CreateThread, or clone with a stack of its own and CLONE_CHILD_CLEARTID to wait on,
+  each thread its own run of out's rows and its own copy of b's columns on its own stack, and this thread the
+  last run. Nothing is written by two threads, so every number is the one one thread would work out. A thread
+  the system won't start has its run done here.
+- **Checked** byte for byte against the single-threaded SSE2 loop and against Folio's own loop on the JavaScript
+  engine, over shapes with every remainder of rows and columns, k past the copy's 1,024, and a thread per four
+  rows: 357,287 numbers the same on Windows and Linux.
+- **What it gave**, on 12 cores: 512 by 512 in 5 ms, not 31 (54 billion a second); 1,024 by 1,024 in 59 ms.
+  The digit reader's training on the processor takes 3.7 s, not 4.5: its multiplies are small, and the rest of
+  each step, arrays made and the operations between them, is most of it now.
+
+## 167. A GPT trained on the graphics card
+
+learn.folio (§162) trained a network of layers on the card; a GPT wants more: its letters looked up in a table,
+its places too, layer norms, GELU, and attention, each place looking back at the places before it, each with
+its gradient.
+
+- **Operations.** `embedding(table, ids)`, `gelu(m)`, `layer_norm(m, gamma, beta)` and `attention(q, k, v,
+  batch, time, heads)`, with a causal mask, each kept on the tape like the rest. On the card, gpu.folio's
+  kernels: an embedding's rows gathered and its gradient added back at once (`red.global.add.f32`, as several
+  rows can have one id); GELU as GPT-2 has it (tanh's) and its slope; layer norm, a thread for each row, its
+  normalized rows and 1 / sqrt(variance + 10^-5) kept for the gradient; and attention, a thread for each batch,
+  head and place: scores against the places up to it, their softmax kept, the values added up, and for the
+  gradient, dv and dk added at once and dq worked out where it is. On the processor, the same in Folio.
+- **Checked**: each gradient against the loss's slope on the processor on every engine, a place seeing only the
+  places before it, and every loss and gradient on the card the processor's to within 10^-7 of each.
+- **Weights in a file.** `save(named, file)`, `load(file)`, `load_into(named, file)` and `named_parameters(net)`
+  keep matrices as safetensors, as Hugging Face does: 8 bytes for the header's length, the header in JSON, then
+  32-bit floats. A file the spec's way, made in Python, loads; Folio's parses with the same numbers.
+- **gpt.folio**, a character-level GPT: token and place embeddings 64 wide, 2 blocks of 4-head attention and
+  a GELU network each after a layer norm and added back, a last layer norm and the letters' scores, 117,740
+  parameters, Adam at 0.003, batches of 16 pieces of 64 letters of Folio's own README. Against PyTorch 2.6 with
+  the same model, sizes and steps, on the same GTX 1650:
+
+| 2,000 steps | Folio | PyTorch |
+|:--|--:|--:|
+| loss at the last step | 1.386 | 1.423 |
+| loss on the tenth of the text it never learned from | 1.727 | 1.763 |
+| time a step | 24.9 ms | 17.6 ms |
+
+  It writes text with the README's shape: "Folio Windows, Python's `run` ...". A kernel's launch from Folio takes
+  about 20 microseconds here, the same as the driver's call alone, so PyTorch's lead is in launching fewer:
+  its Adam does every parameter at once, its multiplies take a matrix turned over without turning it.
+- **Next**: Adam for every parameter in one launch, multiplies that read a matrix turned over, 16-bit floats and
+  the card's tensor cores, and a bigger GPT.
+
+## 168. Training faster than PyTorch on the card
+
+§167's GPT took 24.9 ms a step on a GTX 1650 to PyTorch's 17.6. Leaving out one kind of kernel at a time
+(its launches skipped, the step timed) showed where the card's time went: a step's own work in Folio was a
+millisecond, and the rest was the card. It went to matmuls of a layer's weight gradient, 64 by 64 from 1,024
+rows, one block of the card's threads doing all of it; to turning matrices over for the gradients; to attention
+and layer norm, a thread for each row, each looping alone over its row; and to launching 181 kernels a step,
+32 of them Adam's.
+
+- **Matmuls that read a matrix turned over.** gpu.folio's `matmul_turned(a, b, rows, inner, columns,
+  a_turned, b_turned, into)`: kernels `matmul_tn` and `matmul_nt` load a tile of a or b turned over into shared
+  memory as they load it (rows 17 and 65 numbers apart there, so threads don't wait on one bank), and learn.folio's
+  gradients use them, with no transposes. A long inner axis with few tiles is shared out in pieces, each block a
+  piece, each added at once to the answer (`red.global.add.f32`), so a weight gradient has 16 blocks working, not
+  1. Given `into`, a gradient is added to what's there: the parameter's own.
+- **Attention a thread for each score.** Scores and dp, a thread for each (batch, head, place, place);
+  softmax and ds, a warp of 32 threads for each row, its largest and its sum found across the warp
+  (`shfl.sync.bfly`); out, dq, dk and dv, a thread for each number. Layer norm and its gradient, a warp for each
+  row the same way. Column sums, a thread for each column and 32 rows.
+- **Adam in one launch.** `adam_many(entries, ...)` takes up to 64 parameters at once: each one's p, g, m, v and
+  count go in a table passed as the kernel's one parameter, the block's y its parameter; and it leaves each g 0.
+  learn.folio keeps those zeros (a parameter's `zeroed`), and the next step's matmuls, column sums and embedding
+  gradients add to them where they are, so they need no zeros of their own and no adds after.
+- **Checked**: every loss and gradient on the card the processor's to within 2 x 10^-5, as before, and now
+  four steps of Adam too, with a gradient shared out over 160 rows, an embedding, a layer norm and a parameter
+  left out of one step: each parameter after them the processor's.
+
+181 launches a step became 117. On the same GTX 1650, PyTorch 2.6 with the same model, sizes and steps:
+
+| 2,000 steps | Folio | PyTorch |
+|:--|--:|--:|
+| time a step | **3.1 ms** | 9.1 ms |
+| loss at the last step | 1.377 | 1.521 |
+| loss on the tenth of the text it never learned from | 1.735 | 1.720 |
+
+The digit reader (§162) learns 10 rounds of 6,000 drawings in 0.11 s on the card, to PyTorch's 0.47.
+
+**On the processor**, the digit reader took 3.0 s; PyTorch, 0.50. Two things in machine code take it to 1.41 s,
+every number the same to the last bit:
+
+- **Adam in one loop.** arrays.folio's `adam_step(p, g, m, v, rate, b1, b2, eps, t)` moves p, m and v in place:
+  machine code's `rt_k_adam` goes over the numbers twice, first only to see nothing goes wrong (a NaN, a square
+  root below 0, a division by 0, which Folio then does as it would), then putting each in, each step the one
+  arrays.folio's own takes, in its order. It had been ten arrays made one after another, 2.4 ms for a 256 by
+  256 layer.
+- **matmul's threads kept.** §166 started a thread for each run of a multiply and waited for it to end: about
+  0.6 ms on Windows, more than a 200 by 256 by 256 multiply's own work. Now the first multiply big enough starts
+  one for each core but one, and each waits for its next run: it spins a while (a training loop's next multiply
+  is soon), then sleeps on an event (Windows) or a futex (Linux), and its slot in `mm_pool` says when it's done.
+  Whoever multiplies takes the pool; a second thread that wants it at once does its multiply alone. 200 by 256
+  by 256 went from 1.15 ms to 0.40, and sharing out starts from 2^19 multiplies, not 2^21. A library, which can
+  be unloaded with its threads waiting, still starts them for each run.
+
+PyTorch is still ahead there: its numbers are 32-bit and MKL's, Folio's 64-bit and its own.

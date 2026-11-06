@@ -29033,6 +29033,9 @@ to emit_runtime with st
     if workers of a and target of st is "windows"
         add (list of "KERNEL32.dll", wk_imports) to wanted
     end
+    if "numbers_matmul" is in own_kernels of a and target of st is "windows" # matmul on every core (DESIGN §166)
+        add (list of "KERNEL32.dll", (list of "CreateThread", "WaitForSingleObject", "CloseHandle", "GetSystemInfo", "CreateEventW", "SetEvent")) to wanted
+    end
     if threading of a
         emit_guards(a, target of st)
     end
@@ -37470,7 +37473,7 @@ end
 
 set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "numbers_matmul" is "rt_k_matmul",
     "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory",
-    "numbers_atomic" is "rt_k_atomic"
+    "numbers_atomic" is "rt_k_atomic", "numbers_adam" is "rt_k_adam"
 
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
@@ -37539,7 +37542,7 @@ to kernel_enter with a, target, inputs
     for each r in list of rbx, rsi, rdi, r12, r13, r14, r15
         push_r(a, r)
     end
-    alui(a, "sub", rsp, 128)
+    alui(a, "sub", rsp, 160) # inputs and slots 1 to 20 (see kernel_input)
     set in_regs to list of rdi, rsi, rdx, rcx, r8, r9
     set stack_from to 16
     if target is "windows"
@@ -37602,6 +37605,17 @@ to emit_kernels with a, target
     end
     if "numbers_matmul" is in used
         emit_kernel_matmul(a, target)
+        mark(a, "rt_mm_blocks")
+        matmul_blocks(a)
+        ret(a)
+        mark(a, "rt_mm_blocks_avx")
+        matmul_blocks_avx(a)
+        ret(a)
+        emit_matmul_thread(a, target)
+        emit_matmul_cores(a, target)
+        if not is_library(a)
+            emit_matmul_pool(a, target)
+        end
     end
     if "numbers_reduce" is in used
         emit_kernel_reduce(a, target)
@@ -37615,6 +37629,98 @@ to emit_kernels with a, target
     if "numbers_atomic" is in used
         emit_kernel_atomic(a, target)
     end
+    if "numbers_adam" is in used
+        emit_kernel_adam(a, target)
+    end
+end
+
+# rt_k_adam(p, g, m, v, s, n): Adam's step for n numbers, each list's first n, in place (DESIGN §168):
+# m = m b1 + g (1 - b1), v = v b2 + g g (1 - b2) and p = p - m (c1 rate) / (sqrt(v c2) + eps), with the new m and
+# v, s the list of b1, 1 - b1, b2, 1 - b2, c1 rate, c2 and eps. Each step is the one arrays.folio's adam_step
+# takes in Folio, in the same order, so the numbers are the same, in one loop and not ten. It goes over them
+# twice: first only to see that nothing goes wrong, a NaN, a square root of less than 0 or a division by 0,
+# which is 1, for Folio to do, with nothing changed; then again, putting each one in
+to emit_kernel_adam with a, target
+    set refuse to new_label(a)
+    set done to new_label(a)
+    mark(a, "rt_k_adam")
+    kernel_enter(a, target, 6)
+    kernel_small(a, 6, refuse)
+    load(a, rax, kernel_input(6))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, done)
+    for each k from 1 to 4
+        load(a, rax, kernel_input(6))
+        dec_r(a, rax)
+        kernel_inside(a, k, refuse)
+    end
+    movi(a, rax, 6)
+    kernel_inside(a, 5, refuse)
+    xorpd(a, xmm7, reg_at(xmm7))
+    for each storing in list of no, yes
+        set each to new_label(a)
+        set regs to list of r8, r9, r10, r11, r15
+        for each k from 1 to 5
+            load(a, item k of regs, kernel_input(k))
+            load(a, item k of regs, mem(item k of regs, 16))
+        end
+        load(a, rcx, kernel_input(6))
+        mark(a, each)
+        movsd_plain(a, xmm1, mem(r9, 0)) # g
+        movsd_plain(a, xmm0, mem(r10, 0)) # m b1 + g (1 - b1)
+        scalar_math(a, "*", xmm0, mem(r15, 0))
+        movsd_plain(a, xmm2, mem(r9, 0))
+        scalar_math(a, "*", xmm2, mem(r15, 8))
+        scalar_math(a, "+", xmm0, reg_at(xmm2))
+        movsd_plain(a, xmm3, mem(r11, 0)) # v b2 + g g (1 - b2)
+        scalar_math(a, "*", xmm3, mem(r15, 16))
+        movsd_plain(a, xmm2, mem(r9, 0))
+        scalar_math(a, "*", xmm2, reg_at(xmm1))
+        scalar_math(a, "*", xmm2, mem(r15, 24))
+        scalar_math(a, "+", xmm3, reg_at(xmm2))
+        movsd_plain(a, xmm2, reg_at(xmm3)) # sqrt(v c2) + eps
+        scalar_math(a, "*", xmm2, mem(r15, 40))
+        if not storing
+            ucomisd(a, xmm0, reg_at(xmm0))
+            jcc(a, cc_p, refuse)
+            ucomisd(a, xmm3, reg_at(xmm3))
+            jcc(a, cc_p, refuse)
+            ucomisd(a, xmm2, reg_at(xmm7)) # below 0, or a NaN
+            jcc(a, cc_b, refuse)
+        end
+        sqrt_sd(a, xmm2, xmm2)
+        scalar_math(a, "+", xmm2, mem(r15, 48))
+        if not storing
+            ucomisd(a, xmm2, reg_at(xmm7)) # 0, or a NaN
+            jcc(a, cc_e, refuse)
+        end
+        movsd_plain(a, xmm4, reg_at(xmm0)) # m (c1 rate), over that
+        scalar_math(a, "*", xmm4, mem(r15, 32))
+        scalar_math(a, "/", xmm4, reg_at(xmm2))
+        movsd_plain(a, xmm5, mem(r8, 0)) # p, less that
+        scalar_math(a, "-", xmm5, reg_at(xmm4))
+        if storing
+            movsd_store(a, mem(r10, 0), xmm0)
+            movsd_store(a, mem(r11, 0), xmm3)
+            movsd_store(a, mem(r8, 0), xmm5)
+        else
+            ucomisd(a, xmm4, reg_at(xmm4))
+            jcc(a, cc_p, refuse)
+            ucomisd(a, xmm5, reg_at(xmm5))
+            jcc(a, cc_p, refuse)
+        end
+        for each r in list of r8, r9, r10, r11
+            alui(a, "add", r, 8)
+        end
+        dec_r(a, rcx)
+        jcc(a, cc_ne, each)
+    end
+    mark(a, done)
+    movi(a, rax, 0)
+    kernel_leave(a)
+    mark(a, refuse)
+    movi(a, rax, 1)
+    kernel_leave(a)
 end
 
 # rt_k_convert(op, list, bytes): a list of numbers and bytes, as C keeps numbers of other sizes, for as many
@@ -38188,6 +38294,706 @@ end
 # rt_k_matmul(out, a, b, m, k, n, a_from, b_from, out_from): out's m by n numbers, from out_from on, are a's m
 # by k (from a_from) times b's k by n (from b_from), each row after row. Each of out's numbers is 0 + a's first
 # times b's first + a's second times b's second..., added in that order, as arrays.folio adds them in Folio.
+# ---------- AVX: 256-bit registers, ymm0 to ymm15, 4 doubles each (DESIGN §166) ----------
+# An instruction with a VEX prefix, as AVX has them: `map` 1 for 0F and 2 for 0F38, `pp` 1 for 66, `long` 1 for
+# 256 bits, `w` its W bit, `second` the register it takes as its other source (0 for none), then the opcode and
+# the reg and r/m operands as enc writes them
+to vex with a, map, pp, long, w, op, reg, second, rm
+    set code to code of a
+    set r_bar to 1
+    if reg is at least 8
+        set r_bar to 0
+    end
+    set b_bar to 1
+    set low to 5
+    if mode of rm is not "rip"
+        set low to r of rm bit and 7
+        if r of rm is at least 8
+            set b_bar to 0
+        end
+    end
+    set inverted to 15 - second
+    if b_bar is 1 and map is 1 and w is 0
+        add 0xC5 to code
+        add r_bar * 128 + inverted * 8 + long * 4 + pp to code
+    else
+        add 0xC4 to code
+        add r_bar * 128 + 64 + b_bar * 32 + map to code
+        add w * 128 + inverted * 8 + long * 4 + pp to code
+    end
+    add op to code
+    set field to (reg bit and 7) * 8
+    if mode of rm is "reg"
+        add 192 + field + low to code
+    else if mode of rm is "rip"
+        add field + 5 to code
+        fixup(a, label of rm, addend of rm, 0)
+    else
+        set offset to disp of rm
+        set md to 128
+        if offset is 0 and low is not 5
+            set md to 0
+        else if offset is at least -128 and offset is at most 127
+            set md to 64
+        end
+        add md + field + low to code
+        if low is 4
+            add 36 to code
+        end
+        if md is 64
+            put8(code, offset)
+        else if md is 128
+            put32(code, offset)
+        end
+    end
+end
+
+to vmovupd_load with a, y, at
+    vex(a, 1, 1, 1, 0, 0x10, y, 0, at)
+end
+
+to vmovupd_store with a, at, y
+    vex(a, 1, 1, 1, 0, 0x11, y, 0, at)
+end
+
+# y = x op z, 4 doubles at a time: "*" vmulpd, "+" vaddpd
+to vmath with a, op, y, x, z
+    set code_of_op to 0x58
+    if op is "*"
+        set code_of_op to 0x59
+    end
+    vex(a, 1, 1, 1, 0, code_of_op, y, x, reg_at(z))
+end
+
+to vxorpd with a, y
+    vex(a, 1, 1, 1, 0, 0x57, y, y, reg_at(y))
+end
+
+to vbroadcastsd with a, y, at
+    vex(a, 2, 1, 1, 0, 0x19, y, 0, at)
+end
+
+to vzeroupper with a
+    raw(a, list of 0xC5, 0xF8, 0x77)
+end
+
+# rax 2 if the processor has AVX and the system keeps its registers (CPUID's AVX and OSXSAVE, and XGETBV's
+# XMM and YMM bits), else 1, found once and kept in avx_state. rbx and rcx, rdx and r8 are used
+to avx_check with a
+    set known to new_label(a)
+    set without to new_label(a)
+    set found to new_label(a)
+    reserve(a, "avx_state", 8, 8)
+    load(a, rax, rip("avx_state"))
+    test_rr(a, rax, rax)
+    jcc(a, cc_ne, known)
+    push_r(a, rbx)
+    movi(a, rax, 1)
+    movi(a, rcx, 0)
+    raw(a, list of 0x0F, 0xA2) # cpuid
+    mov_rr(a, r8, rcx)
+    movi(a, rax, 402653184) # 3 << 27: OSXSAVE and AVX
+    alu(a, "and", r8, rax)
+    alu(a, "cmp", r8, rax)
+    jcc(a, cc_ne, without)
+    movi(a, rcx, 0)
+    raw(a, list of 0x0F, 0x01, 0xD0) # xgetbv
+    alui(a, "and", rax, 6)
+    alui(a, "cmp", rax, 6)
+    jcc(a, cc_ne, without)
+    movi(a, rax, 2)
+    jmp_to(a, found)
+    mark(a, without)
+    movi(a, rax, 1)
+    mark(a, found)
+    pop_r(a, rbx)
+    store(a, rip("avx_state"), rax)
+    mark(a, known)
+end
+
+# rt_k_matmul's blocks, on as many of the processor's cores as there are, at most 8, when there's enough to do
+# (m times n times k from 2^19 on, 2^21 in a library) and two or more fours of rows: each thread its own run of out's rows, its own
+# copy of b's columns on its own stack, nothing of another's written (DESIGN §166). The last run is this
+# thread's; it waits for the rest. A thread the system won't start has its run done here instead.
+to matmul_on_cores with a, target
+    set alone to new_label(a)
+    set done to new_label(a)
+    set spawn_loop to new_label(a)
+    set join_loop to new_label(a)
+    set joined to new_label(a)
+    set next_join to new_label(a)
+    set started to new_label(a)
+    set failed to new_label(a)
+    set windows to target is "windows"
+    load(a, rax, kernel_input(11)) # fours of rows: at least 2
+    shifti(a, "shr", rax, 2)
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_b, alone)
+    set least to 524288 # the pool's threads wait for work: from 2^19 multiplies on
+    if is_library(a) # a thread started for each run: from 2^21
+        set least to 2097152
+    end
+    load(a, rax, kernel_input(4)) # m times n, then times k, from that on
+    load(a, rcx, kernel_input(6))
+    imul_rr(a, rax, rcx)
+    movi(a, rcx, least)
+    alu(a, "cmp", rax, rcx)
+    set enough to new_label(a)
+    jcc(a, cc_ae, enough)
+    load(a, rcx, kernel_input(5))
+    imul_rr(a, rax, rcx)
+    movi(a, rcx, least)
+    alu(a, "cmp", rax, rcx)
+    jcc(a, cc_b, alone)
+    mark(a, enough)
+    call_to(a, "rt_mm_cores") # rax: how many threads, from 2 up, or 1
+    load(a, rcx, kernel_input(11))
+    shifti(a, "shr", rcx, 2)
+    alu(a, "cmp", rax, rcx) # no more threads than fours of rows
+    set fewer to new_label(a)
+    jcc(a, cc_be, fewer)
+    mov_rr(a, rax, rcx)
+    mark(a, fewer)
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_b, alone)
+    store(a, kernel_input(19), rax) # threads, this one among them
+    if not is_library(a) # the pool's threads, which wait for work, not new ones (DESIGN §168)
+        matmul_pool_take(a, alone)
+    end
+    # each run: fours of rows, shared out, a run of ceil(fours / threads) fours
+    load(a, rcx, kernel_input(11))
+    shifti(a, "shr", rcx, 2)
+    alu(a, "add", rcx, rax)
+    dec_r(a, rcx)
+    mov_rr(a, rdx, rax)
+    mov_rr(a, rax, rcx)
+    mov_rr(a, rcx, rdx)
+    movi(a, rdx, 0)
+    raw(a, list of 0x48, 0xF7, 0xF1) # div rcx: rax the run, in fours
+    shifti(a, "shl", rax, 2)
+    store(a, kernel_input(20), rax) # rows to a run
+    if not is_library(a)
+        matmul_pool_runs(a, target)
+        jmp_to(a, done)
+    else
+        # the threads' records, 64 bytes each, on this stack: the frame, the first row, the row past the last,
+        # the thread (a handle, or the id the system clears when it ends), and its stack (Linux)
+        alui(a, "sub", rsp, 512)
+        mov_rr(a, r12, rsp) # the records
+        movi(a, r13, 0) # the first row of the next run
+        movi(a, r14, 0) # threads started
+        mark(a, spawn_loop)
+        load(a, rax, kernel_input(19))
+        dec_r(a, rax)
+        alu(a, "cmp", r14, rax)
+        jcc(a, cc_ae, started) # all but the last run on threads of their own
+        mov_rr(a, r15, r14)
+        shifti(a, "shl", r15, 6)
+        alu(a, "add", r15, r12) # this run's record
+        store(a, mem(r15, 0), rbp)
+        store(a, mem(r15, 8), r13)
+        alu_load(a, "add", r13, kernel_input(20))
+        load(a, rax, kernel_input(11)) # at most the fours' end
+        alu(a, "cmp", r13, rax)
+        set within to new_label(a)
+        jcc(a, cc_be, within)
+        mov_rr(a, r13, rax)
+        mark(a, within)
+        store(a, mem(r15, 16), r13)
+        storei(a, mem(r15, 24), 0)
+        storei(a, mem(r15, 32), 0)
+        if windows
+            movi(a, rcx, 0)
+            movi(a, rdx, 0)
+            lea(a, r8, rip("rt_mm_thread"))
+            mov_rr(a, r9, r15)
+            win_enter(a)
+            storei(a, mem(rsp, 32), 0)
+            storei(a, mem(rsp, 40), 0)
+            call_import(a, "imp_CreateThread")
+            win_leave(a)
+            test_rr(a, rax, rax)
+            jcc(a, cc_e, failed)
+            store(a, mem(r15, 24), rax)
+        else
+            set in_child to new_label(a)
+            movi(a, rdi, 0) # a stack of 1 MB
+            movi(a, rsi, 1048576)
+            movi(a, rdx, 3)
+            movi(a, r10, 147490)
+            movi(a, r8, -1)
+            movi(a, r9, 0)
+            sys_call(a, 9)
+            alui(a, "cmp", rax, -4096)
+            jcc(a, cc_a, failed)
+            store(a, mem(r15, 32), rax)
+            mov_rr(a, rsi, rax)
+            movi(a, rcx, 1048560)
+            alu(a, "add", rsi, rcx)
+            store(a, mem(rsi, 0), r15) # what the child takes from its stack: its record
+            storei(a, mem(r15, 24), 1)
+            movi(a, rdi, 3477248) # CLONE_VM | FS | FILES | SIGHAND | THREAD | SYSVSEM | PARENT_SETTID | CHILD_CLEARTID
+            lea(a, rdx, mem(r15, 24))
+            mov_rr(a, r10, rdx)
+            movi(a, r8, 0)
+            sys_call(a, 56)
+            test_rr(a, rax, rax)
+            jcc(a, cc_e, in_child)
+            jcc(a, cc_l, failed)
+            set forward to new_label(a)
+            jmp_to(a, forward)
+            mark(a, in_child) # the new thread, on its own stack
+            pop_r(a, rdi)
+            call_to(a, "rt_mm_thread")
+            movi(a, rdi, 0)
+            sys_call(a, 60) # this thread ends; the system clears its id and wakes the wait
+            mark(a, forward)
+        end
+        inc_r(a, r14)
+        jmp_to(a, spawn_loop)
+        mark(a, failed) # no thread for this run: it's done here, now, and its record marked done
+        load(a, rax, mem(r15, 8))
+        store(a, kernel_input(17), rax)
+        load(a, rax, mem(r15, 16))
+        store(a, kernel_input(18), rax)
+        matmul_call_blocks(a)
+        storei(a, mem(r15, 24), 0)
+        storei(a, mem(r15, 32), 0)
+        inc_r(a, r14)
+        jmp_to(a, spawn_loop)
+        mark(a, started) # the last run here
+        store(a, kernel_input(17), r13)
+        load(a, rax, kernel_input(11))
+        store(a, kernel_input(18), rax)
+        matmul_call_blocks(a)
+        movi(a, r14, 0) # then each thread waited for
+        mark(a, join_loop)
+        load(a, rax, kernel_input(19))
+        dec_r(a, rax)
+        alu(a, "cmp", r14, rax)
+        jcc(a, cc_ae, joined)
+        mov_rr(a, r15, r14)
+        shifti(a, "shl", r15, 6)
+        alu(a, "add", r15, r12)
+        load(a, rax, mem(r15, 24))
+        test_rr(a, rax, rax)
+        jcc(a, cc_e, next_join)
+        if windows
+            mov_rr(a, rcx, rax)
+            movi(a, rdx, -1) # INFINITE
+            win_enter(a)
+            call_import(a, "imp_WaitForSingleObject")
+            win_leave(a)
+            load(a, rcx, mem(r15, 24))
+            win_enter(a)
+            call_import(a, "imp_CloseHandle")
+            win_leave(a)
+        else
+            set waiting to new_label(a)
+            set gone to new_label(a)
+            mark(a, waiting)
+            load32(a, rdx, mem(r15, 24))
+            test_rr(a, rdx, rdx)
+            jcc(a, cc_e, gone)
+            lea(a, rdi, mem(r15, 24))
+            movi(a, rsi, 0) # FUTEX_WAIT, while it's the id
+            movi(a, r10, 0)
+            sys_call(a, 202)
+            jmp_to(a, waiting)
+            mark(a, gone)
+            load(a, rdi, mem(r15, 32))
+            movi(a, rsi, 1048576)
+            sys_call(a, 11) # its stack back
+        end
+        mark(a, next_join)
+        inc_r(a, r14)
+        jmp_to(a, join_loop)
+        mark(a, joined)
+        alui(a, "add", rsp, 512)
+        load(a, r13, kernel_input(14)) # as the rest of rt_k_matmul has them
+        load(a, r14, kernel_input(15))
+        load(a, r15, kernel_input(16))
+        jmp_to(a, done)
+    end
+    mark(a, alone)
+    storei(a, kernel_input(17), 0)
+    load(a, rax, kernel_input(11))
+    store(a, kernel_input(18), rax)
+    matmul_call_blocks(a)
+    mark(a, done)
+end
+
+# the blocks from row kernel_input(17) to kernel_input(18): AVX's, or SSE2's. r12 to r15 kept (the blocks use
+# r12 and r13; rsi and rdi too)
+to matmul_call_blocks with a
+    set by_sse2 to new_label(a)
+    set called to new_label(a)
+    for each r in list of r12, r13, r14, r15, rsi, rdi
+        push_r(a, r)
+    end
+    load(a, rax, rip("avx_state"))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ne, by_sse2)
+    call_to(a, "rt_mm_blocks_avx")
+    jmp_to(a, called)
+    mark(a, by_sse2)
+    call_to(a, "rt_mm_blocks")
+    mark(a, called)
+    for each r in list of rdi, rsi, r15, r14, r13, r12
+        pop_r(a, r)
+    end
+end
+
+# rt_mm_thread(record, in rcx on Windows, rdi on Linux): a frame as rt_k_matmul's, its inputs and slots copied
+# from the frame that started it, the record's rows, then the blocks; 0
+to emit_matmul_thread with a, target
+    mark(a, "rt_mm_thread")
+    push_r(a, rbp)
+    mov_rr(a, rbp, rsp)
+    for each r in list of rbx, rsi, rdi, r12, r13, r14, r15
+        push_r(a, r)
+    end
+    alui(a, "sub", rsp, 160)
+    set given to rdi
+    if target is "windows"
+        set given to rcx
+    end
+    mov_rr(a, r8, given)
+    load(a, r9, mem(r8, 0))
+    for each k from 1 to 16
+        load(a, rax, mem(r9, -56 - 8 * k))
+        store(a, kernel_input(k), rax)
+    end
+    load(a, rax, mem(r8, 8))
+    store(a, kernel_input(17), rax)
+    load(a, rax, mem(r8, 16))
+    store(a, kernel_input(18), rax)
+    load(a, rbx, kernel_input(6)) # b's and out's row, in bytes
+    shifti(a, "shl", rbx, 3)
+    matmul_call_blocks(a)
+    movi(a, rax, 0)
+    kernel_leave(a)
+end
+
+# A matmul's pool of threads (DESIGN §168): one for each core but the first, started the first time a matmul is
+# big enough to share, then each waiting for its next run, as starting a thread for each run took more than the
+# run did for a matmul of a few million multiplies. A thread's slot in mm_pool, 64 bytes: 0, nothing to do, 1,
+# a run to do, 2, done; the run's record; the thread; and on Windows the event that wakes it. Whoever multiplies
+# takes the pool (mm_pool_busy), or, if another thread has it, does all of its multiply itself.
+to matmul_pool_take with a, alone
+    set pooled to new_label(a)
+    set enough to new_label(a)
+    lea(a, rdx, rip("mm_pool_busy"))
+    movi(a, rax, 0)
+    movi(a, rcx, 1)
+    raw(a, list of 0xF0, 0x48, 0x0F, 0xB1, 0x0A) # lock cmpxchg [rdx], rcx
+    jcc(a, cc_ne, alone)
+    call_to(a, "rt_mm_pool_ready") # rax: its threads, started the first time
+    inc_r(a, rax) # and this one
+    alu_load(a, "cmp", rax, kernel_input(19))
+    jcc(a, cc_ae, enough)
+    store(a, kernel_input(19), rax)
+    mark(a, enough)
+    load(a, rax, kernel_input(19))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ae, pooled)
+    lea(a, rdx, rip("mm_pool_busy"))
+    storei(a, mem(rdx, 0), 0)
+    jmp_to(a, alone)
+    mark(a, pooled)
+end
+
+# each run but the last posted to a thread of the pool, its slot 1 and the thread woken; the last here; then
+# each waited for, until its slot is 2, and made 0; and the pool given back
+to matmul_pool_runs with a, target
+    set post_loop to new_label(a)
+    set started to new_label(a)
+    set wait_loop to new_label(a)
+    set waited to new_label(a)
+    alui(a, "sub", rsp, 512)
+    mov_rr(a, r12, rsp) # the records, as for threads started for them
+    movi(a, r13, 0) # the first row of the next run
+    movi(a, r14, 0) # runs posted
+    mark(a, post_loop)
+    load(a, rax, kernel_input(19))
+    dec_r(a, rax)
+    alu(a, "cmp", r14, rax)
+    jcc(a, cc_ae, started)
+    mov_rr(a, r15, r14)
+    shifti(a, "shl", r15, 6)
+    alu(a, "add", r15, r12) # this run's record
+    store(a, mem(r15, 0), rbp)
+    store(a, mem(r15, 8), r13)
+    alu_load(a, "add", r13, kernel_input(20))
+    load(a, rax, kernel_input(11)) # at most the fours' end
+    alu(a, "cmp", r13, rax)
+    set within to new_label(a)
+    jcc(a, cc_be, within)
+    mov_rr(a, r13, rax)
+    mark(a, within)
+    store(a, mem(r15, 16), r13)
+    mov_rr(a, rdx, r14)
+    shifti(a, "shl", rdx, 6)
+    lea(a, rax, rip("mm_pool"))
+    alu(a, "add", rdx, rax)
+    store(a, mem(rdx, 8), r15)
+    storei(a, mem(rdx, 0), 1)
+    if target is "windows"
+        load(a, rcx, mem(rdx, 24))
+        win_enter(a)
+        call_import(a, "imp_SetEvent")
+        win_leave(a)
+    else
+        mov_rr(a, rdi, rdx)
+        movi(a, rsi, 129) # FUTEX_WAKE_PRIVATE, one
+        movi(a, rdx, 1)
+        sys_call(a, 202)
+    end
+    inc_r(a, r14)
+    jmp_to(a, post_loop)
+    mark(a, started) # the last run here
+    store(a, kernel_input(17), r13)
+    load(a, rax, kernel_input(11))
+    store(a, kernel_input(18), rax)
+    matmul_call_blocks(a)
+    movi(a, r14, 0)
+    mark(a, wait_loop)
+    load(a, rax, kernel_input(19))
+    dec_r(a, rax)
+    alu(a, "cmp", r14, rax)
+    jcc(a, cc_ae, waited)
+    mov_rr(a, rdx, r14)
+    shifti(a, "shl", rdx, 6)
+    lea(a, rax, rip("mm_pool"))
+    alu(a, "add", rdx, rax)
+    set spin to new_label(a)
+    set finished to new_label(a)
+    mark(a, spin)
+    load(a, rax, mem(rdx, 0))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_e, finished)
+    raw(a, list of 0xF3, 0x90) # pause
+    jmp_to(a, spin)
+    mark(a, finished)
+    storei(a, mem(rdx, 0), 0)
+    inc_r(a, r14)
+    jmp_to(a, wait_loop)
+    mark(a, waited)
+    lea(a, rdx, rip("mm_pool_busy"))
+    storei(a, mem(rdx, 0), 0)
+    alui(a, "add", rsp, 512)
+    load(a, r13, kernel_input(14)) # as the rest of rt_k_matmul has them
+    load(a, r14, kernel_input(15))
+    load(a, r15, kernel_input(16))
+end
+
+# rt_mm_pool_ready: rax, the pool's threads, started the first time (mm_pool_count is their count + 1 once they
+# are); and rt_mm_worker(slot), each thread's own loop: it waits for its slot to be 1, spinning a while and then
+# asleep, does the run, and makes its slot 2. The process ending ends them
+to emit_matmul_pool with a, target
+    set windows to target is "windows"
+    reserve(a, "mm_pool", 512, 64)
+    reserve(a, "mm_pool_count", 8, 8)
+    reserve(a, "mm_pool_busy", 8, 8)
+    set make to new_label(a)
+    set make_loop to new_label(a)
+    set made to new_label(a)
+    mark(a, "rt_mm_pool_ready")
+    load(a, rax, rip("mm_pool_count"))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, make)
+    dec_r(a, rax)
+    ret(a)
+    mark(a, make)
+    push_r(a, rbx)
+    push_r(a, r12)
+    push_r(a, r13)
+    call_to(a, "rt_mm_cores")
+    mov_rr(a, r13, rax)
+    dec_r(a, r13) # one for each core but this one
+    movi(a, r12, 0)
+    mark(a, make_loop)
+    alu(a, "cmp", r12, r13)
+    jcc(a, cc_ae, made)
+    mov_rr(a, rbx, r12)
+    shifti(a, "shl", rbx, 6)
+    lea(a, rax, rip("mm_pool"))
+    alu(a, "add", rbx, rax) # its slot
+    if windows
+        movi(a, rcx, 0) # CreateEventW: an event that resets itself, not set
+        movi(a, rdx, 0)
+        movi(a, r8, 0)
+        movi(a, r9, 0)
+        win_enter(a)
+        call_import(a, "imp_CreateEventW")
+        win_leave(a)
+        test_rr(a, rax, rax)
+        jcc(a, cc_e, made)
+        store(a, mem(rbx, 24), rax)
+        movi(a, rcx, 0)
+        movi(a, rdx, 0)
+        lea(a, r8, rip("rt_mm_worker"))
+        mov_rr(a, r9, rbx)
+        win_enter(a)
+        storei(a, mem(rsp, 32), 0)
+        storei(a, mem(rsp, 40), 0)
+        call_import(a, "imp_CreateThread")
+        win_leave(a)
+        test_rr(a, rax, rax)
+        jcc(a, cc_e, made)
+        store(a, mem(rbx, 16), rax)
+    else
+        set in_child to new_label(a)
+        set forward to new_label(a)
+        movi(a, rdi, 0) # a stack of 1 MB, kept
+        movi(a, rsi, 1048576)
+        movi(a, rdx, 3)
+        movi(a, r10, 147490)
+        movi(a, r8, -1)
+        movi(a, r9, 0)
+        sys_call(a, 9)
+        alui(a, "cmp", rax, -4096)
+        jcc(a, cc_a, made)
+        mov_rr(a, rsi, rax)
+        movi(a, rcx, 1048560)
+        alu(a, "add", rsi, rcx)
+        store(a, mem(rsi, 0), rbx) # what the child takes from its stack: its slot
+        movi(a, rdi, 331520) # CLONE_VM | FS | FILES | SIGHAND | THREAD | SYSVSEM
+        movi(a, rdx, 0)
+        movi(a, r10, 0)
+        movi(a, r8, 0)
+        sys_call(a, 56)
+        test_rr(a, rax, rax)
+        jcc(a, cc_e, in_child)
+        jcc(a, cc_l, made)
+        jmp_to(a, forward)
+        mark(a, in_child)
+        pop_r(a, rdi)
+        call_to(a, "rt_mm_worker") # it never comes back
+        mark(a, forward)
+    end
+    inc_r(a, r12)
+    jmp_to(a, make_loop)
+    mark(a, made)
+    lea(a, rax, mem(r12, 1))
+    store(a, rip("mm_pool_count"), rax)
+    mov_rr(a, rax, r12)
+    pop_r(a, r13)
+    pop_r(a, r12)
+    pop_r(a, rbx)
+    ret(a)
+
+    set wait to new_label(a)
+    set spin to new_label(a)
+    set work to new_label(a)
+    set given to rdi
+    if windows
+        set given to rcx
+    end
+    mark(a, "rt_mm_worker")
+    push_r(a, rbp)
+    mov_rr(a, rbp, rsp)
+    push_r(a, rbx)
+    push_r(a, r12)
+    mov_rr(a, rbx, given)
+    mark(a, wait)
+    movi(a, r12, 4000) # spins before it sleeps: a training loop's next multiply is soon
+    mark(a, spin)
+    load(a, rax, mem(rbx, 0))
+    alui(a, "cmp", rax, 1)
+    jcc(a, cc_e, work)
+    raw(a, list of 0xF3, 0x90) # pause
+    dec_r(a, r12)
+    jcc(a, cc_ne, spin)
+    if windows
+        load(a, rcx, mem(rbx, 24))
+        movi(a, rdx, -1) # INFINITE
+        win_enter(a)
+        call_import(a, "imp_WaitForSingleObject")
+        win_leave(a)
+    else
+        load32(a, rdx, mem(rbx, 0))
+        alui(a, "cmp", rdx, 1)
+        jcc(a, cc_e, work)
+        mov_rr(a, rdi, rbx)
+        movi(a, rsi, 128) # FUTEX_WAIT_PRIVATE, while the slot is what it was
+        movi(a, r10, 0)
+        sys_call(a, 202)
+    end
+    jmp_to(a, wait)
+    mark(a, work)
+    load(a, given, mem(rbx, 8))
+    call_to(a, "rt_mm_thread")
+    storei(a, mem(rbx, 0), 2)
+    jmp_to(a, wait)
+end
+
+# rt_mm_cores: rax, how many threads a multiply takes: the cores the program may use, at most 8, found once
+to emit_matmul_cores with a, target
+    set known to new_label(a)
+    set counted to new_label(a)
+    reserve(a, "mm_cores", 8, 8)
+    reserve(a, "mm_info", 128, 8)
+    mark(a, "rt_mm_cores")
+    load(a, rax, rip("mm_cores"))
+    test_rr(a, rax, rax)
+    jcc(a, cc_ne, known)
+    if target is "windows"
+        lea(a, rcx, rip("mm_info")) # GetSystemInfo: dwNumberOfProcessors 32 bytes in
+        win_enter(a)
+        call_import(a, "imp_GetSystemInfo")
+        win_leave(a)
+        load32(a, rax, rip_plus("mm_info", 32))
+    else
+        set bits to new_label(a)
+        set bit_loop to new_label(a)
+        set next_word to new_label(a)
+        push_r(a, rbx)
+        movi(a, rdi, 0) # sched_getaffinity(0, 128, mm_info): the cores it may run on, a bit each
+        movi(a, rsi, 128)
+        lea(a, rdx, rip("mm_info"))
+        sys_call(a, 204)
+        movi(a, rcx, 0) # the count
+        test_rr(a, rax, rax)
+        jcc(a, cc_s, bits)
+        lea(a, r8, rip("mm_info"))
+        mov_rr(a, r9, rax) # bytes it wrote
+        shifti(a, "shr", r9, 3)
+        mark(a, next_word)
+        test_rr(a, r9, r9)
+        jcc(a, cc_e, bits)
+        load(a, rdx, mem(r8, 0))
+        mark(a, bit_loop)
+        test_rr(a, rdx, rdx)
+        set word_done to new_label(a)
+        jcc(a, cc_e, word_done)
+        mov_rr(a, rbx, rdx)
+        alui(a, "and", rbx, 1)
+        alu(a, "add", rcx, rbx)
+        shifti(a, "shr", rdx, 1)
+        jmp_to(a, bit_loop)
+        mark(a, word_done)
+        alui(a, "add", r8, 8)
+        dec_r(a, r9)
+        jmp_to(a, next_word)
+        mark(a, bits)
+        mov_rr(a, rax, rcx)
+        pop_r(a, rbx)
+    end
+    alui(a, "cmp", rax, 8)
+    jcc(a, cc_be, counted)
+    movi(a, rax, 8)
+    mark(a, counted)
+    alui(a, "cmp", rax, 1)
+    set at_least to new_label(a)
+    jcc(a, cc_ae, at_least)
+    movi(a, rax, 1)
+    mark(a, at_least)
+    store(a, rip("mm_cores"), rax)
+    mark(a, known)
+    ret(a)
+end
+
 # rt_k_matmul's fours: out's rows and columns by 4 by 4, each 16 numbers kept in xmm8 to xmm15 (two to a register)
 # while a's 4 rows times b's 4 columns are added to them, a term at a time, then put in out: 16 multiplies and
 # adds for every 2 of b's loads and 4 of a's, where adding into out in memory took a load and a store for each 2.
@@ -38261,9 +39067,9 @@ to matmul_blocks with a
     jcc(a, cc_ne, packing)
     load(a, r9, kernel_input(13))
     mark(a, unpacked)
-    movi(a, rsi, 0) # i, out's row
+    load(a, rsi, kernel_input(17)) # i, out's row, from the first of this run's rows
     mark(a, rows_loop)
-    alu_load(a, "cmp", rsi, kernel_input(11))
+    alu_load(a, "cmp", rsi, kernel_input(18))
     jcc(a, cc_ae, rows_done)
     for each k from 8 to 15
         xorpd(a, k, reg_at(k))
@@ -38317,6 +39123,137 @@ to matmul_blocks with a
     alui(a, "add", rdi, 4)
     jmp_to(a, cols_loop)
     mark(a, cols_done)
+    alu_load(a, "add", rsp, kernel_input(9)) # the copy's room back
+    for each k from 0 to 7
+        movdqu_load(a, 8 + k, mem(rsp, 16 * k))
+    end
+    alui(a, "add", rsp, 128)
+end
+
+# matmul_blocks with AVX: 4 rows by 8 columns, each 4 numbers of a row in a ymm register, which the same 8
+# registers hold twice as many of (DESIGN §166): every number the same sum in the same order, a multiply then an add
+to matmul_blocks_avx with a
+    set packed to new_label(a)
+    set strided to new_label(a)
+    set probing to new_label(a)
+    set probed to new_label(a)
+    set cols_loop to new_label(a)
+    set packing to new_label(a)
+    set rows_loop to new_label(a)
+    set terms_loop to new_label(a)
+    set rows_done to new_label(a)
+    set cols_done to new_label(a)
+    set unpacked to new_label(a)
+    alui(a, "sub", rsp, 128)
+    for each k from 0 to 7
+        movdqu_store(a, mem(rsp, 16 * k), 8 + k)
+    end
+    # b's 4 columns, copied one after another, 32 bytes to a term, onto the stack, when there are at most 2,048
+    # terms: a row of b is n numbers on, and a power of 2 of them on puts every row of a column in the same few
+    # places in the processor's cache, which a 512 by 512 multiply spent most of its time waiting on
+    load(a, rax, kernel_input(5))
+    alui(a, "cmp", rax, 1024)
+    jcc(a, cc_a, strided)
+    shifti(a, "shl", rax, 6)
+    alu(a, "sub", rsp, rax)
+    store(a, kernel_input(9), rax)
+    mov_rr(a, rcx, rax) # each page of it touched, from the top down, as Windows grows a stack
+    mark(a, probing)
+    alui(a, "cmp", rcx, 4096)
+    jcc(a, cc_b, probed)
+    alui(a, "sub", rcx, 4096)
+    mov_rr(a, rdx, rsp)
+    alu(a, "add", rdx, rcx)
+    store8i(a, mem(rdx, 0), 0)
+    jmp_to(a, probing)
+    mark(a, probed)
+    store8i(a, mem(rsp, 0), 0)
+    store(a, kernel_input(13), rsp)
+    movi(a, r12, 64)
+    jmp_to(a, packed)
+    mark(a, strided)
+    storei(a, kernel_input(9), 0)
+    mov_rr(a, r12, rbx)
+    mark(a, packed)
+    movi(a, rdi, 0) # j, out's column
+    mark(a, cols_loop)
+    alu_load(a, "cmp", rdi, kernel_input(12))
+    jcc(a, cc_ae, cols_done)
+    load(a, r9, kernel_input(15)) # b's row 0, from column j
+    mov_rr(a, rdx, rdi)
+    shifti(a, "shl", rdx, 3)
+    alu(a, "add", r9, rdx)
+    load(a, rax, kernel_input(9))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, unpacked)
+    load(a, r10, kernel_input(13)) # the copy, made once for every row of out
+    load(a, rcx, kernel_input(5))
+    mark(a, packing)
+    vmovupd_load(a, 0, mem(r9, 0))
+    vmovupd_load(a, 1, mem(r9, 32))
+    vmovupd_store(a, mem(r10, 0), 0)
+    vmovupd_store(a, mem(r10, 32), 1)
+    alu(a, "add", r9, rbx)
+    alui(a, "add", r10, 64)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, packing)
+    load(a, r9, kernel_input(13))
+    mark(a, unpacked)
+    load(a, rsi, kernel_input(17)) # i, out's row, from the first of this run's rows
+    mark(a, rows_loop)
+    alu_load(a, "cmp", rsi, kernel_input(18))
+    jcc(a, cc_ae, rows_done)
+    for each k from 8 to 15
+        vxorpd(a, k)
+    end
+    load(a, r8, kernel_input(10)) # a's 4 rows from row i: r8, r10, r11 and rax
+    mov_rr(a, rdx, rsi)
+    imul_rr(a, rdx, r8)
+    mov_rr(a, r8, rdx)
+    alu_load(a, "add", r8, kernel_input(14))
+    load(a, rdx, kernel_input(10))
+    mov_rr(a, r10, r8)
+    alu(a, "add", r10, rdx)
+    mov_rr(a, r11, r10)
+    alu(a, "add", r11, rdx)
+    mov_rr(a, rax, r11)
+    alu(a, "add", rax, rdx)
+    mov_rr(a, r13, r9) # b's columns from row 0: the copy, or b itself
+    load(a, rcx, kernel_input(5))
+    mark(a, terms_loop)
+    vmovupd_load(a, 0, mem(r13, 0))
+    vmovupd_load(a, 1, mem(r13, 32))
+    set k to 0
+    for each row_at in list of r8, r10, r11, rax
+        vbroadcastsd(a, 2, mem(row_at, 0))
+        vmath(a, "*", 3, 2, 0)
+        vmath(a, "+", 8 + 2 * k, 8 + 2 * k, 3)
+        vmath(a, "*", 3, 2, 1)
+        vmath(a, "+", 9 + 2 * k, 9 + 2 * k, 3)
+        alui(a, "add", row_at, 8)
+        add 1 to k
+    end
+    alu(a, "add", r13, r12)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, terms_loop)
+    mov_rr(a, r8, rsi) # out's 4 by 4 from row i, column j
+    imul_rr(a, r8, rbx)
+    alu_load(a, "add", r8, kernel_input(16))
+    mov_rr(a, rdx, rdi)
+    shifti(a, "shl", rdx, 3)
+    alu(a, "add", r8, rdx)
+    for each k from 0 to 3
+        vmovupd_store(a, mem(r8, 0), 8 + 2 * k)
+        vmovupd_store(a, mem(r8, 32), 9 + 2 * k)
+        alu(a, "add", r8, rbx)
+    end
+    alui(a, "add", rsi, 4)
+    jmp_to(a, rows_loop)
+    mark(a, rows_done)
+    alui(a, "add", rdi, 8)
+    jmp_to(a, cols_loop)
+    mark(a, cols_done)
+    vzeroupper(a) # back to SSE without the processor's slow change over
     alu_load(a, "add", rsp, kernel_input(9)) # the copy's room back
     for each k from 0 to 7
         movdqu_load(a, 8 + k, mem(rsp, 16 * k))
@@ -38474,10 +39411,19 @@ to emit_kernel_matmul with a, target
     load(a, rax, kernel_input(4)) # m and n, down to fours
     alui(a, "and", rax, -4)
     store(a, kernel_input(11), rax)
-    load(a, rax, kernel_input(6))
-    alui(a, "and", rax, -4)
-    store(a, kernel_input(12), rax)
-    matmul_blocks(a)
+    set by_sse to new_label(a)
+    set widths_set to new_label(a)
+    avx_check(a)
+    load(a, rcx, kernel_input(6))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ne, by_sse)
+    alui(a, "and", rcx, -8) # with AVX: n down to eights
+    jmp_to(a, widths_set)
+    mark(a, by_sse)
+    alui(a, "and", rcx, -4)
+    mark(a, widths_set)
+    store(a, kernel_input(12), rcx)
+    matmul_on_cores(a, target)
     # the rest, a term at a time: the columns past the fours for the rows in fours, then the rows past them
     matmul_rest(a, 0, 11, 12)
     matmul_rest(a, 11, 0, 0)

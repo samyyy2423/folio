@@ -610,7 +610,9 @@ bytes and dictionaries:
   OpenBLAS where it's installed.
 - [`learn.folio`](tools/learn.folio) trains networks as PyTorch does: matrices on the graphics card (or on the
   processor), `backward(loss)` for every parameter's gradient, layers, `sgd` and `adam`. A digit reader learns
-  10 rounds of 6,000 drawings in a quarter of a second on a GTX 1650, faster than PyTorch on the same card.
+  10 rounds of 6,000 drawings in a ninth of a second on a GTX 1650, 4 times as fast as PyTorch on the same card.
+  It has a GPT's parts too, embeddings, layer norm, GELU and attention, and keeps weights in safetensors files:
+  [gpt.folio](gpt.folio) trains a small GPT on this README as well as PyTorch's same model does, 3 times as fast.
 - [`gpu.folio`](tools/gpu.folio) works on numbers on an NVIDIA graphics card, through CUDA's driver: `gpu's
   upload(numbers)`, then `plus`, `times`, `relu`, `exp`, `matmul` and `sum` there, thousands at once, and
   `gpu's download` to bring them back; a 2,048 by 2,048 matrix multiply 270 times as fast as on the processor.

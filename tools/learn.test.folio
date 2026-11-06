@@ -105,6 +105,74 @@ to test_gradients
     check_gradients(loss_squares, (list of "a", "b"), list of (list of (list of 1, 2), (list of -1, 0.5)), (list of (list of 0.3, -2), (list of 4, 1)))
 end
 
+to loss_embedding with ps
+    set target to learn's matrix(list of (list of 1, 0, 2), (list of 0.5, 1, -1), (list of 2, 2, 0), (list of 1, 0, 2))
+    return learn's mean_squared_error(learn's embedding(item 1 of ps, list of 2, 0, 2, 1), target)
+end
+
+to loss_gelu with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5), (list of 3, 1, -1))
+    return learn's sum(learn's times(learn's gelu(item 1 of ps), w))
+end
+
+to loss_layer_norm with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5, 2), (list of 3, 1, -1, 0.25), (list of -1, 1, 2, 1))
+    return learn's sum(learn's times(learn's layer_norm(item 1 of ps, item 2 of ps, item 3 of ps), w))
+end
+
+to loss_attention with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5, 2), (list of 3, 1, -1, 0.25), (list of -1, 1, 2, 1),
+        (list of 0.5, 0.5, -2, 1), (list of 2, -1, 1, 1), (list of -0.5, 1.5, 1, -1))
+    return learn's sum(learn's times(learn's attention(item 1 of ps, item 2 of ps, item 3 of ps, 2, 3, 2), w))
+end
+
+to test_transformer_gradients
+    learn's use_card(no)
+    check_gradients(loss_embedding, (list of "table"), list of (list of (list of 0.1, 0.2, 0.3), (list of -1, 0.5, 2), (list of 1, 1, 1)))
+    check_gradients(loss_gelu, (list of "x"), list of (list of (list of 0.3, -1.2, 2), (list of 0.01, 1, -0.4)))
+    check_gradients(loss_layer_norm, (list of "x", "gamma", "beta"), list of (list of (list of 1, 2, 4, -1), (list of 0.5, -0.5, 3, 2), (list of 2, 0, 1, 1.5)),
+        (list of (list of 1, 0.5, 2, 1)), (list of (list of 0, 0.1, -0.2, 0.3)))
+    set qkv to list of (list of 0.1, 0.4, -0.3, 0.2), (list of 0.5, -0.1, 0.2, 0.3), (list of -0.2, 0.3, 0.4, -0.5),
+        (list of 0.3, 0.2, -0.1, 0.6), (list of -0.4, 0.1, 0.5, 0.2), (list of 0.2, -0.3, 0.1, 0.4)
+    check_gradients(loss_attention, (list of "q", "k", "v"), list of qkv, qkv, qkv)
+    # each place sees only the places up to it: the first place's output is the first v's own, in each batch
+    set q to learn's matrix(qkv)
+    set out to learn's rows_of(learn's attention(q, q, q, 2, 3, 2))
+    expect item 1 of out is item 1 of qkv
+    expect item 4 of out is item 4 of qkv
+end
+
+# a network's parameters saved to a safetensors file and put back, and a file's header as the format has it
+to test_saving
+    learn's use_card(no)
+    set net to learn's network(list of 3, 4, 2)
+    set named to learn's named_parameters(net)
+    expect keys of named is list of "1.weights", "1.bias", "2.weights", "2.bias"
+    set w to item "1.weights" of named
+    set kept to learn's numbers_of(w)
+    learn's save(named, "weights.safetensors")
+    set back to learn's load("weights.safetensors")
+    expect keys of back is keys of named
+    expect learn's shape_of(item "1.weights" of back) is list of 3, 4
+    expect learn's shape_of(item "2.bias" of back) is list of 1, 2
+    set got to learn's numbers_of(item "1.weights" of back)
+    for each i from 1 to length of kept
+        set off to item i of got - item i of kept
+        if off is less than 0
+            set off to -off
+        end
+        expect off is less than 0.000001
+    end
+    set other to learn's network(list of 3, 4, 2)
+    learn's load_into(learn's named_parameters(other), "weights.safetensors")
+    expect learn's numbers_of(item "1.weights" of learn's named_parameters(other)) is got
+    set raw to read bytes "weights.safetensors"
+    set n to byte 1 of raw + 256 * byte 2 of raw
+    expect ((n / 8) rounded down) * 8 is n
+    set first to "\{\"1.weights\":\{\"dtype\":\"F32\",\"shape\":[3,4],\"data_offsets\":[0,48]}"
+    expect ((items 9 to (8 + length of first) of raw) as text) is first
+end
+
 # a network learns XOR, which no straight line can
 to test_training
     learn's use_card(no)
