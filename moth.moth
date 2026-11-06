@@ -1603,9 +1603,14 @@ end
 # anywhere.
 
 # git, run with these arguments, keeping what it says; or nothing, said why, if it can't be started. On
-# Windows a package's files can be deeper than 260 characters, which git takes only when told to.
+# Windows a package's files can be deeper than 260 characters, which git takes only when told to. A package's own
+# .git can't make it run a command: no hooks, no fsmonitor, no ext:: (1.11.1)
 to cli_git with cli_git_args
     set cli_all_args to list of "-c", "core.longpaths=true"
+    for each cli_safe in list of "core.hooksPath=/dev/null", "core.fsmonitor=false", "protocol.ext.allow=never"
+        add "-c" to cli_all_args
+        add cli_safe to cli_all_args
+    end
     for each cli_arg in cli_git_args
         add cli_arg to cli_all_args
     end
@@ -1652,9 +1657,10 @@ to cli_is_file with cli_path
     end
 end
 
-# a package's name: letters, digits, '-', '_' and '.', as `use the package` takes
+# a package's name: letters, digits, '-', '_' and '.', as `use the package` takes, and not ending in '.', which
+# Windows drops: packages/... would be packages/ itself
 to cli_package_name with cli_name
-    if cli_name is "" or cli_name is "." or cli_name is ".."
+    if cli_name is "" or item (length of cli_name) of cli_name is "."
         return no
     end
     for each cli_c in cli_name
@@ -1685,8 +1691,44 @@ to cli_package_name_of with cli_source
     return cli_last
 end
 
-# moth.packages, read: a record of each line's name, source and commit, or nothing if there isn't one
+# whether a text is a commit, as git names one: 40 hex digits, or 64
+to cli_is_commit with cli_commit
+    if length of cli_commit is not 40 and length of cli_commit is not 64
+        return no
+    end
+    for each cli_c in cli_commit
+        if not (cli_c is in "0123456789abcdefABCDEF")
+            return no
+        end
+    end
+    return yes
+end
+
+# why moth won't take a package as given, or nothing if it will (1.11.1): a name that isn't one (../x is a
+# folder outside packages/, which get or remove would take away), where it comes from or its version starting
+# with '-', which git would take for one of its options, or a commit that isn't one. cli_commit is nothing for
+# moth add, which finds the commit
+to cli_package_fault with cli_name, cli_source, cli_commit
+    if not cli_package_name(cli_name)
+        return "that can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.')"
+    end
+    if cli_source is "" or item 1 of cli_source is "-"
+        return "where it comes from, '" + cli_source + "', starts with '-', as git's options do"
+    end
+    set cli_ref to ref of cli_source_and_ref(cli_source)
+    if cli_ref is not nothing and item 1 of cli_ref is "-"
+        return "its version, '" + cli_ref + "', starts with '-', as git's options do"
+    end
+    if cli_commit is not nothing and not cli_is_commit(cli_commit)
+        return "its commit, '" + cli_commit + "', isn't one: a commit is 40 hex digits, or 64"
+    end
+    return nothing
+end
+
+# moth.packages, read: a record of each line's name, source and commit, or nothing if there isn't one, or no,
+# said why, if it lists a package moth won't take
 to cli_package_list
+    set cli_whose to "moth.packages"
     set cli_text to nothing
     try
         set cli_text to read "moth.packages"
@@ -1708,6 +1750,11 @@ to cli_package_list
                     add " " to cli_from
                 end
                 add item cli_k of cli_words to cli_from
+            end
+            set cli_fault to cli_package_fault(item 1 of cli_words, cli_from, item (length of cli_words) of cli_words)
+            if cli_fault is not nothing
+                say "moth: " + cli_whose + " lists " + item 1 of cli_words + ", which moth won't use: " + cli_fault to the error output
+                return no
             end
             add record with name item 1 of cli_words, source cli_from, commit item (length of cli_words) of cli_words to cli_list
         end
@@ -1740,7 +1787,7 @@ end
 to cli_fetch with cli_name, cli_source, cli_commit
     set cli_dir to "packages/" + cli_name
     set cli_split to cli_source_and_ref(cli_source)
-    set cli_answer to cli_git(list of "clone", "--quiet", place of cli_split, cli_dir)
+    set cli_answer to cli_git(list of "clone", "--quiet", "--", place of cli_split, cli_dir)
     if cli_answer is nothing
         return nothing
     end
@@ -1755,6 +1802,7 @@ to cli_fetch with cli_name, cli_source, cli_commit
         end
         if code of cli_answer is not 0
             say "moth: " + place of cli_split + " has no tag, branch or commit called " + ref of cli_split + ": " + cli_git_said(cli_answer) to the error output
+            cli_remove_folder(cli_dir)
             return nothing
         end
     end
@@ -1765,6 +1813,7 @@ to cli_fetch with cli_name, cli_source, cli_commit
         end
         if code of cli_answer is not 0
             say "moth: " + cli_name + "'s commit " + cli_commit + " isn't in " + cli_source + ": " + cli_git_said(cli_answer) to the error output
+            cli_remove_folder(cli_dir)
             return nothing
         end
     end
@@ -1977,10 +2026,18 @@ to cli_add with cli_given, cli_named
         set cli_name to cli_package_name_of(place of cli_source_and_ref(cli_source))
     end
     if not cli_package_name(cli_name)
-        say "moth: '" + cli_name + "' can't be a package's name (letters, digits, '-', '_' and '.' make one): give it one, as in moth add " + cli_given + " thing" to the error output
+        say "moth: '" + cli_name + "' can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.'): give it one, as in moth add " + cli_given + " thing" to the error output
+        return 1
+    end
+    set cli_fault to cli_package_fault(cli_name, cli_source, nothing)
+    if cli_fault is not nothing
+        say "moth: moth won't add " + cli_given + ": " + cli_fault to the error output
         return 1
     end
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         set cli_list to empty list
     end
@@ -2019,7 +2076,12 @@ to cli_add with cli_given, cli_named
             set cli_needs to nothing
         end
         if cli_needs is not nothing
-            for each cli_need in cli_needs_of(cli_needs)
+            set cli_needed to cli_needs_of(cli_needs, "packages/" + cli_needing + "/moth.packages")
+            if cli_needed is no
+                set cli_failed to yes
+                set cli_needed to empty list
+            end
+            for each cli_need in cli_needed
                 set cli_have to no
                 for each cli_one in cli_list
                     if name of cli_one is name of cli_need
@@ -2046,8 +2108,9 @@ to cli_add with cli_given, cli_named
     return 0
 end
 
-# the packages a package's own moth.packages lists, as cli_package_list reads them
-to cli_needs_of with cli_text
+# the packages a package's own moth.packages lists, as cli_package_list reads them, or no, said why, if it lists
+# one moth won't take; cli_whose is the file, for that
+to cli_needs_of with cli_text, cli_whose
     set cli_list to empty list
     for each cli_line in cli_text_lines(cli_text)
         set cli_words to empty list
@@ -2064,6 +2127,11 @@ to cli_needs_of with cli_text
                 end
                 add item cli_k of cli_words to cli_from
             end
+            set cli_fault to cli_package_fault(item 1 of cli_words, cli_from, item (length of cli_words) of cli_words)
+            if cli_fault is not nothing
+                say "moth: " + cli_whose + " lists " + item 1 of cli_words + ", which moth won't use: " + cli_fault to the error output
+                return no
+            end
             add record with name item 1 of cli_words, source cli_from, commit item (length of cli_words) of cli_words to cli_list
         end
     end
@@ -2073,6 +2141,9 @@ end
 # `moth get`: every package listed, fetched or moved to its commit
 to cli_get
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         say "moth: there's no moth.packages here: moth add <git repository> adds a package" to the error output
         return 1
@@ -2097,6 +2168,9 @@ end
 # `moth update [name]`: every package, or the one named, moved to the newest commit where it comes from
 to cli_update with cli_named
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         say "moth: there's no moth.packages here: moth add <git repository> adds a package" to the error output
         return 1
@@ -2158,6 +2232,9 @@ end
 # `moth remove <name>`: the package's folder gone, and its line
 to cli_remove_package with cli_named
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing
         set cli_list to empty list
     end
@@ -2183,6 +2260,9 @@ end
 # `moth packages`: each, its commit, where it comes from, and whether it's been fetched
 to cli_list_packages
     set cli_list to cli_package_list()
+    if cli_list is no
+        return 1
+    end
     if cli_list is nothing or length of cli_list is 0
         say "no packages: moth add <git repository> adds one"
         return 0

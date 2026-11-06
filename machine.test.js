@@ -537,7 +537,7 @@ test("moth add, update, get and remove keep packages/ and moth.packages, and use
   // mistakes
   assert.deepEqual(moth(other, "add", "../shout"), ["", "moth: there's a package called shout here already: moth update shout moves it to its newest\n", 1]);
   assert.deepEqual(moth(other, "add", "../shout", "bad/name"),
-    ["", "moth: 'bad/name' can't be a package's name (letters, digits, '-', '_' and '.' make one): give it one, as in moth add ../shout thing\n", 1]);
+    ["", "moth: 'bad/name' can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.'): give it one, as in moth add ../shout thing\n", 1]);
   const nowhere = moth(other, "add", "../nowhere");
   assert.equal(nowhere[2], 1);
   assert.match(nowhere[1], /^moth: git couldn't fetch \.\.\/nowhere: /);
@@ -549,6 +549,95 @@ test("moth add, update, get and remove keep packages/ and moth.packages, and use
   assert.deepEqual(moth(other, "remove", "greet"), ["removed greet\n", "", 0]);
   assert.deepEqual(readdirSync(join(other, "packages")), ["shout"]);
   assert.deepEqual(moth(other, "packages"), [`shout at ${shouting.slice(0, 7)}, from ../shout\n`, "", 0]);
+});
+
+// What a moth.packages, a program's or a package's own, can't make moth do (1.11.1): take away a folder
+// outside packages/, give git an option, which --upload-pack makes a command, or have git run a hook a
+// package's .git has
+test("moth won't take a package whose name, source or commit would reach outside packages/ or into git's options", { skip: skip || (gitHere ? false : "there's no git") }, () => {
+  const { exe } = mothExe();
+  const root = mkdtempSync(join(tmpdir(), "moth-guarded-"));
+  const git = (cwd, ...args) => {
+    const done = spawnSync("git", ["-c", "user.name=moth", "-c", "user.email=moth@example.com", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+    assert.equal(done.status, 0, done.stderr);
+    return done.stdout.trim();
+  };
+  const moth = (cwd, ...args) => {
+    const done = spawnSync(exe, args, { cwd, encoding: "utf8", timeout: 120_000 });
+    return [done.stdout, done.stderr, done.status];
+  };
+  try {
+    const lib = join(root, "kind");
+    mkdirSync(lib);
+    writeFileSync(join(lib, "kind.moth"), 'set word to "one"\n');
+    git(lib, "init", "-q");
+    git(lib, "add", ".");
+    git(lib, "commit", "-qm", "one");
+    const one = git(lib, "rev-parse", "HEAD");
+    writeFileSync(join(lib, "kind.moth"), 'set word to "two"\n');
+    git(lib, "commit", "-qam", "two");
+    const two = git(lib, "rev-parse", "HEAD");
+    mkdirSync(join(root, "precious"));
+    writeFileSync(join(root, "precious", "keep.txt"), "keep");
+    const marker = join(root, "ran.txt").replace(/\\/g, "/");
+
+    // a program's moth.packages: each line refused, by every command that reads it, and nothing done
+    const app = join(root, "app");
+    mkdirSync(join(app, "packages"), { recursive: true });
+    git(root, "clone", "-q", "--bare", lib, join(app, "packages", "kind.git")); // what git clone ... packages/kind would find
+    const notName = "that can't be a package's name (letters, digits, '-', '_' and '.' make one, not ending in '.')";
+    const option = `--upload-pack=sh -c 'echo x > ${marker}'`;
+    for (const [line, name, why] of [
+      [`../../precious ../kind ${one}`, "../../precious", notName],
+      [`... ../kind ${one}`, "...", notName],
+      [`kind ${option} ${one}`, "kind", `where it comes from, '${option}', starts with '-', as git's options do`],
+      [`kind ../kind@--detach ${one}`, "kind", "its version, '--detach', starts with '-', as git's options do"],
+      [`kind ../kind --orphan=x`, "kind", "its commit, '--orphan=x', isn't one: a commit is 40 hex digits, or 64"],
+    ]) {
+      writeFileSync(join(app, "moth.packages"), line + "\n");
+      const said = `moth: moth.packages lists ${name}, which moth won't use: ${why}\n`;
+      for (const command of [["get"], ["update"], ["packages"], ["remove", name]]) assert.deepEqual(moth(app, ...command), ["", said, 1], `${command[0]}: ${line}`);
+    }
+    assert.equal(readFileSync(join(root, "precious", "keep.txt"), "utf8"), "keep");
+    assert.equal(existsSync(marker), false);
+    assert.deepEqual(readdirSync(join(app, "packages")), ["kind.git"]);
+
+    // moth add's source and version, checked as a line is
+    rmSync(join(app, "moth.packages"));
+    assert.deepEqual(moth(app, "add", "../kind@-x", "kind"), ["", "moth: moth won't add ../kind@-x: its version, '-x', starts with '-', as git's options do\n", 1]);
+    assert.deepEqual(moth(app, "add", "--template=../kind", "kind"), ["", "moth: moth won't add --template=../kind: where it comes from, '--template=../kind', starts with '-', as git's options do\n", 1]);
+    assert.deepEqual(readdirSync(join(app, "packages")), ["kind.git"]);
+
+    // a package's own moth.packages: what it lists that moth won't take isn't fetched, and moth add says so
+    const evil = join(root, "evil");
+    mkdirSync(evil);
+    writeFileSync(join(evil, "evil.moth"), 'set word to "evil"\n');
+    writeFileSync(join(evil, "moth.packages"), `../../outside ../kind ${one}\n`);
+    git(evil, "init", "-q");
+    git(evil, "add", ".");
+    git(evil, "commit", "-qm", "evil");
+    const using = join(root, "using");
+    mkdirSync(using);
+    assert.deepEqual(moth(using, "add", "../evil"), [`added evil at ${git(evil, "rev-parse", "HEAD").slice(0, 7)}, from ../evil\n`,
+      `moth: packages/evil/moth.packages lists ../../outside, which moth won't use: ${notName}\n`, 1]);
+    assert.equal(existsSync(join(root, "outside")), false);
+
+    // a hook in a package's .git: git runs it, and moth's git doesn't
+    const hooked = join(root, "hooked");
+    mkdirSync(hooked);
+    assert.equal(moth(hooked, "add", "../kind")[2], 0);
+    const hook = join(hooked, "packages", "kind", ".git", "hooks", "post-checkout");
+    writeFileSync(hook, `#!/bin/sh\necho ran > "${marker}"\n`);
+    chmodSync(hook, 0o755);
+    git(join(hooked, "packages", "kind"), "checkout", "-q", "-f", one); // -f: 1.11 clones with the system's line ends
+    assert.equal(existsSync(marker), true, "git itself runs the hook");
+    rmSync(marker);
+    assert.deepEqual(moth(hooked, "get"), [`kind at ${two.slice(0, 7)}\n`, "", 0]);
+    assert.equal(existsSync(marker), false, "moth's git doesn't");
+    assert.equal(git(join(hooked, "packages", "kind"), "rev-parse", "HEAD"), two);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 // moth build --web: a page holding the program and the files it uses (math.moth from the standard library),
