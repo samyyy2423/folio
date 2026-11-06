@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>memory.folio · Folio's standard library</title>
+  <meta name="description" content="Memory as C has it: numbers kept as C keeps them, in bytes or in memory of the program's own, outside the collector, for file formats, what goes over a…">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
+      <a class="go" href="../#playground">Playground</a>
+      <a class="go" href="../learn.html">Learn</a>
+      <a class="go" href="../docs/" aria-current="page">Docs</a>
+      <a class="go" href="../docs/cookbook/">Cookbook</a>
+      <a class="go" href="../docs/examples.html">Examples</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The standard library</a></p>
+      <h1><em>memory</em>.folio</h1>
+      <p>Memory as C has it: numbers kept as C keeps them, in bytes or in memory of the program's own, outside the collector, for file formats, what goes over a…</p>
+      <p class="use"><code>use "memory.folio" as memory</code></p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="memory.folio's functions">
+      <h2>12 functions</h2>
+      <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
+      <ol id="toc"><li><a href="#get">get</a></li><li><a href="#put">put</a></li><li><a href="#get_many">get_many</a></li><li><a href="#put_many">put_many</a></li><li><a href="#size_of">size_of</a></li><li><a href="#size">size</a></li><li><a href="#take">take</a></li><li><a href="#give_back">give_back</a></li><li><a href="#address_of">address_of</a></li><li><a href="#block_at">block_at</a></li><li><a href="#copy">copy</a></li><li><a href="#fill">fill</a></li></ol>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio">The source</a></p>
+    </nav>
+    <main>
+      <section class="about">
+        <h2>What it's for</h2>
+          <p>Memory as C has it: numbers kept as C keeps them, in bytes or in memory of the program's own, outside the collector, for file formats, what goes over a network, a model's weights and what a C library hands back. A kind of number is named as a library's line names it: &quot;a byte&quot;, &quot;a signed byte&quot;, &quot;a short whole number&quot;, &quot;an unsigned short whole number&quot;, &quot;a whole number&quot;, &quot;an unsigned whole number&quot;, &quot;a long whole number&quot;, &quot;an unsigned long whole number&quot;, &quot;a pointer&quot;, &quot;a float&quot; and &quot;a number&quot; (C's double). Places count from 1, as bytes' do.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+memory's put(b, <span class="n">1</span>, -<span class="n">2</span>, <span class="s">&quot;a whole number&quot;</span>)                <span class="c"># 4 bytes, as C keeps an int</span>
+<span class="k">say</span> b                                                   <span class="c"># (16 bytes: 254, 255, 255, 255, 0, ...)</span>
+<span class="k">say</span> memory's get(b, <span class="n">1</span>, <span class="s">&quot;a whole number&quot;</span>)                <span class="c"># -2</span>
+<span class="k">say</span> memory's get(b, <span class="n">1</span>, <span class="s">&quot;an unsigned whole number&quot;</span>)      <span class="c"># 4294967294: the same bytes, read unsigned</span>
+memory's put(b, <span class="n">5</span>, <span class="n">0.1</span>, <span class="s">&quot;a float&quot;</span>)                      <span class="c"># rounded to the nearest float, as C rounds it</span>
+<span class="k">say</span> memory's get(b, <span class="n">5</span>, <span class="s">&quot;a float&quot;</span>)                       <span class="c"># 0.100000001490116</span>
+memory's put(b, <span class="n">9</span>, <span class="n">258</span>, <span class="s">&quot;a short whole number&quot;</span>, <span class="s">&quot;big&quot;</span>)  <span class="c"># biggest byte first, as networks send them: 1, 2</span>
+memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), <span class="s">&quot;a short whole number&quot;</span>)
+<span class="k">say</span> memory's get_many(b, <span class="n">1</span>, <span class="n">3</span>, <span class="s">&quot;a short whole number&quot;</span>)  <span class="c"># [1, 2, 3]</span>
+<span class="k">say</span> memory's size_of(<span class="s">&quot;a long whole number&quot;</span>)             <span class="c"># 8</span>
+
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">4096</span>)          <span class="c"># 4,096 bytes of the program's own, outside the collector, all 0</span>
+memory's put(block, <span class="n">1</span>, <span class="n">7</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's copy(b, <span class="n">1</span>, block, <span class="n">9</span>, <span class="n">16</span>)         <span class="c"># 16 bytes, from b's 1st on to block's 9th on</span>
+memory's fill(block, <span class="n">100</span>, <span class="n">8</span>, <span class="n">255</span>)         <span class="c"># 8 bytes from the 100th on, each 255</span>
+<span class="k">say</span> memory's address_of(block)            <span class="c"># where it is, for a library's `a pointer`</span>
+memory's give_back(block)                 <span class="c"># its memory back to the system; using it after is a mistake</span></code></pre></div>
+          <p>Every place is checked against the memory's size, and every number against its kind: a whole number in its kind's range, or a <code>fail with</code> that says so. <a href="#get_many">get_many</a> and <a href="#put_many">put_many</a> take a list of numbers in one go. <a href="#size">size</a>(m) is how many bytes m has, and <a href="#block_at">block_at</a>(address, size) is memory a C library gave as a block, which <a href="#give_back">give_back</a> doesn't take. &quot;little&quot;, the order every computer Folio runs on keeps numbers in, can be said too.</p>
+          <p>In a program <code>folio build</code> makes, get, put and their many go through a loop of Folio's own in machine code (DESIGN §160), and take, <a href="#give_back">give_back</a>, copy and fill through the system's C library (msvcrt on Windows, libc on Linux), so such a program is run or built with --allow-libraries to take memory. On the JavaScript engines, which have no memory but the collector's, a block is bytes, and <a href="#address_of">address_of</a> and <a href="#block_at">block_at</a> are a <code>fail with</code>. A block's memory is the program's until give_back, however long that is, and an address that isn't one, given to block_at, can crash the program, as in C.</p>
+      </section>
+      <section class="fns">
+        <h2>Functions</h2>
+        <section class="fn" id="get">
+          <h3><a href="#get"><code>memory's get(m, place, number_kind, order)</code></a></h3>
+          <p>the number at the place, of the kind</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to get with m, place, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L96">memory.folio line 96</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+<span class="k">say</span> memory's get(b, <span class="n">1</span>, <span class="s">&quot;a whole number&quot;</span>)                <span class="c"># -2</span></code></pre><pre class="says"><code>0</code></pre></div>
+        </section>
+        <section class="fn" id="put">
+          <h3><a href="#put"><code>memory's put(m, place, value, number_kind, order)</code></a></h3>
+          <p>the number put at the place, as the kind</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>value</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to put with m, place, value, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L103">memory.folio line 103</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+memory's put(b, <span class="n">1</span>, -<span class="n">2</span>, <span class="s">&quot;a whole number&quot;</span>)
+<span class="k">say</span> <span class="k">items</span> <span class="n">1</span> <span class="k">to</span> <span class="n">4</span> <span class="k">of</span> b</code></pre><pre class="says"><code>(4 bytes: 254, 255, 255, 255)</code></pre></div>
+        </section>
+        <section class="fn" id="get_many">
+          <h3><a href="#get_many"><code>memory's get_many(m, place, count, number_kind, order)</code></a></h3>
+          <p>a list of count numbers of the kind, one after another from the place on</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>count</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to get_many with m, place, count, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L110">memory.folio line 110</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+<span class="k">say</span> memory's get_many(b, <span class="n">1</span>, <span class="n">3</span>, <span class="s">&quot;a short whole number&quot;</span>)  <span class="c"># [1, 2, 3]</span></code></pre><pre class="says"><code>[0, 0, 0]</code></pre></div>
+        </section>
+        <section class="fn" id="put_many">
+          <h3><a href="#put_many"><code>memory's put_many(m, place, numbers, number_kind, order)</code></a></h3>
+          <p>a list's numbers put one after another from the place on, as the kind</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>numbers</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to put_many with m, place, numbers, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L120">memory.folio line 120</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">40</span> <span class="k">bytes</span>
+memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, -<span class="n">2</span>, <span class="n">3</span>, -<span class="n">4</span>, <span class="n">5</span>), <span class="s">&quot;a short whole number&quot;</span>)
+<span class="k">say</span> memory's get_many(b, <span class="n">1</span>, <span class="n">5</span>, <span class="s">&quot;a short whole number&quot;</span>)</code></pre><pre class="says"><code>[1, -2, 3, -4, 5]</code></pre></div>
+        </section>
+        <section class="fn" id="size_of">
+          <h3><a href="#size_of"><code>memory's size_of(number_kind)</code></a></h3>
+          <p>how many bytes a kind of number takes</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>number_kind</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to size_of with number_kind</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L130">memory.folio line 130</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">say</span> memory's size_of(<span class="s">&quot;a long whole number&quot;</span>)             <span class="c"># 8</span></code></pre><pre class="says"><code>8</code></pre></div>
+        </section>
+        <section class="fn" id="size">
+          <h3><a href="#size"><code>memory's size(m)</code></a></h3>
+          <p>how many bytes there are: of bytes, or of a block</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to size with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L135">memory.folio line 135</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+memory's put(b, <span class="n">1</span>, -<span class="n">2</span>, <span class="s">&quot;a whole number&quot;</span>)
+memory's put(b, <span class="n">5</span>, <span class="n">258</span>, <span class="s">&quot;a short whole number&quot;</span>, <span class="s">&quot;big&quot;</span>)
+memory's put(b, <span class="n">9</span>, -<span class="n">1</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's put(b, <span class="n">9</span>, <span class="n">2</span> <span class="k">to</span> the <span class="k">power</span> <span class="k">of</span> <span class="n">53</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's put(b, <span class="n">9</span>, -(<span class="n">2</span> <span class="k">to</span> the <span class="k">power</span> <span class="k">of</span> <span class="n">63</span>), <span class="s">&quot;a long whole number&quot;</span>)
+memory's put(b, <span class="n">9</span>, <span class="n">2</span> <span class="k">to</span> the <span class="k">power</span> <span class="k">of</span> <span class="n">63</span>, <span class="s">&quot;an unsigned long whole number&quot;</span>)
+memory's put(b, <span class="n">9</span>, <span class="n">305419896</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;big&quot;</span>)
+<span class="k">say</span> memory's size(b)</code></pre><pre class="says"><code>16</code></pre></div>
+        </section>
+        <section class="fn" id="take">
+          <h3><a href="#take"><code>memory's take(n)</code></a></h3>
+          <p>a block of n bytes, outside the collector, each 0, until it's given back</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to take with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L142">memory.folio line 142</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">64</span>)
+<span class="k">say</span> block</code></pre><pre class="says"><code>(a block of 64 bytes)</code></pre></div>
+        </section>
+        <section class="fn" id="give_back">
+          <h3><a href="#give_back"><code>memory's give_back(block)</code></a></h3>
+          <p>the block's memory back to the system</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>block</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to give_back with block</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L158">memory.folio line 158</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">4096</span>)          <span class="c"># 4,096 bytes of the program's own, outside the collector, all 0</span>
+memory's give_back(block)                 <span class="c"># its memory back to the system; using it after is a mistake</span></code></pre></div>
+        </section>
+        <section class="fn" id="address_of">
+          <h3><a href="#address_of"><code>memory's address_of(m)</code></a></h3>
+          <p>where bytes or a block are in memory, for a library's <code>a pointer</code></p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to address_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L172">memory.folio line 172</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">4096</span>)          <span class="c"># 4,096 bytes of the program's own, outside the collector, all 0</span>
+<span class="k">say</span> memory's address_of(block)            <span class="c"># where it is, for a library's `a pointer`</span></code></pre></div>
+        </section>
+        <section class="fn" id="block_at">
+          <h3><a href="#block_at"><code>memory's block_at(address, n)</code></a></h3>
+          <p>memory a C library gave, size bytes from the address on, as a block, which <a href="#give_back">give_back</a> doesn't take</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>address</code></li><li><code>n</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to block_at with address, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L187">memory.folio line 187</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+memory's block_at(address, n)</code></pre></div>
+        </section>
+        <section class="fn" id="copy">
+          <h3><a href="#copy"><code>memory's copy(source, source_place, target, target_place, count)</code></a></h3>
+          <p>count bytes from one place to another, in the same memory or not; they may overlap</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>source</code></li><li><code>source_place</code></li><li><code>target</code></li><li><code>target_place</code></li><li><code>count</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to copy with source, source_place, target, target_place, count</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L201">memory.folio line 201</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">64</span>)
+memory's put(block, <span class="n">1</span>, <span class="n">7</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's put(block, <span class="n">9</span>, <span class="n">2.75</span>, <span class="s">&quot;a number&quot;</span>)
+memory's put_many(block, <span class="n">17</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>), <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;big&quot;</span>)
+memory's put(block, <span class="n">57</span>, <span class="n">2</span> <span class="k">to</span> the <span class="k">power</span> <span class="k">of</span> <span class="n">64</span> - <span class="n">2048</span>, <span class="s">&quot;an unsigned long whole number&quot;</span>)
+<span class="k">set</span> b <span class="k">to</span> <span class="n">8</span> <span class="k">bytes</span>
+memory's put(b, <span class="n">1</span>, <span class="n">99</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's copy(b, <span class="n">1</span>, block, <span class="n">33</span>, <span class="n">8</span>)
+<span class="k">say</span> memory's get(block, <span class="n">33</span>, <span class="s">&quot;a long whole number&quot;</span>)</code></pre><pre class="says"><code>99</code></pre></div>
+        </section>
+        <section class="fn" id="fill">
+          <h3><a href="#fill"><code>memory's fill(m, place, count, value)</code></a></h3>
+          <p>count bytes from the place on, each the value, a whole number from 0 to 255</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>count</code></li><li><code>value</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to fill with m, place, count, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L218">memory.folio line 218</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">64</span>)
+memory's put(block, <span class="n">1</span>, <span class="n">7</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's put(block, <span class="n">9</span>, <span class="n">2.75</span>, <span class="s">&quot;a number&quot;</span>)
+memory's put_many(block, <span class="n">17</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>), <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;big&quot;</span>)
+memory's put(block, <span class="n">57</span>, <span class="n">2</span> <span class="k">to</span> the <span class="k">power</span> <span class="k">of</span> <span class="n">64</span> - <span class="n">2048</span>, <span class="s">&quot;an unsigned long whole number&quot;</span>)
+<span class="k">set</span> b <span class="k">to</span> <span class="n">8</span> <span class="k">bytes</span>
+memory's put(b, <span class="n">1</span>, <span class="n">99</span>, <span class="s">&quot;a long whole number&quot;</span>)
+memory's copy(b, <span class="n">1</span>, block, <span class="n">33</span>, <span class="n">8</span>)
+memory's copy(block, <span class="n">1</span>, b, <span class="n">1</span>, <span class="n">8</span>)
+memory's fill(block, <span class="n">41</span>, <span class="n">4</span>, <span class="n">255</span>)
+<span class="k">say</span> memory's get(block, <span class="n">41</span>, <span class="s">&quot;a whole number&quot;</span>)</code></pre><pre class="says"><code>-1</code></pre></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Folio">
+      <a href="../#playground">Playground</a>
+      <a href="../learn.html">Learn</a>
+      <a href="../docs/">The standard library</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
+    </nav>
+  </footer>
+  <script>
+    // the list of functions, filtered as a name is typed
+    const filter = document.getElementById("filter");
+    filter.oninput = () => {
+      const wanted = filter.value.trim().toLowerCase();
+      for (const li of document.getElementById("toc").children) li.hidden = !li.textContent.toLowerCase().includes(wanted);
+    };
+  </script>
+</body>
+</html>

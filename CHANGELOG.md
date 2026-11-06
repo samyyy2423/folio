@@ -9,6 +9,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **Numbers on the graphics card: `gpu.folio`.** Lists of numbers go up to an NVIDIA card, are added, multiplied,
   matrix-multiplied and summed there, and come back, through CUDA's driver alone: no toolkit. A 2,048 by 2,048
   matrix multiply on a GTX 1650 takes 13 ms, where arrays.folio's machine code takes 3.5 seconds (DESIGN §158).
+- **Memory as C has it: `memory.folio`.** Numbers kept as C keeps them, in bytes or in memory of the program's
+  own outside the collector, in each of C's kinds and either byte order: `memory's put(b, 1, -2, "a whole
+  number")`, `get`, `get_many` and `put_many`, `take`, `copy`, `fill`, `address_of` and `give_back`. In a program
+  folio builds, a loop of Folio's own in machine code puts a million floats in a millisecond (DESIGN §160).
 - **Programs start sooner on Windows.** The DLLs a program uses for windows, pictures, sound and going online are
   loaded the first time it uses them, not as it starts: `folio version` takes 24 ms, not 35, as long as Windows
   takes to start a program that does nothing (DESIGN §159).

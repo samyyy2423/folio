@@ -2917,19 +2917,107 @@ test("text.folio, dates.folio, hash.folio, base64.folio, toml.folio, options.fol
   assert.equal(ran.stdout.split("\n").at(-2), "93 passed");
 });
 
-// tools/arrays.folio (DESIGN §118): its own tests, in machine code, where machine code's own loops do the work and
-// must give what Folio gives to the last bit
-test("arrays.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
+// memory.folio's own loop (DESIGN §160), on its own: each kind of number, each order, written into bytes past their
+// first and read back, against what Node's Buffer writes, and everything it won't do refused for memory.folio to say
+test("Folio's own loop for memory.folio writes and reads numbers as C keeps them, and refuses what isn't so", { skip }, () => {
+  const cases = [ // each kind's numbers: as Folio writes them, and as JavaScript has them
+    [1, [["0", 0], ["1", 1], ["200", 200], ["255", 255]], (b, v, at, big) => b.writeUInt8(v, at)],
+    [2, [["-128", -128], ["-1", -1], ["5", 5], ["127", 127]], (b, v, at, big) => b.writeInt8(v, at)],
+    [3, [["-32768", -32768], ["-2", -2], ["258", 258], ["32767", 32767]], (b, v, at, big) => big ? b.writeInt16BE(v, at) : b.writeInt16LE(v, at)],
+    [4, [["0", 0], ["258", 258], ["40000", 40000], ["65535", 65535]], (b, v, at, big) => big ? b.writeUInt16BE(v, at) : b.writeUInt16LE(v, at)],
+    [5, [["-2147483648", -2147483648], ["-2", -2], ["305419896", 305419896], ["2147483647", 2147483647]], (b, v, at, big) => big ? b.writeInt32BE(v, at) : b.writeInt32LE(v, at)],
+    [6, [["0", 0], ["1", 1], ["4000000000", 4000000000], ["4294967295", 4294967295]], (b, v, at, big) => big ? b.writeUInt32BE(v, at) : b.writeUInt32LE(v, at)],
+    [7, [["-(2 to the power of 63)", -(2 ** 63)], ["-2", -2], ["(2 to the power of 53) + 2", 2 ** 53 + 2], ["2 to the power of 62", 2 ** 62]],
+      (b, v, at, big) => big ? b.writeBigInt64BE(BigInt(v), at) : b.writeBigInt64LE(BigInt(v), at)],
+    [8, [["0", 0], ["1", 1], ["2 to the power of 53", 2 ** 53], ["(2 to the power of 63) - 1024", 2 ** 63 - 1024]],
+      (b, v, at, big) => big ? b.writeBigUInt64BE(BigInt(v), at) : b.writeBigUInt64LE(BigInt(v), at)],
+    [9, [["-1.5", -1.5], ["0.1", 0.1], ["1 / (2 to the power of 149)", 2 ** -149], ["(2 to the power of 128)", 2 ** 128]],
+      (b, v, at, big) => big ? b.writeFloatBE(v, at) : b.writeFloatLE(v, at)],
+    [10, [["-2.5", -2.5], ["0.1", 0.1], ["1 / (2 to the power of 1022) / (2 to the power of 52)", 2 ** -1074], ["2 to the power of 1023", 2 ** 1023]],
+      (b, v, at, big) => big ? b.writeDoubleBE(v, at) : b.writeDoubleLE(v, at)],
+  ];
+  const shownBytes = (b) => `(${b.length} bytes: ${[...b].join(", ")})`;
+  let source = `use the library "folio"
+    "numbers_memory" as k_bytes(a long whole number, a long whole number, a list of numbers, a long whole number, bytes, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_memory" as k_raw(a long whole number, a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+end
+use the library "msvcrt" or "c"
+    "memcpy" as address_of(bytes, bytes, a long whole number) gives a pointer
+end
+# the numbers read back, as their doubles' bytes, so each is seen to the last bit
+to as_doubles with numbers
+    set b to (8 * length of numbers) bytes
+    k_bytes(1, 10, numbers, 0, b, 0, 0, length of numbers)
+    return b
+end
+`;
+  const expected = [];
+  for (const [kind, values, write] of cases) {
+    const width = [1, 1, 2, 2, 4, 4, 8, 8, 4, 8][kind - 1];
+    source += `set values to list of 0, ${values.map(([f]) => f).join(", ")}\n`;
+    for (const big of [0, 2]) {
+      source += `set b to 34 bytes
+set wrote to k_bytes(${1 + big}, ${kind}, values, 1, b, 0, 1, 4)
+set back to list of 7, 7, 7, 7, 7, 7
+set got to k_bytes(${big}, ${kind}, back, 1, b, 0, 1, 4)
+say wrote " " got " " b " " as_doubles(back)\n`;
+      const b = Buffer.alloc(34);
+      const back = [7, 0, 0, 0, 0, 7];
+      values.forEach(([, v], i) => {
+        write(b, v, 1 + i * width, big === 2);
+        back[1 + i] = kind === 9 ? Math.fround(v) : v;
+      });
+      const doubles = Buffer.alloc(48);
+      back.forEach((v, i) => doubles.writeDoubleLE(v, 8 * i));
+      expected.push(`0 0 ${shownBytes(b)} ${shownBytes(doubles)}`);
+    }
+  }
+  source += `set b to 8 bytes
+set out to list of 0, 0
+say k_bytes(1, 1, (list of 256), 0, b, 0, 0, 1) k_bytes(1, 2, (list of -129), 0, b, 0, 0, 1) k_bytes(1, 5, (list of 1.5), 0, b, 0, 0, 1) k_bytes(1, 6, (list of -1), 0, b, 0, 0, 1)
+say k_bytes(1, 9, (list of "x"), 0, b, 0, 0, 1) k_bytes(1, 10, (list of nothing), 0, b, 0, 0, 1) k_bytes(1, 7, (list of 2 to the power of 63), 0, b, 0, 0, 1) k_bytes(1, 8, (list of -1), 0, b, 0, 0, 1)
+say k_bytes(1, 1, (list of 1, 2), 0, (1 bytes), 0, 0, 2) k_bytes(0, 1, out, 0, b, 0, 0, 3) k_bytes(0, 5, out, 0, b, 0, 6, 1) k_bytes(0, 1, out, 0, b, 0, 9, 0)
+say k_bytes(0, 11, out, 0, b, 0, 0, 1) k_bytes(0, 0, out, 0, b, 0, 0, 1) k_bytes(8, 1, out, 0, b, 0, 0, 1) k_bytes(0, 1, out, -1, b, 0, 0, 1) k_bytes(0, 1, out, 0, b, 0, 0, -1)
+k_bytes(1, 1, (list of 255, 255, 255, 255, 255, 255, 255, 255), 0, b, 0, 0, 8)
+say k_bytes(0, 8, out, 0, b, 0, 0, 1) k_bytes(0, 7, out, 0, b, 0, 0, 1) " " out
+# a NaN read is Folio's own, whatever its bits: these are nothing's
+k_bytes(1, 6, (list of 1, 0x7FF80000), 0, b, 0, 0, 2)
+set got to list of 0
+say k_bytes(0, 10, got, 0, b, 0, 0, 1) " " (item 1 of got is nothing) " " (item 1 of got is item 1 of got) " " as_doubles(got)
+k_bytes(1, 5, (list of 0x7FC00001), 0, b, 0, 0, 1)
+say k_bytes(0, 9, got, 0, b, 0, 0, 1) " " as_doubles(got)
+# memory at an address, and its size
+set at to address_of(b, b, 0)
+say k_raw(5, 5, (list of -2, 7), 0, at, 8, 0, 2) " " b
+set back to list of 0, 0
+say k_raw(4, 5, back, 0, at, 8, 0, 2) " " back
+say k_raw(6, 3, back, 0, at, 8, 6, 1) " " back
+say k_raw(5, 5, (list of 1, 2, 3), 0, at, 8, 0, 3) k_raw(4, 1, back, 0, at, 8, 8, 1) k_raw(4, 1, back, 0, at, -1, 0, 0)
+`;
+  const ran = libraryRun(source);
+  assert.deepEqual([ran.stderr, ran.status], ["", 0]);
+  assert.deepEqual(ran.stdout.split("\n"), [...expected,
+    "1111", "1111", "1111", "11111", "10 [-1, 0]",
+    `0 no no (8 bytes: 0, 0, 0, 0, 0, 0, 248, 255)`,
+    `0 (8 bytes: 0, 0, 0, 0, 0, 0, 248, 255)`,
+    "0 (8 bytes: 254, 255, 255, 255, 7, 0, 0, 0)",
+    "0 [-2, 7]", "0 [0, 7]",
+    "111", ""]);
+});
+
+// tools/arrays.folio (DESIGN §118) and tools/memory.folio (§160): their own tests, in machine code, where machine
+// code's own loops do the work and must give what Folio gives to the last bit
+test("arrays.folio, memory.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
   const { dir, exe } = folioExe();
   const sub = join(dir, "arrays");
   mkdirSync(sub);
-  for (const name of ["arrays.folio", "arrays.test.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
+  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "arrays.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "13 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "18 passed");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of

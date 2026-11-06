@@ -6706,3 +6706,43 @@ program starts, for every command, though `folio version` opens no window and go
 - **Measured** with Node's `spawnSync`, 20 runs at a time, each program run 5 times first: Git Bash takes 80 to
   180 ms to start a program itself, and Windows' virus checker looks over a program it hasn't seen in its first
   few runs.
+
+## 160. Memory as C has it: memory.folio
+
+Folio had bytes, a byte at a time, and C's kinds of number only where a library's function takes them. A file
+format, a network message, a model's weights or a structure C hands back keeps whole numbers of 8 to 64 bits,
+signed or not, floats and doubles, in either byte order, and reading one meant adding bytes up by hand.
+
+- **The kinds, by the names Folio has for them.** `get(b, place, "a short whole number")` and `put(b, place,
+  value, kind)` take the eleven names a library's line takes (`a byte` to `an unsigned long whole number`,
+  `a pointer`, `a float`, and `a number` for a double), and an order, `"little"`, as every computer Folio runs on
+  keeps numbers, or `"big"`, as networks send them. Places count from 1, as bytes' do. `get_many` and `put_many`
+  take a list at a time. No new words: it's a library (VERSIONING.md), and `read` and `write`, which are Folio's
+  own, aren't its names.
+- **Checked, as everything in Folio is.** Every place against the memory's size, and every number against its
+  kind: `'put' needs a whole number from -32768 to 32767 for a short whole number, not 40000`. A whole number is
+  the one Folio takes it for, to 15 digits (§23), as a library's whole inputs are.
+- **Memory of the program's own.** `take(n)` is a block of n bytes outside the collector, through the C library's
+  `calloc` (msvcrt on Windows, libc on Linux), all 0, until `give_back(block)` frees it; using it after is a
+  mistake, not a crash. `copy` (memmove, so they may overlap) and `fill` (memset) work on bytes and blocks alike,
+  `address_of` gives where either is, for a library's `a pointer`, and `block_at(address, size)` makes memory a C
+  library gave a block, which `give_back` won't free. That one can crash a program given an address that isn't
+  one, as C can; nothing else can. Taking memory needs `--allow-libraries`; numbers in bytes don't.
+- **Folio's own loop.** In a program `folio build` makes, `get`, `put` and their many go through `rt_k_memory`
+  (`numbers_memory` in `use the library "folio"`, §118): a loop for each of the ten kinds, each order and each
+  way, 40 in all, with `movsx`, `bswap`, `cvtss2sd` and the rest, between a list of numbers and bytes or an
+  address and its size. It checks what it's given, the list's room and the memory's, every number written, and
+  gives 1 for anything it won't do, which memory.folio then does in Folio, so its mistakes are Folio's. A NaN
+  read is made the one Folio makes: a NaN's bits can be anything, and some of them are `nothing`'s.
+- **In Folio, exactly.** On the JavaScript engines, which have no memory but the collector's, a block is bytes,
+  and every number is made from its bytes and back in Folio. Arithmetic there is the double's own, but rounding
+  and comparing go by 15 digits (§23), which can't be used for bits: a float is rounded to the nearest, ties to
+  the even one, by the double's own rounding of it plus 2^52, the exponent is found by the sign of a difference,
+  and whole numbers are split into 32-bit words by `remainder of`, which is exact for whole numbers.
+- **What it gave**, in machine code: a million floats put in 1 ms and got in 10 (most of it making the list they
+  go into; 3 the next time), and one number got or put in about 0.2 microseconds. The same in Folio on the JIT
+  takes 5.5 seconds and 1.
+- **Checked**: every kind, both orders and both ways, in bytes past their first and through an address, against
+  what Node's Buffer writes, to the bit; everything the loop refuses; a NaN with nothing's bits read as a NaN;
+  and memory.folio's own tests on every engine and in machine code, with and without the loop.
+

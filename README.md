@@ -473,6 +473,13 @@ bytes and dictionaries:
   turn so slow ones spread evenly; a `cores's work_here(work)` line after the
   functions makes a copy start on its part at once. Workers (`start work(x) on
   another core`) do the same inside one program.
+- [`memory.folio`](tools/memory.folio) keeps numbers as C does, for file
+  formats, networks and C libraries: `memory's put(b, 1, -2, "a whole
+  number")` and `get`, in each of C's kinds of number and either byte order,
+  and `get_many` and `put_many` a list at a time, a million floats in a
+  millisecond in a program folio builds. And memory of the program's own,
+  outside the collector: `take(4096)`, `copy`, `fill`, `address_of` for C,
+  and `give_back`.
 - [`sockets.folio`](tools/sockets.folio) talks over a network as Python's
   `socket` does: `connect("example.com", 80)`, `listen(9000)` and `accept`,
   `send`, `receive`, `receive_line`, `receive_all`, `finish_sending`,

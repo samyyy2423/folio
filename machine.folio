@@ -37469,7 +37469,7 @@ end
 # a NaN, a division by 0), which arrays.folio then does in Folio, so what happens is what Folio says happens.
 
 set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "numbers_matmul" is "rt_k_matmul",
-    "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert"
+    "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory"
 
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
@@ -37608,6 +37608,9 @@ to emit_kernels with a, target
     if "numbers_convert" is in used
         emit_kernel_convert(a, target)
     end
+    if "numbers_memory" is in used
+        emit_kernel_memory(a, target)
+    end
 end
 
 # rt_k_convert(op, list, bytes): a list of numbers and bytes, as C keeps numbers of other sizes, for as many
@@ -37695,6 +37698,252 @@ to emit_kernel_convert with a, target
     mark(a, refuse)
     movi(a, rax, 1)
     kernel_leave(a)
+end
+
+# rt_k_memory(op, kind, list, list_first, memory, size, byte_first, count), for tools/memory.folio (DESIGN §160):
+# `count` numbers as C keeps them, between a list, from its place list_first on (from 0), and memory, from its
+# byte byte_first on: bytes, or, with op's 4, the address of memory outside the collector and how many bytes it
+# has. op's 1 writes the list's numbers into the memory, where without it they're read into the list, and its 2
+# has them biggest byte first. kind is 1 to 8, whole numbers of 8 to 64 bits (a byte, a signed byte, a short and
+# an unsigned short, a whole number and an unsigned one, a long and an unsigned long), 9 a float and 10 a double.
+# A whole number written must be one, in its kind's range. An unsigned long from 2^63 on, read or written, is
+# left to memory.folio, as is anything else it won't do. A NaN read is made the one Folio makes, as any other
+# NaN's bits could be one of Folio's values that aren't numbers.
+set memory_kernel_kinds to list of (list of 1, no, 0, 255), (list of 1, yes, -128, 127), (list of 2, yes, -32768, 32767),
+    (list of 2, no, 0, 65535), (list of 4, yes, -2147483648, 2147483647), (list of 4, no, 0, 4294967295),
+    (list of 8, yes, 0, 0), (list of 8, no, 0, 0), (list of 4, no, 0, 0), (list of 8, no, 0, 0)
+
+to emit_kernel_memory with a, target
+    set refuse to new_label(a)
+    set done to new_label(a)
+    set from_bytes to new_label(a)
+    set have_memory to new_label(a)
+    mark(a, "rt_k_memory")
+    kernel_enter(a, target, 8)
+    load(a, rax, kernel_input(1))
+    alui(a, "cmp", rax, 7)
+    jcc(a, cc_a, refuse)
+    load(a, rax, kernel_input(2))
+    alui(a, "sub", rax, 1)
+    alui(a, "cmp", rax, 9)
+    jcc(a, cc_a, refuse)
+    for each k in list of 4, 7, 8 # the places and the count from 0 to 2^40 - 1, so no sum of them overflows
+        load(a, rax, kernel_input(k))
+        shifti(a, "shr", rax, 40)
+        test_rr(a, rax, rax)
+        jcc(a, cc_ne, refuse)
+    end
+    load(a, r8, kernel_input(3)) # the list: room for them from list_first on, and where they go
+    load(a, rax, kernel_input(4))
+    alu_load(a, "add", rax, kernel_input(8))
+    alu_load(a, "cmp", rax, mem(r8, 0))
+    jcc(a, cc_a, refuse)
+    load(a, r8, mem(r8, 16))
+    load(a, rax, kernel_input(4))
+    shifti(a, "shl", rax, 3)
+    alu(a, "add", r8, rax)
+    load(a, rax, kernel_input(1)) # the memory: r9 where it is, rdx how many bytes it has
+    alui(a, "and", rax, 4)
+    jcc(a, cc_e, from_bytes)
+    load(a, r9, kernel_input(5))
+    load(a, rdx, kernel_input(6))
+    test_rr(a, rdx, rdx)
+    jcc(a, cc_s, refuse)
+    jmp_to(a, have_memory)
+    mark(a, from_bytes)
+    load(a, rax, kernel_input(5))
+    load(a, rdx, mem(rax, 0))
+    load(a, r9, mem(rax, 8))
+    mark(a, have_memory)
+    load(a, rax, kernel_input(7)) # from byte_first on: rdx the bytes there are from there
+    alu(a, "cmp", rax, rdx)
+    jcc(a, cc_a, refuse)
+    alu(a, "sub", rdx, rax)
+    alu(a, "add", r9, rax)
+    load(a, rcx, kernel_input(8))
+    load(a, rax, kernel_input(1)) # the loop for op's 1 and 2 and the kind
+    alui(a, "and", rax, 3)
+    shifti(a, "shl", rax, 4)
+    alu_load(a, "add", rax, kernel_input(2))
+    set starts to empty list
+    for each way from 0 to 3
+        for each which from 1 to 10
+            set start to new_label(a)
+            add start to starts
+            alui(a, "cmp", rax, 16 * way + which)
+            jcc(a, cc_e, start)
+        end
+    end
+    jmp_to(a, refuse)
+    set s to 0
+    for each way from 0 to 3
+        for each which from 1 to 10
+            add 1 to s
+            mark(a, item s of starts)
+            memory_kernel_loop(a, which, (way bit and 1) is 1, (way bit and 2) is 2, refuse, done)
+        end
+    end
+    mark(a, done)
+    movi(a, rax, 0)
+    kernel_leave(a)
+    mark(a, refuse)
+    movi(a, rax, 1)
+    kernel_leave(a)
+end
+
+# one of rt_k_memory's loops: rcx numbers, r8 where the list's are, r9 where the memory's are, rdx its bytes
+to memory_kernel_loop with a, which, writes, big, refuse, done
+    set info to item which of memory_kernel_kinds
+    set width to item 1 of info
+    set loop to new_label(a)
+    mov_rr(a, rax, rcx) # the bytes they take, at most the bytes there are
+    imul_ri(a, rax, rax, width)
+    alu(a, "cmp", rax, rdx)
+    jcc(a, cc_a, refuse)
+    mark(a, loop)
+    test_rr(a, rcx, rcx)
+    jcc(a, cc_e, done)
+    if writes
+        memory_kernel_put(a, which, info, big, refuse)
+    else
+        memory_kernel_get(a, which, info, big, refuse)
+    end
+    alui(a, "add", r8, 8)
+    alui(a, "add", r9, width)
+    dec_r(a, rcx)
+    jmp_to(a, loop)
+end
+
+# the number at r9, of the kind, into the list at r8
+to memory_kernel_get with a, which, info, big, refuse
+    set width to item 1 of info
+    set has_sign to item 2 of info
+    if which is at least 9 # a float or a double: its bits, then the number
+        set made to new_label(a)
+        if which is 9
+            load32(a, rax, mem(r9, 0))
+            if big
+                bswap32(a, rax)
+            end
+            movq_xr(a, xmm0, rax)
+            cvtss2sd(a, xmm0, reg_at(xmm0))
+        else
+            load(a, rax, mem(r9, 0))
+            if big
+                bswap64(a, rax)
+            end
+            movq_xr(a, xmm0, rax)
+        end
+        ucomisd(a, xmm0, reg_at(xmm0))
+        jcc(a, cc_np, made)
+        movi64(a, rax, list of 0, 0, 0, 0, 0, 0, 0xF8, 0xFF)
+        movq_xr(a, xmm0, rax)
+        mark(a, made)
+    else
+        if width is 1
+            if has_sign
+                movsx8_load(a, rax, mem(r9, 0))
+            else
+                load8(a, rax, mem(r9, 0))
+            end
+        else if width is 2
+            load16(a, rax, mem(r9, 0))
+            if big
+                bswap32(a, rax)
+                shifti(a, "shr", rax, 16)
+            end
+            if has_sign
+                movsx16(a, rax, rax)
+            end
+        else if width is 4
+            load32(a, rax, mem(r9, 0))
+            if big
+                bswap32(a, rax)
+            end
+            if has_sign
+                movsxd(a, rax, rax)
+            end
+        else
+            load(a, rax, mem(r9, 0))
+            if big
+                bswap64(a, rax)
+            end
+            if not has_sign # from 2^63 on, left to memory.folio
+                test_rr(a, rax, rax)
+                jcc(a, cc_s, refuse)
+            end
+        end
+        cvtsi2sd(a, xmm0, rax)
+    end
+    movsd_store(a, mem(r8, 0), xmm0)
+end
+
+# the list's number at r8, which must be one, into the memory at r9 as the kind
+to memory_kernel_put with a, which, info, big, refuse
+    set width to item 1 of info
+    load(a, rax, mem(r8, 0))
+    mov_rr(a, r10, rax)
+    movi64(a, r11, bits_nothing)
+    alu(a, "sub", r10, r11)
+    alui(a, "cmp", r10, 3)
+    jcc(a, cc_b, refuse)
+    mov_rr(a, r10, rax)
+    shifti(a, "shr", r10, 48)
+    alui(a, "cmp", r10, kind_text)
+    jcc(a, cc_ae, refuse)
+    if which is 10
+        if big
+            bswap64(a, rax)
+        end
+        store(a, mem(r9, 0), rax)
+    else if which is 9 # rounded to the nearest float, as C rounds it
+        movq_xr(a, xmm0, rax)
+        cvtsd2ss(a, xmm0, xmm0)
+        movq_rx(a, rax, xmm0)
+        if big
+            bswap32(a, rax)
+        end
+        store32(a, mem(r9, 0), rax)
+    else # whole, and in the kind's range
+        movq_xr(a, xmm0, rax)
+        cvttsd2si(a, rax, xmm0)
+        cvtsi2sd(a, xmm1, rax)
+        ucomisd(a, xmm0, reg_at(xmm1))
+        jcc(a, cc_ne, refuse)
+        jcc(a, cc_p, refuse)
+        if width is 8
+            if not item 2 of info
+                test_rr(a, rax, rax)
+                jcc(a, cc_s, refuse)
+            end
+        else
+            movi(a, r10, item 3 of info)
+            alu(a, "cmp", rax, r10)
+            jcc(a, cc_l, refuse)
+            movi(a, r10, item 4 of info)
+            alu(a, "cmp", rax, r10)
+            jcc(a, cc_g, refuse)
+        end
+        if big
+            if width is 2
+                bswap32(a, rax)
+                shifti(a, "shr", rax, 16)
+            else if width is 4
+                bswap32(a, rax)
+            else if width is 8
+                bswap64(a, rax)
+            end
+        end
+        if width is 1
+            store8(a, mem(r9, 0), rax)
+        else if width is 2
+            store16(a, mem(r9, 0), rax)
+        else if width is 4
+            store32(a, mem(r9, 0), rax)
+        else
+            store(a, mem(r9, 0), rax)
+        end
+    end
 end
 
 # rt_k_binary(op, out, a, b, outer, inner, a_from, a_step_out, a_step, b_from, b_step_out, b_step, out_from):
