@@ -684,30 +684,11 @@ to wasm_runtime
     wasm_import(m, "say", (list of eq), none)
     wasm_import(m, "sayError", (list of eq), none)
     wasm_import(m, "exit", (list of eq, i32), none)
-    wasm_import(m, "plus", (list of eq, eq, i32), (list of eq))
-    wasm_import(m, "arithmetic", (list of i32, eq, eq, i32), (list of eq))
-    wasm_import(m, "negate", (list of eq, i32), (list of eq))
-    wasm_import(m, "compare", (list of i32, eq, eq, i32), (list of i32))
-    wasm_import(m, "remainder", (list of f64, f64), (list of f64))
-    wasm_import(m, "numberOrder", (list of f64, f64), (list of i32))
-    wasm_import(m, "divisible", (list of f64, f64), (list of i32))
-    wasm_import(m, "equal", (list of eq, eq), (list of i32))
-    wasm_import(m, "lengthOf", (list of eq, i32), (list of f64))
-    wasm_import(m, "item", (list of eq, eq, i32), (list of eq))
-    wasm_import(m, "itemRef", (list of eq, eq, i32), none)
-    wasm_import(m, "put", (list of eq, eq, eq, i32), none)
-    wasm_import(m, "dict", (list of eq, i32), none) # only ever throws: the mistake in a dictionary's keys
-    wasm_import(m, "remove", (list of eq, eq, i32), none)
-    wasm_import(m, "addInto", (list of eq, eq, i32, i32), (list of eq))
-    wasm_import(m, "checkRepeat", (list of eq, i32), (list of f64))
-    wasm_import(m, "itemsOf", (list of eq, i32), (list of eq))
-    wasm_import(m, "checkKind", (list of i32, i32, eq, i32, i32), none)
     wasm_import(m, "stopped", (list of i32), none)
     wasm_import(m, "refill", (list of i32), (list of i32))
     wasm_import(m, "grant", none, (list of i32))
     wasm_import(m, "tooDeep", none, none)
     wasm_import(m, "turtle", (list of i32, eq, i32), none)
-    wasm_import(m, "field", (list of eq, i32, i32), none)
     wasm_import(m, "builtin", (list of i32, eq, i32), (list of eq))
     wasm_import(m, "ask", (list of eq, i32), (list of eq))
     wasm_import(m, "read", (list of eq, i32, i32), (list of eq))
@@ -805,9 +786,9 @@ to wasm_runtime_functions with m
         set sign to item k of signs
         set op to k - 1
         set f to wasm_rt(m, item k of labels, (list of eq, eq, i32), (list of eq))
-        set slow to " i32.const " + op + " local.get 0 local.get 1 local.get 2 call im.arithmetic " # an amount, or a mistake
+        set slow to " i32.const " + op + " local.get 0 local.get 1 local.get 2 call R.arithRest " # an amount, or a mistake
         if sign is "+"
-            set slow to " local.get 0 local.get 1 local.get 2 call im.plus "
+            set slow to " local.get 0 local.get 1 local.get 2 call R.plusRest "
         end
         wasm_asm(f, wasm_both_nums(0, 1) + " if eq")
         if sign is "/"
@@ -815,7 +796,7 @@ to wasm_runtime_functions with m
         end
         wasm_asm(f, wasm_num_of(0) + wasm_num_of(1) + item k of f64_ops + " call R.box")
         if sign is "/"
-            wasm_asm(f, "else i32.const " + op + " local.get 0 local.get 1 local.get 2 call im.arithmetic unreachable end")
+            wasm_asm(f, "else i32.const " + op + " local.get 0 local.get 1 local.get 2 call R.arithRest unreachable end")
         end
         wasm_asm(f, "else")
         if sign is "+" # text and text, or text and a number, joined here; the rest as before
@@ -834,7 +815,7 @@ to wasm_runtime_functions with m
     end
 
     set f to wasm_rt(m, "neg", (list of eq, i32), (list of eq))
-    wasm_asm(f, wasm_is_num(0) + " if eq " + wasm_num_of(0) + " f64.neg call R.box else local.get 0 local.get 1 call im.negate end")
+    wasm_asm(f, wasm_is_num(0) + " if eq " + wasm_num_of(0) + " f64.neg call R.box else local.get 0 local.get 1 call R.negRest end")
 
     # How two numbers compare, to 15 digits (numberOrder in vm.js): -1, 0, 1, or 2 if either is NaN. Two that are
     # equal, two whole numbers, and two further apart than 15 digits tell are answered here; the rest, which
@@ -843,7 +824,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 1 f64.eq if i32.const 0 return end")
     wasm_asm(f, "local.get 0 local.get 0 f64.trunc f64.eq local.get 1 local.get 1 f64.trunc f64.eq i32.and i32.eqz")
     wasm_asm(f, "local.get 0 local.get 1 f64.sub f64.abs local.get 0 f64.abs local.get 1 f64.abs f64.max f64.const 1e-14 f64.mul f64.le")
-    wasm_asm(f, "i32.and if local.get 0 local.get 1 call im.numberOrder return end")
+    wasm_asm(f, "i32.and if local.get 0 local.get 1 call R.nearOrder return end")
     wasm_asm(f, "local.get 0 local.get 1 f64.lt if i32.const -1 return end")
     wasm_asm(f, "local.get 0 local.get 1 f64.gt if i32.const 1 return end")
     wasm_asm(f, "i32.const 2")
@@ -858,7 +839,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 ref.test list local.get 1 ref.test list i32.and local.get 0 ref.test record local.get 1 ref.test record i32.and i32.or")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test dict i32.and i32.or local.get 0 ref.test bytes local.get 1 ref.test bytes i32.and i32.or")
     wasm_asm(f, "local.get 0 ref.test qty local.get 1 ref.test qty i32.or") # 1 km is 1000 m, and not 1000
-    wasm_asm(f, "i32.or if local.get 0 local.get 1 call im.equal return end i32.const 0")
+    wasm_asm(f, "i32.or if local.get 0 local.get 1 call R.deepEq return end i32.const 0")
 
     # less than, greater than, at least, at most: numbers and text here, mistakes in JavaScript
     set orders to list of "less than", "greater than", "at least", "at most"
@@ -868,7 +849,7 @@ to wasm_runtime_functions with m
         set order_test to wasm_order_test(item k of orders)
         wasm_asm(f, wasm_both_nums(0, 1) + " if i32 " + wasm_num_of(0) + wasm_num_of(1) + " call R.ncmp " + order_test)
         wasm_asm(f, "else local.get 0 ref.test text local.get 1 ref.test text i32.and if i32 local.get 0 local.get 1 call R.textOrder " + order_test)
-        wasm_asm(f, "else i32.const " + k + " local.get 0 local.get 1 local.get 2 call im.compare end end")
+        wasm_asm(f, "else i32.const " + k + " local.get 0 local.get 1 local.get 2 call R.compareRest end end")
     end
 
     # `is divisible by` on two numbers. For whole numbers below 2^52, a is divisible by b exactly when
@@ -876,21 +857,21 @@ to wasm_runtime_functions with m
     # float holds exactly. Fractions and huge numbers go to JavaScript's %, and 0 to the shared check's error.
     set divisible to front's slot_of(front's comparisons, "divisible by") - 1
     set f to wasm_rt(m, "dvf", (list of f64, f64, i32), (list of i32))
-    wasm_asm(f, "local.get 1 f64.const 0 f64.eq if i32.const " + divisible + " local.get 0 call R.box local.get 1 call R.box local.get 2 call im.compare return end")
+    wasm_asm(f, "local.get 1 f64.const 0 f64.eq if i32.const " + divisible + " local.get 0 call R.box local.get 1 call R.box local.get 2 call R.compareRest return end")
     wasm_asm(f, "local.get 0 local.get 0 f64.trunc f64.eq local.get 0 f64.abs f64.const 2^52 f64.lt i32.and")
     wasm_asm(f, "local.get 1 local.get 1 f64.trunc f64.eq local.get 1 f64.abs f64.const 2^52 f64.lt i32.and")
     wasm_asm(f, "i32.and if i32 local.get 0 local.get 0 local.get 1 f64.div f64.trunc local.get 1 f64.mul f64.eq")
-    wasm_asm(f, "else local.get 0 local.get 1 call im.divisible end") # to 15 digits, in JavaScript
+    wasm_asm(f, "else local.get 0 local.get 1 call R.divisibleF end") # to 15 digits
 
     set f to wasm_rt(m, "dv", (list of eq, eq, i32), (list of i32))
     wasm_asm(f, wasm_both_nums(0, 1) + " if i32 " + wasm_num_of(0) + wasm_num_of(1) + " local.get 2 call R.dvf")
-    wasm_asm(f, "else i32.const " + divisible + " local.get 0 local.get 1 local.get 2 call im.compare end")
+    wasm_asm(f, "else i32.const " + divisible + " local.get 0 local.get 1 local.get 2 call R.compareRest end")
 
     set f to wasm_rt(m, "lengthOf", (list of eq, i32), (list of eq))
     wasm_asm(f, "local.get 0 ref.test list if f64 local.get 0 ref.cast list struct.get list 1 f64.convert_i32_s")
     wasm_asm(f, "else local.get 0 ref.test bytes if f64 " + wasm_bytes_of(0) + " array.len f64.convert_i32_s")
     wasm_asm(f, "else local.get 0 ref.test dict if f64 local.get 0 ref.cast dict struct.get dict 3 f64.convert_i32_s")
-    wasm_asm(f, "else local.get 0 local.get 1 call im.lengthOf end end end call R.box")
+    wasm_asm(f, "else local.get 0 local.get 1 call R.lengthRest end end end call R.box")
 
     # The 0-based place of item n in a list, if n is a whole number from 1 to its length, or -1.
     set f to wasm_rt(m, "place", (list of eq, eq), (list of i32))
@@ -917,7 +898,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, wasm_bytes_of(0) + " local.get at array.get_u u8 f64.convert_i32_u call R.box return end")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if local.get 0 local.get 1 local.get 2 call R.dictItem return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.item")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call R.itemRest")
 
     # where `set item n of x to ...` goes: the place in a list, or -1 for a byte or a dictionary's key (see
     # put), checked before the value is worked out; anything else fails in the shared code
@@ -926,7 +907,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 local.get 1 call R.place local.tee at i32.const 0 i32.ge_s if local.get at return end")
     wasm_asm(f, "local.get 0 local.get 1 call R.bytePlace i32.const 0 i32.ge_s if i32.const -1 return end")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if i32.const -1 return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.itemRef i32.const -1")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call R.itemRefRest")
 
     # a value into a byte (a whole number from 0 to 255), or into a dictionary, where itemRef said to;
     # anything else is a mistake, which the shared code words
@@ -937,12 +918,12 @@ to wasm_runtime_functions with m
     wasm_asm(f, wasm_num_of(2) + " local.set v " + wasm_whole_in("v", "0", "255") + " if")
     wasm_asm(f, wasm_bytes_of(0) + " local.get at local.get v i32.trunc_f64_s array.set u8 return end end")
     wasm_asm(f, "local.get 0 ref.test dict local.get 1 ref.test text " + wasm_is_num(1) + " i32.or i32.and if local.get 0 local.get 1 local.get 2 call R.dictPut return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call im.put")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call R.putRest")
 
     # `x is in d` for a dictionary, here; anything else in the shared code
     set f to wasm_rt(m, "isIn", (list of eq, eq, i32), (list of i32))
     wasm_asm(f, "local.get 1 ref.test dict local.get 0 ref.test text " + wasm_is_num(0) + " i32.or i32.and if local.get 1 local.get 0 call R.dictHas return end")
-    wasm_asm(f, "i32.const " + (front's slot_of(front's comparisons, "in") - 1) + " local.get 0 local.get 1 local.get 2 call im.compare")
+    wasm_asm(f, "i32.const " + (front's slot_of(front's comparisons, "in") - 1) + " local.get 0 local.get 1 local.get 2 call R.compareRest")
 
     # `remainder of a divided by b` (vm.js's remainder): of two whole numbers that fit in 32 bits, b not 0, here,
     # exactly, with b's sign; anything else, and every mistake, through the builtin
@@ -1036,7 +1017,7 @@ to wasm_runtime_functions with m
     set f to wasm_rt(m, "addInto", (list of eq, eq, i32, i32), (list of eq))
     wasm_asm(f, wasm_both_nums(0, 1) + " if " + wasm_num_of(0) + wasm_num_of(1) + " f64.add call R.box return end")
     wasm_asm(f, "local.get 0 ref.test list if local.get 0 local.get 1 call R.push local.get 0 return end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call im.addInto")
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 local.get 3 call R.addRest")
 
     # what `for each` goes through: a copy, so adding to the list inside the loop can't make it endless
     set f to wasm_rt(m, "itemsOf", (list of eq, i32), (list of wasm_ref_null(wasm_t_list)))
@@ -1052,13 +1033,13 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get copy local.get i local.get bs local.get i array.get_u u8 f64.convert_i32_u call R.box array.set items")
     wasm_asm(f, "local.get i i32.const 1 i32.add local.set i br 0 end end")
     wasm_asm(f, "local.get copy ref.as_non_null local.get n struct.new list return end")
-    wasm_asm(f, "local.get 0 local.get 1 call im.itemsOf ref.cast list")
+    wasm_asm(f, "local.get 0 local.get 1 call R.itemsRest ref.cast list")
 
     set f to wasm_rt(m, "repeatCount", (list of eq, i32), (list of f64))
     wasm_named(f, "x", f64)
     wasm_asm(f, wasm_is_num(0) + " if " + wasm_num_of(0) + " local.tee x local.get x f64.trunc f64.eq local.get x f64.const 0 f64.ge i32.and")
     wasm_asm(f, "local.get x local.get x f64.sub f64.const 0 f64.eq i32.and if local.get x return end end") # not infinite
-    wasm_asm(f, "local.get 0 local.get 1 call im.checkRepeat") # whole to 15 digits, or a mistake
+    wasm_asm(f, "local.get 0 local.get 1 call R.repeatRest") # whole to 15 digits, or a mistake
 
     # where a field is in a record, or -1
     set f to wasm_rt(m, "find", (list of eq, i32), (list of i32))
@@ -1094,7 +1075,7 @@ to wasm_runtime_functions with m
     wasm_asm(f, "local.get 0 ref.test record if local.get 0 local.get 1 call R.find local.tee at i32.const 0 i32.ge_s if")
     wasm_asm(f, "local.get 0 ref.cast record struct.get record 1 local.get at array.get items return end end")
     wasm_asm(f, "local.get 0 ref.test record i32.eqz if local.get 0 local.get 1 local.get 2 call R.notRecord end")
-    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call im.field unreachable") # a record without it: JavaScript guesses what was meant
+    wasm_asm(f, "local.get 0 local.get 1 local.get 2 call R.fieldRest unreachable") # a record without it: what was meant, guessed
 end
 
 # What JavaScript calls to look inside Folio's values, and to make them, when a check or `say` needs them.
@@ -1637,7 +1618,7 @@ to wasm_expr_num with fc, e
             set b to wasm_temp(fc, wasm_f64)
             wasm_x(fc, "local.set " + b + " local.set " + a + " local.get " + b + " f64.const 0 f64.eq if")
             wasm_x(fc, "i32.const 3 local.get " + a + " struct.new num local.get " + b + " struct.new num")
-            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call im.arithmetic unreachable end local.get " + a + " local.get " + b + " f64.div")
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.arithRest unreachable end local.get " + a + " local.get " + b + " f64.div")
         end
         return nothing
     end
@@ -2145,7 +2126,7 @@ to wasm_call with fc, e, statement
     if n is greater than 0 # a function whose inputs say what they are: each one checked
         wasm_x(fc, get_closure + "4 if")
         for each i from 1 to n
-            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.checkKind")
+            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.checkKind")
         end
         wasm_x(fc, "end")
     end
@@ -2194,7 +2175,7 @@ to wasm_start_worker with fc, e
     if n is greater than 0
         wasm_x(fc, get_closure + "4 if")
         for each i from 1 to n
-            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call im.checkKind")
+            wasm_x(fc, get_closure + "4 i32.const " + (i - 1) + " local.get " + item i of temps + " i32.const " + wasm_id(fc, name of e) + " i32.const " + k + " call R.checkKind")
         end
         wasm_x(fc, "end")
     end
@@ -2593,6 +2574,23 @@ to wasm_module with program
     add units of cx to segments # the program's text, as UTF-16 units: in every module, as the runtime reads names from it
     set main to wasm_function(cx, nothing, "main", empty list, program, 0)
     wasm_export(m, "main", index of f of main)
+    # each function whose inputs say what they are (R.checkKind): how many inputs it has, then each one's name and
+    # its kind plus 1 (0 for any); their names are given ids here, before the names' table is written
+    set kind_entries to empty list
+    set kinds_of to kinds of cx
+    set named to record with cx cx
+    set j to 2
+    repeat while j is at most length of kinds_of
+        set one to item j of kinds_of
+        set entry to empty list
+        add length of params of one to entry
+        for each i from 1 to length of params of one
+            add wasm_id(named, item i of params of one) to entry
+            add (item i of kinds of one) + 1 to entry
+        end
+        add entry to kind_entries
+        add 1 to j
+    end
     # the program's names, for the words of a mistake (R.nameText): each one's units in the data, then where each
     # starts and how many units it has, which init makes the names global of
     set units to units of cx
@@ -2609,6 +2607,26 @@ to wasm_module with program
         add (shift v right by 24) bit and 255 to units
     end
     wasm_asm(init, "i32.const " + table_at + " i32.const " + length of table + " array.new_data ids 0 global.set g.names")
+    # and after it, the kinds' table: for function j, where its entry is, then the entries
+    set kinds_table to list of 0
+    set kinds_place to length of kinds_of
+    for each entry in kind_entries
+        add kinds_place to kinds_table
+        set kinds_place to kinds_place + length of entry
+    end
+    for each entry in kind_entries
+        for each v in entry
+            add v to kinds_table
+        end
+    end
+    set kinds_at to length of units
+    for each v in kinds_table
+        add v bit and 255 to units
+        add (shift v right by 8) bit and 255 to units
+        add (shift v right by 16) bit and 255 to units
+        add (shift v right by 24) bit and 255 to units
+    end
+    wasm_asm(init, "i32.const " + kinds_at + " i32.const " + length of kinds_table + " array.new_data ids 0 global.set g.kindsData")
     # the calls in progress, for a mistake's trail: how many, and for each (outermost first), where it was made
     # and the name of its function
     wasm_out(m, "callDepth", empty list, (list of wasm_i32), "global.get g.depth")

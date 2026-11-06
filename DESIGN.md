@@ -6517,3 +6517,362 @@ too long, which are fixed too, but for one, below.
   minutes on 50,000. They're programs no one writes by hand, but a page or a tool that checks code it's sent
   should limit its size.
 
+## 153. What a value shows as, in the WebAssembly module
+
+The rest of stage 2's fourth part (§151): what lists, text, dictionaries and bytes do that still called
+JavaScript, and every mistake they make. A module imports 42 functions, not 51: `lengthOf`, `item`, `itemRef`,
+`put`, `dict`, `remove`, `addInto`, `checkRepeat` and `itemsOf` are gone. What's left of part 4 is a function's
+inputs that say what they are (`checkKind`) and a record's "did you mean" (`field`).
+
+- **They weren't only mistakes.** A text's letters (`item 2 of "héllo"`, `for each c in words`, `length of
+  words`), a dictionary's keys for `for each`, and `add` to text went to JavaScript too. They're the module's now.
+- **Showing a value** (`show`), as vm.js's show does: text as it is, or inside a list, record or dictionary in
+  quotes as `JSON.stringify` writes them (`\"`, `\\`, `\n` and the rest, `\u` and four lowercase hex digits for
+  a unit below 32 and for half of an emoji on its own); a number as text (§139); `[1, "a"]`, `(record with ...)`,
+  `(dictionary where "a" is 1)`, past keys taken out, and `(empty record)` and `(empty dictionary)`; a list
+  inside itself as `[...]` and a record or dictionary as `(...)`, from a stack of what's being shown;
+  `(3 bytes: 0, 255, 0)`, `<function f>`, and an amount by its unit's word for one of it or for more.
+- **A text's letters,** as the VM counts them, an emoji as one: where each begins, kept for the last text asked
+  about, as vm.js's lettersOf keeps them, so going through a text a letter at a time takes as long as it is.
+- **"Did you mean"** for a dictionary's key: vm.js's distance (an edit is a unit put in, taken out or changed, or
+  two side by side swapped) and closest (within 1 edit for 3 units or fewer, 2 for more, the first nearest).
+- **Names JavaScript adds** as the program runs, a table's rows' fields, it gives the module too (`addName`), so
+  the module can show a row; a name's text is from the program's data, or past it from those.
+- **Amounts added** in the module, as vm.js's amountIn does: in the first one's unit, times the other's factor
+  over its own, from a table of each unit's factor and words made from vm.js's UNITS.
+- **A bug it fixed.** `set item 2.0000000000000004 of xs to 9`, an item given past 15 digits, changed a copy of
+  the list in JavaScript, and left the list as it was. It's changed in the module now, as the VM changes it.
+- **A hazard met.** The runtime's `canon` takes only a number above 0 that isn't whole (as §147's keys use it),
+  and with 0 it never ended. `canonAny` is vm.js's canon: a whole number, or one that isn't finite, as it is.
+  `item 0 of xs` and an amount of 0 found it; the tests have both.
+- **What it cost.** Every module holds all of the runtime, used or not: a module for `say 1` is 26,348 bytes,
+  not 15,538, and folio.wasm 1,965,287, not 1,709,430. Leaving out what a program doesn't call, in wasm.js and
+  wasm.folio alike, is for later: part 5's built-ins will make it worth more.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test:
+  each kind of value shown, letters and emoji, `for each` over text and a dictionary, and 21 mistakes, all as
+  the VM says them; amounts shown and added on both engines; and every program the engines are tested with, made
+  by wasm.js, wasm.folio and folio.wasm byte for byte, the 8,000 broken ones too.
+
+## 154. Inputs that say what they are, and a record's "did you mean", in the module
+
+The last of stage 2's fourth part (§151, §153). A module imports 40 functions, not 42: `checkKind` and `field`
+are gone, and every value check, and every mistake one makes, is the module's own.
+
+- **A table of each function's inputs** that say what they are, in the module's data after its names: for each
+  such function, where its entry is; there, how many inputs it has, then each one's name and its kind plus 1 (0
+  for any, so no number in it is below 0, which wasm.folio's `bit and` would want to be). The names are given ids
+  as the program's other names are, before those are written, in wasm.js and wasm.folio alike. `init` makes the
+  `kindsData` global of it; a call checks each input, at the call's own place, as vm.js's checkKinds does.
+- **A bug it fixed.** wasm.js said what a value was from its own table of tags, which had none for an amount:
+  `f(5 km)` for `to f with a as a number` said "'f' needs a to be a number, not undefined". The module says what
+  the VM and the JIT say, "not a distance", from `kindWords` (§151).
+- **"Did you mean"** for a record's field: vm.js's closest over the record's own fields' names, from the names
+  table, and from the names JavaScript gives the module (§153), so a table's row is guessed about too.
+- **Checked.** A module run with every import but `say`, `tryStart`, `grant` and `refill` failing the test:
+  three inputs of the wrong kind and three fields, with a guess and without; an amount given to a number; a
+  table's row read from a file, shown and guessed about as the VM does; and every program the engines are tested
+  with, made by wasm.js, wasm.folio and folio.wasm byte for byte.
+- **What's next.** Part 5 is the built-ins, which still call JavaScript (`builtin`, `plus`, `arithmetic`,
+  `compare`, `equal` and the rest); then the host interface (part 6), where WASI plugs in, and deep calls (part 7).
+  A module for `say 1` is 27,149 bytes; leaving out the runtime a program doesn't call is worth more as part 5
+  adds to it.
+
+## 155. The operators, in the WebAssembly module
+
+The first of stage 2's fifth part, the built-ins: the operators, which every program uses. A module imports 34
+functions, not 40: `plus`, `arithmetic`, `negate`, `compare`, `numberOrder` and `equal` are gone.
+
+- **What they did in JavaScript.** Two numbers, and text with text or a number, were the module's already. The
+  rest went out: `+` with text and any other value (joined as show makes it, §153), amounts (`5 km + 300 m`,
+  `2 * 3 km`, `6 km / 2 km`, `-(5 km)`, compared in the first one's unit), `is` by value for lists, records,
+  dictionaries, bytes and amounts, `is in`, and every mistake. Each is as vm.js does it now, in the module.
+- **`is` by value**, as vm.js's equal: a list, record or dictionary by what it holds, the pair of them on a stack
+  while they're compared, so a list that holds itself is the same as another that holds itself; a dictionary's
+  keys found in the other by its slots (§147), a record's fields by their ids; bytes byte by byte; an amount in
+  the first one's unit, to 15 digits.
+- **Two numbers that agree to 15 digits, or nearly** (`0.30000000000000004 is less than 0.3`): both to 15 digits
+  (`canonAny`, §153), then compared, as numberOrder does.
+- **`is in`**, as isIn: an item of a list by value, a number among bytes to 15 digits, a key of a dictionary (no
+  dictionary has a key that isn't text or a number, so a list is in none), or a piece of a text, unit by unit.
+- **Left in JavaScript: `remainder` and `divisible`,** for numbers that aren't both whole and below 2^52 (the module
+  does those). Each needs JavaScript's `%` on doubles, which is exact (C's fmod), and WebAssembly has no remainder
+  for floats; doing it from the bits, as musl's fmod does, is for the next part.
+- **Checked.** A module run with those imports failing the test: text joined with a list and a record, 15-digit
+  comparing, `is` on lists, records, dictionaries and lists that hold themselves, `is in` four ways, and eight
+  mistakes, as the VM says them; amounts on both engines; and every program the engines are tested with, made by
+  wasm.js, wasm.folio and folio.wasm byte for byte.
+
+## 156. A name found in a scope at once
+
+The security pass (§152) found compiler.folio looked a name up by going through every name in its scope:
+`slot_of` from the first to the last, for every name used and, as a scope was made, for every name it made. A
+program of 20,000 top-level variables took folio.exe 20 seconds to run, and one of 50,000 more than 3 minutes,
+where folio.js took 0.2 seconds; compiler.folio on the JIT took 55. Each scope keeps a dictionary of each name's
+slot now, beside its list of names, set as each name is added: the last slot with that name, as slot_of found
+it, so a function with two inputs of the same name has the second. `new_scope`, `reaches` and `resolve` look
+there. The slots are the ones they were, so what every back end makes is the same, byte for byte.
+
+| | 5,000 variables | 20,000 | 50,000 |
+|:--|--:|--:|--:|
+| compiler.folio on the JIT, before | | | 55 s |
+| compiler.folio on the JIT, now | 0.15 s | 0.41 s | 1.0 s |
+| folio.exe run, before | 1.0 s | 20 s | over 200 s |
+| folio.exe run, now | 0.21 s | 0.43 s | 0.98 s |
+
+Still slow, and not about names: folio.exe on code nested a thousand blocks deep (100 seconds, where the JIT
+takes a quarter of one), likely its collector going through a stack that deep each time it runs; and folio.exe's
+check on a chain of thousands of `-` or `+` (8,000: 6 seconds), whose types it works out again for each, as
+checker.js did before §152. Neither is a program anyone writes by hand.
+
+## 157. A remainder of two numbers, exactly, in the module
+
+JavaScript's `%` on numbers is exact, with the first number's sign: C's fmod. WebAssembly has no remainder for
+floats, and `x - trunc(x / y) * y` isn't exact, so `fmod` is worked out from the bits, as musl's fmod does: each
+significand with its leading 1 (a subnormal's shifted up to have one), y taken from x a bit at a time, and the
+rest made a double again with x's sign. `is divisible by` for two whole numbers past 2^52, and any that aren't
+whole, is vm.js's divisible on it, so a module imports 32 functions, not 34: `remainder` (which nothing called)
+and `divisible` are gone. Checked against JavaScript's `%` on 3,000,000 pairs of numbers, any bits at all,
+subnormals, whole numbers, both signs, 0, infinities and NaN, every one the same to the bit, through
+`remainderOf`, which the runtime exports for that, as it does `numberText`.
+
+## 158. Numbers on the graphics card: gpu.folio
+
+The first step of making Folio able to train real neural networks: its numbers worked on by an NVIDIA card,
+thousands at a time. arrays.folio (§118) does a matrix multiply in machine code, two numbers at a time; a card does
+it with thousands of threads at once.
+
+- **Through the driver alone.** CUDA has two layers: the toolkit (nvcc, the runtime, cuBLAS), which a program
+  would have to ship, and the driver, which every NVIDIA card's driver installs (nvcuda.dll on Windows,
+  libcuda.so.1 on Linux). gpu.folio uses only the driver, through `use the library` (§45): cuInit, the device
+  and its primary context, cuMemAlloc and the copies, cuModuleLoadDataEx and cuLaunchKernel.
+- **The card's code in PTX.** NVIDIA's cards run code the driver makes for each, from PTX, NVIDIA's assembly for
+  all of them, which the driver compiles as it loads a module. So the card's code is written in gpu.folio, as text,
+  for `sm_50` (every card since 2014, the newer ones by the driver's own compiling): `binary` (+ - * /, the larger
+  and the smaller of two), `scalar` (the same with a number), `unary` (negate, relu, exp, ln, tanh, sigmoid, sqrt,
+  absolute, square and relu's slope), `fill`, `sum` (each thread a stride of the numbers, a block of 256 added up in
+  the card's fast memory, then added to the answer) and `matmul`. A mistake in the PTX comes back with the driver's
+  own words, from its log.
+- **The multiply, as fast ones are made.** Each block of 16 by 16 threads works out a 64 by 64 tile of the answer,
+  each thread a 4 by 4 of it, 16 apart, in registers. A 64 by 16 tile of one matrix and a 16 by 64 of the other
+  are loaded into the card's fast memory in turn; each of their 16 steps takes 8 numbers from it for 16
+  multiplications, where a first version, each thread one number of the answer, took 2 for 1. That was 3 to 4
+  times as slow (2,048 by 2,048 in 49 ms). The 16 sums and the 4 by 4 loads are written out by loops in Folio.
+- **Floats.** A card keeps numbers as 32-bit floats, about 7 digits, as machine learning wants them; Folio's are
+  doubles to 15 (§24). `numbers_convert` (§118) turns a list into floats for the card and back. exp, ln, tanh and
+  sigmoid are the card's quick ones (ex2.approx and lg2.approx), good to a float's last digit or two.
+- **Kernel inputs.** cuLaunchKernel takes where each input is: each one's 8 bytes in a row (a place on the card, a
+  whole number, or a float's 4 bytes), and a list of where each starts, which `memcpy` with 0 bytes gives, as it
+  gives back where it copied to.
+- **Asked first, and none.** A program that uses it needs `--allow-libraries`, as any library does. Where there's no
+  driver, or no card, `available()` is no and every other function a `fail with` that says which.
+- **What it gave**, on a GTX 1650 (4 GB, 14 processors) against arrays.folio's matmul in machine code:
+
+| | 256 | 512 | 1,024 | 2,048 |
+|:--|--:|--:|--:|--:|
+| matrix multiply, on the card | 0.1 ms | 0.3 ms | 2.8 ms | 13 ms |
+| arrays.folio, in machine code | 5 ms | 39 ms | 461 ms | 3,552 ms |
+| times as fast | 50 | 130 | 167 | 270 |
+
+  2,048 by 2,048 is 1.3 trillion operations a second, about 45% of what the card can do. A million numbers go up
+  to the card in 2 ms and come back in 7, and the card adds them in 1; the first call takes about a tenth of a
+  second, as the driver starts.
+- **Checked**, in machine code, where there's a driver (it's skipped where there isn't): each operation against
+  Folio's own arithmetic, the quick ones within a millionth of arrays.folio's, a 37 by 29 times 29 by 41 multiply
+  (past a tile's edge both ways) the same as arrays.folio's, a sum of 100,000 numbers, nothing on the card, numbers
+  given back, and its mistakes. CI has no card, so it runs on a computer that has one.
+- **Next**: arrays that live on the card, with their shapes, in arrays.folio; a gradient for each operation, so a
+  network of arrays learns (neural.folio's, micrograd's way, is one number at a time); layers, Adam, and a small
+  GPT trained on the card.
+
+## 159. The system's DLLs, loaded when a program first uses them
+
+`folio version` took 25 ms on Windows, where a C program that says hello takes 15. folio's own work before it
+writes, the collector's memory, the clock and the dispatch, takes 1. The other 9 were Windows loading the DLLs
+folio imports, USER32, GDI32, GDI+, the file dialogs, WinHTTP and WINMM, before the program starts, for every
+command, though `folio version` opens no window and goes nowhere.
+
+- **Late.** Those six are no longer in a program's imports. Each of its functions in them has a slot of its own, in
+  the zeroed memory, which `rt_late_init`, the first thing `start` does, points at a stub. The first call goes
+  there: `rt_late_resolve` keeps the call's inputs (rcx, rdx, r8, r9 and xmm0 to xmm3; those on the stack are
+  where they were), loads the DLL with `LoadLibraryExW` and `LOAD_LIBRARY_SEARCH_SYSTEM32`, finds the function
+  with `GetProcAddress`, puts it in the slot, and jumps to it. Every call after goes straight there, as through
+  the import table. KERNEL32, which every program uses, is loaded at the start, as before.
+- **From System32 only**, as the load configuration has Windows load the rest (§38): a winmm.dll beside the
+  program is never the one it loads, as the test that plants three of them checks. A DLL of Windows' own that
+  isn't there, or hasn't the function, ends the program with 75.
+- **What it gave.** `folio version` takes 16.4 ms, a C program built with MSVC that says hello 15.5, Folio's
+  hello 15.2, and Windows' own hostname.exe 16.2: what's left is Windows starting a program at all. On Linux,
+  where a program has no DLLs to load, `folio version` takes 3 ms.
+- **Measured** with Node's `spawnSync`, the best of 20 runs, each program run 5 times first, in a folder of the
+  user's: in the temporary folder Windows' virus checker looks over a program every time it starts, 9 ms more
+  for each of these (35 ms against 24), and in its first few runs anywhere. Git Bash takes 80 to 180 ms to start
+  a program itself, so it can't time one.
+
+## 160. Memory as C has it: memory.folio
+
+Folio had bytes, a byte at a time, and C's kinds of number only where a library's function takes them. A file
+format, a network message, a model's weights or a structure C hands back keeps whole numbers of 8 to 64 bits,
+signed or not, floats and doubles, in either byte order, and reading one meant adding bytes up by hand.
+
+- **The kinds, by the names Folio has for them.** `get(b, place, "a short whole number")` and `put(b, place,
+  value, kind)` take the eleven names a library's line takes (`a byte` to `an unsigned long whole number`,
+  `a pointer`, `a float`, and `a number` for a double), and an order, `"little"`, as every computer Folio runs on
+  keeps numbers, or `"big"`, as networks send them. Places count from 1, as bytes' do. `get_many` and `put_many`
+  take a list at a time. No new words: it's a library (VERSIONING.md), and `read` and `write`, which are Folio's
+  own, aren't its names.
+- **Checked, as everything in Folio is.** Every place against the memory's size, and every number against its
+  kind: `'put' needs a whole number from -32768 to 32767 for a short whole number, not 40000`. A whole number is
+  the one Folio takes it for, to 15 digits (§23), as a library's whole inputs are.
+- **Memory of the program's own.** `take(n)` is a block of n bytes outside the collector, through the C library's
+  `calloc` (msvcrt on Windows, libc on Linux), all 0, until `give_back(block)` frees it; using it after is a
+  mistake, not a crash. `copy` (memmove, so they may overlap) and `fill` (memset) work on bytes and blocks alike,
+  `address_of` gives where either is, for a library's `a pointer`, and `block_at(address, size)` makes memory a C
+  library gave a block, which `give_back` won't free. That one can crash a program given an address that isn't
+  one, as C can; nothing else can. Taking memory needs `--allow-libraries`; numbers in bytes don't.
+- **Folio's own loop.** In a program `folio build` makes, `get`, `put` and their many go through `rt_k_memory`
+  (`numbers_memory` in `use the library "folio"`, §118): a loop for each of the ten kinds, each order and each
+  way, 40 in all, with `movsx`, `bswap`, `cvtss2sd` and the rest, between a list of numbers and bytes or an
+  address and its size. It checks what it's given, the list's room and the memory's, every number written, and
+  gives 1 for anything it won't do, which memory.folio then does in Folio, so its mistakes are Folio's. A NaN
+  read is made the one Folio makes: a NaN's bits can be anything, and some of them are `nothing`'s.
+- **In Folio, exactly.** On the JavaScript engines, which have no memory but the collector's, a block is bytes,
+  and every number is made from its bytes and back in Folio. Arithmetic there is the double's own, but rounding
+  and comparing go by 15 digits (§23), which can't be used for bits: a float is rounded to the nearest, ties to
+  the even one, by the double's own rounding of it plus 2^52, the exponent is found by the sign of a difference,
+  and whole numbers are split into 32-bit words by `remainder of`, which is exact for whole numbers.
+- **What it gave**, in machine code: a million floats put in 1 ms and got in 10 (most of it making the list they
+  go into; 3 the next time), and one number got or put in about 0.2 microseconds. The same in Folio on the JIT
+  takes 5.5 seconds and 1.
+- **Checked**: every kind, both orders and both ways, in bytes past their first and through an address, against
+  what Node's Buffer writes, to the bit; everything the loop refuses; a NaN with nothing's bits read as a NaN;
+  and memory.folio's own tests on every engine and in machine code, with and without the loop.
+
+## 161. folio check reads only the rules a program needs
+
+`folio check` on an empty file took 37 ms, where 1.11.0's took 26, and folio's other commands take 16. All 20
+went on the checker's rulebook (§107): 9,504 lines of what each rule does with each type, made into a dictionary
+before the program was looked at, every run.
+
+- **By family.** make-checker-rules.mjs writes the lines in families, what's before a line's first `|` (`math`,
+  `compare`, `type`), or `builtin|` and the builtin's name, 75 of them, the biggest 1,725 lines (`items`). folio
+  check makes a family's dictionary the first time it looks a rule up in it, and the messages the first time it
+  says one. A program uses a few families, and an empty one none.
+- **What it gave.** `folio check` takes 16.8 ms on a one-line file, not 37, and 84 ms on arrays.folio's 1,300
+  lines, not 97. Every one of the 117 Folio files in the repository is checked with the same words as before.
+
+## 162. Networks trained on the graphics card: learn.folio
+
+gpu.folio (§158) worked on lists of numbers on the card; a network wants matrices with shapes, a gradient for
+each operation, and its parameters moved, again and again, without coming back to the processor.
+
+- **Matrices that remember how they were made.** learn.folio's matrix is rows by columns numbers on the card
+  (gpu.folio's) or, where there's no card, an array (arrays.folio's), and a parameter is a matrix that learns.
+  Each operation on a matrix a parameter went into, `matmul`, `plus`, `minus`, `times`, `add_row`, `relu`, `sum`,
+  `mean`, `cross_entropy` and `mean_squared_error`, is kept on a tape, in the order it was done; `backward(loss)`
+  goes through it the other way, each one's gradient sent to what made it, added up where two used the same:
+  reverse-mode differentiation over whole matrices, as PyTorch's autograd, where neural.folio's went a number at
+  a time. Then `layer`, `network` and `forward`, and `sgd` and `adam`, whose `step` moves the parameters and lets
+  go of the tape's matrices, their memory back to the card.
+- **The card's kernels for it**, in gpu.folio, in PTX: a matrix turned over, a row added to each row (a bias),
+  each column added up (its gradient), each row's softmax, softmax and cross-entropy at once (the loss and its
+  gradient in one pass over each row, the largest taken off first so nothing overflows), each row's largest,
+  relu's gradient, numbers added in place, and Adam, each parameter moved in one pass. Each is checked against
+  the same in Folio, to a float's precision.
+- **Memory kept.** A training step makes and frees the same sizes each time, and the driver takes a while to
+  hand memory out, so `free` keeps it for the next numbers of as many; `give_back_memory()` returns it, and an
+  allocation the card has no room for returns it and tries again.
+- **Checked**: every operation's gradient against the loss's slope as each parameter's numbers move a little either
+  way, on the processor, on every engine; a network learning XOR; Adam's and gradient descent's steps; and, in
+  machine code where there's a card, every loss and gradient on the card against the processor's, to a float's
+  precision.
+- **What it gave**, digits-learn.folio: a network of 256 pixels, a hidden layer and 10 chances, 10 rounds of
+  6,000 drawings in batches of 200 with Adam, 99.4% right on 1,000 it hadn't seen. On a GTX 1650:
+
+| hidden | Folio, on the card | PyTorch 2.6, on the card | PyTorch, on the processor | Folio, on the processor |
+|--:|--:|--:|--:|--:|
+| 256 | 0.24 s | 0.63 s | 0.76 s | 5.5 s |
+| 1,024 | 0.49 s | 0.68 s | | |
+| 2,048 | 0.83 s | 0.63 s | | |
+
+  A small network is mostly the time each operation takes to start, which is less in Folio than through Python;
+  a wide one is mostly the multiplies, where PyTorch's cuBLAS does better with a matrix 2,048 by 10 than
+  gpu.folio's 64 by 64 tiles. On the processor, the multiplies are arrays.folio's loop, one number at a time on
+  one core, where PyTorch's use every core and the processor's vector instructions.
+- **Next**: a multiply for thin matrices, arrays for a GPT (embeddings, layer norm, attention with its mask),
+  and a small GPT trained on the card.
+
+## 163. A square root to the last bit
+
+math.folio's `sqrt` took 60 of Newton's steps from x itself, which for 10^300 got to 8.7 × 10^281, and from 1 for
+10^-300, which got to 8.7 × 10^-19: 60 halvings is nowhere near enough for a number that size.
+
+- **Now** x is m times 4^k, m from 1 up to 4, each step exact, so its root is m's times 2^k; from (m + 1) / 2, six
+  of Newton's steps are within one double of m's root; and m - r times r, worked out exactly by splitting r in
+  halves of 26 bits (Dekker's way), says by its sign whether the double above or below is nearer. Folio compares
+  numbers to 15 digits (§23), so every test is a difference's sign, which is exact.
+- **Checked** against JavaScript's `Math.sqrt`, which IEEE 754 makes the nearest double: a million of every size,
+  subnormal to the largest, every one the same to the last bit, at 0.6 microseconds each in machine code.
+- **So arrays.folio's sqrt is the processor's.** Its machine-code loop (§118) has `sqrtsd` for it now, which gives
+  that same double, and a new `above_zero`, 1 above 0 and 0 otherwise, relu's slope: learn.folio's gradients on
+  the processor, which went through `apply` a number at a time, take a third of the time they did.
+
+## 164. Machine code nearer C's
+
+Measured against C (MSVC, /O2), Rust (-O), Node.js 24 and Python 3.13, each program run whole, the best of
+three, outside the temporary folder (§159), Folio's machine code was C's on the add loop, the primes and the
+float maths, 20% behind it on fib, and 3.6 times behind on putting 10 million floats in bytes and back, a loop
+that does arithmetic on the way.
+
+- **The right first.** `set s to s + i * 0.5` pushed s, worked out `i * 0.5`, and added from the stack: a store
+  and a load on the loop's one chain of work, every time round. When the left is a variable known to hold a
+  number, so reading it can't fail, and the right is numbers, names and maths, which can't change it or run
+  any of the program, the right is worked out first and the left added from its register: 5.5 ns a time round
+  to 1.6, as `add i * 0.5 to s` already was. Two numbers added either way round are the same number.
+- **matmul in blocks.** arrays.folio's loop (§118) added each term into out's row in memory, a load and a store
+  for every two numbers. It now keeps a 4 by 4 block of out in xmm8 to xmm15 for the whole sum, with b's four
+  columns copied together onto the stack first (a power-of-2 row puts every row of a column in the same few
+  places in the cache). Each number is still 0 + a's first times b's first + ..., a multiply then an add, in
+  that order, so it's what Folio's own loop works out to the last bit, as a byte-for-byte check over shapes with
+  every remainder found: 256 by 256 in 3 ms, not 7; 512 by 512 in 31, not 42.
+- **Tried and taken out**: comparing with a whole number the program wrote without first checking the other
+  side is whole (a sliver below it is all that 15 digits can move). fib was no faster: the processor guesses
+  that branch, so the check costs nothing on the way.
+- **Where it stands**, the same programs, each whole, on Windows:
+
+| | C | Rust | Folio | JavaScript | Python |
+|:--|--:|--:|--:|--:|--:|
+| start, say hello, end | 16.7 ms | 17.3 ms | 14.6 ms | 66.6 ms | 78 ms |
+| fib(32): 7 million calls | 25.7 ms | 24.7 ms | 31.2 ms | 88.8 ms | 448 ms |
+| adding 1 to 100,000,000 | 41.5 ms | 19.0 ms | 42.5 ms | 146 ms | 9,519 ms |
+| primes up to 300,000 | 77.4 ms | 78.1 ms | 76.8 ms | 127 ms | 2,122 ms |
+| 30,000,000 steps of decimal maths | 55.6 ms | 56.3 ms | 54.1 ms | 108 ms | 4,404 ms |
+| 10 million floats into bytes and back | 68 ms | 69 ms | 249 ms | 592 ms | 1,005 ms |
+
+  Rust's add loop is LLVM's, four numbers at a time; fib's 20% is what each call checks that C's doesn't (that
+  n is whole before comparing it to 15 digits, how deep the calls are, and that the sum is a number). The
+  floats are mostly adding 10 million numbers to two lists, 6 ns each.
+
+## 165. Structures, views and memory threads share
+
+memory.folio (§160) read and wrote numbers anywhere in memory; a C structure was a sum of offsets worked out by
+hand, any part of a block was the whole of it to anything given it, and two threads changing one number could
+lose each other's changes.
+
+- **Layouts.** `layout(list of "x", "a whole number", "d", "a number")` lays a structure out as C does: each
+  field on a boundary of its own size, a structure in it on its largest field's, the whole a multiple of the
+  largest. `get_field`, `put_field`, `offset_of` and `size_of` go by name; a name that isn't a field is a
+  mistake that lists the fields.
+- **Views.** `view(m, place, n)` is n of m's bytes as a block of their own, places from 1, nothing past its end
+  reachable through it: the size a function is handed is the size it can touch. `read_only(m)` is a view that
+  get and the rest read and put, put_many, copy, fill and the atomics refuse. A view is gone when the block it's
+  a view of is given back, and using it after is a mistake, not a read of memory that's someone else's now; a
+  view isn't given back itself.
+- **taken()** is how many bytes take has given that give_back hasn't had back, for a test to find a leak.
+- **Atomics.** `add_atomically`, `swap_if`, `get_atomically` and `put_atomically` change a 64-bit whole number as
+  one step however many threads do it at once, through `rt_k_atomic` in machine code: lock xadd, lock cmpxchg, a
+  read, and xchg. The place must be on an 8-byte boundary, as the lock instructions want. Four workers adding
+  1 a million times each to one number of a block they share count 4,000,000; the same through get and put
+  counted 1,325,496. On the JavaScript engines, with no other thread, they're get and put.
+- **Checked**: layouts against C's for mixed and nested structures, views' bounds, read-only refusals, a view of a
+  block given back, taken() back to where it was, the atomics' answers on every engine, and the workers' count.
+

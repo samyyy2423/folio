@@ -6,6 +6,48 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Numbers on the graphics card: `gpu.folio`.** Lists of numbers go up to an NVIDIA card, are added, multiplied,
+  matrix-multiplied and summed there, and come back, through CUDA's driver alone: no toolkit. A 2,048 by 2,048
+  matrix multiply on a GTX 1650 takes 13 ms, where arrays.folio's machine code takes 3.5 seconds (DESIGN §158).
+- **Structures, views and atomics in `memory.folio`.** `layout` lays a C structure out as C does, and
+  `get_field` and `put_field` go by name; `view` is part of a block with its own bounds, `read_only` one that
+  refuses writes, and a view of a block given back is a mistake; `taken()` finds leaks; and `add_atomically`,
+  `swap_if`, `get_atomically` and `put_atomically` change a number whole however many threads do (DESIGN §165).
+- **Faster machine code.** `s + i * 0.5` works out the right first when s is a number, a third of the time a
+  loop like that took; arrays.folio's matmul keeps 4 by 4 blocks in registers, twice as fast, to the same bits
+  (DESIGN §164).
+- **Networks trained on the graphics card: `learn.folio`.** Matrices on the card (or on the processor, where
+  there's none) that remember how they were made, `backward(loss)` for every parameter's gradient, layers, and
+  gradient descent and Adam. A digit reader learns 10 rounds of 6,000 drawings in 0.24 s on a GTX 1650, where
+  PyTorch takes 0.63 on the same card (DESIGN §162).
+- **gpu.folio** has transpose, add_rows, column_sums, softmax_rows, cross_entropy, argmax_rows, relu_gradient,
+  add_scaled and adam_step, and keeps memory it's given back for the next numbers of as many (DESIGN §162).
+- **math.folio's `sqrt` is the nearest double.** It was wrong for numbers past about 10^36 and below 10^-36
+  (`sqrt(10^300)` gave 8.7 × 10^281); now it's the processor's own to the last bit, and arrays.folio's `sqrt` is
+  `sqrtsd` in machine code. arrays.folio has `above_zero`, relu's slope (DESIGN §163).
+- **Memory as C has it: `memory.folio`.** Numbers kept as C keeps them, in bytes or in memory of the program's
+  own outside the collector, in each of C's kinds and either byte order: `memory's put(b, 1, -2, "a whole
+  number")`, `get`, `get_many` and `put_many`, `take`, `copy`, `fill`, `address_of` and `give_back`. In a program
+  folio builds, a loop of Folio's own in machine code puts a million floats in a millisecond (DESIGN §160).
+- **Programs start sooner on Windows.** The DLLs a program uses for windows, pictures, sound and going online are
+  loaded the first time it uses them, not as it starts: `folio version` takes 16 ms, not 25, where a C program
+  that says hello takes 15 (DESIGN §159).
+- **`folio check` starts at once.** It reads the checker's rules for the parts of the language a program uses,
+  not all 9,500 of them first: 17 ms on a short file, not 37 (DESIGN §161).
+- **Lists, text, dictionaries and bytes stay in WebAssembly.** A text's letters, a dictionary's keys, `add` to
+  text and amounts, showing any value, and every mistake these make, "did you mean" and all, are the module's own:
+  it imports 42 functions, not 51. An item given past 15 digits, as in `set item 2.0000000000000004 of xs to 9`,
+  now changes the list on the WebAssembly engine, as on the others (DESIGN §153).
+- **Inputs that say what they are, checked in WebAssembly.** A function's typed inputs and a record's "did you
+  mean" are the module's own too (40 imports). An amount given to an input that wants a number now says "not a
+  distance" on the WebAssembly engine, as on the others, not "not undefined" (DESIGN §154).
+- **The operators stay in WebAssembly.** `+ - * /` with text, amounts or a mistake, `-` before a value, comparing,
+  `is` by value and `is in` are the module's own: it imports 34 functions, not 40 (DESIGN §155).
+- **A program with many variables compiles fast.** The compiler written in Folio found each name by going through
+  every name in its scope; it keeps a dictionary of them now. A program of 20,000 variables runs in folio.exe in
+  0.4 seconds, not 20, and one of 50,000 in 1 second, not more than 3 minutes (DESIGN §156).
+- **`is divisible by` stays in WebAssembly.** An exact remainder of two numbers, from their bits, as C's fmod
+  gives it: the module imports 32 functions (DESIGN §157).
 - **Security: a folio.packages can't reach out of packages/, or into git's options.** A line naming a package
   `../x` made `folio get` and `folio remove` take away a folder outside `packages/`, and one whose source began
   `--upload-pack=` could make git run a command. folio now refuses a line, a program's own or a package's,

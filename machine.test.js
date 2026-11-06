@@ -1071,7 +1071,7 @@ test("folio.exe build --target wasm makes wasm.js's module, which runs as the VM
     return said;
   };
   const vm = outcome((print) => run(source, print, { engine: "vm", files: (name) => files[name] }));
-  assert.deepEqual(vm.slice(0, 2), ["fib(15) is 610 and 1.41421356237309", '(dictionary where "é" is [1, "x"])']);
+  assert.deepEqual(vm.slice(0, 2), ["fib(15) is 610 and 1.4142135623731", '(dictionary where "é" is [1, "x"])']);
   assert.deepEqual(outcome((print) => runWasm(bytes, print)), vm);
   writeFileSync(join(sub, "bad.folio"), "say 1 +\n");
   const bad = spawnSync(exe, ["build", "bad.folio", "--target", "wasm"], { cwd: sub, encoding: "utf8" });
@@ -2914,22 +2914,110 @@ test("text.folio, dates.folio, hash.folio, base64.folio, toml.folio, options.fol
   const ran = spawnSync(exe, ["test", "text.test.folio", "dates.test.folio", "hash.test.folio", "big.test.folio", "xml.test.folio", "zip.test.folio", "math.test.folio",
     "base64.test.folio", "toml.test.folio", "options.test.folio", "collections.test.folio", "lists.test.folio", "stats.test.folio", "sync.test.folio", "fractions.test.folio", "sets.test.folio", "images.test.folio", "crypto.test.folio", "charts.test.folio"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "93 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "94 passed");
 });
 
-// tools/arrays.folio (DESIGN §118): its own tests, in machine code, where machine code's own loops do the work and
-// must give what Folio gives to the last bit
-test("arrays.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
+// memory.folio's own loop (DESIGN §160), on its own: each kind of number, each order, written into bytes past their
+// first and read back, against what Node's Buffer writes, and everything it won't do refused for memory.folio to say
+test("Folio's own loop for memory.folio writes and reads numbers as C keeps them, and refuses what isn't so", { skip }, () => {
+  const cases = [ // each kind's numbers: as Folio writes them, and as JavaScript has them
+    [1, [["0", 0], ["1", 1], ["200", 200], ["255", 255]], (b, v, at, big) => b.writeUInt8(v, at)],
+    [2, [["-128", -128], ["-1", -1], ["5", 5], ["127", 127]], (b, v, at, big) => b.writeInt8(v, at)],
+    [3, [["-32768", -32768], ["-2", -2], ["258", 258], ["32767", 32767]], (b, v, at, big) => big ? b.writeInt16BE(v, at) : b.writeInt16LE(v, at)],
+    [4, [["0", 0], ["258", 258], ["40000", 40000], ["65535", 65535]], (b, v, at, big) => big ? b.writeUInt16BE(v, at) : b.writeUInt16LE(v, at)],
+    [5, [["-2147483648", -2147483648], ["-2", -2], ["305419896", 305419896], ["2147483647", 2147483647]], (b, v, at, big) => big ? b.writeInt32BE(v, at) : b.writeInt32LE(v, at)],
+    [6, [["0", 0], ["1", 1], ["4000000000", 4000000000], ["4294967295", 4294967295]], (b, v, at, big) => big ? b.writeUInt32BE(v, at) : b.writeUInt32LE(v, at)],
+    [7, [["-(2 to the power of 63)", -(2 ** 63)], ["-2", -2], ["(2 to the power of 53) + 2", 2 ** 53 + 2], ["2 to the power of 62", 2 ** 62]],
+      (b, v, at, big) => big ? b.writeBigInt64BE(BigInt(v), at) : b.writeBigInt64LE(BigInt(v), at)],
+    [8, [["0", 0], ["1", 1], ["2 to the power of 53", 2 ** 53], ["(2 to the power of 63) - 1024", 2 ** 63 - 1024]],
+      (b, v, at, big) => big ? b.writeBigUInt64BE(BigInt(v), at) : b.writeBigUInt64LE(BigInt(v), at)],
+    [9, [["-1.5", -1.5], ["0.1", 0.1], ["1 / (2 to the power of 149)", 2 ** -149], ["(2 to the power of 128)", 2 ** 128]],
+      (b, v, at, big) => big ? b.writeFloatBE(v, at) : b.writeFloatLE(v, at)],
+    [10, [["-2.5", -2.5], ["0.1", 0.1], ["1 / (2 to the power of 1022) / (2 to the power of 52)", 2 ** -1074], ["2 to the power of 1023", 2 ** 1023]],
+      (b, v, at, big) => big ? b.writeDoubleBE(v, at) : b.writeDoubleLE(v, at)],
+  ];
+  const shownBytes = (b) => `(${b.length} bytes: ${[...b].join(", ")})`;
+  let source = `use the library "folio"
+    "numbers_memory" as k_bytes(a long whole number, a long whole number, a list of numbers, a long whole number, bytes, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_memory" as k_raw(a long whole number, a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+end
+use the library "msvcrt" or "c"
+    "memcpy" as address_of(bytes, bytes, a long whole number) gives a pointer
+end
+# the numbers read back, as their doubles' bytes, so each is seen to the last bit
+to as_doubles with numbers
+    set b to (8 * length of numbers) bytes
+    k_bytes(1, 10, numbers, 0, b, 0, 0, length of numbers)
+    return b
+end
+`;
+  const expected = [];
+  for (const [kind, values, write] of cases) {
+    const width = [1, 1, 2, 2, 4, 4, 8, 8, 4, 8][kind - 1];
+    source += `set values to list of 0, ${values.map(([f]) => f).join(", ")}\n`;
+    for (const big of [0, 2]) {
+      source += `set b to 34 bytes
+set wrote to k_bytes(${1 + big}, ${kind}, values, 1, b, 0, 1, 4)
+set back to list of 7, 7, 7, 7, 7, 7
+set got to k_bytes(${big}, ${kind}, back, 1, b, 0, 1, 4)
+say wrote " " got " " b " " as_doubles(back)\n`;
+      const b = Buffer.alloc(34);
+      const back = [7, 0, 0, 0, 0, 7];
+      values.forEach(([, v], i) => {
+        write(b, v, 1 + i * width, big === 2);
+        back[1 + i] = kind === 9 ? Math.fround(v) : v;
+      });
+      const doubles = Buffer.alloc(48);
+      back.forEach((v, i) => doubles.writeDoubleLE(v, 8 * i));
+      expected.push(`0 0 ${shownBytes(b)} ${shownBytes(doubles)}`);
+    }
+  }
+  source += `set b to 8 bytes
+set out to list of 0, 0
+say k_bytes(1, 1, (list of 256), 0, b, 0, 0, 1) k_bytes(1, 2, (list of -129), 0, b, 0, 0, 1) k_bytes(1, 5, (list of 1.5), 0, b, 0, 0, 1) k_bytes(1, 6, (list of -1), 0, b, 0, 0, 1)
+say k_bytes(1, 9, (list of "x"), 0, b, 0, 0, 1) k_bytes(1, 10, (list of nothing), 0, b, 0, 0, 1) k_bytes(1, 7, (list of 2 to the power of 63), 0, b, 0, 0, 1) k_bytes(1, 8, (list of -1), 0, b, 0, 0, 1)
+say k_bytes(1, 1, (list of 1, 2), 0, (1 bytes), 0, 0, 2) k_bytes(0, 1, out, 0, b, 0, 0, 3) k_bytes(0, 5, out, 0, b, 0, 6, 1) k_bytes(0, 1, out, 0, b, 0, 9, 0)
+say k_bytes(0, 11, out, 0, b, 0, 0, 1) k_bytes(0, 0, out, 0, b, 0, 0, 1) k_bytes(8, 1, out, 0, b, 0, 0, 1) k_bytes(0, 1, out, -1, b, 0, 0, 1) k_bytes(0, 1, out, 0, b, 0, 0, -1)
+k_bytes(1, 1, (list of 255, 255, 255, 255, 255, 255, 255, 255), 0, b, 0, 0, 8)
+say k_bytes(0, 8, out, 0, b, 0, 0, 1) k_bytes(0, 7, out, 0, b, 0, 0, 1) " " out
+# a NaN read is Folio's own, whatever its bits: these are nothing's
+k_bytes(1, 6, (list of 1, 0x7FF80000), 0, b, 0, 0, 2)
+set got to list of 0
+say k_bytes(0, 10, got, 0, b, 0, 0, 1) " " (item 1 of got is nothing) " " (item 1 of got is item 1 of got) " " as_doubles(got)
+k_bytes(1, 5, (list of 0x7FC00001), 0, b, 0, 0, 1)
+say k_bytes(0, 9, got, 0, b, 0, 0, 1) " " as_doubles(got)
+# memory at an address, and its size
+set at to address_of(b, b, 0)
+say k_raw(5, 5, (list of -2, 7), 0, at, 8, 0, 2) " " b
+set back to list of 0, 0
+say k_raw(4, 5, back, 0, at, 8, 0, 2) " " back
+say k_raw(6, 3, back, 0, at, 8, 6, 1) " " back
+say k_raw(5, 5, (list of 1, 2, 3), 0, at, 8, 0, 3) k_raw(4, 1, back, 0, at, 8, 8, 1) k_raw(4, 1, back, 0, at, -1, 0, 0)
+`;
+  const ran = libraryRun(source);
+  assert.deepEqual([ran.stderr, ran.status], ["", 0]);
+  assert.deepEqual(ran.stdout.split("\n"), [...expected,
+    "1111", "1111", "1111", "11111", "10 [-1, 0]",
+    `0 no no (8 bytes: 0, 0, 0, 0, 0, 0, 248, 255)`,
+    `0 (8 bytes: 0, 0, 0, 0, 0, 0, 248, 255)`,
+    "0 (8 bytes: 254, 255, 255, 255, 7, 0, 0, 0)",
+    "0 [-2, 7]", "0 [0, 7]",
+    "111", ""]);
+});
+
+// tools/arrays.folio (DESIGN §118) and tools/memory.folio (§160): their own tests, in machine code, where machine
+// code's own loops do the work and must give what Folio gives to the last bit
+test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
   const { dir, exe } = folioExe();
   const sub = join(dir, "arrays");
   mkdirSync(sub);
-  for (const name of ["arrays.folio", "arrays.test.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
+  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "learn.folio", "learn.test.folio", "gpu.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "arrays.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "13 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "26 passed");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
@@ -3089,6 +3177,368 @@ fails: yes
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// tools/gpu.folio (DESIGN §158): numbers on an NVIDIA card through CUDA's driver, the card's code PTX the driver makes
+// its own. Each operation as Folio's own arithmetic has it (the card's exp and the rest to a float's precision), a
+// matrix multiply past a tile's edge as arrays.folio's, a sum of more than a block, and its mistakes. Where there's a
+// driver and no card, available() is no; where there's no driver, it's skipped.
+const cudaHere = target === "windows" ? existsSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "nvcuda.dll"))
+  : ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib", "/usr/local/lib"].some((d) => existsSync(join(d, "libcuda.so.1")) || existsSync(join(d, "libcuda.so")));
+test("tools/gpu.folio works on numbers on the graphics card, as Folio does to a float's precision", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-gpu-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+    const exe = executable(dir, "p");
+    writeFileSync(exe, machine(`use "gpu.folio" as gpu
+use "arrays.folio" as arrays
+
+# whether each number is the exact one to 6 digits
+to close with xs, exact
+    for each k from 1 to length of xs
+        set gap to item k of xs - item k of exact
+        if gap is less than 0
+            set gap to 0 - gap
+        end
+        if gap is greater than 0.000001 * (1 + item k of exact)
+            return no
+        end
+    end
+    return yes
+end
+
+if not gpu's available()
+    say "no card"
+else
+    set card to gpu's device()
+    say length of card's name is greater than 0 and card's memory is greater than 0 and card's processors is greater than 0
+    set a to gpu's upload(list of 1, 2, 3, 4)
+    set b to gpu's upload(list of 10, 20, 30, 40)
+    say gpu's download(gpu's plus(a, b))
+    say gpu's download(gpu's minus(b, a))
+    say gpu's download(gpu's times(a, b))
+    say gpu's download(gpu's divided_by(b, a))
+    say gpu's download(gpu's maximum(a, 2.5))
+    say gpu's download(gpu's minimum(a, b))
+    say gpu's download(gpu's relu(gpu's minus(a, 2.5)))
+    say gpu's download(gpu's step(gpu's minus(a, 2.5)))
+    say gpu's download(gpu's square(a))
+    say gpu's download(gpu's absolute(gpu's negate(a)))
+    set x to arrays's array(list of 1, 2, 3, 4)
+    say close(gpu's download(gpu's exp(a)), arrays's numbers_of(arrays's exp(x)))
+    say close(gpu's download(gpu's ln(a)), arrays's numbers_of(arrays's ln(x)))
+    say close(gpu's download(gpu's sqrt(a)), arrays's numbers_of(arrays's sqrt(x)))
+    say close(gpu's download(gpu's tanh(a)), arrays's numbers_of(arrays's tanh(x)))
+    say close(gpu's download(gpu's sigmoid(a)), arrays's numbers_of(arrays's sigmoid(x)))
+    say gpu's sum(a)
+    say gpu's download(gpu's filled(3, 0.5))
+    say gpu's download(gpu's copy_of(b))
+    say gpu's download(gpu's matmul(gpu's upload(list of 1, 2, 3, 4, 5, 6), gpu's upload(list of 7, 8, 9, 10, 11, 12), 2, 3, 2))
+    set left to empty list
+    for each k from 1 to 37 * 29
+        add remainder of (k * 7) divided by 11 - 5 to left
+    end
+    set right to empty list
+    for each k from 1 to 29 * 41
+        add remainder of (k * 5) divided by 13 - 6 to right
+    end
+    set want to arrays's numbers_of(arrays's matmul(arrays's shaped(left, list of 37, 29), arrays's shaped(right, list of 29, 41)))
+    say gpu's download(gpu's matmul(gpu's upload(left), gpu's upload(right), 37, 29, 41)) is want
+    set many to empty list
+    for each k from 1 to 100000
+        add remainder of k divided by 7 to many
+    end
+    say gpu's sum(gpu's upload(many))
+    say gpu's upload(list of 1, 2)
+    say gpu's download(gpu's upload(empty list))
+    gpu's free(a)
+    say gpu's download(a)
+    try
+        say gpu's plus(b, gpu's upload(list of 1))
+    if it fails with why
+        say why
+    end
+    try
+        say gpu's matmul(b, b, 3, 3, 3)
+    if it fails with why
+        say why
+    end
+end
+`, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+    if (ran.stdout === "no card\n") return; // a driver, and no card it can use
+    assert.deepEqual([ran.stdout, ran.stderr, ran.status], [["yes", "[11, 22, 33, 44]", "[9, 18, 27, 36]", "[10, 40, 90, 160]", "[10, 10, 10, 10]",
+      "[2.5, 2.5, 3, 4]", "[1, 2, 3, 4]", "[0, 0, 0.5, 1.5]", "[0, 0, 1, 1]", "[1, 4, 9, 16]", "[1, 2, 3, 4]", "yes", "yes", "yes", "yes", "yes", "10",
+      "[0.5, 0.5, 0.5]", "[10, 20, 30, 40]", "[58, 64, 139, 154]", "yes", "300000", "2 numbers on the graphics card", "[]", "[]",
+      "'+' on the card needs as many numbers on each side, not 4 and 1", "matmul needs 3 by 3 numbers and 3 by 3, not 4 and 4", ""].join("\n"), "", 0]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// tools/learn.folio (DESIGN §162) on the card: gpu.folio's kernels for it against the same maths in Folio, and the
+// losses and gradients of every operation on the card against the processor's, to a float's precision
+test("learn.folio works out the same losses and gradients on the graphics card as on the processor", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-learn-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "arrays.folio", "learn.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+    const run = (source, name) => {
+      const exe = executable(dir, name);
+      writeFileSync(exe, machine(source, { target, name: `${name}.folio`, files, allow: ["--allow-libraries"] }));
+      if (target === "linux") chmodSync(exe, 0o755);
+      const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+      assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
+      return ran.stdout.trim().split("\n");
+    };
+    const kernels = run(KERNELS, "kernels");
+    assert.deepEqual(kernels.filter((line) => !line.startsWith("ok ")), ["failures: 0"], kernels.join("\n"));
+    const card = run(LOSSES.replace("WHERE", "yes"), "card");
+    const processor = run(LOSSES.replace("WHERE", "no"), "processor");
+    assert.deepEqual([card[0], processor[0]], ["on the card: yes", "on the card: no"]);
+    const numbers = (line) => line.replace(/[\[\]]/g, "").split(", ").map(Number);
+    for (let k = 1; k < processor.length; k++) {
+      const [got, want] = [numbers(card[k]), numbers(processor[k])];
+      assert.equal(got.length, want.length);
+      got.forEach((g, i) => assert.ok(Math.abs(g - want[i]) <= 0.00002 * (1 + Math.abs(want[i])), `line ${k}: ${card[k]} on the card, ${processor[k]} on the processor`));
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+const KERNELS = `use "gpu.folio" as gpu
+use "math.folio" as m
+
+set failures to 0
+to near with got, want, what
+    set worst to 0
+    for each k from 1 to length of want
+        set d to absolute(item k of got - item k of want) / (1 + absolute(item k of want))
+        if d is greater than worst
+            set worst to d
+        end
+    end
+    if length of got is not length of want or worst is greater than 0.00001
+        say "WRONG " + what + ": worst " + worst
+        say "  got  " + got
+        say "  want " + want
+        set failures to failures + 1
+    else
+        say "ok " + what
+    end
+end
+
+to absolute with x
+    if x is less than 0
+        return -x
+    end
+    return x
+end
+
+to randoms with n
+    set made to empty list
+    for each k from 1 to n
+        add (m's random() * 2 - 1) * 3 to made
+    end
+    return made
+end
+
+# floats, as the card keeps them
+to as_floats with xs
+    return gpu's download(gpu's upload(xs))
+end
+
+set rows to 37
+set cols to 13
+set a to as_floats(randoms(rows * cols))
+set b to as_floats(randoms(cols))
+set ga to gpu's upload(a)
+set gb to gpu's upload(b)
+
+# transpose
+set want to empty list
+for each j from 1 to cols
+    for each i from 1 to rows
+        add item ((i - 1) * cols + j) of a to want
+    end
+end
+near(gpu's download(gpu's transpose(ga, rows, cols)), want, "transpose")
+
+# add_rows
+set want to empty list
+for each i from 1 to rows
+    for each j from 1 to cols
+        add item ((i - 1) * cols + j) of a + item j of b to want
+    end
+end
+near(gpu's download(gpu's add_rows(ga, gb, rows, cols)), want, "add_rows")
+
+# column_sums
+set want to empty list
+for each j from 1 to cols
+    set s to 0
+    for each i from 1 to rows
+        set s to s + item ((i - 1) * cols + j) of a
+    end
+    add s to want
+end
+near(gpu's download(gpu's column_sums(ga, rows, cols)), want, "column_sums")
+
+# softmax_rows, and cross_entropy against labels
+set labels to empty list
+for each i from 1 to rows
+    add (i * 7) - (((i * 7) / cols) rounded down) * cols to labels
+end
+set soft to empty list
+set grad to empty list
+set loss to 0
+for each i from 1 to rows
+    set top to -1000000
+    for each j from 1 to cols
+        if item ((i - 1) * cols + j) of a is greater than top
+            set top to item ((i - 1) * cols + j) of a
+        end
+    end
+    set total to 0
+    for each j from 1 to cols
+        set total to total + m's exp(item ((i - 1) * cols + j) of a - top)
+    end
+    for each j from 1 to cols
+        set p to m's exp(item ((i - 1) * cols + j) of a - top) / total
+        add p to soft
+        set g to p
+        if j - 1 is item i of labels
+            set g to p - 1
+        end
+        add g / rows to grad
+    end
+    set loss to loss + top + m's ln(total) - item ((i - 1) * cols + item i of labels + 1) of a
+end
+near(gpu's download(gpu's softmax_rows(ga, rows, cols)), soft, "softmax_rows")
+set got to gpu's cross_entropy(ga, gpu's upload(labels), rows, cols)
+near((list of got's loss), (list of loss / rows), "cross_entropy loss")
+near(gpu's download(got's gradient), grad, "cross_entropy gradient")
+
+# argmax_rows
+set want to empty list
+for each i from 1 to rows
+    set best to 0
+    for each j from 2 to cols
+        if item ((i - 1) * cols + j) of a is greater than item ((i - 1) * cols + best + 1) of a
+            set best to j - 1
+        end
+    end
+    add best to want
+end
+near(gpu's download(gpu's argmax_rows(ga, rows, cols)), want, "argmax_rows")
+
+# relu_gradient
+set g to as_floats(randoms(rows * cols))
+set want to empty list
+for each k from 1 to rows * cols
+    if item k of a is greater than 0
+        add item k of g to want
+    else
+        add 0 to want
+    end
+end
+near(gpu's download(gpu's relu_gradient(gpu's upload(g), ga)), want, "relu_gradient")
+
+# add_scaled, in place
+set target to gpu's upload(a)
+gpu's add_scaled(target, gpu's upload(g), -0.5)
+set want to empty list
+for each k from 1 to rows * cols
+    add item k of a + item k of g * -0.5 to want
+end
+near(gpu's download(target), want, "add_scaled")
+
+# adam, two steps
+set p to as_floats(randoms(50))
+set grads to list of as_floats(randoms(50)), as_floats(randoms(50))
+set gp to gpu's upload(p)
+set gm to gpu's zeros(50)
+set gv to gpu's zeros(50)
+set mm to empty list
+set vv to empty list
+for each k from 1 to 50
+    add 0 to mm
+    add 0 to vv
+end
+for each t from 1 to 2
+    set gr to item t of grads
+    gpu's adam_step(gp, gpu's upload(gr), gm, gv, 0.01, 0.9, 0.999, 0.00000001, t)
+    for each k from 1 to 50
+        set item k of mm to 0.9 * item k of mm + 0.1 * item k of gr
+        set item k of vv to 0.999 * item k of vv + 0.001 * item k of gr * item k of gr
+        set mh to item k of mm / (1 - (0.9 to the power of t))
+        set vh to item k of vv / (1 - (0.999 to the power of t))
+        set item k of p to item k of p - 0.01 * mh / (m's sqrt(vh) + 0.00000001)
+    end
+end
+near(gpu's download(gp), p, "adam_step")
+
+# the pool: memory freed comes back for numbers of the same count
+set first to gpu's zeros(1000)
+set at to first's at
+gpu's free(first)
+set again to gpu's zeros(1000)
+if again's at is at
+    say "ok the pool gives the memory back"
+else
+    say "WRONG the pool didn't give the memory back"
+    set failures to failures + 1
+end
+gpu's give_back_memory()
+say "failures: " + failures
+`;
+const LOSSES = `use "learn.folio" as learn
+learn's use_card(WHERE)
+say "on the card: " + learn's on_card()
+set x_data to list of (list of 0.5, -1.2), (list of 1.5, 0.3), (list of -0.7, 0.9)
+
+to loss_matmul with ps
+    return learn's sum(learn's times(learn's matmul(item 1 of ps, item 2 of ps), 0.5))
+end
+
+to loss_layer with ps
+    set x to learn's matrix(x_data)
+    return learn's mean(learn's relu(learn's add_row(learn's matmul(x, item 1 of ps), item 2 of ps)))
+end
+
+to loss_entropy with ps
+    set x to learn's matrix(x_data)
+    return learn's cross_entropy(learn's add_row(learn's matmul(x, item 1 of ps), item 2 of ps), list of 2, 0, 1)
+end
+
+to loss_squares with ps
+    set target to learn's matrix(list of (list of 1, 2), (list of 3, 4))
+    set both to learn's plus(learn's times(item 1 of ps, item 2 of ps), learn's minus(item 1 of ps, item 2 of ps))
+    return learn's mean_squared_error(both, target)
+end
+
+
+to show with make_loss, starts
+    set params to empty list
+    for each s in starts
+        add learn's parameter(learn's matrix(s)) to params
+    end
+    set loss to make_loss(params)
+    learn's backward(loss)
+    say learn's value(loss)
+    for each p in params
+        say learn's numbers_of(learn's gradient_of(p))
+    end
+    learn's forget()
+end
+show(loss_matmul, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 1, -2), (list of 0.3, 4), (list of 2, 1)))
+show(loss_layer, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.15, 0.2, 0.3)))
+show(loss_entropy, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.1, -0.2, 0.3)))
+show(loss_squares, list of (list of (list of 1, 2), (list of -1, 0.5)), (list of (list of 0.3, -2), (list of 4, 1)))
+`;
 
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program
 function numpyBlas() {
@@ -6526,8 +6976,9 @@ test("tools/game.folio plays a game: frames, keys held, pictures and sounds, on 
     + "frames a second at least 30: yes\npainted yes, yes frames\n", 0], ran.stderr);
 });
 
-test("only a program that reads can go online, and only it imports WinHTTP", () => {
-  const imports = (bytes) => Buffer.from(bytes).includes(Buffer.from("WINHTTP.dll"));
+test("only a program that reads can go online, and only it has WinHTTP in it", () => {
+  // loaded when the program first goes online (DESIGN §159), so it's named in the program as Windows' wide text
+  const imports = (bytes) => Buffer.from(bytes).includes(Buffer.from("WINHTTP.dll", "utf16le"));
   assert.ok(!imports(machine('say "hello"\nwrite "x" to "out.txt"\n', { target: "windows", name: "w.folio", allow: ["--allow-all"] })));
   assert.ok(imports(machine('say read "notes.txt"\n', { target: "windows", name: "r.folio" })));
   const reads = (source) => machine(source, { target: "linux", name: "r.folio" });
@@ -7166,8 +7617,8 @@ test("an app's handlers make their sounds as its events come, and only a program
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, FOLIO_PICTURE: join(dir, "app.bmp"), FOLIO_EVENTS: events, FOLIO_SOUND: "app.wav" } });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["", "", 2]);
     assert.ok(Buffer.from(soundWav(played)).equals(readFileSync(join(dir, "app.wav"))));
-    if (target === "windows") { // winmm.dll, which plays sounds, only goes into a program that makes one
-      const imports = (b) => Buffer.from(b).includes("WINMM.dll");
+    if (target === "windows") { // winmm.dll, which plays sounds, only goes into a program that makes one (DESIGN §159)
+      const imports = (b) => Buffer.from(b).includes(Buffer.from("WINMM.dll", "utf16le"));
       assert.ok(imports(bytes));
       assert.ok(!imports(machine('say "quiet"\nmove forward 10', { target, name: "q.folio" })));
     }
@@ -7564,7 +8015,40 @@ say sync's wait_for_all(list of (start nap(20) on another core), (start nap(10) 
 });
 
 // Four workers, each doing what four calls one after another do a quarter of, take far less time, where there are cores
-test("workers use every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, () => {
+// How much of the time four copies of a program take one after another they take all at once, here: on a runner
+// whose two "cores" are two threads of one, as GitHub's are for a private repository, nearly all of it, and no
+// program can do better there.
+async function parallelCapacity(source) {
+  const dir = mkdtempSync(join(tmpdir(), "folio-cores-"));
+  try {
+    const exe = executable(dir, "p");
+    writeFileSync(exe, machine(source, { target, name: "p.folio" }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    spawnSync(exe, []);
+    let start = process.hrtime.bigint();
+    for (let k = 0; k < 4; k++) spawnSync(exe, []);
+    const alone = Number(process.hrtime.bigint() - start);
+    start = process.hrtime.bigint();
+    await Promise.all([0, 1, 2, 3].map(() => new Promise((done) => spawn(exe, []).on("close", done))));
+    return Number(process.hrtime.bigint() - start) / alone;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("workers use every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, async (t) => {
+  const capacity = await parallelCapacity(`to busy with n
+    set sum to 0
+    for each i from 1 to n
+        set sum to sum + (remainder of i divided by 7)
+    end
+    return sum
+end
+say busy(40000000)`);
+  if (capacity > 0.7) {
+    t.skip(`four programs at once took ${capacity.toFixed(2)} of the time one after another did: this computer can't run them side by side`);
+    return;
+  }
   const source = `to busy with n
     set sum to 0
     for each i from 1 to n
@@ -7589,15 +8073,40 @@ end
 set together to the clock - t0
 say together / alone`;
   // Best of three: one busy moment on a shared CI runner can leave the workers no spare core, so a single
-  // measurement sometimes shows no speed-up. The speed-up is real if it shows even once.
-  const want = availableParallelism() >= 4 ? 0.6 : 0.8;
+  // measurement sometimes shows no speed-up. The speed-up is real if it shows even once, and near what four
+  // programs at once get here.
+  const want = Math.min(0.8, capacity * 1.3 + 0.1);
   let best = Infinity;
   for (let attempt = 0; attempt < 3 && best >= want; attempt++) {
     const ran = taskRun(source);
     assert.equal(ran.status, 0, ran.stderr);
     best = Math.min(best, Number(ran.stdout));
   }
-  assert.ok(best < want, `four workers took ${best} of the time four calls one after another did (best of 3)`);
+  assert.ok(best < want, `four workers took ${best} of the time four calls one after another did (best of 3), and four programs ${capacity.toFixed(2)}`);
+});
+
+// memory.folio's atomics (DESIGN §165): four workers, each on a thread of its own, adding 1 to one number of a block
+// they share a million times each, through lock xadd: every one of the 4,000,000 counted
+test("memory.folio's add_atomically counts every add from workers on every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, () => {
+  const ran = taskRun(`use "memory.folio" as memory
+set counter to memory's take(8)
+to count_up with block, times
+    for each k from 1 to times
+        memory's add_atomically(block, 1, 1)
+    end
+    return times
+end
+set jobs to empty list
+for each w from 1 to 4
+    add (start count_up(counter, 1000000) on another core) to jobs
+end
+for each j in jobs
+    wait for j
+end
+say memory's get_atomically(counter, 1)
+memory's give_back(counter)
+say memory's taken()`, { allow: ["--allow-libraries"], files: { "memory.folio": readFileSync(new URL("./tools/memory.folio", import.meta.url), "utf8") } });
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["4000000\n0\n", "", 0]);
 });
 
 test("a program with workers takes its threads and its workers' memory from the system, on Windows as on Linux", () => {

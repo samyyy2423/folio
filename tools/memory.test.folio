@@ -1,0 +1,367 @@
+# memory.folio's tests, which folio.test.js runs on every engine, and machine.test.js in machine code
+
+use "memory.folio" as memory
+
+to test_whole_numbers
+    set b to 16 bytes
+    memory's put(b, 1, -2, "a whole number")
+    expect items 1 to 4 of b is (list of 254, 255, 255, 255) as bytes
+    expect memory's get(b, 1, "a whole number") is -2
+    expect memory's get(b, 1, "an unsigned whole number") is 4294967294
+    expect memory's get(b, 1, "a short whole number") is -2
+    expect memory's get(b, 1, "an unsigned short whole number") is 65534
+    expect memory's get(b, 1, "a signed byte") is -2
+    expect memory's get(b, 1, "a byte") is 254
+    memory's put(b, 5, 258, "a short whole number", "big")
+    expect byte 5 of b is 1
+    expect byte 6 of b is 2
+    expect memory's get(b, 5, "a short whole number", "big") is 258
+    expect memory's get(b, 5, "a short whole number") is 513
+    memory's put(b, 9, -1, "a long whole number")
+    expect memory's get(b, 9, "a long whole number") is -1
+    expect memory's get(b, 9, "an unsigned long whole number") is 2 to the power of 64
+    memory's put(b, 9, 2 to the power of 53, "a long whole number")
+    expect memory's get(b, 9, "a long whole number") is 2 to the power of 53
+    memory's put(b, 9, -(2 to the power of 63), "a long whole number")
+    expect byte 16 of b is 128
+    expect memory's get(b, 9, "a long whole number") is -(2 to the power of 63)
+    memory's put(b, 9, 2 to the power of 63, "an unsigned long whole number")
+    expect memory's get(b, 9, "an unsigned long whole number") is 2 to the power of 63
+    expect memory's get(b, 9, "a long whole number") is -(2 to the power of 63)
+    memory's put(b, 9, 305419896, "a whole number", "big")
+    expect items 9 to 12 of b is (list of 0x12, 0x34, 0x56, 0x78) as bytes
+    expect memory's get(b, 9, "an unsigned whole number") is 0x78563412
+    set p to 8 bytes
+    memory's put(p, 1, (0x01020304 * 4294967296 + 0x05060700), "a pointer", "big")
+    expect p is (list of 1, 2, 3, 4, 5, 6, 7, 0) as bytes
+    expect memory's get(p, 1, "a pointer", "big") is (0x01020304 * 4294967296 + 0x05060700)
+    for each name in list of "a byte", "a signed byte", "a short whole number", "an unsigned short whole number", "a whole number", "an unsigned whole number", "a long whole number", "an unsigned long whole number", "a pointer"
+        for each value in list of 0, 1, 127
+            memory's put(b, 3, value, name)
+            expect memory's get(b, 3, name) is value
+            memory's put(b, 3, value, name, "big")
+            expect memory's get(b, 3, name, "big") is value
+        end
+    end
+    expect memory's size_of("a byte") is 1
+    expect memory's size_of("an unsigned short whole number") is 2
+    expect memory's size_of("a float") is 4
+    expect memory's size_of("a pointer") is 8
+    expect memory's size(b) is 16
+end
+
+to test_floats_and_doubles
+    set b to 8 bytes
+    memory's put(b, 1, 1.5, "a float")
+    expect b is (list of 0, 0, 0xC0, 0x3F, 0, 0, 0, 0) as bytes
+    expect memory's get(b, 1, "a float") is 1.5
+    memory's put(b, 1, 0.1, "a float")
+    expect memory's get(b, 1, "an unsigned whole number") is 0x3DCCCCCD
+    expect memory's get(b, 1, "a float") is 13421773 / 134217728
+    memory's put(b, 1, 0.1, "a number")
+    expect memory's get(b, 1, "a number") is 0.1
+    expect memory's get(b, 1, "an unsigned whole number") is 0x9999999A
+    expect memory's get(b, 5, "an unsigned whole number") is 0x3FB99999
+    memory's put(b, 1, -2.5, "a number", "big")
+    expect b is (list of 0xC0, 0x04, 0, 0, 0, 0, 0, 0) as bytes
+    expect memory's get(b, 1, "a number", "big") is -2.5
+    set huge to (2 to the power of 1023) * 2
+    for each x in list of 0, 1, -1, 3.25, 65504, 2 to the power of -126, 2 to the power of -149, huge, -huge
+        memory's put(b, 1, x, "a float")
+        expect memory's get(b, 1, "a float") is x
+        memory's put(b, 1, x, "a float", "big")
+        expect memory's get(b, 1, "a float", "big") is x
+    end
+    set tiny to 1 / (2 to the power of 1022) / (2 to the power of 52)
+    for each x in list of 0.1, -1 / 3, 2 to the power of 1023, tiny, 3 * tiny, 1 / (2 to the power of 1022), huge, -huge, 123456789.125
+        memory's put(b, 1, x, "a number")
+        expect memory's get(b, 1, "a number") is x
+        memory's put(b, 1, x, "a number", "big")
+        expect memory's get(b, 1, "a number", "big") is x
+    end
+    # a float's rounding: ties to even, the smallest steps, and past the largest
+    memory's put(b, 1, 1 + 1 / 16777216, "a float")
+    expect memory's get(b, 1, "a float") is 1
+    memory's put(b, 1, 1 + 3 / 16777216, "a float")
+    expect memory's get(b, 1, "a float") is 1 + 4 / 16777216
+    memory's put(b, 1, 2 to the power of 128, "a float")
+    expect memory's get(b, 1, "a float") is huge
+    memory's put(b, 1, 3 * (2 to the power of -151), "a float")
+    expect memory's get(b, 1, "a float") is 2 to the power of -149
+    memory's put(b, 1, 2 to the power of -151, "a float")
+    expect memory's get(b, 1, "a float") is 0
+    # NaN, read and written
+    memory's put(b, 1, 0x7FC00001, "an unsigned whole number")
+    set nan to memory's get(b, 1, "a float")
+    expect nan is not nan
+    memory's put(b, 1, nan, "a float")
+    expect memory's get(b, 1, "an unsigned whole number") is not 0
+    set got to memory's get(b, 1, "a float")
+    expect got is not got
+    memory's put_many(b, 1, (list of 0xFFFFFFFF, 0x7FF0FFFF), "an unsigned whole number")
+    set got to memory's get(b, 1, "a number")
+    expect got is not got
+end
+
+to test_many_at_once
+    set b to 40 bytes
+    memory's put_many(b, 1, (list of 1, -2, 3, -4, 5), "a short whole number")
+    expect memory's get_many(b, 1, 5, "a short whole number") is list of 1, -2, 3, -4, 5
+    expect memory's get_many(b, 3, 2, "an unsigned short whole number") is list of 65534, 3
+    memory's put_many(b, 11, (list of 0.5, 1.5, 2.5, 3.5), "a float", "big")
+    expect memory's get_many(b, 11, 4, "a float", "big") is list of 0.5, 1.5, 2.5, 3.5
+    expect memory's get_many(b, 11, 0, "a float") is empty list
+    memory's put_many(b, 27, empty list, "a number")
+    memory's put_many(b, 33, (list of 1 / 3), "a number")
+    expect memory's get_many(b, 33, 1, "a number") is list of 1 / 3
+    set many to empty list
+    for each i from 1 to 1000
+        add i * 0.25 - 100 to many
+    end
+    set big to 4000 bytes
+    memory's put_many(big, 1, many, "a float")
+    expect memory's get_many(big, 1, 1000, "a float") is many
+    memory's put_many(big, 1, many, "a float", "big")
+    expect memory's get_many(big, 1, 1000, "a float", "big") is many
+    expect memory's get(big, 3997, "a float", "big") is 150
+end
+
+to test_blocks
+    set block to memory's take(64)
+    expect memory's size(block) is 64
+    expect memory's get_many(block, 1, 8, "a long whole number") is list of 0, 0, 0, 0, 0, 0, 0, 0
+    memory's put(block, 1, 7, "a long whole number")
+    memory's put(block, 9, 2.75, "a number")
+    expect memory's get(block, 1, "a long whole number") is 7
+    expect memory's get(block, 9, "a number") is 2.75
+    memory's put_many(block, 17, (list of 10, 20, 30), "a whole number", "big")
+    expect memory's get_many(block, 17, 3, "a whole number", "big") is list of 10, 20, 30
+    memory's put(block, 57, 2 to the power of 64 - 2048, "an unsigned long whole number")
+    expect memory's get(block, 57, "an unsigned long whole number") is 2 to the power of 64 - 2048
+    set b to 8 bytes
+    memory's put(b, 1, 99, "a long whole number")
+    memory's copy(b, 1, block, 33, 8)
+    expect memory's get(block, 33, "a long whole number") is 99
+    memory's copy(block, 1, b, 1, 8)
+    expect memory's get(b, 1, "a long whole number") is 7
+    memory's fill(block, 41, 4, 255)
+    expect memory's get(block, 41, "a whole number") is -1
+    expect memory's get(block, 45, "a whole number") is 0
+    memory's put_many(b, 1, (list of 1, 2, 3, 4, 5, 6, 7, 8), "a byte")
+    memory's copy(b, 1, b, 3, 6) # overlapping, as memmove has them
+    expect b is (list of 1, 2, 1, 2, 3, 4, 5, 6) as bytes
+    memory's copy(b, 3, b, 1, 6)
+    expect b is (list of 1, 2, 3, 4, 5, 6, 5, 6) as bytes
+    memory's fill(b, 2, 0, 9)
+    expect "{block}" is "(a block of 64 bytes)"
+    memory's give_back(block)
+    expect "{block}" is "(a block, given back)"
+    try
+        memory's get(block, 1, "a byte")
+        expect "a block given back" is "a mistake"
+    if it fails with why
+        expect why is "'get' was given a block that was given back"
+    end
+    try
+        memory's give_back(block)
+        expect "a block given back twice" is "a mistake"
+    if it fails with why
+        expect why is "'give_back' was given a block that was given back"
+    end
+    expect memory's size(memory's take(0)) is 0
+end
+
+to test_mistakes
+    set b to 4 bytes
+    for each case in list of (list of "'get' needs a place from 1 to 1 in 4 bytes, not 2", 2, "a whole number"),
+        (list of "'get' needs a place from 1 to 4 in 4 bytes, not 0", 0, "a byte"),
+        (list of "'get' needs a place from 1 to 3 in 4 bytes, not 1.5", 1.5, "a short whole number"),
+        (list of "'get' needs 8 bytes, and there are 4", 1, "a number"),
+        (list of "'get' needs a kind of number C has: \"a byte\", \"a signed byte\", \"a short whole number\", \"an unsigned short whole number\", \"a whole number\", \"an unsigned whole number\", \"a long whole number\", \"an unsigned long whole number\", \"a pointer\", \"a float\" or \"a number\", not \"an int\"", 1, "an int")
+        try
+            memory's get(b, item 2 of case, item 3 of case)
+            expect item 1 of case is "no mistake"
+        if it fails with why
+            expect why is item 1 of case
+        end
+    end
+    for each case in list of (list of "'put' needs a whole number from 0 to 255 for a byte, not 256", 256, "a byte"),
+        (list of "'put' needs a whole number from -128 to 127 for a signed byte, not -129", -129, "a signed byte"),
+        (list of "'put' needs a whole number from -32768 to 32767 for a short whole number, not 1.5", 1.5, "a short whole number"),
+        (list of "'put' needs a whole number from 0 to 4294967295 for an unsigned whole number, not -1", -1, "an unsigned whole number"),
+        (list of "'put' needs numbers, not \"7\"", "7", "a float")
+        try
+            memory's put(b, 1, item 2 of case, item 3 of case)
+            expect item 1 of case is "no mistake"
+        if it fails with why
+            expect why is item 1 of case
+        end
+    end
+    set long to 8 bytes
+    for each case in list of (list of "'put' needs a whole number from -2^63 to 2^63 - 1 for a long whole number, not 9223372036854776000", 2 to the power of 63, "a long whole number"),
+        (list of "'put' needs a whole number from 0 to 2^64 - 1 for an unsigned long whole number, not 18446744073709552000", 2 to the power of 64, "an unsigned long whole number")
+        try
+            memory's put(long, 1, item 2 of case, item 3 of case)
+            expect item 1 of case is "no mistake"
+        if it fails with why
+            expect why is item 1 of case
+        end
+    end
+    try
+        memory's put_many(b, 1, (list of 1, 2, 300, 4), "a byte")
+        expect "300 in a byte" is "a mistake"
+    if it fails with why
+        expect why is "'put_many' needs a whole number from 0 to 255 for a byte, not 300"
+    end
+    expect b is (list of 1, 2, 0, 0) as bytes # those before it, written
+    try
+        memory's get(b, 1, "a byte", "middle")
+        expect "a middle order" is "a mistake"
+    if it fails with why
+        expect why is "'get' needs \"little\" or \"big\" for the order, not \"middle\""
+    end
+    try
+        memory's get((list of 1, 2), 1, "a byte")
+        expect "a list" is "a mistake"
+    if it fails with why
+        expect why is "'get' needs bytes or a block, not a list"
+    end
+    try
+        memory's fill(b, 1, 2, 256)
+        expect "a fill of 256" is "a mistake"
+    if it fails with why
+        expect why is "'fill' fills with a byte, a whole number from 0 to 255, not 256"
+    end
+    try
+        memory's copy(b, 3, b, 1, 3)
+        expect "a copy past the end" is "a mistake"
+    if it fails with why
+        expect why is "'copy' needs a place from 1 to 2 in 4 bytes, not 3"
+    end
+    try
+        memory's take(-1)
+        expect "a block of -1 bytes" is "a mistake"
+    if it fails with why
+        expect why is "'take' needs a number of bytes, a whole number from 0 up, not -1"
+    end
+end
+
+to test_layouts
+    # as C lays out struct { char c; int i; double d; short s; }: 1, then 3 to a 4-byte boundary, 4, 8, 2, then 6 to 24
+    set mixed to memory's layout(list of "c", "a byte", "i", "a whole number", "d", "a number", "s", "a short whole number")
+    expect memory's size_of(mixed) is 24
+    expect memory's offset_of(mixed, "i") is 4
+    expect memory's offset_of(mixed, "d") is 8
+    expect memory's offset_of(mixed, "s") is 16
+    set point to memory's layout(list of "x", "a float", "y", "a float")
+    set line to memory's layout(list of "from", point, "to", point, "width", "a byte")
+    expect memory's size_of(line) is 20
+    expect memory's offset_of(line, "to") is 8
+    set b to 48 bytes
+    memory's put_field(b, 1, mixed, "i", -7)
+    memory's put_field(b, 1, mixed, "d", 2.5)
+    memory's put_field(b, 25, mixed, "s", 300)
+    expect memory's get_field(b, 1, mixed, "i") is -7
+    expect memory's get_field(b, 1, mixed, "d") is 2.5
+    expect memory's get_field(b, 25, mixed, "s") is 300
+    expect memory's get(b, 5, "a whole number") is -7
+    expect memory's get(b, 25 + 16, "a short whole number") is 300
+    for each case in list of (list of "'get_field' was given 'z', which isn't one of the layout's fields: c, i, d, s", "z"),
+        (list of "'layout' was given the field 'x' twice", "twice")
+        try
+            if item 2 of case is "twice"
+                memory's layout(list of "x", "a byte", "x", "a byte")
+            else
+                memory's get_field(b, 1, mixed, "z")
+            end
+            expect item 1 of case is "no mistake"
+        if it fails with why
+            expect why is item 1 of case
+        end
+    end
+end
+
+to test_views
+    set b to 16 bytes
+    memory's put_many(b, 1, (list of 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), "a byte")
+    set part to memory's view(b, 5, 4)
+    expect memory's size(part) is 4
+    expect memory's get_many(part, 1, 4, "a byte") is list of 5, 6, 7, 8
+    memory's put(part, 1, 99, "a byte")
+    expect byte 5 of b is 99
+    set inner to memory's view(part, 2, 2)
+    expect memory's get_many(inner, 1, 2, "a byte") is list of 6, 7
+    try
+        memory's get(part, 4, "a short whole number")
+        expect "past the view's end" is "a mistake"
+    if it fails with why
+        expect why is "'get' needs a place from 1 to 3 in 4 bytes, not 4"
+    end
+    set safe to memory's read_only(part)
+    expect memory's is_read_only(safe)
+    expect not memory's is_read_only(part)
+    expect memory's get(safe, 1, "a byte") is 99
+    expect "{safe}" is "(a read-only view of 4 bytes)"
+    for each what in list of "put", "fill", "copy"
+        try
+            if what is "put"
+                memory's put(safe, 1, 1, "a byte")
+            else if what is "fill"
+                memory's fill(safe, 1, 4, 0)
+            else
+                memory's copy(b, 1, safe, 1, 2)
+            end
+            expect what is "refused"
+        if it fails with why
+            expect why is "'" + what + "' was given memory that can only be read"
+        end
+    end
+    memory's copy(safe, 1, b, 13, 4)
+    expect memory's get_many(b, 13, 4, "a byte") is list of 99, 6, 7, 8
+    set before to memory's taken()
+    set block to memory's take(32)
+    expect memory's taken() - before is 32
+    set window to memory's view(block, 9, 8)
+    memory's put(window, 1, 12345, "a long whole number")
+    expect memory's get(block, 9, "a long whole number") is 12345
+    try
+        memory's give_back(window)
+        expect "a view given back" is "a mistake"
+    if it fails with why
+        expect why is "'give_back' takes back a block take made, not a view, or one block_at made of a C library's memory"
+    end
+    memory's give_back(block)
+    expect memory's taken() is before
+    try
+        memory's get(window, 1, "a byte")
+        expect "a view of a block given back" is "a mistake"
+    if it fails with why
+        expect why is "'get' was given a view of a block that was given back"
+    end
+end
+
+to test_atomics
+    set block to memory's take(24)
+    expect memory's add_atomically(block, 9, 5) is 0
+    expect memory's add_atomically(block, 9, -2) is 5
+    expect memory's get_atomically(block, 9) is 3
+    expect memory's swap_if(block, 9, 3, 10)
+    expect not memory's swap_if(block, 9, 3, 20)
+    expect memory's get_atomically(block, 9) is 10
+    expect memory's put_atomically(block, 9, 7) is 10
+    expect memory's get(block, 9, "a long whole number") is 7
+    try
+        memory's add_atomically(block, 20, 1)
+        expect "past the end" is "a mistake"
+    if it fails with why
+        expect why is "'add_atomically' needs a place from 1 to 17 in 24 bytes, not 20"
+    end
+    try
+        memory's add_atomically(memory's read_only(block), 1, 1)
+        expect "read-only" is "a mistake"
+    if it fails with why
+        expect why is "'add_atomically' was given memory that can only be read"
+    end
+    expect memory's get_atomically(memory's read_only(block), 9) is 7
+    memory's give_back(block)
+end

@@ -1,0 +1,1082 @@
+# Memory as C has it: numbers kept as C keeps them, in bytes or in memory of the program's own, outside the
+# collector, for file formats, what goes over a network, a model's weights and what a C library hands back. A
+# kind of number is named as a library's line names it: "a byte", "a signed byte", "a short whole number", "an
+# unsigned short whole number", "a whole number", "an unsigned whole number", "a long whole number", "an unsigned
+# long whole number", "a pointer", "a float" and "a number" (C's double). Places count from 1, as bytes' do.
+#
+#   use "memory.folio" as memory
+#   set b to 16 bytes
+#   memory's put(b, 1, -2, "a whole number")                # 4 bytes, as C keeps an int
+#   say b                                                   # (16 bytes: 254, 255, 255, 255, 0, ...)
+#   say memory's get(b, 1, "a whole number")                # -2
+#   say memory's get(b, 1, "an unsigned whole number")      # 4294967294: the same bytes, read unsigned
+#   memory's put(b, 5, 0.1, "a float")                      # rounded to the nearest float, as C rounds it
+#   say memory's get(b, 5, "a float")                       # 0.100000001490116
+#   memory's put(b, 9, 258, "a short whole number", "big")  # biggest byte first, as networks send them: 1, 2
+#   memory's put_many(b, 1, (list of 1, 2, 3), "a short whole number")
+#   say memory's get_many(b, 1, 3, "a short whole number")  # [1, 2, 3]
+#   say memory's size_of("a long whole number")             # 8
+#
+#   set block to memory's take(4096)          # 4,096 bytes of the program's own, outside the collector, all 0
+#   memory's put(block, 1, 7, "a long whole number")
+#   memory's copy(b, 1, block, 9, 16)         # 16 bytes, from b's 1st on to block's 9th on
+#   memory's fill(block, 100, 8, 255)         # 8 bytes from the 100th on, each 255
+#   say memory's address_of(block)            # where it is, for a library's `a pointer`
+#   memory's give_back(block)                 # its memory back to the system; using it after is a mistake
+#
+# Every place is checked against the memory's size, and every number against its kind: a whole number in its
+# kind's range, or a `fail with` that says so. get_many and put_many take a list of numbers in one go. size(m)
+# is how many bytes m has, and block_at(address, size) is memory a C library gave as a block, which give_back
+# doesn't take. "little", the order every computer Folio runs on keeps numbers in, can be said too.
+#
+# C's structures, by their fields' names, laid out as C lays them out (each field on a boundary of its own size,
+# the whole a multiple of its largest), and memory a part at a time:
+#
+#   set point to memory's layout(list of "x", "a whole number", "y", "a whole number", "weight", "a number")
+#   say memory's size_of(point)                          # 16: 4, 4, then 8 on a boundary of 8
+#   memory's put_field(block, 1, point, "y", 7)           # a point at block's 1st byte, its y 7
+#   say memory's get_field(block, 1 + memory's size_of(point), point, "weight")   # the next point's weight
+#   set part to memory's view(block, 17, 16)              # 16 of block's bytes, from its 17th: places from 1
+#   set safe to memory's read_only(part)                  # the same bytes, which put and the rest refuse
+#   say memory's taken()                                  # bytes taken and not given back, to find a leak
+#
+# Numbers threads share, each change whole however many threads make one at once (64-bit whole numbers on an
+# 8-byte boundary, as the processor's lock instructions have them): add_atomically(m, place, n) gives what was
+# there before, swap_if(m, place, was, now) puts now there if was was there and says whether it did, and
+# get_atomically and put_atomically. A view is gone once what it's a view of is given back.
+#
+# In a program `folio build` makes, get, put and their many go through a loop of Folio's own in machine code
+# (DESIGN §160), and take, give_back, copy and fill through the system's C library (msvcrt on Windows, libc on
+# Linux), so such a program is run or built with --allow-libraries to take memory. On the JavaScript engines,
+# which have no memory but the collector's, a block is bytes, and address_of and block_at are a `fail with`. A
+# block's memory is the program's until give_back, however long that is, and an address that isn't one, given to
+# block_at, can crash the program, as in C.
+
+# Folio's own loop, which a program folio build makes has in it (see machine.folio's own kernels): it gives 0, or
+# 1 for anything it won't do, which is then done here in Folio, so what happens is what Folio says happens
+use the library "folio"
+    "numbers_memory" as memory_k_bytes(a long whole number, a long whole number, a list of numbers, a long whole number, bytes, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_memory" as memory_k_raw(a long whole number, a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_atomic" as memory_k_atomic_bytes(a long whole number, a list of numbers, bytes, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_atomic" as memory_k_atomic_raw(a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+end
+
+# the system's C library: memory of the program's own, and copying and filling it
+use the library "msvcrt" or "c"
+    "calloc" as memory_calloc(a long whole number, a long whole number) gives a pointer
+    "free" as memory_free(a pointer)
+    "memmove" as memory_move(a pointer, a pointer, a long whole number) gives a pointer
+    "memset" as memory_set(a pointer, a whole number, a long whole number) gives a pointer
+    "memcpy" as memory_bytes_address(bytes, bytes, a long whole number) gives a pointer
+end
+
+# whether the loop is there: in machine code, yes; on the JavaScript engines, which can't call a library, no
+set memory_native to yes
+try
+    memory_k_bytes(0, 1, (list of 0), 0, (1 bytes), 0, 0, 0)
+if it fails
+    set memory_native to no
+end
+
+# whether the C library can be used, once something has tried: nothing until then
+set memory_c to nothing
+
+# how many bytes take has given and give_back hasn't had back
+set memory_taken to 0
+
+set memory_kinds to dictionary where "a byte" is 1, "a signed byte" is 2, "a short whole number" is 3,
+    "an unsigned short whole number" is 4, "a whole number" is 5, "an unsigned whole number" is 6,
+    "a long whole number" is 7, "an unsigned long whole number" is 8, "a pointer" is 8, "a float" is 9, "a number" is 10
+set memory_widths to list of 1, 1, 2, 2, 4, 4, 8, 8, 4, 8
+set memory_signed to list of no, yes, yes, no, yes, no, yes, no
+set memory_two_32 to 4294967296
+set memory_two_63 to 2 to the power of 63
+set memory_infinity to (2 to the power of 1023) * 2
+set memory_nan to memory_infinity - memory_infinity
+
+# a block: memory of the program's own (address and size), or, on the JavaScript engines, bytes (store) from its
+# byte offset on; owned if take made it, gone once it's given back, a view of parent if it's one, and read_only
+# if put and the rest refuse it
+kind memory_record with address, size, store, owned, gone, offset, parent, read_only
+    to shown with self
+        if self's gone
+            return "(a block, given back)"
+        end
+        set what to "block"
+        if self's parent is not nothing
+            set what to "view"
+        end
+        if self's read_only
+            return "(a read-only " + what + " of " + self's size + " bytes)"
+        end
+        return "(a " + what + " of " + self's size + " bytes)"
+    end
+end
+
+to memory_new_block with address, n, store, owned
+    set made to memory_record(address, n, store, owned, no, 0, nothing, no)
+    set kind of made to "block"
+    return made
+end
+
+# ---------- numbers in memory ----------
+
+# the number at the place, of the kind
+to get with m, place, number_kind, order or "little"
+    set k to memory_kind(number_kind, "get")
+    set at to memory_place(m, place, 1, k, "get")
+    return item 1 of memory_get_list(m, at, 1, k, memory_order(order, "get"), "get")
+end
+
+# the number put at the place, as the kind
+to put with m, place, value, number_kind, order or "little"
+    memory_writable(m, "put")
+    set k to memory_kind(number_kind, "put")
+    set at to memory_place(m, place, 1, k, "put")
+    memory_put_list(m, at, (list of value), k, memory_order(order, "put"), "put")
+end
+
+# a list of count numbers of the kind, one after another from the place on
+to get_many with m, place, count, number_kind, order or "little"
+    set k to memory_kind(number_kind, "get_many")
+    if not memory_whole(count) or count is less than 0
+        fail with "'get_many' needs a count, a whole number from 0 up, not " + memory_shown(count)
+    end
+    set at to memory_place(m, place, count, k, "get_many")
+    return memory_get_list(m, at, count, k, memory_order(order, "get_many"), "get_many")
+end
+
+# a list's numbers put one after another from the place on, as the kind
+to put_many with m, place, numbers, number_kind, order or "little"
+    memory_writable(m, "put_many")
+    set k to memory_kind(number_kind, "put_many")
+    if not memory_is_list(numbers)
+        fail with "'put_many' needs a list of numbers, not " + memory_shown(numbers)
+    end
+    set at to memory_place(m, place, length of numbers, k, "put_many")
+    memory_put_list(m, at, numbers, k, memory_order(order, "put_many"), "put_many")
+end
+
+# how many bytes a kind of number takes, or a layout's structure
+to size_of with number_kind
+    if memory_is_layout(number_kind)
+        return number_kind's size
+    end
+    return item memory_kind(number_kind, "size_of") of memory_widths
+end
+
+# how many bytes there are: of bytes, or of a block
+to size with m
+    return memory_size(m, "size")
+end
+
+# ---------- memory of the program's own ----------
+
+# a block of n bytes, outside the collector, each 0, until it's given back
+to take with n
+    if not memory_whole(n) or n is less than 0
+        fail with "'take' needs a number of bytes, a whole number from 0 up, not " + memory_shown(n)
+    end
+    if not memory_native
+        set memory_taken to memory_taken + n
+        return memory_new_block(nothing, n, n bytes, yes)
+    end
+    set address to memory_calloc(1, n + 1) # at least a byte, so 0 bytes is a block too
+    if address is nothing or address is 0
+        fail with "there isn't room for " + n + " bytes"
+    end
+    set memory_c to yes
+    set memory_taken to memory_taken + n
+    return memory_new_block(address, n, nothing, yes)
+end
+
+# the block's memory back to the system
+to give_back with block
+    set b to memory_block(block, "give_back")
+    if not b's owned
+        fail with "'give_back' takes back a block take made, not a view, or one block_at made of a C library's memory"
+    end
+    set memory_taken to memory_taken - b's size
+    if b's address is not nothing
+        memory_free(b's address)
+    end
+    set b's address to nothing
+    set b's store to nothing
+    set b's gone to yes
+end
+
+# where bytes or a block are in memory, for a library's `a pointer`
+to address_of with m
+    if memory_is_bytes(m)
+        if not memory_native
+            fail with "'address_of' needs a program folio build makes: on the JavaScript engines, bytes have no address"
+        end
+        return memory_bytes_address(m, m, 0)
+    end
+    set b to memory_block(m, "address_of")
+    if b's address is nothing
+        if not memory_native
+            fail with "'address_of' needs a program folio build makes: on the JavaScript engines, a block is bytes, with no address"
+        end
+        return memory_address_at(b, 0)
+    end
+    return b's address
+end
+
+# memory a C library gave, size bytes from the address on, as a block, which give_back doesn't take
+to block_at with address, n
+    if not memory_native
+        fail with "'block_at' needs a program folio build makes: the JavaScript engines have no memory but their own"
+    end
+    if not memory_whole(address) or address is less than 1
+        fail with "'block_at' needs an address, a whole number from 1 up, not " + memory_shown(address)
+    end
+    if not memory_whole(n) or n is less than 0
+        fail with "'block_at' needs a number of bytes, a whole number from 0 up, not " + memory_shown(n)
+    end
+    return memory_new_block(address, n, nothing, no)
+end
+
+# count bytes from one place to another, in the same memory or not; they may overlap
+to copy with source, source_place, target, target_place, count
+    if not memory_whole(count) or count is less than 0
+        fail with "'copy' needs a count, a whole number from 0 up, not " + memory_shown(count)
+    end
+    memory_writable(target, "copy")
+    set from to memory_place(source, source_place, count, 1, "copy")
+    set to_at to memory_place(target, target_place, count, 1, "copy")
+    if count is 0
+        return nothing
+    end
+    if memory_can_use_c()
+        memory_move(memory_address_at(target, to_at), memory_address_at(source, from), count)
+        return nothing
+    end
+    memory_put_bytes(target, to_at, memory_slice(source, from, count))
+end
+
+# count bytes from the place on, each the value, a whole number from 0 to 255
+to fill with m, place, count, value
+    if not memory_whole(count) or count is less than 0
+        fail with "'fill' needs a count, a whole number from 0 up, not " + memory_shown(count)
+    end
+    if not memory_whole(value) or value is less than 0 or value is greater than 255
+        fail with "'fill' fills with a byte, a whole number from 0 to 255, not " + memory_shown(value)
+    end
+    memory_writable(m, "fill")
+    set at to memory_place(m, place, count, 1, "fill")
+    if count is 0
+        return nothing
+    end
+    if memory_can_use_c()
+        memory_set(memory_address_at(m, at), value, count)
+        return nothing
+    end
+    set made to count bytes
+    if value is not 0
+        for each i from 1 to count
+            set byte i of made to value
+        end
+    end
+    memory_put_bytes(m, at, made)
+end
+
+# ---------- structures, views and memory threads share ----------
+
+# a structure's layout, as C lays it out: a list of each field's name, then its kind of number or a layout of
+# its own, each field on a boundary of its own size (a layout's, its largest field's), the whole a multiple of
+# the largest
+to layout with fields
+    if not memory_is_list(fields) or length of fields is 0 or (length of fields) is not ((length of fields / 2) rounded down) * 2
+        fail with "'layout' needs a list of each field's name and then its kind, as list of \"x\", \"a whole number\""
+    end
+    set places to empty dictionary
+    set names to empty list
+    set at to 0
+    set largest to 1
+    for each k from 1 to length of fields / 2
+        set name to item (2 * k - 1) of fields
+        set what to item (2 * k) of fields
+        if not memory_is_text(name)
+            fail with "'layout' needs each field's name as text, not " + memory_shown(name)
+        end
+        if name is in places
+            fail with "'layout' was given the field '" + name + "' twice"
+        end
+        set width to 0
+        set boundary to 0
+        if memory_is_layout(what)
+            set width to what's size
+            set boundary to what's alignment
+        else
+            set width to size_of(memory_kind_any(what, "layout"))
+            set boundary to width
+        end
+        set at to memory_round_up(at, boundary)
+        set item name of places to record with offset at, what what
+        add name to names
+        set at to at + width
+        if boundary is greater than largest
+            set largest to boundary
+        end
+    end
+    set made to record with fields places, names names, size memory_round_up(at, largest), alignment largest
+    set kind of made to "layout"
+    return made
+end
+
+# how far into a structure a field starts, in bytes, from 0
+to offset_of with shape, name
+    return memory_field(shape, name, "offset_of")'s offset
+end
+
+# a structure's field, the structure at place in m
+to get_field with m, place, shape, name, order or "little"
+    set f to memory_field(shape, name, "get_field")
+    if memory_is_layout(f's what)
+        fail with "'get_field' was given '" + name + "', a structure in the structure: its fields are at the place plus offset_of"
+    end
+    return get(m, place + f's offset, f's what, order)
+end
+
+# a structure's field set to value, the structure at place in m
+to put_field with m, place, shape, name, value, order or "little"
+    set f to memory_field(shape, name, "put_field")
+    if memory_is_layout(f's what)
+        fail with "'put_field' was given '" + name + "', a structure in the structure: its fields are at the place plus offset_of"
+    end
+    put(m, place + f's offset, value, f's what, order)
+end
+
+# n of m's bytes from place on, as a block of their own, places from 1: the same memory, nothing past its end
+# reachable through it, gone when m is given back
+to view with m, place, n
+    if not memory_whole(n) or n is less than 0
+        fail with "'view' needs a number of bytes, a whole number from 0 up, not " + memory_shown(n)
+    end
+    set at to memory_place(m, place, n, 1, "view")
+    set read_only to no
+    set address to nothing
+    set store to m
+    set offset to at
+    set up to m
+    if memory_is_block(m)
+        set read_only to m's read_only
+        if m's address is not nothing
+            set address to m's address + at
+            set store to nothing
+            set offset to 0
+        else
+            set store to m's store
+            set offset to m's offset + at
+        end
+    end
+    set made to memory_record(address, n, store, no, no, offset, up, read_only)
+    set kind of made to "block"
+    return made
+end
+
+# m's bytes, as a view that get and the rest read, and put, put_many, copy and fill refuse
+to read_only with m
+    set made to view(m, 1, size(m))
+    set made's read_only to yes
+    return made
+end
+
+# whether put and the rest refuse m
+to is_read_only with m
+    if memory_is_bytes(m)
+        return no
+    end
+    return memory_block(m, "is_read_only")'s read_only
+end
+
+# how many bytes take has given that give_back hasn't had back
+to taken
+    return memory_taken
+end
+
+# n added to the 64-bit whole number at place, at once, however many threads do it: what was there before
+to add_atomically with m, place, n
+    return memory_atomic(1, m, place, n, 0, "add_atomically")
+end
+
+# now put at place if was is there, at once: whether it was
+to swap_if with m, place, was, now
+    return memory_atomic(2, m, place, now, was, "swap_if") is was
+end
+
+# the 64-bit whole number at place, as one read
+to get_atomically with m, place
+    return memory_atomic(3, m, place, 0, 0, "get_atomically")
+end
+
+# a 64-bit whole number put at place, as one write: what was there before
+to put_atomically with m, place, value
+    return memory_atomic(4, m, place, value, 0, "put_atomically")
+end
+
+# ---------- in here ----------
+# an atomic operation's kernel call, or, where there's no other thread (the JavaScript engines), the same in Folio
+to memory_atomic with op, m, place, value, was, what
+    if op is not 3
+        memory_writable(m, what)
+    end
+    for each v in list of value, was
+        if not memory_whole(v) or v is less than -memory_two_63 or v is at least memory_two_63
+            fail with "'" + what + "' needs a whole number from -2^63 to 2^63 - 1, not " + memory_shown(v)
+        end
+    end
+    set at to memory_place(m, place, 1, 7, what)
+    if memory_native
+        set out to list of 0
+        set address to memory_raw_address(m)
+        set refused to 1
+        if address is not nothing
+            set refused to memory_k_atomic_raw(op + 8, out, address, size(m), at, value, was)
+        else
+            set refused to memory_k_atomic_bytes(op, out, memory_storage(m), 0, memory_start(m) + at, value, was)
+        end
+        if refused is 0
+            return item 1 of out
+        end
+        fail with "'" + what + "' needs a place on an 8-byte boundary of the memory, as the processor's lock instructions do"
+    end
+    set before to get(m, place, "a long whole number")
+    if op is 1
+        put(m, place, before + value, "a long whole number")
+    else if op is 2
+        if before is was
+            put(m, place, value, "a long whole number")
+        end
+    else if op is 4
+        put(m, place, value, "a long whole number")
+    end
+    return before
+end
+
+# a layout's field, checked
+to memory_field with shape, name, what
+    if not memory_is_layout(shape)
+        fail with "'" + what + "' needs a layout, not " + memory_shown(shape)
+    end
+    if not memory_is_text(name) or not (name is in shape's fields)
+        fail with "'" + what + "' was given '" + name + "', which isn't one of the layout's fields: " + join shape's names with ", "
+    end
+    return item name of shape's fields
+end
+
+# a kind of number, checked, by name, for a layout
+to memory_kind_any with what, where
+    memory_kind(what, where)
+    return what
+end
+
+to memory_round_up with at, boundary
+    set over to remainder of at divided by boundary
+    if over is 0
+        return at
+    end
+    return at + boundary - over
+end
+
+to memory_is_layout with v
+    try
+        return kind of v is "layout"
+    if it fails
+        return no
+    end
+end
+
+# put and the rest refuse what's read-only
+to memory_writable with m, what
+    if memory_is_block(m)
+        if memory_block(m, what)'s read_only
+            fail with "'" + what + "' was given memory that can only be read"
+        end
+    end
+end
+
+# where a block's bytes start in its store: 0 for bytes and memory of its own, more for a view of bytes
+to memory_start with m
+    if memory_is_bytes(m)
+        return 0
+    end
+    return m's offset
+end
+
+# the numbers from the byte after `at` on, through the loop, or in Folio, from their bytes
+to memory_get_list with m, at, count, k, big, what
+    set out to memory_zeros(count)
+    if count is 0
+        return out
+    end
+    set op to 0
+    if big
+        set op to 2
+    end
+    if memory_native
+        set address to memory_raw_address(m)
+        set refused to 1
+        if address is not nothing
+            set refused to memory_k_raw(op + 4, k, out, 0, address, size(m), at, count)
+        else
+            set refused to memory_k_bytes(op, k, out, 0, memory_storage(m), 0, memory_start(m) + at, count)
+        end
+        if refused is 0
+            return out
+        end
+    end
+    set w to item k of memory_widths
+    set got to memory_slice(m, at, count * w)
+    for each i from 1 to count
+        set item i of out to memory_decode(got, (i - 1) * w, k, big)
+    end
+    return out
+end
+
+# the numbers into the bytes after `at` on, through the loop, or in Folio, each checked first
+to memory_put_list with m, at, numbers, k, big, what
+    set count to length of numbers
+    if count is 0
+        return nothing
+    end
+    set op to 1
+    if big
+        set op to 3
+    end
+    if memory_native
+        set address to memory_raw_address(m)
+        set refused to 1
+        try
+            if address is not nothing
+                set refused to memory_k_raw(op + 4, k, numbers, 0, address, size(m), at, count)
+            else
+                set refused to memory_k_bytes(op, k, numbers, 0, memory_storage(m), 0, memory_start(m) + at, count)
+            end
+        if it fails
+            set refused to 1 # a list with something not a number in it, which Folio's check says
+        end
+        if refused is 0
+            return nothing
+        end
+    end
+    set w to item k of memory_widths
+    set made to (count * w) bytes
+    set i to 0
+    for each value in numbers
+        try
+            memory_check(value, k, what)
+        if it fails with why # those before it written, as the loop writes them, then the mistake
+            if i is greater than 0
+                memory_put_bytes(m, at, items 1 to (i * w) of made)
+            end
+            fail with why
+        end
+        set code to memory_encode(value, k, big)
+        for each j from 1 to w
+            set byte (i * w + j) of made to item j of code
+        end
+        add 1 to i
+    end
+    memory_put_bytes(m, at, made)
+end
+
+# bytes put into memory from the byte after `at` on
+to memory_put_bytes with m, at, made
+    set address to memory_raw_address(m)
+    if address is not nothing
+        memory_move(address + at, memory_bytes_address(made, made, 0), length of made)
+        return nothing
+    end
+    set kept to memory_storage(m)
+    set from to memory_start(m) + at
+    for each j from 1 to length of made
+        set byte (from + j) of kept to byte j of made
+    end
+end
+
+# n bytes, a copy, from the byte after `at` on
+to memory_slice with m, at, n
+    set address to memory_raw_address(m)
+    if address is not nothing
+        set got to n bytes
+        if n is greater than 0
+            memory_move(memory_bytes_address(got, got, 0), address + at, n)
+        end
+        return got
+    end
+    if n is 0
+        return 0 bytes
+    end
+    set from to memory_start(m) + at
+    return items (from + 1) to (from + n) of memory_storage(m)
+end
+
+# the number from w bytes of `got` after `from`
+to memory_decode with got, from, k, big
+    set w to item k of memory_widths
+    set u to empty list # least significant first
+    for each j from 1 to w
+        if big
+            add byte (from + w + 1 - j) of got to u
+        else
+            add byte (from + j) of got to u
+        end
+    end
+    if k is 9
+        return memory_float_of(memory_word(u, 1))
+    end
+    set low to memory_word(u, 1)
+    if w is 8
+        set high to memory_word(u, 5)
+        if k is 10
+            return memory_double_of(low, high)
+        end
+        if k is 7 and high is at least 2147483648
+            set high to high - memory_two_32
+        end
+        return high * memory_two_32 + low
+    end
+    if item k of memory_signed
+        set half to 2 to the power of (8 * w - 1)
+        if low is at least half
+            return low - 2 * half
+        end
+    end
+    return low
+end
+
+# a whole number from up to 4 bytes of u, from its place `first` on, least significant first
+to memory_word with u, first
+    set word to 0
+    set scale to 1
+    for each j from first to first + 3
+        if j is at most length of u
+            set word to word + (item j of u) * scale
+            set scale to scale * 256
+        end
+    end
+    return word
+end
+
+# a float's 32 bits as the number they are
+to memory_float_of with bits
+    set e to (shift bits right by 23) bit and 255
+    set f to bits bit and 8388607
+    set x to 0
+    if e is 255
+        if f is not 0
+            return memory_nan
+        end
+        set x to memory_infinity
+    else if e is 0
+        set x to f * memory_power(-149)
+    else
+        set x to (f + 8388608) * memory_power(e - 150)
+    end
+    if bits is at least 2147483648
+        return -x
+    end
+    return x
+end
+
+# a double's 64 bits, as two 32-bit words, as the number they are
+to memory_double_of with low, high
+    set e to (shift high right by 20) bit and 2047
+    set f to (high bit and 1048575) * memory_two_32 + low
+    set x to 0
+    if e is 2047
+        if f is not 0
+            return memory_nan
+        end
+        set x to memory_infinity
+    else if e is 0
+        set x to f * memory_power(-1074)
+    else
+        set x to (f + 4503599627370496) * memory_power(e - 1075)
+    end
+    if high is at least 2147483648
+        return -x
+    end
+    return x
+end
+
+# the w bytes a number is kept as, in memory's order
+to memory_encode with value, k, big
+    set w to item k of memory_widths
+    set low to 0
+    set high to 0
+    if k is 9
+        set low to memory_float_bits(value)
+    else if k is 10
+        set words to memory_double_words(value)
+        set low to item 1 of words
+        set high to item 2 of words
+    else # the whole number Folio takes it for, in two 32-bit words, two's complement for one less than 0
+        set v to value rounded
+        set low to remainder of v divided by memory_two_32
+        set high to remainder of ((v - low) / memory_two_32) divided by memory_two_32
+    end
+    set code to empty list
+    for each j from 1 to w
+        if j is at most 4
+            add (shift low right by (8 * (j - 1))) bit and 255 to code
+        else
+            add (shift high right by (8 * (j - 5))) bit and 255 to code
+        end
+    end
+    if big
+        set flipped to empty list
+        for each j from 1 to w
+            add item (w + 1 - j) of code to flipped
+        end
+        return flipped
+    end
+    return code
+end
+
+# a number's nearest float, as its 32 bits, ties to the even one, as C rounds it
+to memory_float_bits with x
+    if x is not x
+        return 2143289344 # 0x7FC00000, the NaN C makes
+    end
+    set sign to 0
+    if x is less than 0
+        set sign to 2147483648
+        set x to -x
+    end
+    if x is memory_infinity
+        return sign + 2139095040
+    end
+    if x is 0
+        return sign
+    end
+    set e to memory_exponent(x)
+    if e is less than -126 # too small for a float's own: a float's tiniest steps, of 2^-149
+        return sign + memory_round_even(x * memory_power(149))
+    end
+    set m to memory_round_even(x * memory_power(23 - e))
+    if m is 16777216
+        set m to 8388608
+        add 1 to e
+    end
+    if e is greater than 127
+        return sign + 2139095040
+    end
+    return sign + (e + 127) * 8388608 + (m - 8388608)
+end
+
+# a number's 64 bits as a double, as two 32-bit words: the low one, then the high
+to memory_double_words with x
+    if x is not x
+        return list of 0, 2146959360 # 0x7FF80000
+    end
+    set sign to 0
+    if x is less than 0
+        set sign to 2147483648
+        set x to -x
+    end
+    if x is memory_infinity
+        return list of 0, sign + 2146435072
+    end
+    if x is 0
+        return list of 0, sign
+    end
+    set e to memory_exponent(x)
+    set field to 0
+    set f to 0
+    if e is less than -1022
+        set f to memory_scaled(x, 1074)
+    else
+        set field to e + 1023
+        set f to memory_scaled(x, 52 - e) - 4503599627370496
+    end
+    set low to remainder of f divided by memory_two_32
+    return list of low, sign + field * 1048576 + (f - low) / memory_two_32
+end
+
+# x times 2^n, in two steps, so neither overflows nor loses a bit
+to memory_scaled with x, n
+    set half to (n / 2) rounded down
+    return x * memory_power(half) * memory_power(n - half)
+end
+
+# the nearest whole number to q, from 0 up to 2^52, ties to the even one: the sum's own rounding, as a double
+# has no bits for less than 1 from 2^52 on (Folio's rounded, and its comparisons, go by 15 digits)
+to memory_round_even with q
+    return (q + 4503599627370496) - 4503599627370496
+end
+
+# e, where 2^e is at most x and x is less than 2^(e + 1), for a positive x short of infinity
+to memory_exponent with x
+    set low to -1074
+    set high to 1023
+    repeat while low is less than high
+        set middle to ((low + high + 1) / 2) rounded down
+        if x - memory_power(middle) is at least 0 # by its sign, which is exact, where comparing goes by 15 digits
+            set low to middle
+        else
+            set high to middle - 1
+        end
+    end
+    return low
+end
+
+# 2^n exactly, n from -1074 to 1023
+set memory_powers to nothing
+to memory_power with n
+    if memory_powers is nothing
+        set made to list of 1
+        for each i from 1 to 1023
+            add (item i of made) * 2 to made
+        end
+        set below to empty list
+        set x to 1
+        for each i from 1 to 1074
+            set x to x / 2
+            add x to below
+        end
+        set memory_powers to list of made, below
+    end
+    if n is at least 0
+        return item (n + 1) of item 1 of memory_powers
+    end
+    return item (-n) of item 2 of memory_powers
+end
+
+# a value checked to be one the kind holds
+to memory_check with value, k, what
+    if not memory_is_number(value)
+        fail with "'" + what + "' needs numbers, not " + memory_shown(value)
+    end
+    if k is at least 9
+        return nothing
+    end
+    set w to item k of memory_widths
+    set lowest to 0
+    set top to 2 to the power of (8 * w)
+    if item k of memory_signed
+        set lowest to -(top / 2)
+        set top to top / 2
+    end
+    if not memory_whole(value) or value is less than lowest or value is at least top
+        set name to memory_kind_name(k)
+        fail with "'" + what + "' needs a whole number from " + item k of memory_lowest_shown + " to " + item k of memory_top_shown + " for " + name + ", not " + memory_shown(value)
+    end
+end
+
+set memory_lowest_shown to list of "0", "-128", "-32768", "0", "-2147483648", "0", "-2^63", "0"
+set memory_top_shown to list of "255", "127", "32767", "65535", "2147483647", "4294967295", "2^63 - 1", "2^64 - 1"
+
+to memory_kind_name with k
+    for each name in keys of memory_kinds
+        if item name of memory_kinds is k and name is not "a pointer"
+            return name
+        end
+    end
+end
+
+# a kind of number's code, 1 to 10
+to memory_kind with number_kind, what
+    if memory_is_text(number_kind)
+        if number_kind is in memory_kinds
+            return item number_kind of memory_kinds
+        end
+    end
+    fail with "'" + what + "' needs a kind of number C has: \"a byte\", \"a signed byte\", \"a short whole number\", \"an unsigned short whole number\", \"a whole number\", \"an unsigned whole number\", \"a long whole number\", \"an unsigned long whole number\", \"a pointer\", \"a float\" or \"a number\", not " + memory_shown(number_kind)
+end
+
+# whether the order is biggest byte first
+to memory_order with order, what
+    if order is "little"
+        return no
+    end
+    if order is "big"
+        return yes
+    end
+    fail with "'" + what + "' needs \"little\" or \"big\" for the order, not " + memory_shown(order)
+end
+
+# how many bytes bytes or a block have
+to memory_size with m, what
+    if memory_is_bytes(m)
+        return length of m
+    end
+    return memory_block(m, what)'s size
+end
+
+# the byte before the place, from 0, checked: the place's whole, and count numbers of kind k from it fit
+to memory_place with m, place, count, k, what
+    set n to memory_size(m, what)
+    set w to item k of memory_widths
+    set last to n - count * w + 1
+    if not memory_whole(place) or place is less than 1 or place is greater than last
+        if last is less than 1
+            fail with "'" + what + "' needs " + (count * w) + " bytes, and there are " + n
+        end
+        fail with "'" + what + "' needs a place from 1 to " + last + " in " + n + " bytes, not " + memory_shown(place)
+    end
+    return place - 1
+end
+
+# the block, checked to be one that hasn't been given back
+to memory_block with m, what
+    if not memory_is_block(m)
+        fail with "'" + what + "' needs bytes or a block, not " + memory_shown(m)
+    end
+    if m's gone
+        fail with "'" + what + "' was given a block that was given back"
+    end
+    set up to m's parent
+    repeat while up is not nothing
+        if memory_is_block(up) and up's gone
+            fail with "'" + what + "' was given a view of a block that was given back"
+        end
+        if memory_is_block(up)
+            set up to up's parent
+        else
+            set up to nothing
+        end
+    end
+    return m
+end
+
+# where memory of the program's own is, or nothing for bytes
+to memory_raw_address with m
+    if memory_is_bytes(m)
+        return nothing
+    end
+    return memory_block(m, "memory")'s address
+end
+
+# the bytes that are memory: bytes, or a block's on the JavaScript engines
+to memory_storage with m
+    if memory_is_bytes(m)
+        return m
+    end
+    return memory_block(m, "memory")'s store
+end
+
+# where the byte after `at` is, for C
+to memory_address_at with m, at
+    set address to memory_raw_address(m)
+    if address is nothing
+        set kept to memory_storage(m)
+        set address to memory_bytes_address(kept, kept, 0) + memory_start(m)
+    end
+    return address + at
+end
+
+# whether copy and fill can go through the C library: in machine code, when libraries are allowed
+to memory_can_use_c
+    if not memory_native
+        return no
+    end
+    if memory_c is nothing
+        set probe to 1 bytes
+        try
+            memory_bytes_address(probe, probe, 0)
+            set memory_c to yes
+        if it fails
+            set memory_c to no
+        end
+    end
+    return memory_c
+end
+
+# n zeros, a list of its own: copied from up to a million kept, which is quick, and the rest added
+set memory_zero_list to list of 0
+to memory_zeros with n
+    if n is 0
+        return empty list
+    end
+    set kept to n
+    if kept is greater than 1000000
+        set kept to 1000000
+    end
+    repeat while length of memory_zero_list is less than kept
+        for each x in items 1 to length of memory_zero_list of memory_zero_list
+            add 0 to memory_zero_list
+        end
+    end
+    set made to items 1 to kept of memory_zero_list
+    for each i from kept + 1 to n
+        add 0 to made
+    end
+    return made
+end
+
+to memory_whole with v
+    return memory_is_number(v) and v is v rounded down and v is not memory_infinity and v is not -memory_infinity
+end
+
+to memory_is_number with v
+    try
+        set probe to v - 0
+        return yes
+    if it fails
+        return no
+    end
+end
+
+to memory_is_text with v
+    try
+        return memory_text_check(v)
+    if it fails
+        return no
+    end
+end
+
+to memory_text_check with v as text
+    return yes
+end
+
+to memory_is_bytes with v
+    try
+        return memory_bytes_check(v)
+    if it fails
+        return no
+    end
+end
+
+to memory_bytes_check with v as bytes
+    return yes
+end
+
+to memory_is_list with v
+    if memory_is_text(v) or memory_is_bytes(v)
+        return no
+    end
+    try
+        set probe to items 1 to 0 of v
+        return yes
+    if it fails
+        return no
+    end
+end
+
+to memory_is_block with v
+    try
+        return kind of v is "block"
+    if it fails
+        return no
+    end
+end
+
+# a value as a mistake shows it
+to memory_shown with v
+    if memory_is_text(v)
+        return "\"" + v + "\""
+    end
+    if memory_is_bytes(v)
+        return "bytes"
+    end
+    if memory_is_block(v)
+        return "a block"
+    end
+    if memory_is_list(v)
+        return "a list"
+    end
+    return "" + v
+end

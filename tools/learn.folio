@@ -1,0 +1,775 @@
+# Learning, as PyTorch has it: matrices of numbers, on the graphics card when there is one (gpu.folio) and on the
+# processor when there isn't (arrays.folio), each operation on them remembered, so backward() works out how a loss
+# changes with every number that went into it, and optimizers that move a network's parameters against that.
+#
+#   use "learn.folio" as learn
+#   set net to learn's network(list of 256, 64, 10)       # 256 numbers in, 64 between, 10 out
+#   set opt to learn's adam(learn's parameters_of(net), 0.01)
+#   set x to learn's matrix(pictures)                      # a list of rows, each a list of numbers
+#   for each round from 1 to 20
+#       set loss to learn's cross_entropy(learn's forward(net, x), labels)   # a place from 0 for each row
+#       learn's backward(loss)
+#       say learn's value(loss)                            # the number it is
+#       learn's step(opt)                                  # the parameters moved; the round's matrices let go
+#   end
+#   say learn's accuracy(learn's forward(net, x), labels)  # how many rows it gets right, from 0 to 1
+#
+# Matrices: matrix(rows), matrix_of(numbers, rows, columns), zeros(rows, columns), random_normal(rows, columns,
+# spread), and parameter(m), a matrix that learns. On them: matmul(a, b), plus, minus and times (each number with
+# each, or times a number), add_row(m, row), a row added to each row (a layer's bias), relu, sum, mean,
+# cross_entropy(scores, labels) and mean_squared_error(m, target). Then backward(loss), and value(m), numbers_of(m),
+# rows_of(m), shape_of(m), gradient_of(p), softmax_of(m) and accuracy(scores, labels). Layers: layer(inputs,
+# outputs), network(sizes), forward(net, x) and parameters_of(net). Optimizers: sgd(parameters, rate) and
+# adam(parameters, rate), moved on by step(opt). forget() lets go of every matrix worked out since the last step,
+# for a program that only uses a network; free(m) lets go of one.
+#
+# A program that uses the card is run or built with --allow-libraries; without that, or with no NVIDIA card, it
+# all works on the processor, more slowly, and use_card(no) asks for that. On the card numbers are floats, about 7
+# digits, as machine learning keeps them. A matrix worked out before a step is let go at the step: its value is a
+# mistake after, so a loss is read with value() first.
+
+use "gpu.folio" as learn_gpu
+use "arrays.folio" as learn_arrays
+use "math.folio" as learn_math
+
+# a matrix: rows by columns numbers, row after row, on the card (data gpu.folio's numbers) or not (an array);
+# learns if it's a parameter, tracks if a parameter went into it, and made_by, inputs and extra say how
+kind learn_matrix with rows, columns, data, card, grad, learns, tracks, made_by, inputs, extra, gone
+    to shown with self
+        if self's gone
+            return "(a matrix that was let go)"
+        end
+        set where to ""
+        if self's card
+            set where to ", on the graphics card"
+        end
+        return "(a " + self's rows + " by " + self's columns + " matrix" + where + ")"
+    end
+end
+
+set learn_wants_card to yes
+set learn_card to nothing
+set learn_tape to empty list
+
+# ---------- where the numbers are ----------
+
+# whether matrices go on the graphics card (yes, if there's one, the first time one is made) or not
+to use_card with wanted
+    if learn_card is not nothing and wanted is not learn_card
+        fail with "use_card comes before the first matrix: they're all on the card or all on the processor"
+    end
+    set learn_wants_card to wanted
+end
+
+# whether the matrices are on the graphics card
+to on_card
+    return learn_on_card()
+end
+
+to learn_on_card
+    if learn_card is nothing
+        set learn_card to learn_wants_card and learn_gpu's available()
+    end
+    return learn_card
+end
+
+# ---------- making matrices ----------
+
+# a matrix of a list of rows, each a list of numbers
+to matrix with rows
+    if length of rows is 0
+        fail with "'matrix' needs at least one row"
+    end
+    set columns to length of item 1 of rows
+    set numbers to empty list
+    for each r in rows
+        if length of r is not columns
+            fail with "'matrix' needs rows of the same length: " + columns + " and " + length of r
+        end
+        for each x in r
+            add x to numbers
+        end
+    end
+    return matrix_of(numbers, length of rows, columns)
+end
+
+# a matrix of numbers, row after row
+to matrix_of with numbers, rows, columns
+    if length of numbers is not rows * columns
+        fail with "'matrix_of' needs " + rows + " by " + columns + " numbers, not " + length of numbers
+    end
+    if learn_on_card()
+        return learn_made(learn_gpu's upload(numbers), rows, columns)
+    end
+    return learn_made(learn_arrays's shaped(numbers, (list of rows, columns)), rows, columns)
+end
+
+# a matrix of zeros
+to zeros with rows, columns
+    if learn_on_card()
+        return learn_made(learn_gpu's zeros(rows * columns), rows, columns)
+    end
+    return learn_made(learn_arrays's zeros(list of rows, columns), rows, columns)
+end
+
+# a matrix of numbers from a normal curve, spread its standard deviation
+to random_normal with rows, columns, spread
+    set numbers to empty list
+    repeat while length of numbers is less than rows * columns
+        set u to learn_math's random()
+        set w to learn_math's random()
+        if u is greater than 0
+            set r to learn_math's sqrt(-2 * learn_math's ln(u)) * spread
+            add r * learn_math's cosine(2 * learn_math's pi * w) to numbers
+            if length of numbers is less than rows * columns
+                add r * learn_math's sine(2 * learn_math's pi * w) to numbers
+            end
+        end
+    end
+    return matrix_of(numbers, rows, columns)
+end
+
+# m, now a parameter: a matrix that learns, which backward() works out a gradient for
+to parameter with m
+    learn_live(m, "parameter")
+    set m's learns to yes
+    set m's tracks to yes
+    return m
+end
+
+to learn_made with data, rows, columns
+    return learn_matrix(rows, columns, data, learn_on_card(), nothing, no, no, nothing, empty list, nothing, no)
+end
+
+# ---------- operations ----------
+
+# the matrix product: a is rows by inner, b inner by columns
+to matmul with a, b
+    learn_two(a, b, "matmul")
+    if a's columns is not b's rows
+        fail with "'matmul' needs a's columns to be b's rows: " + a's rows + " by " + a's columns + " and " + b's rows + " by " + b's columns
+    end
+    if a's card
+        set data to learn_gpu's matmul(a's data, b's data, a's rows, a's columns, b's columns)
+    else
+        set data to learn_arrays's matmul(a's data, b's data)
+    end
+    return learn_result(data, a's rows, b's columns, "matmul", (list of a, b), nothing)
+end
+
+# each number plus the other's at its place
+to plus with a, b
+    learn_same(a, b, "plus")
+    if a's card
+        set data to learn_gpu's plus(a's data, b's data)
+    else
+        set data to learn_arrays's plus(a's data, b's data)
+    end
+    return learn_result(data, a's rows, a's columns, "plus", (list of a, b), nothing)
+end
+
+# each number minus the other's at its place
+to minus with a, b
+    learn_same(a, b, "minus")
+    if a's card
+        set data to learn_gpu's minus(a's data, b's data)
+    else
+        set data to learn_arrays's minus(a's data, b's data)
+    end
+    return learn_result(data, a's rows, a's columns, "minus", (list of a, b), nothing)
+end
+
+# each number times the other's at its place, or times a number
+to times with a, b
+    if learn_is_number(b)
+        learn_live(a, "times")
+        if a's card
+            set data to learn_gpu's times(a's data, b)
+        else
+            set data to learn_arrays's times(a's data, b)
+        end
+        return learn_result(data, a's rows, a's columns, "scale", (list of a), b)
+    end
+    learn_same(a, b, "times")
+    if a's card
+        set data to learn_gpu's times(a's data, b's data)
+    else
+        set data to learn_arrays's times(a's data, b's data)
+    end
+    return learn_result(data, a's rows, a's columns, "times", (list of a, b), nothing)
+end
+
+# a row of numbers, 1 by m's columns, added to each of m's rows: a layer's bias
+to add_row with m, r
+    learn_two(m, r, "add_row")
+    if r's rows is not 1 or r's columns is not m's columns
+        fail with "'add_row' needs a row of " + m's columns + " numbers, 1 by " + m's columns + ", not " + r's rows + " by " + r's columns
+    end
+    if m's card
+        set data to learn_gpu's add_rows(m's data, r's data, m's rows, m's columns)
+    else
+        set data to learn_arrays's plus(m's data, r's data)
+    end
+    return learn_result(data, m's rows, m's columns, "add_row", (list of m, r), nothing)
+end
+
+# each number, or 0 if it's less than 0
+to relu with m
+    learn_live(m, "relu")
+    if m's card
+        set data to learn_gpu's relu(m's data)
+    else
+        set data to learn_arrays's relu(m's data)
+    end
+    return learn_result(data, m's rows, m's columns, "relu", (list of m), nothing)
+end
+
+# all its numbers added up, a 1 by 1 matrix
+to sum with m
+    learn_live(m, "sum")
+    return learn_result(learn_scalar(learn_total(m), m's card), 1, 1, "sum", (list of m), nothing)
+end
+
+# the average of its numbers, a 1 by 1 matrix
+to mean with m
+    learn_live(m, "mean")
+    if m's rows * m's columns is 0
+        fail with "'mean' needs a matrix with numbers in it"
+    end
+    return learn_result(learn_scalar(learn_total(m) / (m's rows * m's columns), m's card), 1, 1, "mean", (list of m), nothing)
+end
+
+# how far each row's softmax is from its label, a place from 0 for each row, on average: a 1 by 1 matrix
+to cross_entropy with scores, labels
+    learn_live(scores, "cross_entropy")
+    if length of labels is not scores's rows
+        fail with "'cross_entropy' needs a label for each of the " + scores's rows + " rows, not " + length of labels
+    end
+    for each label in labels
+        if not learn_is_number(label) or label is less than 0 or label is at least scores's columns or label is not label rounded down
+            fail with "'cross_entropy' needs each label to be a place from 0 to " + (scores's columns - 1) + ", not " + label
+        end
+    end
+    if scores's card
+        set placed to learn_gpu's upload(labels)
+        set worked to learn_gpu's cross_entropy(scores's data, placed, scores's rows, scores's columns)
+        learn_gpu's free(placed)
+        return learn_result(learn_scalar(worked's loss, yes), 1, 1, "cross_entropy", (list of scores), worked's gradient)
+    end
+    set xs to learn_arrays's numbers_of(scores's data)
+    set n to scores's rows
+    set c to scores's columns
+    set loss to 0
+    set gradient to empty list
+    for each i from 1 to n
+        set top to item ((i - 1) * c + 1) of xs
+        for each j from 2 to c
+            if item ((i - 1) * c + j) of xs is greater than top
+                set top to item ((i - 1) * c + j) of xs
+            end
+        end
+        set total to 0
+        for each j from 1 to c
+            set total to total + learn_math's exp(item ((i - 1) * c + j) of xs - top)
+        end
+        set label to item i of labels
+        set loss to loss + top + learn_math's ln(total) - item ((i - 1) * c + label + 1) of xs
+        for each j from 1 to c
+            set p to learn_math's exp(item ((i - 1) * c + j) of xs - top) / total
+            if j - 1 is label
+                set p to p - 1
+            end
+            add p / n to gradient
+        end
+    end
+    return learn_result(learn_scalar(loss / n, no), 1, 1, "cross_entropy", (list of scores), learn_arrays's shaped(gradient, (list of n, c)))
+end
+
+# the average of the squares of how far m is from target, a matrix of the same shape: a 1 by 1 matrix
+to mean_squared_error with m, target
+    learn_same(m, target, "mean_squared_error")
+    set off to minus(m, target)
+    return mean(times(off, off))
+end
+
+# ---------- what they are ----------
+
+# a 1 by 1 matrix's number, or a matrix's numbers row after row
+to value with m
+    learn_live(m, "value")
+    set numbers to numbers_of(m)
+    if m's rows * m's columns is 1
+        return item 1 of numbers
+    end
+    return numbers
+end
+
+# a matrix's numbers, row after row
+to numbers_of with m
+    learn_live(m, "numbers_of")
+    if m's card
+        return learn_gpu's download(m's data)
+    end
+    return learn_arrays's numbers_of(m's data)
+end
+
+# a matrix's rows, each a list of numbers
+to rows_of with m
+    set numbers to numbers_of(m)
+    set made to empty list
+    for each i from 1 to m's rows
+        if m's columns is 0
+            add empty list to made
+        else
+            add items ((i - 1) * m's columns + 1) to (i * m's columns) of numbers to made
+        end
+    end
+    return made
+end
+
+# a matrix's rows and columns
+to shape_of with m
+    return list of m's rows, m's columns
+end
+
+# how a loss backward() started from changes with each of a parameter's numbers, a matrix of its shape
+to gradient_of with p
+    learn_live(p, "gradient_of")
+    if p's grad is nothing
+        return zeros(p's rows, p's columns)
+    end
+    return learn_made(learn_copy(p's grad, p's card), p's rows, p's columns)
+end
+
+# each row's softmax: chances from 0 to 1 that add up to 1
+to softmax_of with m
+    learn_live(m, "softmax_of")
+    if m's card
+        return learn_made(learn_gpu's softmax_rows(m's data, m's rows, m's columns), m's rows, m's columns)
+    end
+    return learn_made(learn_arrays's softmax(m's data, 2), m's rows, m's columns)
+end
+
+# how many of the rows have their largest score at their label, from 0 to 1
+to accuracy with scores, labels
+    learn_live(scores, "accuracy")
+    if length of labels is not scores's rows
+        fail with "'accuracy' needs a label for each of the " + scores's rows + " rows, not " + length of labels
+    end
+    if scores's rows is 0
+        return 0
+    end
+    set picked to empty list
+    if scores's card
+        set placed to learn_gpu's argmax_rows(scores's data, scores's rows, scores's columns)
+        set picked to learn_gpu's download(placed)
+        learn_gpu's free(placed)
+    else
+        for each r in rows_of(scores)
+            set best to 1
+            for each j from 2 to length of r
+                if item j of r is greater than item best of r
+                    set best to j
+                end
+            end
+            add best - 1 to picked
+        end
+    end
+    set right to 0
+    for each i from 1 to scores's rows
+        if item i of picked is item i of labels
+            add 1 to right
+        end
+    end
+    return right / scores's rows
+end
+
+# ---------- backward ----------
+
+# how loss, a 1 by 1 matrix, changes with each parameter that went into it: each one's gradient, added to what
+# it had, for an optimizer's step
+to backward with loss
+    learn_live(loss, "backward")
+    if loss's rows is not 1 or loss's columns is not 1
+        fail with "'backward' starts from a loss, a 1 by 1 matrix, not " + loss's rows + " by " + loss's columns
+    end
+    if not loss's tracks
+        fail with "'backward' needs a loss that parameters went into"
+    end
+    learn_add_grad(loss, learn_scalar(1, loss's card))
+    set k to length of learn_tape
+    repeat while k is at least 1
+        set m to item k of learn_tape
+        if m's grad is not nothing and not m's gone
+            learn_back(m)
+        end
+        set k to k - 1
+    end
+end
+
+# one matrix's gradient sent back to what made it
+to learn_back with m
+    set g to m's grad
+    set how to m's made_by
+    set a to item 1 of m's inputs
+    if how is "matmul"
+        set b to item 2 of m's inputs
+        if a's tracks # g times b turned over
+            set turned to learn_t(b)
+            learn_add_grad(a, learn_mm(g, turned, m's rows, m's columns, b's rows, m's card))
+            learn_drop(turned, m's card)
+        end
+        if b's tracks # a turned over times g
+            set turned to learn_t(a)
+            learn_add_grad(b, learn_mm(turned, g, a's columns, a's rows, m's columns, m's card))
+            learn_drop(turned, m's card)
+        end
+    else if how is "plus" or how is "minus"
+        set b to item 2 of m's inputs
+        if a's tracks
+            learn_add_grad(a, learn_copy(g, m's card))
+        end
+        if b's tracks
+            if how is "plus"
+                learn_add_grad(b, learn_copy(g, m's card))
+            else
+                learn_add_grad(b, learn_scaled(g, -1, m's card))
+            end
+        end
+    else if how is "times"
+        set b to item 2 of m's inputs
+        if a's tracks
+            learn_add_grad(a, learn_each_times(g, b's data, m's card))
+        end
+        if b's tracks
+            learn_add_grad(b, learn_each_times(g, a's data, m's card))
+        end
+    else if how is "scale"
+        if a's tracks
+            learn_add_grad(a, learn_scaled(g, m's extra, m's card))
+        end
+    else if how is "add_row"
+        set b to item 2 of m's inputs
+        if a's tracks
+            learn_add_grad(a, learn_copy(g, m's card))
+        end
+        if b's tracks
+            if m's card
+                learn_add_grad(b, learn_gpu's column_sums(g, m's rows, m's columns))
+            else
+                learn_add_grad(b, learn_arrays's reshape(learn_arrays's sum(g, 1), (list of 1, m's columns)))
+            end
+        end
+    else if how is "relu"
+        if a's tracks
+            if m's card
+                learn_add_grad(a, learn_gpu's relu_gradient(g, a's data))
+            else
+                learn_add_grad(a, learn_arrays's times(g, learn_arrays's above_zero(a's data)))
+            end
+        end
+    else if how is "sum" or how is "mean"
+        if a's tracks
+            set each to learn_scalar_of(g, m's card)
+            if how is "mean"
+                set each to each / (a's rows * a's columns)
+            end
+            if m's card
+                learn_add_grad(a, learn_gpu's filled(a's rows * a's columns, each))
+            else
+                learn_add_grad(a, learn_arrays's filled((list of a's rows, a's columns), each))
+            end
+        end
+    else if how is "cross_entropy"
+        if a's tracks
+            learn_add_grad(a, learn_scaled(m's extra, learn_scalar_of(g, m's card), m's card))
+        end
+    end
+end
+
+# a gradient added to a matrix's: the first is its own, the rest added in place on the card
+to learn_add_grad with m, g
+    if m's grad is nothing
+        set m's grad to g
+    else if m's card
+        learn_gpu's add_scaled(m's grad, g, 1)
+        learn_gpu's free(g)
+    else
+        set m's grad to learn_arrays's plus(m's grad, g)
+    end
+end
+
+to learn_mm with a, b, rows, inner, columns, card
+    if card
+        return learn_gpu's matmul(a, b, rows, inner, columns)
+    end
+    return learn_arrays's matmul(a, b)
+end
+
+to learn_t with m
+    if m's card
+        return learn_gpu's transpose(m's data, m's rows, m's columns)
+    end
+    return learn_arrays's transpose(m's data)
+end
+
+to learn_drop with data, card
+    if card
+        learn_gpu's free(data)
+    end
+end
+
+to learn_copy with data, card
+    if card
+        return learn_gpu's copy_of(data)
+    end
+    return data
+end
+
+to learn_scaled with data, s, card
+    if card
+        return learn_gpu's times(data, s)
+    end
+    return learn_arrays's times(data, s)
+end
+
+to learn_each_times with g, other, card
+    if card
+        return learn_gpu's times(g, other)
+    end
+    return learn_arrays's times(g, other)
+end
+
+# ---------- layers ----------
+
+# a layer: inputs numbers in, outputs out, its weights from a normal curve as He's start has them, its bias 0
+to layer with inputs, outputs
+    set weights to parameter(random_normal(inputs, outputs, learn_math's sqrt(2 / inputs)))
+    set bias to parameter(zeros(1, outputs))
+    return record with weights weights, bias bias
+end
+
+# layers of the sizes, each one's outputs the next one's inputs
+to network with sizes
+    if length of sizes is less than 2
+        fail with "'network' needs at least two sizes: what goes in and what comes out"
+    end
+    set layers to empty list
+    for each k from 1 to length of sizes - 1
+        add layer(item k of sizes, item (k + 1) of sizes) to layers
+    end
+    return layers
+end
+
+# what a network makes of x, a row for each example: each layer's weights and bias, with relu between them
+to forward with net, x
+    set h to x
+    set k to 0
+    for each l in net
+        add 1 to k
+        set h to add_row(matmul(h, l's weights), l's bias)
+        if k is less than length of net
+            set h to relu(h)
+        end
+    end
+    return h
+end
+
+# a network's parameters: each layer's weights and bias
+to parameters_of with net
+    set made to empty list
+    for each l in net
+        add l's weights to made
+        add l's bias to made
+    end
+    return made
+end
+
+# ---------- optimizers ----------
+
+# plain gradient descent: each parameter moved against its gradient, rate times it
+to sgd with parameters, rate
+    return record with way "sgd", parameters parameters, rate rate, t 0, m empty list, v empty list
+end
+
+# Adam: each parameter moved against a running average of its gradient, over one of its square, as most
+# networks are trained (b1 0.9, b2 0.999, eps 10^-8)
+to adam with parameters, rate
+    set ms to empty list
+    set vs to empty list
+    for each p in parameters
+        add nothing to ms
+        add nothing to vs
+    end
+    return record with way "adam", parameters parameters, rate rate, t 0, m ms, v vs
+end
+
+# one step: each parameter moved, its gradient gone, and every matrix worked out since the last step let go
+to step with opt
+    set opt's t to opt's t + 1
+    set k to 0
+    for each p in opt's parameters
+        add 1 to k
+        if p's grad is not nothing
+            if opt's way is "sgd"
+                learn_sgd_one(p, opt's rate)
+            else
+                learn_adam_one(opt, k, p)
+            end
+            learn_free_grad(p)
+        end
+    end
+    forget()
+end
+
+to learn_sgd_one with p, rate
+    if p's card
+        learn_gpu's add_scaled(p's data, p's grad, -rate)
+    else
+        set p's data to learn_arrays's minus(p's data, learn_arrays's times(p's grad, rate))
+    end
+end
+
+to learn_adam_one with opt, k, p
+    set b1 to 0.9
+    set b2 to 0.999
+    set eps to 0.00000001
+    if item k of opt's m is nothing
+        if p's card
+            set item k of opt's m to learn_gpu's zeros(p's rows * p's columns)
+            set item k of opt's v to learn_gpu's zeros(p's rows * p's columns)
+        else
+            set item k of opt's m to learn_arrays's zeros(list of p's rows, p's columns)
+            set item k of opt's v to learn_arrays's zeros(list of p's rows, p's columns)
+        end
+    end
+    if p's card
+        learn_gpu's adam_step(p's data, p's grad, item k of opt's m, item k of opt's v, opt's rate, b1, b2, eps, opt's t)
+        return nothing
+    end
+    set g to p's grad
+    set m to learn_arrays's plus(learn_arrays's times(item k of opt's m, b1), learn_arrays's times(g, 1 - b1))
+    set v to learn_arrays's plus(learn_arrays's times(item k of opt's v, b2), learn_arrays's times(learn_arrays's times(g, g), 1 - b2))
+    set item k of opt's m to m
+    set item k of opt's v to v
+    set c1 to 1 / (1 - (b1 to the power of opt's t))
+    set c2 to 1 / (1 - (b2 to the power of opt's t))
+    set moved to learn_arrays's divided_by(learn_arrays's times(m, c1 * opt's rate), learn_arrays's plus(learn_arrays's sqrt(learn_arrays's times(v, c2)), eps))
+    set p's data to learn_arrays's minus(p's data, moved)
+end
+
+to learn_free_grad with p
+    if p's card and p's grad is not nothing
+        learn_gpu's free(p's grad)
+    end
+    set p's grad to nothing
+end
+
+# every matrix worked out since the last step let go, and its memory on the card given back
+to forget
+    for each m in learn_tape
+        if not m's learns and not m's gone
+            if m's card
+                learn_gpu's free(m's data)
+                if m's extra is not nothing and not learn_is_number(m's extra)
+                    learn_gpu's free(m's extra)
+                end
+            end
+            learn_free_grad(m)
+            set m's data to nothing
+            set m's gone to yes
+        end
+    end
+    set learn_tape to empty list
+end
+
+# a matrix let go, and its memory on the card given back
+to free with m
+    learn_live(m, "free")
+    if m's card
+        learn_gpu's free(m's data)
+    end
+    learn_free_grad(m)
+    set m's data to nothing
+    set m's gone to yes
+end
+
+# ---------- in here ----------
+
+to learn_result with data, rows, columns, how, inputs, extra
+    set tracks to no
+    for each i in inputs
+        if i's tracks
+            set tracks to yes
+        end
+    end
+    set made to learn_matrix(rows, columns, data, learn_card, nothing, no, tracks, how, inputs, extra, no)
+    if tracks
+        add made to learn_tape
+    end
+    return made
+end
+
+# a number as a 1 by 1 matrix's data
+to learn_scalar with x, card
+    if card
+        return learn_gpu's upload(list of x)
+    end
+    return learn_arrays's shaped((list of x), (list of 1, 1))
+end
+
+# a 1 by 1 matrix's data's number
+to learn_scalar_of with data, card
+    if card
+        return item 1 of learn_gpu's download(data)
+    end
+    return item 1 of learn_arrays's numbers_of(data)
+end
+
+to learn_total with m
+    if m's card
+        return learn_gpu's sum(m's data)
+    end
+    return learn_arrays's sum(m's data)
+end
+
+to learn_live with m, what
+    if not learn_is_matrix(m)
+        fail with "'" + what + "' needs a matrix, not " + m
+    end
+    if m's gone
+        fail with "'" + what + "' was given a matrix that was let go at a step, or by free"
+    end
+end
+
+to learn_two with a, b, what
+    learn_live(a, what)
+    learn_live(b, what)
+    if a's card is not b's card
+        fail with "'" + what + "' needs both matrices on the card or both on the processor"
+    end
+end
+
+to learn_same with a, b, what
+    learn_two(a, b, what)
+    if a's rows is not b's rows or a's columns is not b's columns
+        fail with "'" + what + "' needs matrices of the same shape, not " + a's rows + " by " + a's columns + " and " + b's rows + " by " + b's columns
+    end
+end
+
+to learn_is_matrix with v
+    try
+        return kind of v is "learn_matrix"
+    if it fails
+        return no
+    end
+end
+
+to learn_is_number with v
+    try
+        set probe to v - 0
+        return yes
+    if it fails
+        return no
+    end
+end

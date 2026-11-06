@@ -48,7 +48,8 @@ to test_element_by_element
     expect arrays's numbers_of(arrays's negate(m)) is list of 2, 0.5, 0, -3
     expect arrays's numbers_of(arrays's absolute(m)) is list of 2, 0.5, 0, 3
     expect arrays's numbers_of(arrays's relu(m)) is list of 0, 0, 0, 3
-    expect arrays's numbers_of(arrays's sqrt(arrays's array(list of 4, 9, 2))) is list of 2, 3, 1.41421356237309
+    expect arrays's numbers_of(arrays's above_zero(m)) is list of 0, 0, 0, 1
+    expect arrays's numbers_of(arrays's sqrt(arrays's array(list of 4, 9, 2))) is list of 2, 3, 1.4142135623731
     expect arrays's numbers_of(arrays's exp(arrays's array(list of 0, 1))) is list of 1, 2.71828182845904
     expect arrays's numbers_of(arrays's ln(arrays's array(list of 1, 2.718281828459045))) is list of 0, 1
     expect arrays's numbers_of(arrays's tanh(arrays's array(list of 0, 1, -100))) is list of 0, 0.761594155955765, -1

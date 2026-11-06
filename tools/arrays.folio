@@ -19,7 +19,7 @@
 # Made with array(nested lists), shaped(numbers, shape), zeros(shape), ones(shape), filled(shape, x),
 # random(shape) (from 0 up to 1), random_normal(shape), counting(first, last, step), evenly(first, last, n)
 # and identity(n). Element by element: plus, minus, times, divided_by, maximum, minimum (each of two arrays,
-# or an array and a number), negate, absolute, square, relu, sqrt, exp, ln, tanh, sigmoid, power(t, p) and
+# or an array and a number), negate, absolute, square, relu, above_zero (relu's slope), sqrt, exp, ln, tanh, sigmoid, power(t, p) and
 # apply(t, f). Then matmul, dot, transpose, flatten, row, stack, join_along, softmax, to_list, numbers_of,
 # copy_of, size, rank, close(a, b) and same(a, b). Axes and places count from 1. A shape that can't be,
 # shapes that don't go together, or a place outside an array is a `fail with` that says so.
@@ -348,7 +348,12 @@ end
 
 # each number's square root
 to sqrt with t
-    return apply(arrays_need(t, "sqrt"), arrays_math's sqrt)
+    return arrays_unary(10, t, "sqrt")
+end
+
+# 1 for each number above 0, and 0 for the rest: relu's slope
+to above_zero with t
+    return arrays_unary(11, t, "above_zero")
 end
 
 # e to the power of each number
@@ -903,7 +908,7 @@ to arrays_run_binary with op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, sb
     arrays_binary_folio(op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, sb1, oo)
 end
 
-# rt_k_binary, in Folio: op 0 a's number, 1 to 6 + - * / max min, 7 to 9 negate, absolute and relu
+# rt_k_binary, in Folio: op 0 a's number, 1 to 6 + - * / max min, 7 to 11 negate, absolute, relu, sqrt and above_zero
 to arrays_binary_folio with op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, sb1, oo
     set k to oo + 1
     set i to 0
@@ -940,6 +945,16 @@ to arrays_binary_folio with op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, 
                     set r to 0
                 else if x is less than 0
                     set r to -x
+                end
+            else if op is 10
+                set r to arrays_math's sqrt(x)
+            else if op is 11
+                set r to x
+                if x is x
+                    set r to 0
+                    if x is greater than 0
+                        set r to 1
+                    end
                 end
             else
                 set r to x

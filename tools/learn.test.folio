@@ -1,0 +1,193 @@
+# learn.folio's tests, on the processor, which folio.test.js runs on every engine; machine.test.js runs them in
+# machine code too, and checks the card against them where there's one
+
+use "learn.folio" as learn
+
+to test_matrices
+    learn's use_card(no)
+    set m to learn's matrix(list of (list of 1, 2, 3), (list of 4, 5, 6))
+    expect learn's shape_of(m) is list of 2, 3
+    expect learn's rows_of(m) is list of (list of 1, 2, 3), (list of 4, 5, 6)
+    expect learn's numbers_of(learn's zeros(2, 2)) is list of 0, 0, 0, 0
+    expect learn's value(learn's sum(m)) is 21
+    expect learn's value(learn's mean(m)) is 3.5
+    set t to learn's matmul(m, learn's matrix_of((list of 1, 0, 0, 1, 1, 1), 3, 2))
+    expect learn's rows_of(t) is list of (list of 4, 5), (list of 10, 11)
+    expect learn's rows_of(learn's add_row(m, learn's matrix(list of (list of 10, 20, 30)))) is list of (list of 11, 22, 33), (list of 14, 25, 36)
+    expect learn's numbers_of(learn's relu(learn's matrix_of((list of -1, 2), 1, 2))) is list of 0, 2
+    expect learn's numbers_of(learn's times(m, 2)) is list of 2, 4, 6, 8, 10, 12
+    set chances to learn's numbers_of(learn's softmax_of(learn's matrix_of((list of 0, 0), 1, 2)))
+    expect chances is list of 0.5, 0.5
+    expect learn's accuracy(learn's matrix(list of (list of 1, 9), (list of 8, 2), (list of 0, 3)), (list of 1, 0, 0)) is 2 / 3
+    set r to learn's random_normal(100, 10, 2)
+    set spread to learn's value(learn's mean(learn's times(r, r)))
+    expect spread is greater than 3 and spread is less than 5
+    expect "{m}" is "(a 2 by 3 matrix)"
+end
+
+# each parameter's gradient against the slope of the loss as the parameter's numbers move a little either way
+to check_gradients with make_loss, names, starts
+    set params to empty list
+    for each s in starts
+        add learn's parameter(learn's matrix(s)) to params
+    end
+    learn's backward(make_loss(params))
+    set worked to empty list
+    for each p in params
+        add learn's numbers_of(learn's gradient_of(p)) to worked
+    end
+    learn's forget()
+    set h to 0.00001
+    for each k from 1 to length of starts
+        set numbers to learn's numbers_of(learn's matrix(item k of starts))
+        for each j from 1 to length of numbers
+            set up to learn_value_with(make_loss, starts, k, j, h)
+            set down to learn_value_with(make_loss, starts, k, j, -h)
+            set slope to (up - down) / (2 * h)
+            set got to item j of item k of worked
+            set off to got - slope
+            if off is less than 0
+                set off to -off
+            end
+            expect off is less than 0.0001 + 0.0001 * (slope * slope)
+            if off is at least 0.0001 + 0.0001 * (slope * slope)
+                say item k of names + " " + j + ": backward " + got + ", the slope " + slope
+            end
+        end
+    end
+end
+
+to learn_value_with with make_loss, starts, k, j, h
+    set params to empty list
+    set i to 0
+    for each s in starts
+        add 1 to i
+        set m to learn's matrix(s)
+        if i is k
+            set numbers to learn's numbers_of(m)
+            set item j of numbers to item j of numbers + h
+            set m to learn's matrix_of(numbers, length of s, length of item 1 of s)
+        end
+        add learn's parameter(m) to params
+    end
+    set got to learn's value(make_loss(params))
+    learn's forget()
+    return got
+end
+
+set x_data to list of (list of 0.5, -1.2), (list of 1.5, 0.3), (list of -0.7, 0.9)
+
+to loss_matmul with ps
+    return learn's sum(learn's times(learn's matmul(item 1 of ps, item 2 of ps), 0.5))
+end
+
+to loss_layer with ps
+    set x to learn's matrix(x_data)
+    return learn's mean(learn's relu(learn's add_row(learn's matmul(x, item 1 of ps), item 2 of ps)))
+end
+
+to loss_entropy with ps
+    set x to learn's matrix(x_data)
+    return learn's cross_entropy(learn's add_row(learn's matmul(x, item 1 of ps), item 2 of ps), list of 2, 0, 1)
+end
+
+to loss_squares with ps
+    set target to learn's matrix(list of (list of 1, 2), (list of 3, 4))
+    set both to learn's plus(learn's times(item 1 of ps, item 2 of ps), learn's minus(item 1 of ps, item 2 of ps))
+    return learn's mean_squared_error(both, target)
+end
+
+to test_gradients
+    learn's use_card(no)
+    check_gradients(loss_matmul, (list of "a", "b"), list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 1, -2), (list of 0.3, 4), (list of 2, 1)))
+    check_gradients(loss_layer, (list of "weights", "bias"), list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.15, 0.2, 0.3)))
+    check_gradients(loss_entropy, (list of "weights", "bias"), list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.1, -0.2, 0.3)))
+    check_gradients(loss_squares, (list of "a", "b"), list of (list of (list of 1, 2), (list of -1, 0.5)), (list of (list of 0.3, -2), (list of 4, 1)))
+end
+
+# a network learns XOR, which no straight line can
+to test_training
+    learn's use_card(no)
+    set x to learn's matrix(list of (list of 0, 0), (list of 0, 1), (list of 1, 0), (list of 1, 1))
+    set labels to list of 0, 1, 1, 0
+    set net to learn's network(list of 2, 16, 2)
+    set opt to learn's adam(learn's parameters_of(net), 0.05)
+    set first to nothing
+    set last to nothing
+    for each round from 1 to 150
+        set loss to learn's cross_entropy(learn's forward(net, x), labels)
+        learn's backward(loss)
+        set last to learn's value(loss)
+        if first is nothing
+            set first to last
+        end
+        learn's step(opt)
+    end
+    expect last is less than first / 10
+    expect learn's accuracy(learn's forward(net, x), labels) is 1
+    learn's forget()
+end
+
+to test_optimizers
+    learn's use_card(no)
+    set p to learn's parameter(learn's matrix(list of (list of 1, 2)))
+    set opt to learn's sgd((list of p), 0.1)
+    learn's backward(learn's sum(learn's times(p, 3)))
+    expect learn's numbers_of(learn's gradient_of(p)) is list of 3, 3
+    learn's step(opt)
+    expect learn's numbers_of(p) is list of 0.7, 1.7
+    # Adam's first step is the rate, against the gradient's sign, whatever its size
+    set q to learn's parameter(learn's matrix(list of (list of 1, 2)))
+    set opt to learn's adam((list of q), 0.1)
+    learn's backward(learn's sum(learn's times(q, -50)))
+    learn's step(opt)
+    set moved to learn's numbers_of(q)
+    expect item 1 of moved - 1.1 is less than 0.000001 and 1.1 - item 1 of moved is less than 0.000001
+    expect item 2 of moved - 2.1 is less than 0.000001 and 2.1 - item 2 of moved is less than 0.000001
+end
+
+to test_mistakes
+    learn's use_card(no)
+    set a to learn's matrix(list of (list of 1, 2))
+    set b to learn's matrix(list of (list of 1, 2, 3))
+    for each case in list of (list of "'matmul' needs a's columns to be b's rows: 1 by 2 and 1 by 3", "matmul"),
+        (list of "'plus' needs matrices of the same shape, not 1 by 2 and 1 by 3", "plus")
+        try
+            if item 2 of case is "matmul"
+                learn's matmul(a, b)
+            else
+                learn's plus(a, b)
+            end
+            expect item 1 of case is "no mistake"
+        if it fails with why
+            expect why is item 1 of case
+        end
+    end
+    try
+        learn's backward(learn's sum(a))
+        expect "a loss no parameter went into" is "a mistake"
+    if it fails with why
+        expect why is "'backward' needs a loss that parameters went into"
+    end
+    set p to learn's parameter(learn's matrix(list of (list of 1, 2)))
+    try
+        learn's backward(learn's times(p, 2))
+        expect "a loss of two numbers" is "a mistake"
+    if it fails with why
+        expect why is "'backward' starts from a loss, a 1 by 1 matrix, not 1 by 2"
+    end
+    set loss to learn's sum(learn's times(p, 2))
+    learn's step(learn's sgd((list of p), 0.1))
+    try
+        learn's value(loss)
+        expect "a matrix let go" is "a mistake"
+    if it fails with why
+        expect why is "'value' was given a matrix that was let go at a step, or by free"
+    end
+    try
+        learn's cross_entropy(learn's matrix(list of (list of 1, 2)), list of 2)
+        expect "a label past the end" is "a mistake"
+    if it fails with why
+        expect why is "'cross_entropy' needs each label to be a place from 0 to 1, not 2"
+    end
+end

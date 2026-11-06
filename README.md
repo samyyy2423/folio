@@ -473,6 +473,15 @@ bytes and dictionaries:
   turn so slow ones spread evenly; a `cores's work_here(work)` line after the
   functions makes a copy start on its part at once. Workers (`start work(x) on
   another core`) do the same inside one program.
+- [`memory.folio`](tools/memory.folio) keeps numbers as C does, for file
+  formats, networks and C libraries: `memory's put(b, 1, -2, "a whole
+  number")` and `get`, in each of C's kinds of number and either byte order,
+  and `get_many` and `put_many` a list at a time, a million floats in a
+  millisecond in a program folio builds. And memory of the program's own,
+  outside the collector: `take(4096)`, `copy`, `fill`, `address_of` for C,
+  and `give_back`; C structures by field name (`layout`, `get_field`), views
+  with bounds of their own and read-only ones, `taken()` to find leaks, and
+  atomics for numbers threads share (`add_atomically`, `swap_if`).
 - [`sockets.folio`](tools/sockets.folio) talks over a network as Python's
   `socket` does: `connect("example.com", 80)`, `listen(9000)` and `accept`,
   `send`, `receive`, `receive_line`, `receive_all`, `finish_sending`,
@@ -599,6 +608,12 @@ bytes and dictionaries:
   In a program folio builds, loops in machine code do the work and give
   exactly what Folio's own give; `arrays's use_blas()` sends matmul through
   OpenBLAS where it's installed.
+- [`learn.folio`](tools/learn.folio) trains networks as PyTorch does: matrices on the graphics card (or on the
+  processor), `backward(loss)` for every parameter's gradient, layers, `sgd` and `adam`. A digit reader learns
+  10 rounds of 6,000 drawings in a quarter of a second on a GTX 1650, faster than PyTorch on the same card.
+- [`gpu.folio`](tools/gpu.folio) works on numbers on an NVIDIA graphics card, through CUDA's driver: `gpu's
+  upload(numbers)`, then `plus`, `times`, `relu`, `exp`, `matmul` and `sum` there, thousands at once, and
+  `gpu's download` to bring them back; a 2,048 by 2,048 matrix multiply 270 times as fast as on the processor.
 - [`onnx.folio`](tools/onnx.folio) runs a model trained in PyTorch, or anything
   else that saves ONNX, through ONNX Runtime (Windows 11 has it; elsewhere,
   from its releases): `onnx's run(model, dictionary where "X" is x)`, arrays

@@ -36,6 +36,19 @@ to test_powers
     expect math's power(0, 0.5) is 0
 end
 
+# the square root is the double nearest the true one, as the processor's own is: each checked by its difference,
+# which is exact, where `is` goes by 15 digits
+to test_square_roots
+    expect math's sqrt(2) - 1.4142135623730951 is 0
+    expect math's sqrt(144) - 12 is 0
+    expect math's sqrt(0.25) - 0.5 is 0
+    expect math's sqrt(10) - 3.1622776601683795 is 0
+    expect math's sqrt(1 / (2 to the power of 1022) / (2 to the power of 52)) * (2 to the power of 537) - 1 is 0
+    expect math's sqrt(2 to the power of 1000) - (2 to the power of 500) is 0
+    expect math's sqrt(10 to the power of 300) / (10 to the power of 150) - 1 is less than 0.000000000000001
+    expect math's sqrt(0) is 0
+end
+
 to test_angles
     expect close(math's tangent(1), 1.5574077246549023)
     expect close(math's arctangent(1), 0.7853981633974483)

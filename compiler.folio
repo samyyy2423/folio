@@ -3943,12 +3943,16 @@ end
 
 # `place` is the function's number (0 for the program). A name the function changes means a variable outside
 # it only if the nearest function around it with a variable of that name (or the top level) makes it above
-# the function's `to` line; otherwise the function gets a variable of its own.
+# the function's `to` line; otherwise the function gets a variable of its own. `slots` has each name's slot,
+# the last that has it, as slot_of would find it going through names, so finding one takes as long whatever
+# how many names there are (DESIGN §156).
 to new_scope with parent, params, body, place
     set names to empty list
+    set slots to empty dictionary
     set made to empty dictionary # see made_order: the inputs are made above everything
     for each p in params
         add p to names
+        set item p of slots to length of names
         set item p of made to 0
     end
     made_order(body, made, 0)
@@ -3957,26 +3961,29 @@ to new_scope with parent, params, body, place
     set adds to empty list
     declarations(body, own, shared, adds)
     for each n in own
-        if slot_of(names, n) is 0
+        if not (n is in slots)
             add n to names
+            set item n of slots to length of names
         end
     end
     for each n in shared
-        if slot_of(names, n) is 0 and not reaches(parent, place, n)
+        if not (n is in slots) and not reaches(parent, place, n)
             add n to names
+            set item n of slots to length of names
         end
     end
     # `add 1 to n` with no n anywhere is a name nothing sets; with one made below, it's this function's own
     for each n in adds
-        if slot_of(names, n) is 0 and not reaches(parent, place, n) and parent is not nothing and resolve(parent, n) is not nothing
+        if not (n is in slots) and not reaches(parent, place, n) and parent is not nothing and resolve(parent, n) is not nothing
             add n to names
+            set item n of slots to length of names
         end
     end
     set level to 0
     if parent is not nothing
         set level to level of parent + 1
     end
-    return record with parent parent, names names, level level, temps 0, made made, place place
+    return record with parent parent, names names, slots slots, level level, temps 0, made made, place place
 end
 
 # whether a name the function numbered `place` changes means a variable in `outer`, or further out
@@ -3984,7 +3991,7 @@ to reaches with outer, place, wanted
     set here to outer
     set before to place
     repeat while here is not nothing
-        if slot_of(names of here, wanted) is not 0
+        if wanted is in slots of here
             set known to made of here
             return wanted is in known and item wanted of known is less than before
         end
@@ -3999,9 +4006,8 @@ to resolve with scope, wanted
     set depth to 0
     set here to scope
     repeat while here is not nothing
-        set slot to slot_of(names of here, wanted)
-        if slot is not 0
-            return record with depth depth, slot slot
+        if wanted is in slots of here
+            return record with depth depth, slot item wanted of slots of here
         end
         set here to parent of here
         add 1 to depth
