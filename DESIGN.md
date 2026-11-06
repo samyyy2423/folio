@@ -6899,3 +6899,38 @@ in 31 ms, 8.7 billion operations a second, where the processor has 256-bit regis
   The digit reader's training on the processor takes 3.7 s, not 4.5: its multiplies are small, and the rest of
   each step, arrays made and the operations between them, is most of it now.
 
+## 167. A GPT trained on the graphics card
+
+learn.folio (§162) trained a network of layers on the card; a GPT wants more: its letters looked up in a table,
+its places too, layer norms, GELU, and attention, each place looking back at the places before it, each with
+its gradient.
+
+- **Operations.** `embedding(table, ids)`, `gelu(m)`, `layer_norm(m, gamma, beta)` and `attention(q, k, v,
+  batch, time, heads)`, with a causal mask, each kept on the tape like the rest. On the card, gpu.folio's
+  kernels: an embedding's rows gathered and its gradient added back at once (`red.global.add.f32`, as several
+  rows can have one id); GELU as GPT-2 has it (tanh's) and its slope; layer norm, a thread for each row, its
+  normalized rows and 1 / sqrt(variance + 10^-5) kept for the gradient; and attention, a thread for each batch,
+  head and place: scores against the places up to it, their softmax kept, the values added up, and for the
+  gradient, dv and dk added at once and dq worked out where it is. On the processor, the same in Folio.
+- **Checked**: each gradient against the loss's slope on the processor on every engine, a place seeing only the
+  places before it, and every loss and gradient on the card the processor's to within 10^-7 of each.
+- **Weights in a file.** `save(named, file)`, `load(file)`, `load_into(named, file)` and `named_parameters(net)`
+  keep matrices as safetensors, as Hugging Face does: 8 bytes for the header's length, the header in JSON, then
+  32-bit floats. A file the spec's way, made in Python, loads; Folio's parses with the same numbers.
+- **gpt.folio**, a character-level GPT: token and place embeddings 64 wide, 2 blocks of 4-head attention and
+  a GELU network each after a layer norm and added back, a last layer norm and the letters' scores, 117,740
+  parameters, Adam at 0.003, batches of 16 pieces of 64 letters of Folio's own README. Against PyTorch 2.6 with
+  the same model, sizes and steps, on the same GTX 1650:
+
+| 2,000 steps | Folio | PyTorch |
+|:--|--:|--:|
+| loss at the last step | 1.386 | 1.423 |
+| loss on the tenth of the text it never learned from | 1.727 | 1.763 |
+| time a step | 24.9 ms | 17.6 ms |
+
+  It writes text with the README's shape: "Folio Windows, Python's `run` ...". A kernel's launch from Folio takes
+  about 20 microseconds here, the same as the driver's call alone, so PyTorch's lead is in launching fewer:
+  its Adam does every parameter at once, its multiplies take a matrix turned over without turning it.
+- **Next**: Adam for every parameter in one launch, multiplies that read a matrix turned over, 16-bit floats and
+  the card's tensor cores, and a bigger GPT.
+

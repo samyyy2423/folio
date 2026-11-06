@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **A GPT trained on the graphics card.** learn.folio has `embedding`, `gelu`, `layer_norm` and `attention` with a
+  causal mask, on the card and on the processor, and keeps weights in safetensors files (`save`, `load`,
+  `load_into`). gpt.folio trains a character-level GPT on Folio's README on a GTX 1650 to the same loss as
+  PyTorch's same model, at 25 ms a step to PyTorch's 18 (DESIGN §167).
 - **matmul with AVX, on every core.** arrays.folio's matrix multiply in machine code uses AVX where the processor
   has it and shares big ones out over up to 8 cores, every number still Folio's own sum to the last bit: 512 by
   512 in 5 ms, where it took 42 at the start of the day (DESIGN §166).

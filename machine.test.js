@@ -3011,13 +3011,13 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   const { dir, exe } = folioExe();
   const sub = join(dir, "arrays");
   mkdirSync(sub);
-  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "learn.folio", "learn.test.folio", "gpu.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
+  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "learn.folio", "learn.test.folio", "gpu.folio", "json.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "26 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "28 passed");
 });
 
 // arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
@@ -3316,7 +3316,7 @@ test("learn.folio works out the same losses and gradients on the graphics card a
   const dir = mkdtempSync(join(tmpdir(), "folio-learn-"));
   try {
     const files = {};
-    for (const name of ["gpu.folio", "arrays.folio", "learn.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of ["gpu.folio", "arrays.folio", "learn.folio", "memory.folio", "json.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
     const run = (source, name) => {
       const exe = executable(dir, name);
@@ -3341,6 +3341,88 @@ test("learn.folio works out the same losses and gradients on the graphics card a
     rmSync(dir, { recursive: true, force: true });
   }
 });
+// learn.folio's transformer operations (DESIGN §167) on the card: embedding, GELU, layer norm and attention with
+// its mask, each loss and gradient the processor's to a float's precision; and gpt.folio, 30 steps on the card,
+// learning, saving its weights and writing
+test("learn.folio's transformer operations work out on the graphics card what they do on the processor, and gpt.folio learns", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-gpt-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "arrays.folio", "learn.folio", "memory.folio", "json.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+    const run = (source, name, args = [], allow = ["--allow-libraries"]) => {
+      const exe = executable(dir, name);
+      writeFileSync(exe, machine(source, { target, name: `${name}.folio`, files, allow }));
+      if (target === "linux") chmodSync(exe, 0o755);
+      const ran = spawnSync(exe, args, { cwd: dir, encoding: "utf8", timeout: 300_000 });
+      assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
+      return ran.stdout.trim().split("\n");
+    };
+    const card = run(TRANSFORMER.replace("WHERE", "yes"), "card");
+    const processor = run(TRANSFORMER.replace("WHERE", "no"), "processor");
+    assert.deepEqual([card[0], processor[0]], ["on the card: yes", "on the card: no"]);
+    const numbers = (line) => line.replace(/[\[\]]/g, "").split(", ").map(Number);
+    for (let k = 1; k < processor.length; k++) {
+      const [got, want] = [numbers(card[k]), numbers(processor[k])];
+      assert.equal(got.length, want.length);
+      got.forEach((g, i) => assert.ok(Math.abs(g - want[i]) <= 0.00002 * (1 + Math.abs(want[i])), `line ${k}: ${card[k]} on the card, ${processor[k]} on the processor`));
+    }
+    writeFileSync(join(dir, "README.md"), readFileSync(new URL("./README.md", import.meta.url), "utf8"));
+    const said = run(readFileSync(new URL("./gpt.folio", import.meta.url), "utf8"), "gpt", ["30"], ["--allow-read", "--allow-write", "--allow-libraries"]);
+    const loss = (step) => Number(said.find((l) => l.startsWith(`step ${step}:`)).match(/loss ([0-9.]+)/)[1]);
+    assert.ok(said.some((l) => l.startsWith("a GPT of 2 blocks, 4 heads, 64 wide: ") && l.endsWith("on the card: yes")), said.join("\n"));
+    assert.ok(loss(1) > 4 && said.some((l) => /^learned in /.test(l)), said.join("\n"));
+    assert.ok(existsSync(join(dir, "gpt.safetensors")));
+    assert.ok(said.indexOf("----") > 0 && said.at(-1).length > 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+const TRANSFORMER = `use "learn.folio" as learn
+learn's use_card(WHERE)
+say "on the card: " + learn's on_card()
+to loss_embedding with ps
+    set target to learn's matrix(list of (list of 1, 0, 2), (list of 0.5, 1, -1), (list of 2, 2, 0), (list of 1, 0, 2))
+    return learn's mean_squared_error(learn's embedding(item 1 of ps, list of 2, 0, 2, 1), target)
+end
+
+to loss_gelu with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5), (list of 3, 1, -1))
+    return learn's sum(learn's times(learn's gelu(item 1 of ps), w))
+end
+
+to loss_layer_norm with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5, 2), (list of 3, 1, -1, 0.25), (list of -1, 1, 2, 1))
+    return learn's sum(learn's times(learn's layer_norm(item 1 of ps, item 2 of ps, item 3 of ps), w))
+end
+
+to loss_attention with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5, 2), (list of 3, 1, -1, 0.25), (list of -1, 1, 2, 1),
+        (list of 0.5, 0.5, -2, 1), (list of 2, -1, 1, 1), (list of -0.5, 1.5, 1, -1))
+    return learn's sum(learn's times(learn's attention(item 1 of ps, item 2 of ps, item 3 of ps, 2, 3, 2), w))
+end
+
+
+to show with make_loss, starts
+    set params to empty list
+    for each s in starts
+        add learn's parameter(learn's matrix(s)) to params
+    end
+    set loss to make_loss(params)
+    learn's backward(loss)
+    say learn's value(loss)
+    for each p in params
+        say learn's numbers_of(learn's gradient_of(p))
+    end
+    learn's forget()
+end
+set qkv to list of (list of 0.1, 0.4, -0.3, 0.2), (list of 0.5, -0.1, 0.2, 0.3), (list of -0.2, 0.3, 0.4, -0.5),
+    (list of 0.3, 0.2, -0.1, 0.6), (list of -0.4, 0.1, 0.5, 0.2), (list of 0.2, -0.3, 0.1, 0.4)
+show(loss_embedding, list of (list of (list of 0.1, 0.2, 0.3), (list of -1, 0.5, 2), (list of 1, 1, 1)))
+show(loss_gelu, list of (list of (list of 0.3, -1.2, 2), (list of 0.01, 1, -0.4)))
+show(loss_layer_norm, list of (list of (list of 1, 2, 4, -1), (list of 0.5, -0.5, 3, 2), (list of 2, 0, 1, 1.5)), (list of (list of 1, 0.5, 2, 1)), (list of (list of 0, 0.1, -0.2, 0.3)))
+show(loss_attention, list of qkv, qkv, qkv)
+`;
 const KERNELS = `use "gpu.folio" as gpu
 use "math.folio" as m
 

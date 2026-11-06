@@ -17,11 +17,14 @@
 # Matrices: matrix(rows), matrix_of(numbers, rows, columns), zeros(rows, columns), random_normal(rows, columns,
 # spread), and parameter(m), a matrix that learns. On them: matmul(a, b), plus, minus and times (each number with
 # each, or times a number), add_row(m, row), a row added to each row (a layer's bias), relu, sum, mean,
-# cross_entropy(scores, labels) and mean_squared_error(m, target). Then backward(loss), and value(m), numbers_of(m),
+# cross_entropy(scores, labels) and mean_squared_error(m, target); and for transformers, embedding(table, ids),
+# gelu(m), layer_norm(m, gamma, beta) and attention(q, k, v, batch, time, heads), with a causal mask. Then backward(loss), and value(m), numbers_of(m),
 # rows_of(m), shape_of(m), gradient_of(p), softmax_of(m) and accuracy(scores, labels). Layers: layer(inputs,
 # outputs), network(sizes), forward(net, x) and parameters_of(net). Optimizers: sgd(parameters, rate) and
 # adam(parameters, rate), moved on by step(opt). forget() lets go of every matrix worked out since the last step,
-# for a program that only uses a network; free(m) lets go of one.
+# for a program that only uses a network; free(m) lets go of one. save(named, file), load(file) and
+# load_into(named, file) keep matrices in a safetensors file, as Hugging Face does, and named_parameters(net)
+# names a network's.
 #
 # A program that uses the card is run or built with --allow-libraries; without that, or with no NVIDIA card, it
 # all works on the processor, more slowly, and use_card(no) asks for that. On the card numbers are floats, about 7
@@ -31,6 +34,8 @@
 use "gpu.folio" as learn_gpu
 use "arrays.folio" as learn_arrays
 use "math.folio" as learn_math
+use "memory.folio" as learn_memory
+use "json.folio" as learn_json
 
 # a matrix: rows by columns numbers, row after row, on the card (data gpu.folio's numbers) or not (an array);
 # learns if it's a parameter, tracks if a parameter went into it, and made_by, inputs and extra say how
@@ -292,6 +297,155 @@ to mean_squared_error with m, target
     return mean(times(off, off))
 end
 
+# ---------- for transformers (DESIGN §167) ----------
+
+# rows of a table (a parameter, its rows the things looked up), by their places from 0 in ids: an embedding, a
+# row for each id
+to embedding with table, ids
+    learn_live(table, "embedding")
+    if not learn_is_list(ids)
+        fail with "'embedding' needs a list of places from 0, not " + ids
+    end
+    for each id in ids
+        if not learn_is_number(id) or id is less than 0 or id is at least table's rows or id is not id rounded down
+            fail with "'embedding' needs each id to be a place from 0 to " + (table's rows - 1) + ", not " + id
+        end
+    end
+    set n to length of ids
+    set c to table's columns
+    if table's card
+        set placed to learn_gpu's upload(ids)
+        return learn_result(learn_gpu's gather_rows(table's data, placed, table's rows, c), n, c, "embedding", (list of table), placed)
+    end
+    set numbers to learn_arrays's numbers_of(table's data)
+    set made to empty list
+    for each id in ids
+        for each j from 1 to c
+            add item (id * c + j) of numbers to made
+        end
+    end
+    return learn_result(learn_arrays's shaped(made, (list of n, c)), n, c, "embedding", (list of table), ids)
+end
+
+# GELU of each number, as GPT-2 has it: x / 2 (1 + tanh(sqrt(2 / pi) (x + 0.044715 x^3)))
+to gelu with m
+    learn_live(m, "gelu")
+    if m's card
+        set data to learn_gpu's gelu(m's data)
+    else
+        set data to learn_arrays's apply(m's data, learn_gelu_of)
+    end
+    return learn_result(data, m's rows, m's columns, "gelu", (list of m), nothing)
+end
+
+# each row normalized, its mean 0 and its spread 1, then times gamma plus beta, each a row of m's columns
+# (parameters, gamma 1s and beta 0s at first)
+to layer_norm with m, gamma, beta
+    learn_live(m, "layer_norm")
+    learn_two(m, gamma, "layer_norm")
+    learn_two(m, beta, "layer_norm")
+    if gamma's rows is not 1 or gamma's columns is not m's columns or beta's rows is not 1 or beta's columns is not m's columns
+        fail with "'layer_norm' needs gamma and beta to be rows of " + m's columns + " numbers"
+    end
+    set rows to m's rows
+    set c to m's columns
+    if m's card
+        set worked to learn_gpu's layer_norm(m's data, gamma's data, beta's data, rows, c)
+        return learn_result(worked's out, rows, c, "layer_norm", (list of m, gamma, beta), list of worked's xhat, worked's rstd)
+    end
+    set xs to learn_arrays's numbers_of(m's data)
+    set gs to learn_arrays's numbers_of(gamma's data)
+    set bs to learn_arrays's numbers_of(beta's data)
+    set out to empty list
+    set xhat to empty list
+    set rstd to empty list
+    for each i from 1 to rows
+        set total to 0
+        for each j from 1 to c
+            set total to total + item ((i - 1) * c + j) of xs
+        end
+        set mean to total / c
+        set spread to 0
+        for each j from 1 to c
+            set d to item ((i - 1) * c + j) of xs - mean
+            set spread to spread + d * d
+        end
+        set r to 1 / learn_math's sqrt(spread / c + 0.00001)
+        add r to rstd
+        for each j from 1 to c
+            set h to (item ((i - 1) * c + j) of xs - mean) * r
+            add h to xhat
+            add h * item j of gs + item j of bs to out
+        end
+    end
+    return learn_result(learn_arrays's shaped(out, (list of rows, c)), rows, c, "layer_norm", (list of m, gamma, beta), list of xhat, rstd)
+end
+
+# attention with a causal mask, as a GPT's: q, k and v each batch * time rows (each batch's places one after
+# another) of heads * size columns, each head its own size of them; each place looks at the places up to it,
+# softmax(q k^T / sqrt(size)) v
+to attention with q, k, v, batch, time, heads
+    learn_same(q, k, "attention")
+    learn_same(q, v, "attention")
+    if q's rows is not batch * time
+        fail with "'attention' needs batch times time rows, " + (batch * time) + ", not " + q's rows
+    end
+    if q's columns is not ((q's columns / heads) rounded down) * heads
+        fail with "'attention' needs its columns, " + q's columns + ", to be heads times each head's size"
+    end
+    set shape to list of batch, time, heads
+    if q's card
+        set worked to learn_gpu's attention(q's data, k's data, v's data, batch, time, heads)
+        return learn_result(worked's out, q's rows, q's columns, "attention", (list of q, k, v), list of worked's probs, shape)
+    end
+    set c to q's columns
+    set size to c / heads
+    set scale to 1 / learn_math's sqrt(size)
+    set qs to learn_arrays's numbers_of(q's data)
+    set ks to learn_arrays's numbers_of(k's data)
+    set vs to learn_arrays's numbers_of(v's data)
+    set out to learn_list_of(batch * time * c)
+    set probs to learn_list_of(batch * heads * time * time)
+    for each b from 0 to batch - 1
+        for each h from 0 to heads - 1
+            for each t from 0 to time - 1
+                set at_p to ((b * heads + h) * time + t) * time
+                set at_q to (b * time + t) * c + h * size
+                set top to nothing
+                for each j from 0 to t
+                    set at_k to (b * time + j) * c + h * size
+                    set s to 0
+                    for each d from 1 to size
+                        set s to s + item (at_q + d) of qs * item (at_k + d) of ks
+                    end
+                    set s to s * scale
+                    set item (at_p + j + 1) of probs to s
+                    if top is nothing or s is greater than top
+                        set top to s
+                    end
+                end
+                set total to 0
+                for each j from 0 to t
+                    set e to learn_math's exp(item (at_p + j + 1) of probs - top)
+                    set item (at_p + j + 1) of probs to e
+                    set total to total + e
+                end
+                for each j from 0 to t
+                    set item (at_p + j + 1) of probs to item (at_p + j + 1) of probs / total
+                end
+                for each d from 1 to size
+                    set s to 0
+                    for each j from 0 to t
+                        set s to s + item (at_p + j + 1) of probs * item ((b * time + j) * c + h * size + d) of vs
+                    end
+                    set item (at_q + d) of out to s
+                end
+            end
+        end
+    end
+    return learn_result(learn_arrays's shaped(out, (list of q's rows, c)), q's rows, c, "attention", (list of q, k, v), list of probs, shape)
+end
+
 # ---------- what they are ----------
 
 # a 1 by 1 matrix's number, or a matrix's numbers row after row
@@ -480,9 +634,204 @@ to learn_back with m
                 learn_add_grad(a, learn_arrays's filled((list of a's rows, a's columns), each))
             end
         end
+    else if how is "embedding"
+        if a's tracks
+            if m's card
+                set g_table to learn_gpu's zeros(a's rows * a's columns)
+                learn_gpu's scatter_add_rows(g_table, g, m's extra, a's columns)
+                learn_add_grad(a, g_table)
+            else
+                set sums to learn_list_of(a's rows * a's columns)
+                set gs to learn_arrays's numbers_of(g)
+                set c to a's columns
+                set i to 0
+                for each id in m's extra
+                    for each j from 1 to c
+                        set item (id * c + j) of sums to item (id * c + j) of sums + item (i * c + j) of gs
+                    end
+                    add 1 to i
+                end
+                learn_add_grad(a, learn_arrays's shaped(sums, (list of a's rows, c)))
+            end
+        end
+    else if how is "gelu"
+        if a's tracks
+            if m's card
+                learn_add_grad(a, learn_gpu's gelu_gradient(g, a's data))
+            else
+                learn_add_grad(a, learn_arrays's times(g, learn_arrays's apply(a's data, learn_gelu_slope)))
+            end
+        end
+    else if how is "layer_norm"
+        learn_back_layer_norm(m, g)
+    else if how is "attention"
+        learn_back_attention(m, g)
     else if how is "cross_entropy"
         if a's tracks
             learn_add_grad(a, learn_scaled(m's extra, learn_scalar_of(g, m's card), m's card))
+        end
+    end
+end
+
+to learn_gelu_of with x
+    set u to 0.7978845608028654 * (x + 0.044715 * x * x * x)
+    return 0.5 * x * (1 + learn_tanh(u))
+end
+
+to learn_gelu_slope with x
+    set t to learn_tanh(0.7978845608028654 * (x + 0.044715 * x * x * x))
+    return 0.5 * (1 + t) + 0.5 * x * (1 - t * t) * 0.7978845608028654 * (1 + 3 * 0.044715 * x * x)
+end
+
+to learn_tanh with u
+    if u is greater than 20
+        return 1
+    end
+    if u is less than -20
+        return -1
+    end
+    set e to learn_math's exp(2 * u)
+    return (e - 1) / (e + 1)
+end
+
+# n zeros, a list of its own
+to learn_list_of with n
+    set made to empty list
+    for each i from 1 to n
+        add 0 to made
+    end
+    return made
+end
+
+to learn_is_list with v
+    try
+        set probe to items 1 to 0 of v
+        return not learn_is_number(v)
+    if it fails
+        return no
+    end
+end
+
+# layer norm's gradients: x's, rstd (g - mean(g) - xhat mean(g xhat)) with g = dy gamma; gamma's, the column
+# sums of dy xhat; beta's, the column sums of dy
+to learn_back_layer_norm with m, g
+    set x to item 1 of m's inputs
+    set gamma to item 2 of m's inputs
+    set beta to item 3 of m's inputs
+    set rows to m's rows
+    set c to m's columns
+    set xhat to item 1 of m's extra
+    set rstd to item 2 of m's extra
+    if m's card
+        if x's tracks
+            learn_add_grad(x, learn_gpu's layer_norm_gradient(g, xhat, rstd, gamma's data, rows, c))
+        end
+        if gamma's tracks
+            set both to learn_gpu's times(g, xhat)
+            learn_add_grad(gamma, learn_gpu's column_sums(both, rows, c))
+            learn_gpu's free(both)
+        end
+        if beta's tracks
+            learn_add_grad(beta, learn_gpu's column_sums(g, rows, c))
+        end
+        return nothing
+    end
+    set dys to learn_arrays's numbers_of(g)
+    set gs to learn_arrays's numbers_of(gamma's data)
+    set dx to empty list
+    set dgamma to learn_list_of(c)
+    set dbeta to learn_list_of(c)
+    for each i from 1 to rows
+        set s1 to 0
+        set s2 to 0
+        for each j from 1 to c
+            set at to (i - 1) * c + j
+            set gj to item at of dys * item j of gs
+            set s1 to s1 + gj
+            set s2 to s2 + gj * item at of xhat
+            set item j of dgamma to item j of dgamma + item at of dys * item at of xhat
+            set item j of dbeta to item j of dbeta + item at of dys
+        end
+        for each j from 1 to c
+            set at to (i - 1) * c + j
+            set gj to item at of dys * item j of gs
+            add item i of rstd * (gj - s1 / c - item at of xhat * s2 / c) to dx
+        end
+    end
+    if x's tracks
+        learn_add_grad(x, learn_arrays's shaped(dx, (list of rows, c)))
+    end
+    if gamma's tracks
+        learn_add_grad(gamma, learn_arrays's shaped(dgamma, (list of 1, c)))
+    end
+    if beta's tracks
+        learn_add_grad(beta, learn_arrays's shaped(dbeta, (list of 1, c)))
+    end
+end
+
+# attention's gradients: dp_j = dout_t . v_j; dv_j += p_j dout_t; ds_j = p_j (dp_j - sum of p_i dp_i);
+# dq_t = scale sum of ds_j k_j; dk_j += scale ds_j q_t
+to learn_back_attention with m, g
+    set q to item 1 of m's inputs
+    set k to item 2 of m's inputs
+    set v to item 3 of m's inputs
+    set shape to item 2 of m's extra
+    set batch to item 1 of shape
+    set time to item 2 of shape
+    set heads to item 3 of shape
+    if m's card
+        set worked to learn_gpu's attention_gradient(g, item 1 of m's extra, q's data, k's data, v's data, batch, time, heads)
+        for each pair in list of (list of q, worked's dq), (list of k, worked's dk), (list of v, worked's dv)
+            if (item 1 of pair)'s tracks
+                learn_add_grad(item 1 of pair, item 2 of pair)
+            else
+                learn_gpu's free(item 2 of pair)
+            end
+        end
+        return nothing
+    end
+    set probs to item 1 of m's extra
+    set c to q's columns
+    set size to c / heads
+    set scale to 1 / learn_math's sqrt(size)
+    set qs to learn_arrays's numbers_of(q's data)
+    set ks to learn_arrays's numbers_of(k's data)
+    set vs to learn_arrays's numbers_of(v's data)
+    set dout to learn_arrays's numbers_of(g)
+    set dq to learn_list_of(batch * time * c)
+    set dk to learn_list_of(batch * time * c)
+    set dv to learn_list_of(batch * time * c)
+    for each b from 0 to batch - 1
+        for each h from 0 to heads - 1
+            for each t from 0 to time - 1
+                set at_p to ((b * heads + h) * time + t) * time
+                set at_t to (b * time + t) * c + h * size
+                set dp to empty list
+                set weighted to 0
+                for each j from 0 to t
+                    set at_j to (b * time + j) * c + h * size
+                    set s to 0
+                    for each d from 1 to size
+                        set s to s + item (at_t + d) of dout * item (at_j + d) of vs
+                        set item (at_j + d) of dv to item (at_j + d) of dv + item (at_p + j + 1) of probs * item (at_t + d) of dout
+                    end
+                    add s to dp
+                    set weighted to weighted + item (at_p + j + 1) of probs * s
+                end
+                for each j from 0 to t
+                    set at_j to (b * time + j) * c + h * size
+                    set ds to item (at_p + j + 1) of probs * (item (j + 1) of dp - weighted) * scale
+                    for each d from 1 to size
+                        set item (at_t + d) of dq to item (at_t + d) of dq + ds * item (at_j + d) of ks
+                        set item (at_j + d) of dk to item (at_j + d) of dk + ds * item (at_t + d) of qs
+                    end
+                end
+            end
+        end
+    end
+    for each pair in list of (list of q, dq), (list of k, dk), (list of v, dv)
+        if (item 1 of pair)'s tracks
+            learn_add_grad(item 1 of pair, learn_arrays's shaped(item 2 of pair, (list of q's rows, c)))
         end
     end
 end
@@ -671,9 +1020,7 @@ to forget
         if not m's learns and not m's gone
             if m's card
                 learn_gpu's free(m's data)
-                if m's extra is not nothing and not learn_is_number(m's extra)
-                    learn_gpu's free(m's extra)
-                end
+                learn_free_extra(m's extra)
             end
             learn_free_grad(m)
             set m's data to nothing
@@ -681,6 +1028,25 @@ to forget
         end
     end
     set learn_tape to empty list
+end
+
+# what an operation kept on the card for its gradient, given back: numbers on the card, or a list with some
+to learn_free_extra with x
+    if x is nothing or learn_is_number(x)
+        return nothing
+    end
+    if learn_is_list(x)
+        for each part in x
+            learn_free_extra(part)
+        end
+        return nothing
+    end
+    try
+        set probe to x's count
+    if it fails
+        return nothing
+    end
+    learn_gpu's free(x)
 end
 
 # a matrix let go, and its memory on the card given back
@@ -692,6 +1058,143 @@ to free with m
     learn_free_grad(m)
     set m's data to nothing
     set m's gone to yes
+end
+
+# ---------- weights in a file: safetensors, as Hugging Face keeps them (DESIGN §167) ----------
+
+# matrices saved to a file, each by its name: a dictionary of names to matrices. The file is safetensors: 8
+# bytes, the header's length; the header, JSON, each name's dtype ("F32"), shape and where its numbers are;
+# then the numbers, 32-bit floats, row after row
+to save with named, file
+    set names to keys of named
+    set header to "\{"
+    set at to 0
+    set k to 0
+    for each name in names
+        set m to item name of named
+        learn_live(m, "save")
+        add 1 to k
+        if k is greater than 1
+            add "," to header
+        end
+        set size to 4 * m's rows * m's columns
+        add learn_json_text(name) + ":\{\"dtype\":\"F32\",\"shape\":[" + m's rows + "," + m's columns + "],\"data_offsets\":[" + at + "," + (at + size) + "]}" to header
+        set at to at + size
+    end
+    add "}" to header
+    repeat while (length of (header as bytes)) is not ((length of (header as bytes) / 8) rounded up) * 8
+        add " " to header
+    end
+    set heading to header as bytes
+    set made to (8 + length of heading + at) bytes
+    learn_memory's put(made, 1, length of heading, "an unsigned long whole number")
+    learn_memory's copy(heading, 1, made, 9, length of heading)
+    set at to 9 + length of heading
+    for each name in names
+        set m to item name of named
+        set numbers to numbers_of(m)
+        if length of numbers is greater than 0
+            learn_memory's put_many(made, at, numbers, "a float")
+        end
+        set at to at + 4 * length of numbers
+    end
+    write made to file
+end
+
+# the matrices a safetensors file holds, a dictionary of their names to them: 32-bit floats ("F32") or 64-bit
+# ("F64"), of one axis (a row) or two. parameter() makes one learn again
+to load with file
+    set b to read bytes file
+    if length of b is less than 8
+        fail with "'load' needs a safetensors file, and " + file + " is too short to be one"
+    end
+    set n to learn_memory's get(b, 1, "an unsigned long whole number")
+    if n is greater than length of b - 8
+        fail with "'load' needs a safetensors file, and " + file + "'s header runs past its end"
+    end
+    set header to learn_json's parse((items 9 to (8 + n) of b) as text)
+    set made to empty dictionary
+    for each name in keys of header
+        if name is not "__metadata__"
+            set info to item name of header
+            set kind_of to item "dtype" of info
+            set shape to item "shape" of info
+            set places to item "data_offsets" of info
+            set width to 4
+            set kind_name to "a float"
+            if kind_of is "F64"
+                set width to 8
+                set kind_name to "a number"
+            else if kind_of is not "F32"
+                fail with "'load' reads F32 and F64 numbers, not " + name + "'s " + kind_of
+            end
+            set rows to 1
+            set columns to 1
+            if length of shape is 1
+                set columns to item 1 of shape
+            else if length of shape is 2
+                set rows to item 1 of shape
+                set columns to item 2 of shape
+            else if length of shape is not 0
+                fail with "'load' reads matrices, of one axis or two, not " + name + "'s " + length of shape
+            end
+            set count to (item 2 of places - item 1 of places) / width
+            if count is not rows * columns
+                fail with "'load' found " + count + " numbers for " + name + ", where its shape has " + (rows * columns)
+            end
+            set numbers to empty list
+            if count is greater than 0
+                set numbers to learn_memory's get_many(b, 9 + n + item 1 of places, count, kind_name)
+            end
+            set item name of made to matrix_of(numbers, rows, columns)
+        end
+    end
+    return made
+end
+
+# a file's matrices put into the matrices of the same names, in place, each the same shape: a network's
+# parameters back as they were saved
+to load_into with named, file
+    set saved to load(file)
+    for each name in keys of named
+        if not (name is in saved)
+            fail with "'load_into' found no " + name + " in " + file
+        end
+        set m to item name of named
+        set got to item name of saved
+        if got's rows is not m's rows or got's columns is not m's columns
+            fail with "'load_into' found " + name + " " + got's rows + " by " + got's columns + " in " + file + ", not " + m's rows + " by " + m's columns
+        end
+        if m's card
+            learn_gpu's free(m's data)
+        end
+        set m's data to got's data
+        set got's data to nothing
+    end
+end
+
+# a network's parameters by name, for save and load_into: layer 1's weights "1.weights", its bias "1.bias"
+to named_parameters with net
+    set made to empty dictionary
+    set k to 0
+    for each l in net
+        add 1 to k
+        set item ("" + k + ".weights") of made to l's weights
+        set item ("" + k + ".bias") of made to l's bias
+    end
+    return made
+end
+
+to learn_json_text with t
+    set made to "\""
+    for each c in t
+        if c is "\"" or c is "\\"
+            add "\\" + c to made
+        else
+            add c to made
+        end
+    end
+    return made + "\""
 end
 
 # ---------- in here ----------

@@ -1,0 +1,192 @@
+# A small GPT, trained here on the graphics card with learn.folio: it reads a text a letter at a time and learns
+# to write more like it, as GPT-2 does with words. Token and place embeddings, blocks of attention (each place
+# looking back at those before it) and a two-layer GELU network, each after a layer norm and added back to what
+# went in, then the letters' scores. Trained on Folio's own README, it writes text that looks like it.
+#
+#     folio run --allow-read --allow-write --allow-libraries gpt.folio [steps]
+#
+# It saves what it learned to gpt.safetensors. On a GTX 1650, 2,000 steps take about a minute.
+
+use "math.folio"
+use "learn.folio" as learn
+
+set steps to 2000
+if length of arguments is at least 1
+    set steps to number of (item 1 of arguments)
+end
+set width to 64 # numbers for each place
+set heads to 4
+set layers to 2
+set time to 64 # places it looks back over
+set batch to 16
+set rate to 0.003
+
+# ---------- the text, a letter at a time ----------
+
+set text to read "README.md"
+set letters to empty list
+set place_of to empty dictionary
+for each c in text
+    if not (c is in place_of)
+        set item c of place_of to length of letters
+        add c to letters
+    end
+end
+set vocabulary to length of letters
+set ids to empty list
+for each c in text
+    add item c of place_of to ids
+end
+set cut to ((length of ids * 0.9) rounded down)
+say "read " + length of ids + " letters, " + vocabulary + " different ones"
+
+# batch pieces of time letters from somewhere in [first, last), and the letter after each
+to piece_of with first, last
+    set inputs to empty list
+    set targets to empty list
+    for each b from 1 to batch
+        set start to first + ((random() * (last - first - time - 1)) rounded down)
+        for each t from 0 to time - 1
+            add item (start + t + 1) of ids to inputs
+            add item (start + t + 2) of ids to targets
+        end
+    end
+    return record with inputs inputs, targets targets
+end
+
+# ---------- the model ----------
+
+to weights with rows, columns
+    return learn's parameter(learn's random_normal(rows, columns, 0.02))
+end
+
+to ones with columns
+    set made to empty list
+    for each k from 1 to columns
+        add 1 to made
+    end
+    return learn's parameter(learn's matrix_of(made, 1, columns))
+end
+
+to row_of_zeros with columns
+    return learn's parameter(learn's zeros(1, columns))
+end
+
+set model to empty dictionary
+set item "tokens" of model to weights(vocabulary, width)
+set item "places" of model to weights(time, width)
+for each l from 1 to layers
+    for each part in list of "q", "k", "v", "o"
+        set item ("" + l + "." + part) of model to weights(width, width)
+    end
+    set item ("" + l + ".o_bias") of model to row_of_zeros(width)
+    set item ("" + l + ".ln1_gamma") of model to ones(width)
+    set item ("" + l + ".ln1_beta") of model to row_of_zeros(width)
+    set item ("" + l + ".ln2_gamma") of model to ones(width)
+    set item ("" + l + ".ln2_beta") of model to row_of_zeros(width)
+    set item ("" + l + ".up") of model to weights(width, 4 * width)
+    set item ("" + l + ".up_bias") of model to row_of_zeros(4 * width)
+    set item ("" + l + ".down") of model to weights(4 * width, width)
+    set item ("" + l + ".down_bias") of model to row_of_zeros(width)
+end
+set item "final_gamma" of model to ones(width)
+set item "final_beta" of model to row_of_zeros(width)
+set item "scores" of model to weights(width, vocabulary)
+set item "scores_bias" of model to row_of_zeros(vocabulary)
+
+set parameters to empty list
+set counted to 0
+for each name in keys of model
+    add item name of model to parameters
+    set shape to learn's shape_of(item name of model)
+    set counted to counted + item 1 of shape * item 2 of shape
+end
+say "a GPT of " + layers + " blocks, " + heads + " heads, " + width + " wide: " + counted + " parameters, on the card: " + learn's on_card()
+
+to w with name
+    return item name of model
+end
+
+# the letters' scores at each place of `pieces` pieces of `places` letters each
+to forward with tokens, pieces, places
+    set place_ids to empty list
+    for each b from 1 to pieces
+        for each t from 0 to places - 1
+            add t to place_ids
+        end
+    end
+    set x to learn's plus(learn's embedding(w("tokens"), tokens), learn's embedding(w("places"), place_ids))
+    for each l from 1 to layers
+        set p to "" + l + "."
+        set h to learn's layer_norm(x, w(p + "ln1_gamma"), w(p + "ln1_beta"))
+        set q to learn's matmul(h, w(p + "q"))
+        set k to learn's matmul(h, w(p + "k"))
+        set v to learn's matmul(h, w(p + "v"))
+        set seen to learn's attention(q, k, v, pieces, places, heads)
+        set x to learn's plus(x, learn's add_row(learn's matmul(seen, w(p + "o")), w(p + "o_bias")))
+        set h to learn's layer_norm(x, w(p + "ln2_gamma"), w(p + "ln2_beta"))
+        set up to learn's gelu(learn's add_row(learn's matmul(h, w(p + "up")), w(p + "up_bias")))
+        set x to learn's plus(x, learn's add_row(learn's matmul(up, w(p + "down")), w(p + "down_bias")))
+    end
+    set x to learn's layer_norm(x, w("final_gamma"), w("final_beta"))
+    return learn's add_row(learn's matmul(x, w("scores")), w("scores_bias"))
+end
+
+# ---------- learning ----------
+
+set opt to learn's adam(parameters, rate)
+set t0 to the clock
+for each s from 1 to steps
+    set piece to piece_of(0, cut)
+    set loss to learn's cross_entropy(forward(piece's inputs, batch, time), piece's targets)
+    learn's backward(loss)
+    if s is 1 or ((s / 100) rounded down) * 100 is s
+        say "step " + s + ": loss " + learn's value(loss) + " (" + ((the clock - t0) rounded) + " s)"
+    end
+    learn's step(opt)
+end
+set took to the clock - t0
+
+# how well it does on the tenth of the text it never learned from
+set total to 0
+for each k from 1 to 10
+    set piece to piece_of(cut, length of ids)
+    set total to total + learn's value(learn's cross_entropy(forward(piece's inputs, batch, time), piece's targets))
+    learn's forget()
+end
+say "learned in " + took + " s (" + (took / steps * 1000) + " ms a step); loss on text it hadn't seen: " + total / 10
+
+learn's save(model, "gpt.safetensors")
+
+# ---------- writing ----------
+
+set context to empty list
+for each c in "Folio "
+    add item c of place_of to context
+end
+set written to "Folio "
+for each n from 1 to 400
+    set seen to context
+    if length of seen is greater than time
+        set seen to items (length of seen - time + 1) to length of seen of seen
+    end
+    set chances to learn's numbers_of(learn's softmax_of(forward(seen, 1, length of seen)))
+    learn's forget()
+    set last to (length of seen - 1) * vocabulary
+    set pick to random()
+    set chosen to nothing
+    set sum to 0
+    for each j from 1 to vocabulary
+        set sum to sum + item (last + j) of chances
+        if chosen is nothing and sum is greater than pick
+            set chosen to j - 1
+        end
+    end
+    if chosen is nothing
+        set chosen to vocabulary - 1
+    end
+    add chosen to context
+    set written to written + item (chosen + 1) of letters
+end
+say "----"
+say written
