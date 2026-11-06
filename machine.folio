@@ -279,7 +279,9 @@ to mark with a, name
         fail with "machine.folio marks '" + name + "' twice"
     end
     set item name of table to record with section buffer of a, at length of code of a
-    set last_store of a to nothing
+    if last_store of a is not nothing and buffer of last_store of a is buffer of a # a label in the cold code, a
+        set last_store of a to nothing # stub's, says nothing of the code it was left from
+    end
 end
 
 to fixup with a, name, addend, extra
@@ -653,8 +655,10 @@ to jmp_to with a, name
 end
 
 to jcc with a, cc, name
+    set before to length of code of a
     raw(a, list of 0x0F, 0x80 + cc)
     fixup(a, name, 0, 0)
+    store_still_held(a, before)
 end
 
 to ret with a
@@ -734,7 +738,19 @@ to sse_math with a, op, x, at
 end
 
 to ucomisd with a, x, at
+    set before to length of code of a
     sse(a, 0x66, 0x2E, x, at)
+    store_still_held(a, before)
+end
+
+# what the last store put in memory is still in its register after an instruction that changes neither: a
+# compare, or a jump's way on (where it jumps to is a label, which forgets it), so a load of it after is none
+# (DESIGN §169)
+to store_still_held with a, before
+    set was to last_store of a
+    if was is not nothing and buffer of was is buffer of a and at of was is before
+        set at of was to length of code of a
+    end
 end
 
 to movq_xr with a, x, src
@@ -2653,6 +2669,79 @@ to emit_alloc with a
     pop_r(a, rdx)
     pop_r(a, rcx)
     pop_r(a, r8)
+    ret(a)
+
+    # rt_gc_extend: rax a block, rcx bytes: 1 in rax if the block now has that many, made longer where it is,
+    # or 0 if it can't be. It can when it has pages of its own (a big block) and they're the last of the heap's:
+    # the pages after them, never used, so 0, become its own, as a list built by `add` grows, with no copy and
+    # no second block (DESIGN §169). Every other register is kept.
+    set cannot to new_label(a)
+    set fits to new_label(a)
+    set paged to new_label(a)
+    set marked_loop to new_label(a)
+    set leave to new_label(a)
+    mark(a, "rt_gc_extend")
+    for each r in list of rbx, rcx, rdx, rsi, rdi
+        push_r(a, r)
+    end
+    mov_rr(a, rdx, rax)
+    alu_load(a, "sub", rdx, rip("gc_base"))
+    jcc(a, cc_b, cannot)
+    mov_rr(a, rsi, rdx)
+    alui(a, "and", rsi, 65535)
+    jcc(a, cc_ne, cannot) # a big block starts a page
+    shifti(a, "shr", rdx, 16) # its first page
+    alu_load(a, "cmp", rdx, rip("gc_pages"))
+    jcc(a, cc_ae, cannot)
+    mov_rr(a, rbx, rdx)
+    shifti(a, "shl", rbx, 5)
+    alu_load(a, "add", rbx, rip("gc_info")) # what's kept about it
+    load8(a, rsi, mem(rbx, 0))
+    alui(a, "cmp", rsi, 2)
+    jcc(a, cc_ne, cannot)
+    load(a, rsi, mem(rbx, 8)) # its pages
+    mov_rr(a, rdi, rdx)
+    alu(a, "add", rdi, rsi)
+    alu_load(a, "cmp", rdi, rip("gc_pages"))
+    jcc(a, cc_ne, cannot) # the last
+    alui(a, "add", rcx, 65535)
+    shifti(a, "shr", rcx, 16) # the pages it needs
+    alu(a, "cmp", rcx, rsi)
+    jcc(a, cc_be, fits)
+    mov_rr(a, rdi, rcx)
+    alu(a, "sub", rdi, rsi) # more pages
+    push_r(a, rdx)
+    load(a, rdx, rip("gc_pages"))
+    alu(a, "add", rdx, rdi)
+    shifti(a, "shl", rdx, 16)
+    alu_load(a, "cmp", rdx, rip("gc_committed"))
+    jcc(a, cc_be, paged)
+    call_to(a, "rt_gc_commit")
+    mark(a, paged)
+    pop_r(a, rdx)
+    store(a, mem(rbx, 8), rcx)
+    mov_rr(a, rax, rdi)
+    shifti(a, "shl", rax, 16)
+    alu_store(a, "add", rip("gc_since"), rax)
+    alu_store(a, "add", rip("gc_pages"), rdi)
+    mov_rr(a, rax, rsi) # the new pages say where it starts
+    shifti(a, "shl", rax, 5)
+    alu(a, "add", rbx, rax)
+    mark(a, marked_loop)
+    storei(a, mem(rbx, 0), 3)
+    store(a, mem(rbx, 8), rdx)
+    alui(a, "add", rbx, 32)
+    dec_r(a, rdi)
+    jcc(a, cc_ne, marked_loop)
+    mark(a, fits)
+    movi(a, rax, 1)
+    jmp_to(a, leave)
+    mark(a, cannot)
+    movi(a, rax, 0)
+    mark(a, leave)
+    for each r in list of rdi, rsi, rdx, rcx, rbx
+        pop_r(a, r)
+    end
     ret(a)
 
     # rt_block_size: rcx bytes: how big the block rt_alloc gives for them is, in rcx; every other register
@@ -5189,6 +5278,37 @@ to emit_sequences with a
     alu(a, "or", rax, rcx)
     ret(a)
 
+    # rt_items_view: as rt_items, but a list whose items are all numbers is gone through where it is, for a
+    # `for each` that can't change it (each_quiet); rax 0, rdx its numbers, rcx how many
+    set view_scan to new_label(a)
+    set view_found to new_label(a)
+    mark(a, "rt_items_view")
+    movq_rx(a, rax, xmm0)
+    mov_rr(a, rdx, rax)
+    shifti(a, "shr", rdx, 48)
+    alui(a, "cmp", rdx, kind_list)
+    jcc(a, cc_ne, "rt_items")
+    untag(a, rax)
+    load(a, rcx, mem(rax, 0))
+    load(a, rsi, mem(rax, 16))
+    mov_rr(a, rdi, rcx)
+    mov_rr(a, rdx, rsi)
+    mark(a, view_scan)
+    test_rr(a, rdi, rdi)
+    jcc(a, cc_e, view_found)
+    load(a, rax, mem(rdx, 0))
+    shifti(a, "shr", rax, 52)
+    alui(a, "and", rax, 2047)
+    alui(a, "cmp", rax, 2047) # a NaN or infinite: perhaps not a number, so the copy
+    jcc(a, cc_e, "rt_items")
+    alui(a, "add", rdx, 8)
+    dec_r(a, rdi)
+    jmp_to(a, view_scan)
+    mark(a, view_found)
+    mov_rr(a, rdx, rsi)
+    movi(a, rax, 0)
+    ret(a)
+
     # rt_items: xmm0: what `for each` goes through, as items in rdx (rcx of them), a copy so that changing the
     # list doesn't change them; rax is 0, or 2 for a mistake, with the value in err_a
     set list_items to new_label(a)
@@ -5351,12 +5471,19 @@ to emit_sequences with a
     alu(a, "add", rcx, rcx)
     store(a, mem(r8, 8), rcx)
     shifti(a, "shl", rcx, 3)
+    set moved to new_label(a)
+    set grown to new_label(a)
+    load(a, rax, mem(r8, 16)) # its numbers' block made longer where it is, if it can be (DESIGN §169)
+    call_to(a, "rt_gc_extend")
+    test_rr(a, rax, rax)
+    jcc(a, cc_ne, grown)
     call_to(a, "rt_alloc")
     mov_rr(a, rdi, rax)
     load(a, rsi, mem(r8, 16))
     load(a, rcx, mem(r8, 0))
     rep_movsq(a)
     store(a, mem(r8, 16), rax)
+    mark(a, grown)
     mov_rr(a, rax, r8)
     pop_r(a, rdi)
     pop_r(a, rsi)
@@ -45049,8 +45176,13 @@ end
 # `for each x in`: a copy of the items, gone through by place
 to gen_each with fc, s
     set a to a of fc
+    set quiet to each_quiet(fc, s)
     gen_expr(fc, over of s)
-    call_to(a, "rt_items")
+    if quiet # the list's own numbers, not a copy, if they're all numbers (DESIGN §169)
+        call_to(a, "rt_items_view")
+    else
+        call_to(a, "rt_items")
+    end
     kind_stub(fc, at of s, "can only go through a list, text, dictionary or bytes, not ")
     set items_at to hidden_place(fc)
     set count_at to hidden_place(fc)
@@ -45087,6 +45219,125 @@ to gen_each with fc, s
     cache_leave(fc, was)
     set facts of fc to loop_after(stable, before, name_key(fc, name of s))
     set hidden of fc to hidden of fc - 3
+end
+
+# Whether a `for each` can go through a list's own numbers and not a copy of them (DESIGN §169): its body
+# changes no list and runs no code but its own. It sets variables, adds to ones that hold numbers, and has ifs
+# and loops of the same; no call, no `say`, no item set, no try. A `+` in it adds numbers, as text joined to a
+# record could show it with code of the program's own. The item each time is a number: rt_items_view looks
+# first, and makes the copy if any isn't.
+to each_quiet with fc, s
+    set changed to empty dictionary
+    set_names(body of s, changed)
+    for each k in keys of changed # adding a number to a number keeps it a number: only set and the loops count
+        remove k from changed
+    end
+    quiet_sets(body of s, changed)
+    if name of s is in changed
+        return no
+    end
+    if kind of (over of s) is "name" and name of (over of s) is in changed
+        return no
+    end
+    return quiet_block(fc, body of s, name of s, changed)
+end
+
+to quiet_sets with body, changed
+    for each st in body
+        set what to kind of st
+        if what is "set" or what is "count" or what is "each"
+            set item (name of st) of changed to yes
+        end
+        if what is "if"
+            quiet_sets(then of st, changed)
+            quiet_sets(otherwise of st, changed)
+        else if what is "while" or what is "repeat" or what is "count" or what is "each"
+            quiet_sets(body of st, changed)
+        end
+    end
+end
+
+to quiet_block with fc, body, var, changed
+    if body is nothing
+        return yes
+    end
+    for each st in body
+        if not quiet_statement(fc, st, var, changed)
+            return no
+        end
+    end
+    return yes
+end
+
+to quiet_statement with fc, st, var, changed
+    set what to kind of st
+    if what is "set"
+        return quiet_expr(fc, value of st, var, changed)
+    else if what is "add"
+        return numeric_name(fc, name of st, var, changed) and numeric_expr(fc, value of st, var, changed)
+    else if what is "if"
+        return quiet_expr(fc, cond of st, var, changed) and quiet_block(fc, then of st, var, changed) and quiet_block(fc, otherwise of st, var, changed)
+    else if what is "while"
+        return quiet_expr(fc, cond of st, var, changed) and quiet_block(fc, body of st, var, changed)
+    else if what is "repeat"
+        return quiet_expr(fc, count of st, var, changed) and quiet_block(fc, body of st, var, changed)
+    else if what is "count"
+        return quiet_expr(fc, start of st, var, changed) and quiet_expr(fc, limit of st, var, changed) and quiet_block(fc, body of st, var, changed)
+    else if what is "each"
+        return quiet_expr(fc, over of st, var, changed) and quiet_block(fc, body of st, var, changed)
+    else if what is "stop"
+        return yes
+    end
+    return no
+end
+
+to quiet_expr with fc, e, var, changed
+    set what to kind of e
+    if what is "name" or what is "value"
+        return yes
+    else if what is "length"
+        return quiet_expr(fc, subject of e, var, changed)
+    else if what is "item"
+        return quiet_expr(fc, subject of e, var, changed) and quiet_expr(fc, index of e, var, changed)
+    else if what is "negate" or what is "not"
+        return quiet_expr(fc, operand of e, var, changed)
+    else if what is "and" or what is "or" or what is "compare"
+        return quiet_expr(fc, left of e, var, changed) and quiet_expr(fc, right of e, var, changed)
+    else if what is "math"
+        if op of e is "+"
+            return numeric_expr(fc, left of e, var, changed) and numeric_expr(fc, right of e, var, changed)
+        end
+        return quiet_expr(fc, left of e, var, changed) and quiet_expr(fc, right of e, var, changed)
+    end
+    return no
+end
+
+# a number, whatever else happens in the loop: a number written in, the item (once rt_items_view has seen
+# they're all numbers), or a variable that held one before the loop and that the loop only adds numbers to
+to numeric_expr with fc, e, var, changed
+    set what to kind of e
+    if what is "value"
+        return type of e is "number"
+    else if what is "name"
+        return numeric_name(fc, name of e, var, changed)
+    else if what is "length"
+        return quiet_expr(fc, subject of e, var, changed)
+    else if what is "negate"
+        return numeric_expr(fc, operand of e, var, changed)
+    else if what is "math"
+        return numeric_expr(fc, left of e, var, changed) and numeric_expr(fc, right of e, var, changed)
+    end
+    return no
+end
+
+to numeric_name with fc, name, var, changed
+    if name is in changed
+        return no
+    end
+    if name is var
+        return yes
+    end
+    return is_number_kind(fact_of(fc, name_key(fc, name)))
 end
 
 to gen_repeat with fc, s
