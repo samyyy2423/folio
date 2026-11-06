@@ -708,18 +708,26 @@ to memory_can_use_c
     return memory_c
 end
 
-# n zeros, a list of its own
+# n zeros, a list of its own: copied from up to a million kept, which is quick, and the rest added
 set memory_zero_list to list of 0
 to memory_zeros with n
     if n is 0
         return empty list
     end
-    repeat while length of memory_zero_list is less than n
+    set kept to n
+    if kept is greater than 1000000
+        set kept to 1000000
+    end
+    repeat while length of memory_zero_list is less than kept
         for each x in items 1 to length of memory_zero_list of memory_zero_list
             add 0 to memory_zero_list
         end
     end
-    return items 1 to n of memory_zero_list
+    set made to items 1 to kept of memory_zero_list
+    for each i from kept + 1 to n
+        add 0 to made
+    end
+    return made
 end
 
 to memory_whole with v
