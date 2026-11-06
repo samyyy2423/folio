@@ -37949,8 +37949,8 @@ end
 # rt_k_binary(op, out, a, b, outer, inner, a_from, a_step_out, a_step, b_from, b_step_out, b_step, out_from):
 # for each of `outer` rows and `inner` places in it, out's next number, from out_from on, is a's and b's
 # numbers there with op between them: a's from a_from, a_step_out on for each row and a_step for each place,
-# and b's likewise. op 0 is a's number itself, 1 to 6 + - * / max min, and 7 to 9 a's number negated, made
-# positive, and made 0 below 0 (ReLU). max is a if a is greater than b, else b, as maxsd has it; min is a if
+# and b's likewise. op 0 is a's number itself, 1 to 6 + - * / max min, and 7 to 11 a's number negated, made
+# positive, made 0 below 0 (ReLU), its square root, and 1 above 0 and 0 otherwise (ReLU's slope). max is a if a is greater than b, else b, as maxsd has it; min is a if
 # a is less than b, else b.
 to emit_kernel_binary with a, target
     set refuse to new_label(a)
@@ -37961,7 +37961,7 @@ to emit_kernel_binary with a, target
         kernel_small(a, k, refuse)
     end
     load(a, rax, kernel_input(1))
-    alui(a, "cmp", rax, 9)
+    alui(a, "cmp", rax, 11)
     jcc(a, cc_a, refuse)
     for each k in list of 5, 6
         load(a, rax, kernel_input(k))
@@ -38001,7 +38001,7 @@ to emit_kernel_binary with a, target
     end
     load(a, r12, kernel_input(5))
     xorpd(a, xmm4, reg_at(xmm4))
-    set ops to list of "copy", "+", "-", "*", "/", "max", "min", "negate", "absolute", "relu"
+    set ops to list of "copy", "+", "-", "*", "/", "max", "min", "negate", "absolute", "relu", "sqrt", "step"
     set starts to empty list
     for each op in ops
         add new_label(a) to starts
@@ -38051,6 +38051,21 @@ to emit_kernel_binary with a, target
                 xorpd(a, xmm0, rip(sign_mask(a)))
             else if op is "absolute"
                 andpd(a, xmm0, rip(abs_mask(a)))
+            else if op is "sqrt" # below 0 is math.folio's mistake; sqrtsd is the nearest double, as its sqrt is
+                ucomisd(a, xmm0, reg_at(xmm4))
+                jcc(a, cc_b, refuse)
+                sqrt_sd(a, xmm0, xmm0)
+            else if op is "step"
+                set positive to new_label(a)
+                set stepped to new_label(a)
+                ucomisd(a, xmm0, reg_at(xmm4))
+                jcc(a, cc_a, positive)
+                xorpd(a, xmm0, reg_at(xmm0))
+                jmp_to(a, stepped)
+                mark(a, positive)
+                movi64(a, rax, list of 0, 0, 0, 0, 0, 0, 0xF0, 0x3F)
+                movq_xr(a, xmm0, rax)
+                mark(a, stepped)
             else
                 scalar_math(a, "max", xmm0, reg_at(xmm4))
             end

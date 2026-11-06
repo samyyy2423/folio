@@ -1071,7 +1071,7 @@ test("folio.exe build --target wasm makes wasm.js's module, which runs as the VM
     return said;
   };
   const vm = outcome((print) => run(source, print, { engine: "vm", files: (name) => files[name] }));
-  assert.deepEqual(vm.slice(0, 2), ["fib(15) is 610 and 1.41421356237309", '(dictionary where "é" is [1, "x"])']);
+  assert.deepEqual(vm.slice(0, 2), ["fib(15) is 610 and 1.4142135623731", '(dictionary where "é" is [1, "x"])']);
   assert.deepEqual(outcome((print) => runWasm(bytes, print)), vm);
   writeFileSync(join(sub, "bad.folio"), "say 1 +\n");
   const bad = spawnSync(exe, ["build", "bad.folio", "--target", "wasm"], { cwd: sub, encoding: "utf8" });
@@ -2914,7 +2914,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, toml.folio, options.fol
   const ran = spawnSync(exe, ["test", "text.test.folio", "dates.test.folio", "hash.test.folio", "big.test.folio", "xml.test.folio", "zip.test.folio", "math.test.folio",
     "base64.test.folio", "toml.test.folio", "options.test.folio", "collections.test.folio", "lists.test.folio", "stats.test.folio", "sync.test.folio", "fractions.test.folio", "sets.test.folio", "images.test.folio", "crypto.test.folio", "charts.test.folio"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "93 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "94 passed");
 });
 
 // memory.folio's own loop (DESIGN §160), on its own: each kind of number, each order, written into bytes past their
@@ -3007,17 +3007,17 @@ say k_raw(5, 5, (list of 1, 2, 3), 0, at, 8, 0, 3) k_raw(4, 1, back, 0, at, 8, 8
 
 // tools/arrays.folio (DESIGN §118) and tools/memory.folio (§160): their own tests, in machine code, where machine
 // code's own loops do the work and must give what Folio gives to the last bit
-test("arrays.folio, memory.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
+test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests in machine code, where machine code's own loops do the work", { skip }, () => {
   const { dir, exe } = folioExe();
   const sub = join(dir, "arrays");
   mkdirSync(sub);
-  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
+  for (const name of ["arrays.folio", "arrays.test.folio", "memory.folio", "memory.test.folio", "learn.folio", "learn.test.folio", "gpu.folio", "ai.folio", "ai.test.folio", "http.folio", "sockets.folio", "system.folio", "zip.folio"]) {
     writeFileSync(join(sub, name), readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8"));
   }
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
-  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
+  const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "18 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "23 passed");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
@@ -3277,6 +3277,268 @@ end
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// tools/learn.folio (DESIGN §162) on the card: gpu.folio's kernels for it against the same maths in Folio, and the
+// losses and gradients of every operation on the card against the processor's, to a float's precision
+test("learn.folio works out the same losses and gradients on the graphics card as on the processor", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-learn-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "arrays.folio", "learn.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+    const run = (source, name) => {
+      const exe = executable(dir, name);
+      writeFileSync(exe, machine(source, { target, name: `${name}.folio`, files, allow: ["--allow-libraries"] }));
+      if (target === "linux") chmodSync(exe, 0o755);
+      const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+      assert.deepEqual([ran.stderr, ran.status], ["", 0], ran.stdout);
+      return ran.stdout.trim().split("\n");
+    };
+    const kernels = run(KERNELS, "kernels");
+    assert.deepEqual(kernels.filter((line) => !line.startsWith("ok ")), ["failures: 0"], kernels.join("\n"));
+    const card = run(LOSSES.replace("WHERE", "yes"), "card");
+    const processor = run(LOSSES.replace("WHERE", "no"), "processor");
+    assert.deepEqual([card[0], processor[0]], ["on the card: yes", "on the card: no"]);
+    const numbers = (line) => line.replace(/[\[\]]/g, "").split(", ").map(Number);
+    for (let k = 1; k < processor.length; k++) {
+      const [got, want] = [numbers(card[k]), numbers(processor[k])];
+      assert.equal(got.length, want.length);
+      got.forEach((g, i) => assert.ok(Math.abs(g - want[i]) <= 0.00002 * (1 + Math.abs(want[i])), `line ${k}: ${card[k]} on the card, ${processor[k]} on the processor`));
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+const KERNELS = `use "gpu.folio" as gpu
+use "math.folio" as m
+
+set failures to 0
+to near with got, want, what
+    set worst to 0
+    for each k from 1 to length of want
+        set d to absolute(item k of got - item k of want) / (1 + absolute(item k of want))
+        if d is greater than worst
+            set worst to d
+        end
+    end
+    if length of got is not length of want or worst is greater than 0.00001
+        say "WRONG " + what + ": worst " + worst
+        say "  got  " + got
+        say "  want " + want
+        set failures to failures + 1
+    else
+        say "ok " + what
+    end
+end
+
+to absolute with x
+    if x is less than 0
+        return -x
+    end
+    return x
+end
+
+to randoms with n
+    set made to empty list
+    for each k from 1 to n
+        add (m's random() * 2 - 1) * 3 to made
+    end
+    return made
+end
+
+# floats, as the card keeps them
+to as_floats with xs
+    return gpu's download(gpu's upload(xs))
+end
+
+set rows to 37
+set cols to 13
+set a to as_floats(randoms(rows * cols))
+set b to as_floats(randoms(cols))
+set ga to gpu's upload(a)
+set gb to gpu's upload(b)
+
+# transpose
+set want to empty list
+for each j from 1 to cols
+    for each i from 1 to rows
+        add item ((i - 1) * cols + j) of a to want
+    end
+end
+near(gpu's download(gpu's transpose(ga, rows, cols)), want, "transpose")
+
+# add_rows
+set want to empty list
+for each i from 1 to rows
+    for each j from 1 to cols
+        add item ((i - 1) * cols + j) of a + item j of b to want
+    end
+end
+near(gpu's download(gpu's add_rows(ga, gb, rows, cols)), want, "add_rows")
+
+# column_sums
+set want to empty list
+for each j from 1 to cols
+    set s to 0
+    for each i from 1 to rows
+        set s to s + item ((i - 1) * cols + j) of a
+    end
+    add s to want
+end
+near(gpu's download(gpu's column_sums(ga, rows, cols)), want, "column_sums")
+
+# softmax_rows, and cross_entropy against labels
+set labels to empty list
+for each i from 1 to rows
+    add (i * 7) - (((i * 7) / cols) rounded down) * cols to labels
+end
+set soft to empty list
+set grad to empty list
+set loss to 0
+for each i from 1 to rows
+    set top to -1000000
+    for each j from 1 to cols
+        if item ((i - 1) * cols + j) of a is greater than top
+            set top to item ((i - 1) * cols + j) of a
+        end
+    end
+    set total to 0
+    for each j from 1 to cols
+        set total to total + m's exp(item ((i - 1) * cols + j) of a - top)
+    end
+    for each j from 1 to cols
+        set p to m's exp(item ((i - 1) * cols + j) of a - top) / total
+        add p to soft
+        set g to p
+        if j - 1 is item i of labels
+            set g to p - 1
+        end
+        add g / rows to grad
+    end
+    set loss to loss + top + m's ln(total) - item ((i - 1) * cols + item i of labels + 1) of a
+end
+near(gpu's download(gpu's softmax_rows(ga, rows, cols)), soft, "softmax_rows")
+set got to gpu's cross_entropy(ga, gpu's upload(labels), rows, cols)
+near((list of got's loss), (list of loss / rows), "cross_entropy loss")
+near(gpu's download(got's gradient), grad, "cross_entropy gradient")
+
+# argmax_rows
+set want to empty list
+for each i from 1 to rows
+    set best to 0
+    for each j from 2 to cols
+        if item ((i - 1) * cols + j) of a is greater than item ((i - 1) * cols + best + 1) of a
+            set best to j - 1
+        end
+    end
+    add best to want
+end
+near(gpu's download(gpu's argmax_rows(ga, rows, cols)), want, "argmax_rows")
+
+# relu_gradient
+set g to as_floats(randoms(rows * cols))
+set want to empty list
+for each k from 1 to rows * cols
+    if item k of a is greater than 0
+        add item k of g to want
+    else
+        add 0 to want
+    end
+end
+near(gpu's download(gpu's relu_gradient(gpu's upload(g), ga)), want, "relu_gradient")
+
+# add_scaled, in place
+set target to gpu's upload(a)
+gpu's add_scaled(target, gpu's upload(g), -0.5)
+set want to empty list
+for each k from 1 to rows * cols
+    add item k of a + item k of g * -0.5 to want
+end
+near(gpu's download(target), want, "add_scaled")
+
+# adam, two steps
+set p to as_floats(randoms(50))
+set grads to list of as_floats(randoms(50)), as_floats(randoms(50))
+set gp to gpu's upload(p)
+set gm to gpu's zeros(50)
+set gv to gpu's zeros(50)
+set mm to empty list
+set vv to empty list
+for each k from 1 to 50
+    add 0 to mm
+    add 0 to vv
+end
+for each t from 1 to 2
+    set gr to item t of grads
+    gpu's adam_step(gp, gpu's upload(gr), gm, gv, 0.01, 0.9, 0.999, 0.00000001, t)
+    for each k from 1 to 50
+        set item k of mm to 0.9 * item k of mm + 0.1 * item k of gr
+        set item k of vv to 0.999 * item k of vv + 0.001 * item k of gr * item k of gr
+        set mh to item k of mm / (1 - (0.9 to the power of t))
+        set vh to item k of vv / (1 - (0.999 to the power of t))
+        set item k of p to item k of p - 0.01 * mh / (m's sqrt(vh) + 0.00000001)
+    end
+end
+near(gpu's download(gp), p, "adam_step")
+
+# the pool: memory freed comes back for numbers of the same count
+set first to gpu's zeros(1000)
+set at to first's at
+gpu's free(first)
+set again to gpu's zeros(1000)
+if again's at is at
+    say "ok the pool gives the memory back"
+else
+    say "WRONG the pool didn't give the memory back"
+    set failures to failures + 1
+end
+gpu's give_back_memory()
+say "failures: " + failures
+`;
+const LOSSES = `use "learn.folio" as learn
+learn's use_card(WHERE)
+say "on the card: " + learn's on_card()
+set x_data to list of (list of 0.5, -1.2), (list of 1.5, 0.3), (list of -0.7, 0.9)
+
+to loss_matmul with ps
+    return learn's sum(learn's times(learn's matmul(item 1 of ps, item 2 of ps), 0.5))
+end
+
+to loss_layer with ps
+    set x to learn's matrix(x_data)
+    return learn's mean(learn's relu(learn's add_row(learn's matmul(x, item 1 of ps), item 2 of ps)))
+end
+
+to loss_entropy with ps
+    set x to learn's matrix(x_data)
+    return learn's cross_entropy(learn's add_row(learn's matmul(x, item 1 of ps), item 2 of ps), list of 2, 0, 1)
+end
+
+to loss_squares with ps
+    set target to learn's matrix(list of (list of 1, 2), (list of 3, 4))
+    set both to learn's plus(learn's times(item 1 of ps, item 2 of ps), learn's minus(item 1 of ps, item 2 of ps))
+    return learn's mean_squared_error(both, target)
+end
+
+
+to show with make_loss, starts
+    set params to empty list
+    for each s in starts
+        add learn's parameter(learn's matrix(s)) to params
+    end
+    set loss to make_loss(params)
+    learn's backward(loss)
+    say learn's value(loss)
+    for each p in params
+        say learn's numbers_of(learn's gradient_of(p))
+    end
+    learn's forget()
+end
+show(loss_matmul, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 1, -2), (list of 0.3, 4), (list of 2, 1)))
+show(loss_layer, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.15, 0.2, 0.3)))
+show(loss_entropy, list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 0.1, -0.2, 0.3)))
+show(loss_squares, list of (list of (list of 1, 2), (list of -1, 0.5)), (list of (list of 0.3, -2), (list of 4, 1)))
+`;
 
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program
 function numpyBlas() {

@@ -12,6 +12,12 @@
 #       say gpu's sum(a)                            # 6
 #   end
 #
+# For learn.folio, which trains networks on the card: transpose, add_rows (a row added to each row),
+# column_sums, softmax_rows, cross_entropy (each row's softmax against its label, its loss and gradient at
+# once), argmax_rows, relu_gradient, add_scaled (in place) and adam_step. Memory free gives back is kept for
+# the next numbers of as many, as a training loop makes the same sizes over and over; give_back_memory()
+# hands it to the driver.
+#
 # A program that uses it is run or built with --allow-libraries. On a computer with no NVIDIA card, or no
 # driver, available() is no and the rest is a `fail with` that says so. Numbers on the card are floats: about 7
 # digits, not Folio's 15, as machine learning wants them.
@@ -60,6 +66,7 @@ set gpu_card to 0
 set gpu_context to nothing
 set gpu_module to nothing
 set gpu_functions to empty dictionary
+set gpu_pool to empty dictionary
 
 # ---------- the card ----------
 
@@ -138,14 +145,38 @@ to filled with count, value
     return made
 end
 
-# the card's memory for numbers given back, for others to use
+# the card's memory for numbers given back, for others to use: kept for the next numbers of as many, as asking
+# the driver for memory takes a while, which a program that trains, making and freeing the same sizes over and
+# over, would wait for at every step
 to free with g
     gpu_ready()
     if g's at is not 0
-        gpu_check(gpu_cu_free(g's at), "give memory back")
+        if not (g's count is in gpu_pool)
+            set item g's count of gpu_pool to record with places empty list, kept 0
+        end
+        set kept to item g's count of gpu_pool
+        set places to kept's places
+        if kept's kept is less than length of places
+            set item (kept's kept + 1) of places to g's at
+        else
+            add g's at to places
+        end
+        set kept's kept to kept's kept + 1
         set at of g to 0
         set count of g to 0
     end
+end
+
+# the memory kept for numbers to come, given back to the driver
+to give_back_memory
+    gpu_ready()
+    for each count in keys of gpu_pool
+        set kept to item count of gpu_pool
+        for each k from 1 to kept's kept
+            gpu_check(gpu_cu_free(item k of kept's places), "give memory back")
+        end
+    end
+    set gpu_pool to empty dictionary
 end
 
 # a copy, on the card
@@ -268,6 +299,133 @@ to matmul with a, b, rows, inner, columns
     return made
 end
 
+# ---------- for learning ----------
+
+# a matrix turned over: a is rows by columns, row after row, and what it gives columns by rows
+to transpose with a, rows, columns
+    gpu_shape(a, rows, columns, "transpose")
+    set made to gpu_allocate(rows * columns)
+    if rows * columns is greater than 0
+        gpu_launch("transpose", gpu_blocks(rows * columns), 1, 256, 1, (list of made's at, a's at, rows, columns),
+            (list of "pointer", "pointer", "whole", "whole"))
+    end
+    return made
+end
+
+# each row of a, rows by columns, plus b, a row of columns numbers: a layer's bias
+to add_rows with a, b, rows, columns
+    gpu_shape(a, rows, columns, "add_rows")
+    if b's count is not columns
+        fail with "add_rows needs a row of " + columns + " numbers to add, not " + b's count
+    end
+    set made to gpu_allocate(rows * columns)
+    if rows * columns is greater than 0
+        gpu_launch("add_rows", gpu_blocks(rows * columns), 1, 256, 1, (list of made's at, a's at, b's at, rows, columns),
+            (list of "pointer", "pointer", "pointer", "whole", "whole"))
+    end
+    return made
+end
+
+# each column of a, rows by columns, added up: a row of columns numbers
+to column_sums with a, rows, columns
+    gpu_shape(a, rows, columns, "column_sums")
+    set made to gpu_allocate(columns)
+    if columns is greater than 0
+        if rows is 0
+            gpu_run_flat("fill", columns, (list of made's at), 0, columns)
+        else
+            gpu_launch("column_sums", gpu_blocks(columns), 1, 256, 1, (list of made's at, a's at, rows, columns),
+                (list of "pointer", "pointer", "whole", "whole"))
+        end
+    end
+    return made
+end
+
+# each row's softmax: chances that add up to 1, the largest number's the largest
+to softmax_rows with a, rows, columns
+    gpu_shape(a, rows, columns, "softmax_rows")
+    set made to gpu_allocate(rows * columns)
+    if rows * columns is greater than 0
+        gpu_launch("softmax_rows", gpu_blocks(rows), 1, 256, 1, (list of made's at, a's at, rows, columns),
+            (list of "pointer", "pointer", "whole", "whole"))
+    end
+    return made
+end
+
+# the cross-entropy of each row's softmax against its label (a place from 0, on the card): its loss, the
+# average over the rows, and its gradient, how the average changes with each of a's numbers
+to cross_entropy with a, labels, rows, columns
+    gpu_shape(a, rows, columns, "cross_entropy")
+    if labels's count is not rows
+        fail with "cross_entropy needs a label for each of the " + rows + " rows, not " + labels's count
+    end
+    if rows is 0 or columns is 0
+        fail with "cross_entropy needs at least a row of at least one number"
+    end
+    set losses to gpu_allocate(rows)
+    set gradient to gpu_allocate(rows * columns)
+    gpu_launch("softmax_xent", gpu_blocks(rows), 1, 256, 1, (list of losses's at, gradient's at, a's at, labels's at, rows, columns, 1 / rows),
+        (list of "pointer", "pointer", "pointer", "pointer", "whole", "whole", "float"))
+    set loss to sum(losses) / rows
+    free(losses)
+    return record with loss loss, gradient gradient
+end
+
+# the place, from 0, of each row's largest number: what a classifier picks
+to argmax_rows with a, rows, columns
+    gpu_shape(a, rows, columns, "argmax_rows")
+    set made to gpu_allocate(rows)
+    if rows is greater than 0
+        gpu_launch("argmax_rows", gpu_blocks(rows), 1, 256, 1, (list of made's at, a's at, rows, columns),
+            (list of "pointer", "pointer", "whole", "whole"))
+    end
+    return made
+end
+
+# relu's gradient: g where x was more than 0, else 0
+to relu_gradient with g, x
+    if g's count is not x's count
+        fail with "relu_gradient needs as many numbers on each side, not " + g's count + " and " + x's count
+    end
+    set made to gpu_allocate(g's count)
+    if g's count is greater than 0
+        gpu_launch("relu_grad", gpu_blocks(g's count), 1, 256, 1, (list of made's at, g's at, x's at, g's count),
+            (list of "pointer", "pointer", "pointer", "whole"))
+    end
+    return made
+end
+
+# target's numbers each plus a's times s, in place: gradients added up (s 1), or a step down one (s the rate, negated)
+to add_scaled with target, a, s
+    if target's count is not a's count
+        fail with "add_scaled needs as many numbers on each side, not " + target's count + " and " + a's count
+    end
+    if a's count is greater than 0
+        gpu_launch("add_scaled", gpu_blocks(a's count), 1, 256, 1, (list of target's at, a's at, s, a's count),
+            (list of "pointer", "pointer", "float", "whole"))
+    end
+end
+
+# one step of Adam, in place: parameters p moved against their gradient g, with m and v (each as many numbers,
+# 0 at first) its running averages, at step t from 1
+to adam_step with p, g, m, v, rate, b1, b2, eps, t
+    if g's count is not p's count or m's count is not p's count or v's count is not p's count
+        fail with "adam_step needs as many numbers in each of p, g, m and v"
+    end
+    if p's count is greater than 0
+        set c1 to 1 / (1 - (b1 to the power of t))
+        set c2 to 1 / (1 - (b2 to the power of t))
+        gpu_launch("adam", gpu_blocks(p's count), 1, 256, 1, (list of p's at, g's at, m's at, v's at, p's count, rate, b1, b2, eps, c1, c2),
+            (list of "pointer", "pointer", "pointer", "pointer", "whole", "float", "float", "float", "float", "float", "float"))
+    end
+end
+
+to gpu_shape with a, rows, columns, what
+    if a's count is not rows * columns
+        fail with what + " needs " + rows + " by " + columns + " numbers, not " + a's count
+    end
+end
+
 # ---------- the card's code ----------
 
 to gpu_each with a, b, op, sign
@@ -326,8 +484,20 @@ to gpu_allocate with count
     if count is 0
         return gpu_numbers(0, 0)
     end
+    if count is in gpu_pool # memory given back for as many
+        set kept to item count of gpu_pool
+        if kept's kept is greater than 0
+            set at to item kept's kept of kept's places
+            set kept's kept to kept's kept - 1
+            return gpu_numbers(at, count)
+        end
+    end
     set slot to 8 bytes
-    gpu_check(gpu_cu_alloc(slot, 4 * count), "find room for " + count + " numbers")
+    if gpu_cu_alloc(slot, 4 * count) is not 0 # the card full: the memory kept goes back, and it's asked again
+        give_back_memory()
+        set slot to 8 bytes
+        gpu_check(gpu_cu_alloc(slot, 4 * count), "find room for " + count + " numbers")
+    end
     return gpu_numbers(gpu_whole_in(slot), count)
 end
 
@@ -572,6 +742,9 @@ to gpu_code
     for each line in gpu_matmul_code()
         add line to lines
     end
+    for each line in gpu_learning_code()
+        add line to lines
+    end
     return join lines with "\n"
 end
 
@@ -646,5 +819,22 @@ to gpu_matmul_code
     for each line in list of "ret;", "}", ""
         add line to lines
     end
+    return lines
+end
+
+# the kernels learn.folio trains with: a matrix turned over, a row of numbers added to each row, each column added
+# up, each row's softmax, softmax and cross-entropy at once, each row's largest, relu's gradient, numbers added in
+# place, and Adam
+to gpu_learning_code
+    set lines to empty list
+    add ".visible .entry transpose(.param .u64 p_out, .param .u64 p_a, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<2>;\n.reg .b32 %r<12>;\n.reg .f32 %f<2>;\n.reg .b64 %rd<10>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmul.lo.u32 %r7, %r5, %r6;\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r7;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd3, %rd1;\ncvta.to.global.u64 %rd4, %rd2;\ndiv.u32 %r8, %r4, %r6;\nrem.u32 %r9, %r4, %r6;\nmad.lo.s32 %r10, %r9, %r5, %r8;\nmul.wide.u32 %rd5, %r4, 4;\nadd.s64 %rd6, %rd4, %rd5;\nld.global.f32 %f1, [%rd6];\nmul.wide.u32 %rd7, %r10, 4;\nadd.s64 %rd8, %rd3, %rd7;\nst.global.f32 [%rd8], %f1;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry add_rows(.param .u64 p_out, .param .u64 p_a, .param .u64 p_b, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<2>;\n.reg .b32 %r<12>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<12>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.u64 %rd3, [p_b];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmul.lo.u32 %r7, %r5, %r6;\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r7;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd4, %rd1;\ncvta.to.global.u64 %rd5, %rd2;\ncvta.to.global.u64 %rd6, %rd3;\nrem.u32 %r8, %r4, %r6;\nmul.wide.u32 %rd7, %r4, 4;\nadd.s64 %rd8, %rd5, %rd7;\nld.global.f32 %f1, [%rd8];\nmul.wide.u32 %rd9, %r8, 4;\nadd.s64 %rd10, %rd6, %rd9;\nld.global.f32 %f2, [%rd10];\nadd.f32 %f3, %f1, %f2;\nadd.s64 %rd11, %rd4, %rd7;\nst.global.f32 [%rd11], %f3;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry column_sums(.param .u64 p_out, .param .u64 p_a, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<3>;\n.reg .b32 %r<12>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<10>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r6;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd3, %rd1;\ncvta.to.global.u64 %rd4, %rd2;\nmov.f32 %f1, 0f00000000;\nmov.u32 %r8, 0;\nLOOP:\nsetp.ge.u32 %p2, %r8, %r5;\n@%p2 bra END;\nmad.lo.s32 %r9, %r8, %r6, %r4;\nmul.wide.u32 %rd5, %r9, 4;\nadd.s64 %rd6, %rd4, %rd5;\nld.global.f32 %f2, [%rd6];\nadd.f32 %f1, %f1, %f2;\nadd.u32 %r8, %r8, 1;\nbra LOOP;\nEND:\nmul.wide.u32 %rd7, %r4, 4;\nadd.s64 %rd8, %rd3, %rd7;\nst.global.f32 [%rd8], %f1;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry softmax_rows(.param .u64 p_out, .param .u64 p_a, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<3>;\n.reg .b32 %r<12>;\n.reg .f32 %f<8>;\n.reg .b64 %rd<12>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd3, %rd1;\ncvta.to.global.u64 %rd4, %rd2;\nmul.lo.u32 %r7, %r4, %r6;\nmul.wide.u32 %rd5, %r7, 4;\nadd.s64 %rd6, %rd4, %rd5;\nadd.s64 %rd7, %rd3, %rd5;\nmov.f32 %f1, 0fFF800000;\nmov.u32 %r8, 0;\nMAX:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra MAXED;\nmul.wide.u32 %rd8, %r8, 4;\nadd.s64 %rd9, %rd6, %rd8;\nld.global.f32 %f2, [%rd9];\nmax.f32 %f1, %f1, %f2;\nadd.u32 %r8, %r8, 1;\nbra MAX;\nMAXED:\nmov.f32 %f3, 0f00000000;\nmov.u32 %r8, 0;\nEXP:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra SUMMED;\nmul.wide.u32 %rd8, %r8, 4;\nadd.s64 %rd9, %rd6, %rd8;\nld.global.f32 %f2, [%rd9];\nsub.f32 %f4, %f2, %f1;\nmul.f32 %f4, %f4, 0f3FB8AA3B;\nex2.approx.f32 %f5, %f4;\nadd.s64 %rd10, %rd7, %rd8;\nst.global.f32 [%rd10], %f5;\nadd.f32 %f3, %f3, %f5;\nadd.u32 %r8, %r8, 1;\nbra EXP;\nSUMMED:\nrcp.rn.f32 %f6, %f3;\nmov.u32 %r8, 0;\nSCALE:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra DONE;\nmul.wide.u32 %rd8, %r8, 4;\nadd.s64 %rd10, %rd7, %rd8;\nld.global.f32 %f2, [%rd10];\nmul.f32 %f2, %f2, %f6;\nst.global.f32 [%rd10], %f2;\nadd.u32 %r8, %r8, 1;\nbra SCALE;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry softmax_xent(.param .u64 p_loss, .param .u64 p_grad, .param .u64 p_a, .param .u64 p_labels, .param .u32 p_rows, .param .u32 p_cols, .param .f32 p_scale)\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<14>;\n.reg .f32 %f<12>;\n.reg .b64 %rd<16>;\nld.param.u64 %rd1, [p_loss];\nld.param.u64 %rd2, [p_grad];\nld.param.u64 %rd3, [p_a];\nld.param.u64 %rd4, [p_labels];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nld.param.f32 %f10, [p_scale];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd5, %rd1;\ncvta.to.global.u64 %rd6, %rd2;\ncvta.to.global.u64 %rd7, %rd3;\ncvta.to.global.u64 %rd8, %rd4;\nmul.lo.u32 %r7, %r4, %r6;\nmul.wide.u32 %rd9, %r7, 4;\nadd.s64 %rd10, %rd7, %rd9;\nadd.s64 %rd11, %rd6, %rd9;\nmul.wide.u32 %rd12, %r4, 4;\nadd.s64 %rd13, %rd8, %rd12;\nld.global.f32 %f9, [%rd13];\ncvt.rzi.u32.f32 %r9, %f9;\nmov.f32 %f1, 0fFF800000;\nmov.u32 %r8, 0;\nMAX:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra MAXED;\nmul.wide.u32 %rd14, %r8, 4;\nadd.s64 %rd15, %rd10, %rd14;\nld.global.f32 %f2, [%rd15];\nmax.f32 %f1, %f1, %f2;\nadd.u32 %r8, %r8, 1;\nbra MAX;\nMAXED:\nmov.f32 %f3, 0f00000000;\nmov.u32 %r8, 0;\nSUM:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra SUMMED;\nmul.wide.u32 %rd14, %r8, 4;\nadd.s64 %rd15, %rd10, %rd14;\nld.global.f32 %f2, [%rd15];\nsub.f32 %f4, %f2, %f1;\nmul.f32 %f4, %f4, 0f3FB8AA3B;\nex2.approx.f32 %f5, %f4;\nadd.f32 %f3, %f3, %f5;\nadd.u32 %r8, %r8, 1;\nbra SUM;\nSUMMED:\nrcp.rn.f32 %f6, %f3;\nlg2.approx.f32 %f7, %f3;\nmul.f32 %f7, %f7, 0f3F317218;\nadd.f32 %f7, %f7, %f1;\nmov.f32 %f8, 0f00000000;\nmov.u32 %r8, 0;\nGRAD:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra GRADED;\nmul.wide.u32 %rd14, %r8, 4;\nadd.s64 %rd15, %rd10, %rd14;\nld.global.f32 %f2, [%rd15];\nsub.f32 %f4, %f2, %f1;\nmul.f32 %f4, %f4, 0f3FB8AA3B;\nex2.approx.f32 %f5, %f4;\nmul.f32 %f5, %f5, %f6;\nsetp.eq.u32 %p3, %r8, %r9;\n@%p3 sub.f32 %f5, %f5, 0f3F800000;\n@%p3 mov.f32 %f8, %f2;\nmul.f32 %f5, %f5, %f10;\nadd.s64 %rd15, %rd11, %rd14;\nst.global.f32 [%rd15], %f5;\nadd.u32 %r8, %r8, 1;\nbra GRAD;\nGRADED:\nsub.f32 %f7, %f7, %f8;\nadd.s64 %rd14, %rd5, %rd12;\nst.global.f32 [%rd14], %f7;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry argmax_rows(.param .u64 p_out, .param .u64 p_a, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<12>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<12>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd3, %rd1;\ncvta.to.global.u64 %rd4, %rd2;\nmul.lo.u32 %r7, %r4, %r6;\nmul.wide.u32 %rd5, %r7, 4;\nadd.s64 %rd6, %rd4, %rd5;\nmov.f32 %f1, 0fFF800000;\nmov.u32 %r9, 0;\nmov.u32 %r8, 0;\nLOOP:\nsetp.ge.u32 %p2, %r8, %r6;\n@%p2 bra END;\nmul.wide.u32 %rd7, %r8, 4;\nadd.s64 %rd8, %rd6, %rd7;\nld.global.f32 %f2, [%rd8];\nsetp.gt.f32 %p3, %f2, %f1;\n@%p3 mov.f32 %f1, %f2;\n@%p3 mov.u32 %r9, %r8;\nadd.u32 %r8, %r8, 1;\nbra LOOP;\nEND:\ncvt.rn.f32.u32 %f3, %r9;\nmul.wide.u32 %rd9, %r4, 4;\nadd.s64 %rd10, %rd3, %rd9;\nst.global.f32 [%rd10], %f3;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry relu_grad(.param .u64 p_out, .param .u64 p_g, .param .u64 p_x, .param .u32 p_n)\n\{\n.reg .pred %p<3>;\n.reg .b32 %r<8>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<12>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_g];\nld.param.u64 %rd3, [p_x];\nld.param.u32 %r5, [p_n];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd4, %rd1;\ncvta.to.global.u64 %rd5, %rd2;\ncvta.to.global.u64 %rd6, %rd3;\nmul.wide.u32 %rd7, %r4, 4;\nadd.s64 %rd8, %rd5, %rd7;\nld.global.f32 %f1, [%rd8];\nadd.s64 %rd9, %rd6, %rd7;\nld.global.f32 %f2, [%rd9];\nsetp.gt.f32 %p2, %f2, 0f00000000;\nselp.f32 %f3, %f1, 0f00000000, %p2;\nadd.s64 %rd10, %rd4, %rd7;\nst.global.f32 [%rd10], %f3;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry add_scaled(.param .u64 p_out, .param .u64 p_a, .param .f32 p_s, .param .u32 p_n)\n\{\n.reg .pred %p<2>;\n.reg .b32 %r<8>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<10>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.f32 %f3, [p_s];\nld.param.u32 %r5, [p_n];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd3, %rd1;\ncvta.to.global.u64 %rd4, %rd2;\nmul.wide.u32 %rd5, %r4, 4;\nadd.s64 %rd6, %rd4, %rd5;\nld.global.f32 %f1, [%rd6];\nadd.s64 %rd7, %rd3, %rd5;\nld.global.f32 %f2, [%rd7];\nfma.rn.f32 %f2, %f1, %f3, %f2;\nst.global.f32 [%rd7], %f2;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry adam(.param .u64 p_p, .param .u64 p_g, .param .u64 p_m, .param .u64 p_v, .param .u32 p_n, .param .f32 p_rate, .param .f32 p_b1, .param .f32 p_b2, .param .f32 p_eps, .param .f32 p_c1, .param .f32 p_c2)\n\{\n.reg .pred %p<2>;\n.reg .b32 %r<8>;\n.reg .f32 %f<20>;\n.reg .b64 %rd<16>;\nld.param.u64 %rd1, [p_p];\nld.param.u64 %rd2, [p_g];\nld.param.u64 %rd3, [p_m];\nld.param.u64 %rd4, [p_v];\nld.param.u32 %r5, [p_n];\nld.param.f32 %f10, [p_rate];\nld.param.f32 %f11, [p_b1];\nld.param.f32 %f12, [p_b2];\nld.param.f32 %f13, [p_eps];\nld.param.f32 %f14, [p_c1];\nld.param.f32 %f15, [p_c2];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd5, %rd1;\ncvta.to.global.u64 %rd6, %rd2;\ncvta.to.global.u64 %rd7, %rd3;\ncvta.to.global.u64 %rd8, %rd4;\nmul.wide.u32 %rd9, %r4, 4;\nadd.s64 %rd10, %rd5, %rd9;\nadd.s64 %rd11, %rd6, %rd9;\nadd.s64 %rd12, %rd7, %rd9;\nadd.s64 %rd13, %rd8, %rd9;\nld.global.f32 %f1, [%rd10];\nld.global.f32 %f2, [%rd11];\nld.global.f32 %f3, [%rd12];\nld.global.f32 %f4, [%rd13];\nsub.f32 %f5, 0f3F800000, %f11;\nmul.f32 %f3, %f3, %f11;\nfma.rn.f32 %f3, %f5, %f2, %f3;\nsub.f32 %f6, 0f3F800000, %f12;\nmul.f32 %f7, %f2, %f2;\nmul.f32 %f4, %f4, %f12;\nfma.rn.f32 %f4, %f6, %f7, %f4;\nst.global.f32 [%rd12], %f3;\nst.global.f32 [%rd13], %f4;\nmul.f32 %f8, %f4, %f15;\nsqrt.rn.f32 %f8, %f8;\nadd.f32 %f8, %f8, %f13;\nmul.f32 %f9, %f3, %f14;\ndiv.rn.f32 %f9, %f9, %f8;\nmul.f32 %f9, %f9, %f10;\nsub.f32 %f1, %f1, %f9;\nst.global.f32 [%rd10], %f1;\nDONE:\nret;\n}\n" to lines
     return lines
 end

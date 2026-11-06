@@ -9,6 +9,15 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **Numbers on the graphics card: `gpu.folio`.** Lists of numbers go up to an NVIDIA card, are added, multiplied,
   matrix-multiplied and summed there, and come back, through CUDA's driver alone: no toolkit. A 2,048 by 2,048
   matrix multiply on a GTX 1650 takes 13 ms, where arrays.folio's machine code takes 3.5 seconds (DESIGN §158).
+- **Networks trained on the graphics card: `learn.folio`.** Matrices on the card (or on the processor, where
+  there's none) that remember how they were made, `backward(loss)` for every parameter's gradient, layers, and
+  gradient descent and Adam. A digit reader learns 10 rounds of 6,000 drawings in 0.24 s on a GTX 1650, where
+  PyTorch takes 0.63 on the same card (DESIGN §162).
+- **gpu.folio** has transpose, add_rows, column_sums, softmax_rows, cross_entropy, argmax_rows, relu_gradient,
+  add_scaled and adam_step, and keeps memory it's given back for the next numbers of as many (DESIGN §162).
+- **math.folio's `sqrt` is the nearest double.** It was wrong for numbers past about 10^36 and below 10^-36
+  (`sqrt(10^300)` gave 8.7 × 10^281); now it's the processor's own to the last bit, and arrays.folio's `sqrt` is
+  `sqrtsd` in machine code. arrays.folio has `above_zero`, relu's slope (DESIGN §163).
 - **Memory as C has it: `memory.folio`.** Numbers kept as C keeps them, in bytes or in memory of the program's
   own outside the collector, in each of C's kinds and either byte order: `memory's put(b, 1, -2, "a whole
   number")`, `get`, `get_many` and `put_many`, `take`, `copy`, `fill`, `address_of` and `give_back`. In a program

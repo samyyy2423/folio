@@ -6760,3 +6760,59 @@ before the program was looked at, every run.
 - **What it gave.** `folio check` takes 16.8 ms on a one-line file, not 37, and 84 ms on arrays.folio's 1,300
   lines, not 97. Every one of the 117 Folio files in the repository is checked with the same words as before.
 
+## 162. Networks trained on the graphics card: learn.folio
+
+gpu.folio (§158) worked on lists of numbers on the card; a network wants matrices with shapes, a gradient for
+each operation, and its parameters moved, again and again, without coming back to the processor.
+
+- **Matrices that remember how they were made.** learn.folio's matrix is rows by columns numbers on the card
+  (gpu.folio's) or, where there's no card, an array (arrays.folio's), and a parameter is a matrix that learns.
+  Each operation on a matrix a parameter went into, `matmul`, `plus`, `minus`, `times`, `add_row`, `relu`, `sum`,
+  `mean`, `cross_entropy` and `mean_squared_error`, is kept on a tape, in the order it was done; `backward(loss)`
+  goes through it the other way, each one's gradient sent to what made it, added up where two used the same:
+  reverse-mode differentiation over whole matrices, as PyTorch's autograd, where neural.folio's went a number at
+  a time. Then `layer`, `network` and `forward`, and `sgd` and `adam`, whose `step` moves the parameters and lets
+  go of the tape's matrices, their memory back to the card.
+- **The card's kernels for it**, in gpu.folio, in PTX: a matrix turned over, a row added to each row (a bias),
+  each column added up (its gradient), each row's softmax, softmax and cross-entropy at once (the loss and its
+  gradient in one pass over each row, the largest taken off first so nothing overflows), each row's largest,
+  relu's gradient, numbers added in place, and Adam, each parameter moved in one pass. Each is checked against
+  the same in Folio, to a float's precision.
+- **Memory kept.** A training step makes and frees the same sizes each time, and the driver takes a while to
+  hand memory out, so `free` keeps it for the next numbers of as many; `give_back_memory()` returns it, and an
+  allocation the card has no room for returns it and tries again.
+- **Checked**: every operation's gradient against the loss's slope as each parameter's numbers move a little either
+  way, on the processor, on every engine; a network learning XOR; Adam's and gradient descent's steps; and, in
+  machine code where there's a card, every loss and gradient on the card against the processor's, to a float's
+  precision.
+- **What it gave**, digits-learn.folio: a network of 256 pixels, a hidden layer and 10 chances, 10 rounds of
+  6,000 drawings in batches of 200 with Adam, 99.4% right on 1,000 it hadn't seen. On a GTX 1650:
+
+| hidden | Folio, on the card | PyTorch 2.6, on the card | PyTorch, on the processor | Folio, on the processor |
+|--:|--:|--:|--:|--:|
+| 256 | 0.24 s | 0.63 s | 0.76 s | 5.5 s |
+| 1,024 | 0.49 s | 0.68 s | | |
+| 2,048 | 0.83 s | 0.63 s | | |
+
+  A small network is mostly the time each operation takes to start, which is less in Folio than through Python;
+  a wide one is mostly the multiplies, where PyTorch's cuBLAS does better with a matrix 2,048 by 10 than
+  gpu.folio's 64 by 64 tiles. On the processor, the multiplies are arrays.folio's loop, one number at a time on
+  one core, where PyTorch's use every core and the processor's vector instructions.
+- **Next**: a multiply for thin matrices, arrays for a GPT (embeddings, layer norm, attention with its mask),
+  and a small GPT trained on the card.
+
+## 163. A square root to the last bit
+
+math.folio's `sqrt` took 60 of Newton's steps from x itself, which for 10^300 got to 8.7 × 10^281, and from 1 for
+10^-300, which got to 8.7 × 10^-19: 60 halvings is nowhere near enough for a number that size.
+
+- **Now** x is m times 4^k, m from 1 up to 4, each step exact, so its root is m's times 2^k; from (m + 1) / 2, six
+  of Newton's steps are within one double of m's root; and m - r times r, worked out exactly by splitting r in
+  halves of 26 bits (Dekker's way), says by its sign whether the double above or below is nearer. Folio compares
+  numbers to 15 digits (§23), so every test is a difference's sign, which is exact.
+- **Checked** against JavaScript's `Math.sqrt`, which IEEE 754 makes the nearest double: a million of every size,
+  subnormal to the largest, every one the same to the last bit, at 0.6 microseconds each in machine code.
+- **So arrays.folio's sqrt is the processor's.** Its machine-code loop (§118) has `sqrtsd` for it now, which gives
+  that same double, and a new `above_zero`, 1 above 0 and 0 otherwise, relu's slope: learn.folio's gradients on
+  the processor, which went through `apply` a number at a time, take a third of the time they did.
+

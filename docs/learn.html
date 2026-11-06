@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>learn.folio · Folio's standard library</title>
+  <meta name="description" content="Learning, as PyTorch has it: matrices of numbers, on the graphics card when there is one (gpu.folio) and on the processor when there isn't (arrays.folio), each…">
+  <meta name="theme-color" content="#0c0a08">
+  <link rel="icon" href="../docs/folio.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../docs/site.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="wing-fore" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd98a"/><stop offset="1" stop-color="#e8952e"/></linearGradient>
+      <linearGradient id="wing-hind" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a845"/><stop offset="1" stop-color="#b8651c"/></linearGradient>
+      <symbol id="folio" class="folio" viewBox="0 0 64 64">
+        <path class="hind" d="M30 34C20 35 11 42 15 49C19 55 27 48 31 40ZM34 34C44 35 53 42 49 49C45 55 37 48 33 40Z"/>
+        <path class="fore" d="M30 27C22 14 8 10 4 18C2 25 10 33 29 33ZM34 27C42 14 56 10 60 18C62 25 54 33 35 33Z"/>
+        <circle class="spot" cx="15" cy="21" r="2.6"/><circle class="spot" cx="49" cy="21" r="2.6"/>
+        <ellipse class="body" cx="32" cy="35" rx="2.6" ry="11"/><circle class="body" cx="32" cy="23" r="2.8"/>
+        <path class="feelers" d="M31 21C29 15 25 11 20 9M33 21C35 15 39 11 44 9"/>
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="lamp" aria-hidden="true"></div>
+    <nav class="nav wrap" aria-label="Folio">
+      <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
+      <a class="go" href="../#playground">Playground</a>
+      <a class="go" href="../learn.html">Learn</a>
+      <a class="go" href="../docs/" aria-current="page">Docs</a>
+      <a class="go" href="../docs/cookbook/">Cookbook</a>
+      <a class="go" href="../docs/examples.html">Examples</a>
+      <a class="go outlined" href="https://github.com/samyyy2423/folio"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+    </nav>
+    <div class="hero wrap">
+      <p class="eyebrow"><a href="./">The standard library</a></p>
+      <h1><em>learn</em>.folio</h1>
+      <p>Learning, as PyTorch has it: matrices of numbers, on the graphics card when there is one (gpu.folio) and on the processor when there isn't (arrays.folio), each…</p>
+      <p class="use"><code>use "learn.folio" as learn</code></p>
+    </div>
+  </header>
+
+  <div class="layout wrap">
+    <nav class="toc" aria-label="learn.folio's functions">
+      <h2>34 functions</h2>
+      <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
+      <ol id="toc"><li><a href="#use_card">use_card</a></li><li><a href="#on_card">on_card</a></li><li><a href="#matrix">matrix</a></li><li><a href="#matrix_of">matrix_of</a></li><li><a href="#zeros">zeros</a></li><li><a href="#random_normal">random_normal</a></li><li><a href="#parameter">parameter</a></li><li><a href="#matmul">matmul</a></li><li><a href="#plus">plus</a></li><li><a href="#minus">minus</a></li><li><a href="#times">times</a></li><li><a href="#add_row">add_row</a></li><li><a href="#relu">relu</a></li><li><a href="#sum">sum</a></li><li><a href="#mean">mean</a></li><li><a href="#cross_entropy">cross_entropy</a></li><li><a href="#mean_squared_error">mean_squared_error</a></li><li><a href="#value">value</a></li><li><a href="#numbers_of">numbers_of</a></li><li><a href="#rows_of">rows_of</a></li><li><a href="#shape_of">shape_of</a></li><li><a href="#gradient_of">gradient_of</a></li><li><a href="#softmax_of">softmax_of</a></li><li><a href="#accuracy">accuracy</a></li><li><a href="#backward">backward</a></li><li><a href="#layer">layer</a></li><li><a href="#network">network</a></li><li><a href="#forward">forward</a></li><li><a href="#parameters_of">parameters_of</a></li><li><a href="#sgd">sgd</a></li><li><a href="#adam">adam</a></li><li><a href="#step">step</a></li><li><a href="#forget">forget</a></li><li><a href="#free">free</a></li></ol>
+      <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio">The source</a></p>
+    </nav>
+    <main>
+      <section class="about">
+        <h2>What it's for</h2>
+          <p>Learning, as PyTorch has it: matrices of numbers, on the graphics card when there is one (gpu.folio) and on the processor when there isn't (arrays.folio), each operation on them remembered, so <a href="#backward">backward</a>() works out how a loss changes with every number that went into it, and optimizers that move a network's parameters against that.</p>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> net <span class="k">to</span> learn's network(<span class="k">list</span> <span class="k">of</span> <span class="n">256</span>, <span class="n">64</span>, <span class="n">10</span>)       <span class="c"># 256 numbers in, 64 between, 10 out</span>
+<span class="k">set</span> opt <span class="k">to</span> learn's adam(learn's parameters_of(net), <span class="n">0.01</span>)
+<span class="k">set</span> x <span class="k">to</span> learn's matrix(pictures)                      <span class="c"># a list of rows, each a list of numbers</span>
+<span class="k">for</span> <span class="k">each</span> round <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">20</span>
+    <span class="k">set</span> loss <span class="k">to</span> learn's cross_entropy(learn's <span class="k">forward</span>(net, x), labels)   <span class="c"># a place from 0 for each row</span>
+    learn's backward(loss)
+    <span class="k">say</span> learn's value(loss)                            <span class="c"># the number it is</span>
+    learn's step(opt)                                  <span class="c"># the parameters moved; the round's matrices let go</span>
+<span class="k">end</span>
+<span class="k">say</span> learn's accuracy(learn's <span class="k">forward</span>(net, x), labels)  <span class="c"># how many rows it gets right, from 0 to 1</span></code></pre></div>
+          <p>Matrices: <a href="#matrix">matrix</a>(rows), <a href="#matrix_of">matrix_of</a>(numbers, rows, columns), <a href="#zeros">zeros</a>(rows, columns), <a href="#random_normal">random_normal</a>(rows, columns, spread), and <a href="#parameter">parameter</a>(m), a matrix that learns. On them: <a href="#matmul">matmul</a>(a, b), plus, minus and times (each number with each, or times a number), <a href="#add_row">add_row</a>(m, row), a row added to each row (a layer's bias), relu, sum, mean, <a href="#cross_entropy">cross_entropy</a>(scores, labels) and <a href="#mean_squared_error">mean_squared_error</a>(m, target). Then <a href="#backward">backward</a>(loss), and <a href="#value">value</a>(m), <a href="#numbers_of">numbers_of</a>(m), <a href="#rows_of">rows_of</a>(m), <a href="#shape_of">shape_of</a>(m), <a href="#gradient_of">gradient_of</a>(p), <a href="#softmax_of">softmax_of</a>(m) and <a href="#accuracy">accuracy</a>(scores, labels). Layers: <a href="#layer">layer</a>(inputs, outputs), <a href="#network">network</a>(sizes), <a href="#forward">forward</a>(net, x) and <a href="#parameters_of">parameters_of</a>(net). Optimizers: <a href="#sgd">sgd</a>(parameters, rate) and <a href="#adam">adam</a>(parameters, rate), moved on by <a href="#step">step</a>(opt). <a href="#forget">forget</a>() lets go of every matrix worked out since the last step, for a program that only uses a network; <a href="#free">free</a>(m) lets go of one.</p>
+          <p>A program that uses the card is run or built with --allow-libraries; without that, or with no NVIDIA card, it all works on the processor, more slowly, and <a href="#use_card">use_card</a>(no) asks for that. On the card numbers are floats, about 7 digits, as machine learning keeps them. A matrix worked out before a step is let go at the step: its value is a mistake after, so a loss is read with <a href="#value">value</a>() first.</p>
+      </section>
+      <section class="fns">
+        <h2>Functions</h2>
+        <section class="fn" id="use_card">
+          <h3><a href="#use_card"><code>learn's use_card(wanted)</code></a></h3>
+          <p>whether matrices go on the graphics card (yes, if there's one, the first time one is made) or not</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>wanted</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to use_card with wanted</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L57">learn.folio line 57</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+learn's use_card(<span class="k">no</span>)</code></pre></div>
+        </section>
+        <section class="fn" id="on_card">
+          <h3><a href="#on_card"><code>learn's on_card()</code></a></h3>
+          <p>whether the matrices are on the graphics card</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
+            
+          </div>
+          <p class="written">Written <code>to on_card</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L65">learn.folio line 65</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+learn's on_card()</code></pre></div>
+        </section>
+        <section class="fn" id="matrix">
+          <h3><a href="#matrix"><code>learn's matrix(rows)</code></a></h3>
+          <p>a matrix of a list of rows, each a list of numbers</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>rows</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to matrix with rows</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L79">learn.folio line 79</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> m</code></pre><pre class="says"><code>(a 2 by 3 matrix)</code></pre></div>
+        </section>
+        <section class="fn" id="matrix_of">
+          <h3><a href="#matrix_of"><code>learn's matrix_of(numbers, rows, columns)</code></a></h3>
+          <p>a matrix of numbers, row after row</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>numbers</code></li><li><code>rows</code></li><li><code>columns</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to matrix_of with numbers, rows, columns</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L97">learn.folio line 97</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">set</span> t <span class="k">to</span> learn's matmul(m, learn's matrix_of((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">1</span>, <span class="n">1</span>, <span class="n">1</span>), <span class="n">3</span>, <span class="n">2</span>))
+<span class="k">say</span> t</code></pre><pre class="says"><code>(a 2 by 2 matrix)</code></pre></div>
+        </section>
+        <section class="fn" id="zeros">
+          <h3><a href="#zeros"><code>learn's zeros(rows, columns)</code></a></h3>
+          <p>a matrix of zeros</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>rows</code></li><li><code>columns</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to zeros with rows, columns</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L108">learn.folio line 108</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">say</span> learn's numbers_of(learn's zeros(<span class="n">2</span>, <span class="n">2</span>))</code></pre><pre class="says"><code>[0, 0, 0, 0]</code></pre></div>
+        </section>
+        <section class="fn" id="random_normal">
+          <h3><a href="#random_normal"><code>learn's random_normal(rows, columns, spread)</code></a></h3>
+          <p>a matrix of numbers from a normal curve, spread its standard deviation</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>rows</code></li><li><code>columns</code></li><li><code>spread</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to random_normal with rows, columns, spread</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L116">learn.folio line 116</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> r <span class="k">to</span> learn's random_normal(<span class="n">100</span>, <span class="n">10</span>, <span class="n">2</span>)
+<span class="k">say</span> r</code></pre><pre class="says"><code>(a 100 by 10 matrix)</code></pre></div>
+        </section>
+        <section class="fn" id="parameter">
+          <h3><a href="#parameter"><code>learn's parameter(m)</code></a></h3>
+          <p>m, now a parameter: a matrix that learns, which <a href="#backward">backward</a>() works out a gradient for</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to parameter with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L133">learn.folio line 133</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> p <span class="k">to</span> learn's parameter(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>)))
+<span class="k">say</span> p</code></pre><pre class="says"><code>(a 1 by 2 matrix)</code></pre></div>
+        </section>
+        <section class="fn" id="matmul">
+          <h3><a href="#matmul"><code>learn's matmul(a, b)</code></a></h3>
+          <p>the matrix product: a is rows by inner, b inner by columns</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to matmul with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L147">learn.folio line 147</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">set</span> t <span class="k">to</span> learn's matmul(m, learn's matrix_of((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">1</span>, <span class="n">1</span>, <span class="n">1</span>), <span class="n">3</span>, <span class="n">2</span>))
+<span class="k">say</span> t</code></pre><pre class="says"><code>(a 2 by 2 matrix)</code></pre></div>
+        </section>
+        <section class="fn" id="plus">
+          <h3><a href="#plus"><code>learn's plus(a, b)</code></a></h3>
+          <p>each number plus the other's at its place</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to plus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L161">learn.folio line 161</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> both <span class="k">to</span> learn's plus(learn's <span class="k">times</span>(<span class="k">item</span> <span class="n">1</span> <span class="k">of</span> ps, <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> ps), learn's minus(<span class="k">item</span> <span class="n">1</span> <span class="k">of</span> ps, <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> ps))
+<span class="k">say</span> both</code></pre></div>
+        </section>
+        <section class="fn" id="minus">
+          <h3><a href="#minus"><code>learn's minus(a, b)</code></a></h3>
+          <p>each number minus the other's at its place</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to minus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L172">learn.folio line 172</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> both <span class="k">to</span> learn's plus(learn's <span class="k">times</span>(<span class="k">item</span> <span class="n">1</span> <span class="k">of</span> ps, <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> ps), learn's minus(<span class="k">item</span> <span class="n">1</span> <span class="k">of</span> ps, <span class="k">item</span> <span class="n">2</span> <span class="k">of</span> ps))
+<span class="k">say</span> both</code></pre></div>
+        </section>
+        <section class="fn" id="times">
+          <h3><a href="#times"><code>learn's times(a, b)</code></a></h3>
+          <p>each number times the other's at its place, or times a number</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to times with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L183">learn.folio line 183</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's numbers_of(learn's <span class="k">times</span>(m, <span class="n">2</span>))</code></pre><pre class="says"><code>[2, 4, 6, 8, 10, 12]</code></pre></div>
+        </section>
+        <section class="fn" id="add_row">
+          <h3><a href="#add_row"><code>learn's add_row(m, r)</code></a></h3>
+          <p>a row of numbers, 1 by m's columns, added to each of m's rows: a layer's bias</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>r</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to add_row with m, r</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L203">learn.folio line 203</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's rows_of(learn's add_row(m, learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">10</span>, <span class="n">20</span>, <span class="n">30</span>))))</code></pre><pre class="says"><code>[[11, 22, 33], [14, 25, 36]]</code></pre></div>
+        </section>
+        <section class="fn" id="relu">
+          <h3><a href="#relu"><code>learn's relu(m)</code></a></h3>
+          <p>each number, or 0 if it's less than 0</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to relu with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L217">learn.folio line 217</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">say</span> learn's numbers_of(learn's relu(learn's matrix_of((<span class="k">list</span> <span class="k">of</span> -<span class="n">1</span>, <span class="n">2</span>), <span class="n">1</span>, <span class="n">2</span>)))</code></pre><pre class="says"><code>[0, 2]</code></pre></div>
+        </section>
+        <section class="fn" id="sum">
+          <h3><a href="#sum"><code>learn's sum(m)</code></a></h3>
+          <p>all its numbers added up, a 1 by 1 matrix</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to sum with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L228">learn.folio line 228</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's value(learn's sum(m))</code></pre><pre class="says"><code>21</code></pre></div>
+        </section>
+        <section class="fn" id="mean">
+          <h3><a href="#mean"><code>learn's mean(m)</code></a></h3>
+          <p>the average of its numbers, a 1 by 1 matrix</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to mean with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L234">learn.folio line 234</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's value(learn's mean(m))</code></pre><pre class="says"><code>3.5</code></pre></div>
+        </section>
+        <section class="fn" id="cross_entropy">
+          <h3><a href="#cross_entropy"><code>learn's cross_entropy(scores, labels)</code></a></h3>
+          <p>how far each row's softmax is from its label, a place from 0 for each row, on average: a 1 by 1 matrix</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>scores</code></li><li><code>labels</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to cross_entropy with scores, labels</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L243">learn.folio line 243</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> net <span class="k">to</span> learn's network(<span class="k">list</span> <span class="k">of</span> <span class="n">256</span>, <span class="n">64</span>, <span class="n">10</span>)       <span class="c"># 256 numbers in, 64 between, 10 out</span>
+<span class="k">set</span> opt <span class="k">to</span> learn's adam(learn's parameters_of(net), <span class="n">0.01</span>)
+<span class="k">set</span> x <span class="k">to</span> learn's matrix(pictures)                      <span class="c"># a list of rows, each a list of numbers</span>
+<span class="k">for</span> <span class="k">each</span> round <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">20</span>
+    <span class="k">set</span> loss <span class="k">to</span> learn's cross_entropy(learn's <span class="k">forward</span>(net, x), labels)   <span class="c"># a place from 0 for each row</span>
+    learn's backward(loss)
+    <span class="k">say</span> learn's value(loss)                            <span class="c"># the number it is</span>
+    learn's step(opt)                                  <span class="c"># the parameters moved; the round's matrices let go</span>
+<span class="k">end</span>
+<span class="k">say</span> learn's accuracy(learn's <span class="k">forward</span>(net, x), labels)  <span class="c"># how many rows it gets right, from 0 to 1</span></code></pre></div>
+        </section>
+        <section class="fn" id="mean_squared_error">
+          <h3><a href="#mean_squared_error"><code>learn's mean_squared_error(m, target)</code></a></h3>
+          <p>the average of the squares of how far m is from target, a matrix of the same shape: a 1 by 1 matrix</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>target</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to mean_squared_error with m, target</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L289">learn.folio line 289</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+learn's mean_squared_error(m, target)</code></pre></div>
+        </section>
+        <section class="fn" id="value">
+          <h3><a href="#value"><code>learn's value(m)</code></a></h3>
+          <p>a 1 by 1 matrix's number, or a matrix's numbers row after row</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to value with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L298">learn.folio line 298</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's value(learn's sum(m))</code></pre><pre class="says"><code>21</code></pre></div>
+        </section>
+        <section class="fn" id="numbers_of">
+          <h3><a href="#numbers_of"><code>learn's numbers_of(m)</code></a></h3>
+          <p>a matrix's numbers, row after row</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to numbers_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L308">learn.folio line 308</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">say</span> learn's numbers_of(learn's zeros(<span class="n">2</span>, <span class="n">2</span>))</code></pre><pre class="says"><code>[0, 0, 0, 0]</code></pre></div>
+        </section>
+        <section class="fn" id="rows_of">
+          <h3><a href="#rows_of"><code>learn's rows_of(m)</code></a></h3>
+          <p>a matrix's rows, each a list of numbers</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to rows_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L317">learn.folio line 317</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's rows_of(m)</code></pre><pre class="says"><code>[[1, 2, 3], [4, 5, 6]]</code></pre></div>
+        </section>
+        <section class="fn" id="shape_of">
+          <h3><a href="#shape_of"><code>learn's shape_of(m)</code></a></h3>
+          <p>a matrix's rows and columns</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to shape_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L331">learn.folio line 331</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> m <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">say</span> learn's shape_of(m)</code></pre><pre class="says"><code>[2, 3]</code></pre></div>
+        </section>
+        <section class="fn" id="gradient_of">
+          <h3><a href="#gradient_of"><code>learn's gradient_of(p)</code></a></h3>
+          <p>how a loss <a href="#backward">backward</a>() started from changes with each of a parameter's numbers, a matrix of its shape</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to gradient_of with p</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L336">learn.folio line 336</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> p <span class="k">to</span> learn's parameter(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>)))
+learn's backward(learn's sum(learn's <span class="k">times</span>(p, <span class="n">3</span>)))
+<span class="k">say</span> learn's numbers_of(learn's gradient_of(p))</code></pre><pre class="says"><code>[3, 3]</code></pre></div>
+        </section>
+        <section class="fn" id="softmax_of">
+          <h3><a href="#softmax_of"><code>learn's softmax_of(m)</code></a></h3>
+          <p>each row's softmax: chances from 0 to 1 that add up to 1</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to softmax_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L345">learn.folio line 345</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> chances <span class="k">to</span> learn's numbers_of(learn's softmax_of(learn's matrix_of((<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">0</span>), <span class="n">1</span>, <span class="n">2</span>)))
+<span class="k">say</span> chances</code></pre><pre class="says"><code>[0.5, 0.5]</code></pre></div>
+        </section>
+        <section class="fn" id="accuracy">
+          <h3><a href="#accuracy"><code>learn's accuracy(scores, labels)</code></a></h3>
+          <p>how many of the rows have their largest score at their label, from 0 to 1</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>scores</code></li><li><code>labels</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to accuracy with scores, labels</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L354">learn.folio line 354</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">say</span> learn's accuracy(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">9</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">8</span>, <span class="n">2</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">3</span>)), (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">0</span>, <span class="n">0</span>))</code></pre><pre class="says"><code>0.666666666666667</code></pre></div>
+        </section>
+        <section class="fn" id="backward">
+          <h3><a href="#backward"><code>learn's backward(loss)</code></a></h3>
+          <p>how loss, a 1 by 1 matrix, changes with each parameter that went into it: each one's gradient, added to what it had, for an optimizer's step</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>loss</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to backward with loss</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L391">learn.folio line 391</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> p <span class="k">to</span> learn's parameter(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>)))
+learn's backward(learn's sum(learn's <span class="k">times</span>(p, <span class="n">3</span>)))
+<span class="k">say</span> learn's numbers_of(learn's gradient_of(p))</code></pre><pre class="says"><code>[3, 3]</code></pre></div>
+        </section>
+        <section class="fn" id="layer">
+          <h3><a href="#layer"><code>learn's layer(inputs, outputs)</code></a></h3>
+          <p>a layer: inputs numbers in, outputs out, its weights from a normal curve as He's start has them, its bias 0</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>inputs</code></li><li><code>outputs</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to layer with inputs, outputs</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L546">learn.folio line 546</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+learn's layer(inputs, outputs)</code></pre></div>
+        </section>
+        <section class="fn" id="network">
+          <h3><a href="#network"><code>learn's network(sizes)</code></a></h3>
+          <p>layers of the sizes, each one's outputs the next one's inputs</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>sizes</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to network with sizes</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L553">learn.folio line 553</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> net <span class="k">to</span> learn's network(<span class="k">list</span> <span class="k">of</span> <span class="n">256</span>, <span class="n">64</span>, <span class="n">10</span>)       <span class="c"># 256 numbers in, 64 between, 10 out</span></code></pre></div>
+        </section>
+        <section class="fn" id="forward">
+          <h3><a href="#forward"><code>learn's forward(net, x)</code></a></h3>
+          <p>what a network makes of x, a row for each example: each layer's weights and bias, with relu between them</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>net</code></li><li><code>x</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to forward with net, x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L565">learn.folio line 565</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> x <span class="k">to</span> learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">0</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">1</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">0</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">1</span>))
+<span class="k">set</span> labels <span class="k">to</span> <span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">1</span>, <span class="n">1</span>, <span class="n">0</span>
+<span class="k">set</span> net <span class="k">to</span> learn's network(<span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">16</span>, <span class="n">2</span>)
+<span class="k">say</span> learn's accuracy(learn's <span class="k">forward</span>(net, x), labels)</code></pre><pre class="says"><code>0.5</code></pre></div>
+        </section>
+        <section class="fn" id="parameters_of">
+          <h3><a href="#parameters_of"><code>learn's parameters_of(net)</code></a></h3>
+          <p>a network's parameters: each layer's weights and bias</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>net</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to parameters_of with net</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L579">learn.folio line 579</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> net <span class="k">to</span> learn's network(<span class="k">list</span> <span class="k">of</span> <span class="n">256</span>, <span class="n">64</span>, <span class="n">10</span>)       <span class="c"># 256 numbers in, 64 between, 10 out</span>
+<span class="k">set</span> opt <span class="k">to</span> learn's adam(learn's parameters_of(net), <span class="n">0.01</span>)</code></pre></div>
+        </section>
+        <section class="fn" id="sgd">
+          <h3><a href="#sgd"><code>learn's sgd(parameters, rate)</code></a></h3>
+          <p>plain gradient descent: each parameter moved against its gradient, rate times it</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>parameters</code></li><li><code>rate</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to sgd with parameters, rate</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L591">learn.folio line 591</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> p <span class="k">to</span> learn's parameter(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>)))
+<span class="k">set</span> opt <span class="k">to</span> learn's sgd((<span class="k">list</span> <span class="k">of</span> p), <span class="n">0.1</span>)
+<span class="k">say</span> opt</code></pre><pre class="says"><code>(record with way &quot;sgd&quot;, parameters [(record with kind &quot;learn_matrix&quot;, rows 1, columns 2, data (record with kind &quot;array&quot;, shape [1, 2], data [1, 2], shown &lt;function learn's learn_arrays's arrays_record's shown&gt;), card no, grad nothing, learns yes, tracks yes, made_by nothing, inputs [], extra nothing, gone no, shown &lt;function learn's learn_matrix's shown&gt;)], rate 0.1, t 0, m [], v [])</code></pre></div>
+        </section>
+        <section class="fn" id="adam">
+          <h3><a href="#adam"><code>learn's adam(parameters, rate)</code></a></h3>
+          <p>Adam: each parameter moved against a running average of its gradient, over one of its square, as most networks are trained (b1 0.9, b2 0.999, eps 10^-8)</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>parameters</code></li><li><code>rate</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to adam with parameters, rate</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L597">learn.folio line 597</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> p <span class="k">to</span> learn's parameter(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>)))
+<span class="k">set</span> opt <span class="k">to</span> learn's sgd((<span class="k">list</span> <span class="k">of</span> p), <span class="n">0.1</span>)
+learn's step(opt)
+<span class="k">set</span> q <span class="k">to</span> learn's parameter(learn's matrix(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>)))
+<span class="k">set</span> opt <span class="k">to</span> learn's adam((<span class="k">list</span> <span class="k">of</span> q), <span class="n">0.1</span>)
+<span class="k">say</span> opt</code></pre><pre class="says"><code>(record with way &quot;adam&quot;, parameters [(record with kind &quot;learn_matrix&quot;, rows 1, columns 2, data (record with kind &quot;array&quot;, shape [1, 2], data [1, 2], shown &lt;function learn's learn_arrays's arrays_record's shown&gt;), card no, grad nothing, learns yes, tracks yes, made_by nothing, inputs [], extra nothing, gone no, shown &lt;function learn's learn_matrix's shown&gt;)], rate 0.1, t 0, m [nothing], v [nothing])</code></pre></div>
+        </section>
+        <section class="fn" id="step">
+          <h3><a href="#step"><code>learn's step(opt)</code></a></h3>
+          <p>one step: each parameter moved, its gradient gone, and every matrix worked out since the last step let go</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>opt</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to step with opt</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L608">learn.folio line 608</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+<span class="k">set</span> net <span class="k">to</span> learn's network(<span class="k">list</span> <span class="k">of</span> <span class="n">256</span>, <span class="n">64</span>, <span class="n">10</span>)       <span class="c"># 256 numbers in, 64 between, 10 out</span>
+<span class="k">set</span> opt <span class="k">to</span> learn's adam(learn's parameters_of(net), <span class="n">0.01</span>)
+<span class="k">set</span> x <span class="k">to</span> learn's matrix(pictures)                      <span class="c"># a list of rows, each a list of numbers</span>
+<span class="k">for</span> <span class="k">each</span> round <span class="k">from</span> <span class="n">1</span> <span class="k">to</span> <span class="n">20</span>
+    <span class="k">set</span> loss <span class="k">to</span> learn's cross_entropy(learn's <span class="k">forward</span>(net, x), labels)   <span class="c"># a place from 0 for each row</span>
+    learn's backward(loss)
+    <span class="k">say</span> learn's value(loss)                            <span class="c"># the number it is</span>
+    learn's step(opt)                                  <span class="c"># the parameters moved; the round's matrices let go</span>
+<span class="k">end</span>
+<span class="k">say</span> learn's accuracy(learn's <span class="k">forward</span>(net, x), labels)  <span class="c"># how many rows it gets right, from 0 to 1</span></code></pre></div>
+        </section>
+        <section class="fn" id="forget">
+          <h3><a href="#forget"><code>learn's forget()</code></a></h3>
+          <p>every matrix worked out since the last step let go, and its memory on the card given back</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
+            
+          </div>
+          <p class="written">Written <code>to forget</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L669">learn.folio line 669</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+learn's forget()</code></pre></div>
+        </section>
+        <section class="fn" id="free">
+          <h3><a href="#free"><code>learn's free(m)</code></a></h3>
+          <p>a matrix let go, and its memory on the card given back</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to free with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/learn.folio#L687">learn.folio line 687</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;learn.folio&quot;</span> <span class="k">as</span> learn
+learn's free(m)</code></pre></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <footer class="foot wrap">
+    <a class="brand" href="../"><svg class="folio" aria-hidden="true"><use href="#folio"/></svg>Folio</a>
+    <p>Open source under the Apache License 2.0</p>
+    <nav aria-label="More about Folio">
+      <a href="../#playground">Playground</a>
+      <a href="../learn.html">Learn</a>
+      <a href="../docs/">The standard library</a>
+      <a href="https://github.com/samyyy2423/folio#the-language">The language</a>
+      <a href="https://github.com/samyyy2423/folio">GitHub</a>
+    </nav>
+  </footer>
+  <script>
+    // the list of functions, filtered as a name is typed
+    const filter = document.getElementById("filter");
+    filter.oninput = () => {
+      const wanted = filter.value.trim().toLowerCase();
+      for (const li of document.getElementById("toc").children) li.hidden = !li.textContent.toLowerCase().includes(wanted);
+    };
+  </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 # Any program can have them with `use "math.folio"`, as neural.folio does.
 #
 #   use "math.folio" as math
-#   say math's sqrt(2)                     # 1.41421356237309
+#   say math's sqrt(2)                     # 1.4142135623731
 #   say math's sine(math's pi / 6)         # 0.5; cosine and tangent too, of angles in radians
 #   say math's degrees(math's arctangent(1))   # 45; radians(45) the other way
 #   say math's floor(-2.5) " " math's ceiling(-2.5) " " math's round(2.5)   # -3 -2 3
@@ -114,22 +114,71 @@ to exp with x
     return total
 end
 
-# The square root, by Newton's method: average a guess with x / guess until it settles.
+# The square root, the double nearest the true one, as a processor's own gives it. x is m times 4^k with m from 1
+# up to 4, each step exact, so the root is the root of m times 2^k; Newton's method, averaging a guess with m over
+# it, from (m + 1) / 2, is within a step of the root after 6 rounds; and the step is settled by m - r times r,
+# worked out exactly by splitting r in two halves of 26 bits (Dekker's way), against r times a step, by its sign:
+# Folio compares numbers to 15 digits, and a sign is exact.
 to sqrt with x
     if x is less than 0
         fail with "can't take the square root of a number below 0"
     end
-    if x is 0
-        return 0
+    if x is 0 or x is not x or x - x is not 0 # 0, and what isn't a number or is infinite, as it is
+        return x
     end
-    set guess to x
-    if guess is less than 1
-        set guess to 1
+    set m to x
+    set k to 0
+    repeat while m - (2 to the power of 128) is at least 0 # 2^128, 4^64
+        set m to m / (2 to the power of 128)
+        set k to k + 64
     end
-    repeat 60 times
-        set guess to (guess + x / guess) / 2
+    repeat while m - 4 is at least 0
+        set m to m / 4
+        set k to k + 1
     end
-    return guess
+    repeat while 1 / (2 to the power of 128) - m is greater than 0
+        set m to m * (2 to the power of 128)
+        set k to k - 64
+    end
+    repeat while 1 - m is greater than 0
+        set m to m * 4
+        set k to k - 1
+    end
+    set r to (m + 1) / 2
+    repeat 6 times
+        set r to (r + m / r) / 2
+    end
+    set step to 1 / (2 to the power of 52) # 2^-52, a step between doubles from 1 up to 2
+    if r - 2 is at least 0
+        set r to 2
+    end
+    set big to r * 134217729 # 2^27 + 1: r split in two, each 26 bits or so, their products exact
+    set high to big - (big - r)
+    set low to r - high
+    set off to ((m - high * high) - 2 * high * low) - low * low
+    if off - r * step is greater than 0
+        set r to r + step
+    else if off + r * step is less than 0
+        set r to r - step
+    end
+    repeat while k - 64 is at least 0 # back to x's size: 2^k at most 2^64 at a time, each exact
+        set r to r * (2 to the power of 64)
+        set k to k - 64
+    end
+    repeat while k + 64 is at most 0
+        set r to r / (2 to the power of 64)
+        set k to k + 64
+    end
+    set scale to 1
+    repeat while k is greater than 0
+        set scale to scale * 2
+        set k to k - 1
+    end
+    repeat while k is less than 0
+        set scale to scale / 2
+        set k to k + 1
+    end
+    return r * scale
 end
 
 # a random number from low up to high
