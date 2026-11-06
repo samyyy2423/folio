@@ -6626,8 +6626,9 @@ test("tools/game.folio plays a game: frames, keys held, pictures and sounds, on 
     + "frames a second at least 30: yes\npainted yes, yes frames\n", 0], ran.stderr);
 });
 
-test("only a program that reads can go online, and only it imports WinHTTP", () => {
-  const imports = (bytes) => Buffer.from(bytes).includes(Buffer.from("WINHTTP.dll"));
+test("only a program that reads can go online, and only it has WinHTTP in it", () => {
+  // loaded when the program first goes online (DESIGN §159), so it's named in the program as Windows' wide text
+  const imports = (bytes) => Buffer.from(bytes).includes(Buffer.from("WINHTTP.dll", "utf16le"));
   assert.ok(!imports(machine('say "hello"\nwrite "x" to "out.txt"\n', { target: "windows", name: "w.folio", allow: ["--allow-all"] })));
   assert.ok(imports(machine('say read "notes.txt"\n', { target: "windows", name: "r.folio" })));
   const reads = (source) => machine(source, { target: "linux", name: "r.folio" });
@@ -7266,8 +7267,8 @@ test("an app's handlers make their sounds as its events come, and only a program
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", env: { ...process.env, FOLIO_PICTURE: join(dir, "app.bmp"), FOLIO_EVENTS: events, FOLIO_SOUND: "app.wav" } });
     assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["", "", 2]);
     assert.ok(Buffer.from(soundWav(played)).equals(readFileSync(join(dir, "app.wav"))));
-    if (target === "windows") { // winmm.dll, which plays sounds, only goes into a program that makes one
-      const imports = (b) => Buffer.from(b).includes("WINMM.dll");
+    if (target === "windows") { // winmm.dll, which plays sounds, only goes into a program that makes one (DESIGN §159)
+      const imports = (b) => Buffer.from(b).includes(Buffer.from("WINMM.dll", "utf16le"));
       assert.ok(imports(bytes));
       assert.ok(!imports(machine('say "quiet"\nmove forward 10', { target, name: "q.folio" })));
     }

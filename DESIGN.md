@@ -6684,3 +6684,25 @@ it with thousands of threads at once.
   network of arrays learns (neural.folio's, micrograd's way, is one number at a time); layers, Adam, and a small
   GPT trained on the card.
 
+## 159. The system's DLLs, loaded when a program first uses them
+
+`folio version` took 35 ms on Windows. A copy of folio.exe whose first instruction goes straight back took 24,
+and folio's own work before it writes, the collector's memory, the clock and the dispatch, takes 1. The other 11
+were Windows loading the DLLs folio imports, USER32, GDI32, GDI+, the file dialogs, WinHTTP and WINMM, before the
+program starts, for every command, though `folio version` opens no window and goes nowhere.
+
+- **Late.** Those six are no longer in a program's imports. Each of its functions in them has a slot of its own, in
+  the zeroed memory, which `rt_late_init`, the first thing `start` does, points at a stub. The first call goes
+  there: `rt_late_resolve` keeps the call's inputs (rcx, rdx, r8, r9 and xmm0 to xmm3; those on the stack are
+  where they were), loads the DLL with `LoadLibraryExW` and `LOAD_LIBRARY_SEARCH_SYSTEM32`, finds the function
+  with `GetProcAddress`, puts it in the slot, and jumps to it. Every call after goes straight there, as through
+  the import table. KERNEL32, which every program uses, is loaded at the start, as before.
+- **From System32 only**, as the load configuration has Windows load the rest (§38): a winmm.dll beside the
+  program is never the one it loads, as the test that plants three of them checks. A DLL of Windows' own that
+  isn't there, or hasn't the function, ends the program with 75.
+- **What it gave.** `folio version` takes 24 ms, a 59 KB program that says hello 25, and Windows' hostname.exe 18:
+  what's left is Windows starting a program at all, and looking over one it hasn't signed. On Linux, where a
+  program has no DLLs to load, `folio version` takes 3 ms.
+- **Measured** with Node's `spawnSync`, 20 runs at a time, each program run 5 times first: Git Bash takes 80 to
+  180 ms to start a program itself, and Windows' virus checker looks over a program it hasn't seen in its first
+  few runs.

@@ -27457,6 +27457,128 @@ end
 # rt_write (rdi: 1 for the output, 2 for mistakes; rsi and rdx: the bytes) and rt_exit (rcx: the exit
 # code), and where the program starts: on Windows through kernel32.dll, on Linux by system calls.
 
+# ---------- the system's DLLs a program may not use, loaded when it first does (DESIGN §159) ----------
+# Windows loads every DLL a program imports before it starts, which takes time even when the program never opens a
+# window or goes online: folio, which can do both, took 35 ms to say its version, where with them loaded late it
+# takes 24, as long as Windows takes to start a program that does nothing at all. So a program's functions in these DLLs each have a slot
+# of their own, in the zeroed memory, which rt_late_init points at a stub as the program starts. The first call
+# goes there: rt_late_resolve loads the DLL from System32 (as the load configuration has Windows load the others),
+# finds the function, puts it in the slot and goes on to it, with every input as it was. Every call after goes
+# straight to the function. KERNEL32, which every program uses, is loaded as the program starts, as it was.
+set late_dlls to list of "USER32.dll", "GDI32.dll", "gdiplus.dll", "COMDLG32.dll", "WINHTTP.dll", "WINMM.dll"
+
+# the DLLs and functions a program wants: those of late_dlls given their stubs, and the rest, given back, which
+# the loader loads as before
+to late_windows_imports with a, wanted
+    set eager to empty list
+    set dll_names to empty list
+    set dll_functions to empty dictionary
+    for each group in wanted
+        set dll to item 1 of group
+        if dll is in late_dlls
+            if not (dll is in dll_functions)
+                add dll to dll_names
+                set item dll of dll_functions to empty list
+            end
+            set kept to item dll of dll_functions
+            for each fn_name in item 2 of group
+                if not (fn_name is in kept)
+                    add fn_name to kept
+                end
+            end
+        else
+            add group to eager
+        end
+    end
+    # rt_late_init: each slot at its stub
+    mark(a, "rt_late_init")
+    if length of dll_names is 0
+        ret(a)
+        return eager
+    end
+    add (list of "KERNEL32.dll", (list of "LoadLibraryExW", "GetProcAddress")) to eager
+    for each dll in dll_names
+        for each fn_name in item dll of dll_functions
+            reserve(a, "imp_" + fn_name, 8, 8)
+            lea(a, rax, rip("late_" + fn_name))
+            store(a, rip("imp_" + fn_name), rax)
+        end
+    end
+    ret(a)
+    # each function's stub: its name, its slot and its DLL, for rt_late_resolve, in registers no input is in
+    set k to 0
+    for each dll in dll_names
+        add 1 to k
+        set dat to data of a # the DLL's handle once it's loaded, then its name, as Windows' wide text
+        pad_to(dat, 8)
+        data_here(a, "late_dll_" + k)
+        put64(dat, 0)
+        for each c in dll
+            put16(dat, code_point(c))
+        end
+        put16(dat, 0)
+        for each fn_name in item dll of dll_functions
+            mark(a, "late_" + fn_name)
+            lea(a, r10, rip(c_text_place(a, fn_name)))
+            lea(a, r11, rip("imp_" + fn_name))
+            lea(a, rax, rip("late_dll_" + k))
+            jmp_to(a, "rt_late_resolve")
+        end
+    end
+    # rt_late_resolve(rax the DLL, r10 the function's name, r11 its slot), called as the function was: its inputs
+    # kept (rcx, rdx, r8, r9 and xmm0 to xmm3), and those on the stack where they are
+    set have to new_label(a)
+    set missing to new_label(a)
+    mark(a, "rt_late_resolve")
+    push_r(a, rcx)
+    push_r(a, rdx)
+    push_r(a, r8)
+    push_r(a, r9)
+    alui(a, "sub", rsp, 120) # room for the calls, xmm0 to xmm3, and the three, the stack on a 16-byte boundary
+    movdqu_store(a, mem(rsp, 32), xmm0)
+    movdqu_store(a, mem(rsp, 48), xmm1)
+    movdqu_store(a, mem(rsp, 64), xmm2)
+    movdqu_store(a, mem(rsp, 80), xmm3)
+    store(a, mem(rsp, 96), rax)
+    store(a, mem(rsp, 104), r10)
+    store(a, mem(rsp, 112), r11)
+    load(a, rcx, mem(rax, 0))
+    test_rr(a, rcx, rcx)
+    jcc(a, cc_ne, have)
+    lea(a, rcx, mem(rax, 8))
+    movi(a, rdx, 0)
+    movi(a, r8, 0x800) # LOAD_LIBRARY_SEARCH_SYSTEM32
+    call_import(a, "imp_LoadLibraryExW")
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, missing)
+    load(a, rcx, mem(rsp, 96))
+    store(a, mem(rcx, 0), rax)
+    mov_rr(a, rcx, rax)
+    mark(a, have)
+    load(a, rdx, mem(rsp, 104))
+    call_import(a, "imp_GetProcAddress")
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, missing)
+    load(a, rcx, mem(rsp, 112))
+    store(a, mem(rcx, 0), rax)
+    mov_rr(a, r11, rax)
+    movdqu_load(a, xmm0, mem(rsp, 32))
+    movdqu_load(a, xmm1, mem(rsp, 48))
+    movdqu_load(a, xmm2, mem(rsp, 64))
+    movdqu_load(a, xmm3, mem(rsp, 80))
+    alui(a, "add", rsp, 120)
+    pop_r(a, r9)
+    pop_r(a, r8)
+    pop_r(a, rdx)
+    pop_r(a, rcx)
+    jmp_r(a, r11)
+    # a DLL of Windows' own that isn't there, or hasn't the function: the program can't go on
+    mark(a, missing)
+    movi(a, rcx, 75)
+    call_import(a, "imp_ExitProcess")
+    return eager
+end
+
 to emit_windows with a
     if is_library(a)
         library_exit(a)
@@ -27479,6 +27601,7 @@ end
 to emit_windows_start with a
     mark(a, "start")
     alui(a, "sub", rsp, 40)
+    call_to(a, "rt_late_init") # each late DLL's functions at its stub (see late_windows_imports)
     movi(a, rcx, -11)
     call_import(a, "imp_GetStdHandle")
     store(a, rip("out_handle"), rax)
@@ -28915,6 +29038,9 @@ to emit_runtime with st
     end
     if is_library(a) and target of st is "windows" # its lock
         add (list of "KERNEL32.dll", (list of "AcquireSRWLockExclusive", "ReleaseSRWLockExclusive")) to wanted
+    end
+    if target of st is "windows" and not is_library(a) # the system's DLLs it may not use, loaded when it first does
+        set wanted to late_windows_imports(a, wanted)
     end
     set more_imports of a to wanted
     set ro to rodata of a # 10^0 to 10^22, which doubles hold exactly
