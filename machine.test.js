@@ -3017,7 +3017,7 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
   const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "23 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "26 passed");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
@@ -8083,6 +8083,30 @@ say together / alone`;
     best = Math.min(best, Number(ran.stdout));
   }
   assert.ok(best < want, `four workers took ${best} of the time four calls one after another did (best of 3), and four programs ${capacity.toFixed(2)}`);
+});
+
+// memory.folio's atomics (DESIGN §165): four workers, each on a thread of its own, adding 1 to one number of a block
+// they share a million times each, through lock xadd: every one of the 4,000,000 counted
+test("memory.folio's add_atomically counts every add from workers on every core", { skip: skip || (availableParallelism() < 2 && "this computer has one core") }, () => {
+  const ran = taskRun(`use "memory.folio" as memory
+set counter to memory's take(8)
+to count_up with block, times
+    for each k from 1 to times
+        memory's add_atomically(block, 1, 1)
+    end
+    return times
+end
+set jobs to empty list
+for each w from 1 to 4
+    add (start count_up(counter, 1000000) on another core) to jobs
+end
+for each j in jobs
+    wait for j
+end
+say memory's get_atomically(counter, 1)
+memory's give_back(counter)
+say memory's taken()`, { allow: ["--allow-libraries"], files: { "memory.folio": readFileSync(new URL("./tools/memory.folio", import.meta.url), "utf8") } });
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["4000000\n0\n", "", 0]);
 });
 
 test("a program with workers takes its threads and its workers' memory from the system, on Windows as on Linux", () => {

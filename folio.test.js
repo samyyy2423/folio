@@ -1224,7 +1224,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, big.folio, xml.folio, z
         "test_comparing", "test_mistakes", "test_more", "test_more_mistakes"]],
       ["fractions.test.folio", ["test_making", "test_sums", "test_comparing_and_rounding", "test_mistakes"]],
       ["sets.test.folio", ["test_making_and_finding", "test_combining", "test_showing"]],
-      ["memory.test.folio", ["test_whole_numbers", "test_floats_and_doubles", "test_many_at_once", "test_blocks", "test_mistakes"]],
+      ["memory.test.folio", ["test_whole_numbers", "test_floats_and_doubles", "test_many_at_once", "test_blocks", "test_mistakes", "test_layouts", "test_views", "test_atomics"]],
       ["learn.test.folio", ["test_matrices", "test_gradients", "test_training", "test_optimizers", "test_mistakes"]],
       ["properties.test.folio", ["test_making", "test_the_same_seed_makes_the_same_values", "test_properties_that_hold",
         "test_the_simplest_value_that_shows_it", "test_a_mistake_counts_and_the_seed_says_how_to_see_it_again", "test_mistakes",

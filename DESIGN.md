@@ -6816,3 +6816,63 @@ math.folio's `sqrt` took 60 of Newton's steps from x itself, which for 10^300 go
   that same double, and a new `above_zero`, 1 above 0 and 0 otherwise, relu's slope: learn.folio's gradients on
   the processor, which went through `apply` a number at a time, take a third of the time they did.
 
+## 164. Machine code nearer C's
+
+Measured against C (MSVC, /O2), Rust (-O), Node.js 24 and Python 3.13, each program run whole, the best of
+three, outside the temporary folder (§159), Folio's machine code was C's on the add loop, the primes and the
+float maths, 20% behind it on fib, and 3.6 times behind on putting 10 million floats in bytes and back, a loop
+that does arithmetic on the way.
+
+- **The right first.** `set s to s + i * 0.5` pushed s, worked out `i * 0.5`, and added from the stack: a store
+  and a load on the loop's one chain of work, every time round. When the left is a variable known to hold a
+  number, so reading it can't fail, and the right is numbers, names and maths, which can't change it or run
+  any of the program, the right is worked out first and the left added from its register: 5.5 ns a time round
+  to 1.6, as `add i * 0.5 to s` already was. Two numbers added either way round are the same number.
+- **matmul in blocks.** arrays.folio's loop (§118) added each term into out's row in memory, a load and a store
+  for every two numbers. It now keeps a 4 by 4 block of out in xmm8 to xmm15 for the whole sum, with b's four
+  columns copied together onto the stack first (a power-of-2 row puts every row of a column in the same few
+  places in the cache). Each number is still 0 + a's first times b's first + ..., a multiply then an add, in
+  that order, so it's what Folio's own loop works out to the last bit, as a byte-for-byte check over shapes with
+  every remainder found: 256 by 256 in 3 ms, not 7; 512 by 512 in 31, not 42.
+- **Tried and taken out**: comparing with a whole number the program wrote without first checking the other
+  side is whole (a sliver below it is all that 15 digits can move). fib was no faster: the processor guesses
+  that branch, so the check costs nothing on the way.
+- **Where it stands**, the same programs, each whole, on Windows:
+
+| | C | Rust | Folio | JavaScript | Python |
+|:--|--:|--:|--:|--:|--:|
+| start, say hello, end | 16.7 ms | 17.3 ms | 14.6 ms | 66.6 ms | 78 ms |
+| fib(32): 7 million calls | 25.7 ms | 24.7 ms | 31.2 ms | 88.8 ms | 448 ms |
+| adding 1 to 100,000,000 | 41.5 ms | 19.0 ms | 42.5 ms | 146 ms | 9,519 ms |
+| primes up to 300,000 | 77.4 ms | 78.1 ms | 76.8 ms | 127 ms | 2,122 ms |
+| 30,000,000 steps of decimal maths | 55.6 ms | 56.3 ms | 54.1 ms | 108 ms | 4,404 ms |
+| 10 million floats into bytes and back | 68 ms | 69 ms | 249 ms | 592 ms | 1,005 ms |
+
+  Rust's add loop is LLVM's, four numbers at a time; fib's 20% is what each call checks that C's doesn't (that
+  n is whole before comparing it to 15 digits, how deep the calls are, and that the sum is a number). The
+  floats are mostly adding 10 million numbers to two lists, 6 ns each.
+
+## 165. Structures, views and memory threads share
+
+memory.folio (§160) read and wrote numbers anywhere in memory; a C structure was a sum of offsets worked out by
+hand, any part of a block was the whole of it to anything given it, and two threads changing one number could
+lose each other's changes.
+
+- **Layouts.** `layout(list of "x", "a whole number", "d", "a number")` lays a structure out as C does: each
+  field on a boundary of its own size, a structure in it on its largest field's, the whole a multiple of the
+  largest. `get_field`, `put_field`, `offset_of` and `size_of` go by name; a name that isn't a field is a
+  mistake that lists the fields.
+- **Views.** `view(m, place, n)` is n of m's bytes as a block of their own, places from 1, nothing past its end
+  reachable through it: the size a function is handed is the size it can touch. `read_only(m)` is a view that
+  get and the rest read and put, put_many, copy, fill and the atomics refuse. A view is gone when the block it's
+  a view of is given back, and using it after is a mistake, not a read of memory that's someone else's now; a
+  view isn't given back itself.
+- **taken()** is how many bytes take has given that give_back hasn't had back, for a test to find a leak.
+- **Atomics.** `add_atomically`, `swap_if`, `get_atomically` and `put_atomically` change a 64-bit whole number as
+  one step however many threads do it at once, through `rt_k_atomic` in machine code: lock xadd, lock cmpxchg, a
+  read, and xchg. The place must be on an 8-byte boundary, as the lock instructions want. Four workers adding
+  1 a million times each to one number of a block they share count 4,000,000; the same through get and put
+  counted 1,325,496. On the JavaScript engines, with no other thread, they're get and put.
+- **Checked**: layouts against C's for mixed and nested structures, views' bounds, read-only refusals, a view of a
+  block given back, taken() back to where it was, the atomics' answers on every engine, and the workers' count.
+

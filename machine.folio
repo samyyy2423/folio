@@ -37469,7 +37469,8 @@ end
 # a NaN, a division by 0), which arrays.folio then does in Folio, so what happens is what Folio says happens.
 
 set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "numbers_matmul" is "rt_k_matmul",
-    "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory"
+    "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory",
+    "numbers_atomic" is "rt_k_atomic"
 
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
@@ -37611,6 +37612,9 @@ to emit_kernels with a, target
     if "numbers_memory" is in used
         emit_kernel_memory(a, target)
     end
+    if "numbers_atomic" is in used
+        emit_kernel_atomic(a, target)
+    end
 end
 
 # rt_k_convert(op, list, bytes): a list of numbers and bytes, as C keeps numbers of other sizes, for as many
@@ -37698,6 +37702,96 @@ to emit_kernel_convert with a, target
     mark(a, refuse)
     movi(a, rax, 1)
     kernel_leave(a)
+end
+
+# rt_k_atomic(op, out, memory, size, place, value, was), for memory.folio's add_atomically and the rest: the
+# 64-bit whole number at byte `place` (from 0) of memory, bytes, or, with op's 8, an address and how many bytes
+# are there, changed as one step however many threads change it, and what was there before in out's first
+# number. op 1 adds value (lock xadd), 2 puts value there if was was there (lock cmpxchg), 3 reads it, and 4
+# puts value there (xchg, which locks). The place must be inside the memory and on an 8-byte boundary, as the
+# lock instructions want it; anything else gives 1.
+to emit_kernel_atomic with a, target
+    set refuse to new_label(a)
+    set from_bytes to new_label(a)
+    set have_memory to new_label(a)
+    set ops to list of new_label(a), new_label(a), new_label(a), new_label(a)
+    set done to new_label(a)
+    mark(a, "rt_k_atomic")
+    kernel_enter(a, target, 7)
+    load(a, rax, kernel_input(1))
+    mov_rr(a, rcx, rax)
+    alui(a, "and", rcx, 7)
+    alui(a, "sub", rcx, 1)
+    alui(a, "cmp", rcx, 3)
+    jcc(a, cc_a, refuse)
+    alui(a, "cmp", rax, 12)
+    jcc(a, cc_a, refuse)
+    load(a, r8, kernel_input(2)) # out: room for one
+    alui_at_list_length(a, r8, refuse)
+    load(a, rax, kernel_input(5)) # the place, from 0 to 2^40 - 1
+    shifti(a, "shr", rax, 40)
+    test_rr(a, rax, rax)
+    jcc(a, cc_ne, refuse)
+    load(a, rax, kernel_input(1))
+    alui(a, "and", rax, 8)
+    jcc(a, cc_e, from_bytes)
+    load(a, r9, kernel_input(3))
+    load(a, rdx, kernel_input(4))
+    test_rr(a, rdx, rdx)
+    jcc(a, cc_s, refuse)
+    jmp_to(a, have_memory)
+    mark(a, from_bytes)
+    load(a, rax, kernel_input(3))
+    load(a, rdx, mem(rax, 0))
+    load(a, r9, mem(rax, 8))
+    mark(a, have_memory)
+    load(a, rax, kernel_input(5)) # place + 8 at most the size
+    alui(a, "add", rax, 8)
+    alu(a, "cmp", rax, rdx)
+    jcc(a, cc_a, refuse)
+    alu_load(a, "add", r9, kernel_input(5))
+    mov_rr(a, rax, r9) # on an 8-byte boundary
+    alui(a, "and", rax, 7)
+    jcc(a, cc_ne, refuse)
+    load(a, rax, kernel_input(1))
+    alui(a, "and", rax, 7)
+    for each k from 1 to 4
+        alui(a, "cmp", rax, k)
+        jcc(a, cc_e, item k of ops)
+    end
+    jmp_to(a, refuse)
+    mark(a, item 1 of ops) # add
+    load(a, rax, kernel_input(6))
+    enc(a, (list of 0xF0), yes, (list of 0x0F, 0xC1), rax, mem(r9, 0), empty list)
+    jmp_to(a, done)
+    mark(a, item 2 of ops) # put value if was is there
+    load(a, rax, kernel_input(7))
+    load(a, rcx, kernel_input(6))
+    enc(a, (list of 0xF0), yes, (list of 0x0F, 0xB1), rcx, mem(r9, 0), empty list)
+    jmp_to(a, done)
+    mark(a, item 3 of ops) # read
+    load(a, rax, mem(r9, 0))
+    jmp_to(a, done)
+    mark(a, item 4 of ops) # put
+    load(a, rax, kernel_input(6))
+    enc(a, empty list, yes, (list of 0x87), rax, mem(r9, 0), empty list)
+    mark(a, done)
+    cvtsi2sd(a, xmm0, rax)
+    load(a, r8, kernel_input(2))
+    load(a, r8, mem(r8, 16))
+    movsd_store(a, mem(r8, 0), xmm0)
+    movi(a, rax, 0)
+    kernel_leave(a)
+    mark(a, refuse)
+    movi(a, rax, 1)
+    kernel_leave(a)
+end
+
+# jumps to `wrong` if the list at r has no room for a number
+to alui_at_list_length with a, r, wrong
+    load(a, rax, mem(r, 0))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, wrong)
 end
 
 # rt_k_memory(op, kind, list, list_first, memory, size, byte_first, count), for tools/memory.folio (DESIGN §160):

@@ -9,6 +9,13 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **Numbers on the graphics card: `gpu.folio`.** Lists of numbers go up to an NVIDIA card, are added, multiplied,
   matrix-multiplied and summed there, and come back, through CUDA's driver alone: no toolkit. A 2,048 by 2,048
   matrix multiply on a GTX 1650 takes 13 ms, where arrays.folio's machine code takes 3.5 seconds (DESIGN §158).
+- **Structures, views and atomics in `memory.folio`.** `layout` lays a C structure out as C does, and
+  `get_field` and `put_field` go by name; `view` is part of a block with its own bounds, `read_only` one that
+  refuses writes, and a view of a block given back is a mistake; `taken()` finds leaks; and `add_atomically`,
+  `swap_if`, `get_atomically` and `put_atomically` change a number whole however many threads do (DESIGN §165).
+- **Faster machine code.** `s + i * 0.5` works out the right first when s is a number, a third of the time a
+  loop like that took; arrays.folio's matmul keeps 4 by 4 blocks in registers, twice as fast, to the same bits
+  (DESIGN §164).
 - **Networks trained on the graphics card: `learn.folio`.** Matrices on the card (or on the processor, where
   there's none) that remember how they were made, `backward(loss)` for every parameter's gradient, layers, and
   gradient descent and Adam. A digit reader learns 10 rounds of 6,000 drawings in 0.24 s on a GTX 1650, where

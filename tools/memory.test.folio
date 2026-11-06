@@ -245,3 +245,123 @@ to test_mistakes
         expect why is "'take' needs a number of bytes, a whole number from 0 up, not -1"
     end
 end
+
+to test_layouts
+    # as C lays out struct { char c; int i; double d; short s; }: 1, then 3 to a 4-byte boundary, 4, 8, 2, then 6 to 24
+    set mixed to memory's layout(list of "c", "a byte", "i", "a whole number", "d", "a number", "s", "a short whole number")
+    expect memory's size_of(mixed) is 24
+    expect memory's offset_of(mixed, "i") is 4
+    expect memory's offset_of(mixed, "d") is 8
+    expect memory's offset_of(mixed, "s") is 16
+    set point to memory's layout(list of "x", "a float", "y", "a float")
+    set line to memory's layout(list of "from", point, "to", point, "width", "a byte")
+    expect memory's size_of(line) is 20
+    expect memory's offset_of(line, "to") is 8
+    set b to 48 bytes
+    memory's put_field(b, 1, mixed, "i", -7)
+    memory's put_field(b, 1, mixed, "d", 2.5)
+    memory's put_field(b, 25, mixed, "s", 300)
+    expect memory's get_field(b, 1, mixed, "i") is -7
+    expect memory's get_field(b, 1, mixed, "d") is 2.5
+    expect memory's get_field(b, 25, mixed, "s") is 300
+    expect memory's get(b, 5, "a whole number") is -7
+    expect memory's get(b, 25 + 16, "a short whole number") is 300
+    for each case in list of (list of "'get_field' was given 'z', which isn't one of the layout's fields: c, i, d, s", "z"),
+        (list of "'layout' was given the field 'x' twice", "twice")
+        try
+            if item 2 of case is "twice"
+                memory's layout(list of "x", "a byte", "x", "a byte")
+            else
+                memory's get_field(b, 1, mixed, "z")
+            end
+            expect item 1 of case is "no mistake"
+        if it fails with why
+            expect why is item 1 of case
+        end
+    end
+end
+
+to test_views
+    set b to 16 bytes
+    memory's put_many(b, 1, (list of 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), "a byte")
+    set part to memory's view(b, 5, 4)
+    expect memory's size(part) is 4
+    expect memory's get_many(part, 1, 4, "a byte") is list of 5, 6, 7, 8
+    memory's put(part, 1, 99, "a byte")
+    expect byte 5 of b is 99
+    set inner to memory's view(part, 2, 2)
+    expect memory's get_many(inner, 1, 2, "a byte") is list of 6, 7
+    try
+        memory's get(part, 4, "a short whole number")
+        expect "past the view's end" is "a mistake"
+    if it fails with why
+        expect why is "'get' needs a place from 1 to 3 in 4 bytes, not 4"
+    end
+    set safe to memory's read_only(part)
+    expect memory's is_read_only(safe)
+    expect not memory's is_read_only(part)
+    expect memory's get(safe, 1, "a byte") is 99
+    expect "{safe}" is "(a read-only view of 4 bytes)"
+    for each what in list of "put", "fill", "copy"
+        try
+            if what is "put"
+                memory's put(safe, 1, 1, "a byte")
+            else if what is "fill"
+                memory's fill(safe, 1, 4, 0)
+            else
+                memory's copy(b, 1, safe, 1, 2)
+            end
+            expect what is "refused"
+        if it fails with why
+            expect why is "'" + what + "' was given memory that can only be read"
+        end
+    end
+    memory's copy(safe, 1, b, 13, 4)
+    expect memory's get_many(b, 13, 4, "a byte") is list of 99, 6, 7, 8
+    set before to memory's taken()
+    set block to memory's take(32)
+    expect memory's taken() - before is 32
+    set window to memory's view(block, 9, 8)
+    memory's put(window, 1, 12345, "a long whole number")
+    expect memory's get(block, 9, "a long whole number") is 12345
+    try
+        memory's give_back(window)
+        expect "a view given back" is "a mistake"
+    if it fails with why
+        expect why is "'give_back' takes back a block take made, not a view, or one block_at made of a C library's memory"
+    end
+    memory's give_back(block)
+    expect memory's taken() is before
+    try
+        memory's get(window, 1, "a byte")
+        expect "a view of a block given back" is "a mistake"
+    if it fails with why
+        expect why is "'get' was given a view of a block that was given back"
+    end
+end
+
+to test_atomics
+    set block to memory's take(24)
+    expect memory's add_atomically(block, 9, 5) is 0
+    expect memory's add_atomically(block, 9, -2) is 5
+    expect memory's get_atomically(block, 9) is 3
+    expect memory's swap_if(block, 9, 3, 10)
+    expect not memory's swap_if(block, 9, 3, 20)
+    expect memory's get_atomically(block, 9) is 10
+    expect memory's put_atomically(block, 9, 7) is 10
+    expect memory's get(block, 9, "a long whole number") is 7
+    try
+        memory's add_atomically(block, 20, 1)
+        expect "past the end" is "a mistake"
+    if it fails with why
+        expect why is "'add_atomically' needs a place from 1 to 17 in 24 bytes, not 20"
+    end
+    try
+        memory's add_atomically(memory's read_only(block), 1, 1)
+        expect "read-only" is "a mistake"
+    if it fails with why
+        expect why is "'add_atomically' was given memory that can only be read"
+    end
+    expect memory's get_atomically(memory's read_only(block), 9) is 7
+    memory's give_back(block)
+end

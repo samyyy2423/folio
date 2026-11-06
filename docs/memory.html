@@ -46,9 +46,9 @@
 
   <div class="layout wrap">
     <nav class="toc" aria-label="memory.folio's functions">
-      <h2>12 functions</h2>
+      <h2>24 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
-      <ol id="toc"><li><a href="#get">get</a></li><li><a href="#put">put</a></li><li><a href="#get_many">get_many</a></li><li><a href="#put_many">put_many</a></li><li><a href="#size_of">size_of</a></li><li><a href="#size">size</a></li><li><a href="#take">take</a></li><li><a href="#give_back">give_back</a></li><li><a href="#address_of">address_of</a></li><li><a href="#block_at">block_at</a></li><li><a href="#copy">copy</a></li><li><a href="#fill">fill</a></li></ol>
+      <ol id="toc"><li><a href="#get">get</a></li><li><a href="#put">put</a></li><li><a href="#get_many">get_many</a></li><li><a href="#put_many">put_many</a></li><li><a href="#size_of">size_of</a></li><li><a href="#size">size</a></li><li><a href="#take">take</a></li><li><a href="#give_back">give_back</a></li><li><a href="#address_of">address_of</a></li><li><a href="#block_at">block_at</a></li><li><a href="#copy">copy</a></li><li><a href="#fill">fill</a></li><li><a href="#layout">layout</a></li><li><a href="#offset_of">offset_of</a></li><li><a href="#get_field">get_field</a></li><li><a href="#put_field">put_field</a></li><li><a href="#view">view</a></li><li><a href="#read_only">read_only</a></li><li><a href="#is_read_only">is_read_only</a></li><li><a href="#taken">taken</a></li><li><a href="#add_atomically">add_atomically</a></li><li><a href="#swap_if">swap_if</a></li><li><a href="#get_atomically">get_atomically</a></li><li><a href="#put_atomically">put_atomically</a></li></ol>
       <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio">The source</a></p>
     </nav>
     <main>
@@ -75,6 +75,15 @@ memory's fill(block, <span class="n">100</span>, <span class="n">8</span>, <span
 <span class="k">say</span> memory's address_of(block)            <span class="c"># where it is, for a library's `a pointer`</span>
 memory's give_back(block)                 <span class="c"># its memory back to the system; using it after is a mistake</span></code></pre></div>
           <p>Every place is checked against the memory's size, and every number against its kind: a whole number in its kind's range, or a <code>fail with</code> that says so. <a href="#get_many">get_many</a> and <a href="#put_many">put_many</a> take a list of numbers in one go. <a href="#size">size</a>(m) is how many bytes m has, and <a href="#block_at">block_at</a>(address, size) is memory a C library gave as a block, which <a href="#give_back">give_back</a> doesn't take. &quot;little&quot;, the order every computer Folio runs on keeps numbers in, can be said too.</p>
+          <p>C's structures, by their fields' names, laid out as C lays them out (each field on a boundary of its own size, the whole a multiple of its largest), and memory a part at a time:</p>
+          <div class="code"><pre><code><span class="k">set</span> point <span class="k">to</span> memory's layout(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;x&quot;</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;y&quot;</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;weight&quot;</span>, <span class="s">&quot;a number&quot;</span>)
+<span class="k">say</span> memory's size_of(point)                          <span class="c"># 16: 4, 4, then 8 on a boundary of 8</span>
+memory's put_field(block, <span class="n">1</span>, point, <span class="s">&quot;y&quot;</span>, <span class="n">7</span>)           <span class="c"># a point at block's 1st byte, its y 7</span>
+<span class="k">say</span> memory's get_field(block, <span class="n">1</span> + memory's size_of(point), point, <span class="s">&quot;weight&quot;</span>)   <span class="c"># the next point's weight</span>
+<span class="k">set</span> part <span class="k">to</span> memory's view(block, <span class="n">17</span>, <span class="n">16</span>)              <span class="c"># 16 of block's bytes, from its 17th: places from 1</span>
+<span class="k">set</span> safe <span class="k">to</span> memory's read_only(part)                  <span class="c"># the same bytes, which put and the rest refuse</span>
+<span class="k">say</span> memory's taken()                                  <span class="c"># bytes taken and not given back, to find a leak</span></code></pre></div>
+          <p>Numbers threads share, each change whole however many threads make one at once (64-bit whole numbers on an 8-byte boundary, as the processor's lock instructions have them): <a href="#add_atomically">add_atomically</a>(m, place, n) gives what was there before, <a href="#swap_if">swap_if</a>(m, place, was, now) puts now there if was was there and says whether it did, and <a href="#get_atomically">get_atomically</a> and <a href="#put_atomically">put_atomically</a>. A view is gone once what it's a view of is given back.</p>
           <p>In a program <code>folio build</code> makes, get, put and their many go through a loop of Folio's own in machine code (DESIGN §160), and take, <a href="#give_back">give_back</a>, copy and fill through the system's C library (msvcrt on Windows, libc on Linux), so such a program is run or built with --allow-libraries to take memory. On the JavaScript engines, which have no memory but the collector's, a block is bytes, and <a href="#address_of">address_of</a> and <a href="#block_at">block_at</a> are a <code>fail with</code>. A block's memory is the program's until give_back, however long that is, and an address that isn't one, given to block_at, can crash the program, as in C.</p>
       </section>
       <section class="fns">
@@ -86,7 +95,7 @@ memory's give_back(block)                 <span class="c"># its memory back to t
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to get with m, place, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L96">memory.folio line 96</a></p>
+          <p class="written">Written <code>to get with m, place, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L125">memory.folio line 125</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
@@ -99,7 +108,7 @@ memory's give_back(block)                 <span class="c"># its memory back to t
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>value</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to put with m, place, value, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L103">memory.folio line 103</a></p>
+          <p class="written">Written <code>to put with m, place, value, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L132">memory.folio line 132</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
@@ -113,7 +122,7 @@ memory's put(b, <span class="n">1</span>, -<span class="n">2</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>count</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to get_many with m, place, count, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L110">memory.folio line 110</a></p>
+          <p class="written">Written <code>to get_many with m, place, count, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L140">memory.folio line 140</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
@@ -126,7 +135,7 @@ memory's put(b, <span class="n">1</span>, -<span class="n">2</span>, <span class
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>numbers</code></li><li><code>number_kind</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to put_many with m, place, numbers, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L120">memory.folio line 120</a></p>
+          <p class="written">Written <code>to put_many with m, place, numbers, number_kind, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L150">memory.folio line 150</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> b <span class="k">to</span> <span class="n">40</span> <span class="k">bytes</span>
@@ -135,12 +144,12 @@ memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <spa
         </section>
         <section class="fn" id="size_of">
           <h3><a href="#size_of"><code>memory's size_of(number_kind)</code></a></h3>
-          <p>how many bytes a kind of number takes</p>
+          <p>how many bytes a kind of number takes, or a layout's structure</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>number_kind</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to size_of with number_kind</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L130">memory.folio line 130</a></p>
+          <p class="written">Written <code>to size_of with number_kind</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L161">memory.folio line 161</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">say</span> memory's size_of(<span class="s">&quot;a long whole number&quot;</span>)             <span class="c"># 8</span></code></pre><pre class="says"><code>8</code></pre></div>
@@ -152,7 +161,7 @@ memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <spa
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to size with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L135">memory.folio line 135</a></p>
+          <p class="written">Written <code>to size with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L169">memory.folio line 169</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
@@ -172,7 +181,7 @@ memory's put(b, <span class="n">9</span>, <span class="n">305419896</span>, <spa
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to take with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L142">memory.folio line 142</a></p>
+          <p class="written">Written <code>to take with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L176">memory.folio line 176</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">64</span>)
@@ -185,7 +194,7 @@ memory's put(b, <span class="n">9</span>, <span class="n">305419896</span>, <spa
             <div><h4>Inputs</h4><ul class="inputs"><li><code>block</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to give_back with block</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L158">memory.folio line 158</a></p>
+          <p class="written">Written <code>to give_back with block</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L194">memory.folio line 194</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">4096</span>)          <span class="c"># 4,096 bytes of the program's own, outside the collector, all 0</span>
@@ -198,7 +207,7 @@ memory's give_back(block)                 <span class="c"># its memory back to t
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to address_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L172">memory.folio line 172</a></p>
+          <p class="written">Written <code>to address_of with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L209">memory.folio line 209</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">4096</span>)          <span class="c"># 4,096 bytes of the program's own, outside the collector, all 0</span>
@@ -211,7 +220,7 @@ memory's give_back(block)                 <span class="c"># its memory back to t
             <div><h4>Inputs</h4><ul class="inputs"><li><code>address</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to block_at with address, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L187">memory.folio line 187</a></p>
+          <p class="written">Written <code>to block_at with address, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L227">memory.folio line 227</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 memory's block_at(address, n)</code></pre></div>
@@ -223,7 +232,7 @@ memory's block_at(address, n)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>source</code></li><li><code>source_place</code></li><li><code>target</code></li><li><code>target_place</code></li><li><code>count</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to copy with source, source_place, target, target_place, count</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L201">memory.folio line 201</a></p>
+          <p class="written">Written <code>to copy with source, source_place, target, target_place, count</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L241">memory.folio line 241</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">64</span>)
@@ -243,7 +252,7 @@ memory's copy(b, <span class="n">1</span>, block, <span class="n">33</span>, <sp
             <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>count</code></li><li><code>value</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to fill with m, place, count, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L218">memory.folio line 218</a></p>
+          <p class="written">Written <code>to fill with m, place, count, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L259">memory.folio line 259</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
 <span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">64</span>)
@@ -257,6 +266,177 @@ memory's copy(b, <span class="n">1</span>, block, <span class="n">33</span>, <sp
 memory's copy(block, <span class="n">1</span>, b, <span class="n">1</span>, <span class="n">8</span>)
 memory's fill(block, <span class="n">41</span>, <span class="n">4</span>, <span class="n">255</span>)
 <span class="k">say</span> memory's get(block, <span class="n">41</span>, <span class="s">&quot;a whole number&quot;</span>)</code></pre><pre class="says"><code>-1</code></pre></div>
+        </section>
+        <section class="fn" id="layout">
+          <h3><a href="#layout"><code>memory's layout(fields)</code></a></h3>
+          <p>a structure's layout, as C lays it out: a list of each field's name, then its kind of number or a layout of its own, each field on a boundary of its own size (a layout's, its largest field's), the whole a multiple of the largest</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>fields</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to layout with fields</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L289">memory.folio line 289</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> mixed <span class="k">to</span> memory's layout(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;c&quot;</span>, <span class="s">&quot;a byte&quot;</span>, <span class="s">&quot;i&quot;</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;d&quot;</span>, <span class="s">&quot;a number&quot;</span>, <span class="s">&quot;s&quot;</span>, <span class="s">&quot;a short whole number&quot;</span>)
+<span class="k">say</span> mixed</code></pre><pre class="says"><code>(record with fields (dictionary where &quot;c&quot; is (record with offset 0, what &quot;a byte&quot;), &quot;i&quot; is (record with offset 4, what &quot;a whole number&quot;), &quot;d&quot; is (record with offset 8, what &quot;a number&quot;), &quot;s&quot; is (record with offset 16, what &quot;a short whole number&quot;)), names [&quot;c&quot;, &quot;i&quot;, &quot;d&quot;, &quot;s&quot;], size 24, alignment 8, kind &quot;layout&quot;)</code></pre></div>
+        </section>
+        <section class="fn" id="offset_of">
+          <h3><a href="#offset_of"><code>memory's offset_of(shape, name)</code></a></h3>
+          <p>how far into a structure a field starts, in bytes, from 0</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>shape</code></li><li><code>name</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to offset_of with shape, name</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L329">memory.folio line 329</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> mixed <span class="k">to</span> memory's layout(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;c&quot;</span>, <span class="s">&quot;a byte&quot;</span>, <span class="s">&quot;i&quot;</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;d&quot;</span>, <span class="s">&quot;a number&quot;</span>, <span class="s">&quot;s&quot;</span>, <span class="s">&quot;a short whole number&quot;</span>)
+<span class="k">say</span> memory's offset_of(mixed, <span class="s">&quot;i&quot;</span>)</code></pre><pre class="says"><code>4</code></pre></div>
+        </section>
+        <section class="fn" id="get_field">
+          <h3><a href="#get_field"><code>memory's get_field(m, place, shape, name, order)</code></a></h3>
+          <p>a structure's field, the structure at place in m</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>shape</code></li><li><code>name</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to get_field with m, place, shape, name, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L334">memory.folio line 334</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> mixed <span class="k">to</span> memory's layout(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;c&quot;</span>, <span class="s">&quot;a byte&quot;</span>, <span class="s">&quot;i&quot;</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;d&quot;</span>, <span class="s">&quot;a number&quot;</span>, <span class="s">&quot;s&quot;</span>, <span class="s">&quot;a short whole number&quot;</span>)
+<span class="k">set</span> b <span class="k">to</span> <span class="n">48</span> <span class="k">bytes</span>
+memory's put_field(b, <span class="n">1</span>, mixed, <span class="s">&quot;i&quot;</span>, -<span class="n">7</span>)
+memory's put_field(b, <span class="n">1</span>, mixed, <span class="s">&quot;d&quot;</span>, <span class="n">2.5</span>)
+memory's put_field(b, <span class="n">25</span>, mixed, <span class="s">&quot;s&quot;</span>, <span class="n">300</span>)
+<span class="k">say</span> memory's get_field(b, <span class="n">1</span>, mixed, <span class="s">&quot;i&quot;</span>)</code></pre><pre class="says"><code>-7</code></pre></div>
+        </section>
+        <section class="fn" id="put_field">
+          <h3><a href="#put_field"><code>memory's put_field(m, place, shape, name, value, order)</code></a></h3>
+          <p>a structure's field set to value, the structure at place in m</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>shape</code></li><li><code>name</code></li><li><code>value</code></li><li><code>order</code> <span class="optional">optional: &quot;little&quot; if it's left out</span></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to put_field with m, place, shape, name, value, order or &quot;little&quot;</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L343">memory.folio line 343</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> mixed <span class="k">to</span> memory's layout(<span class="k">list</span> <span class="k">of</span> <span class="s">&quot;c&quot;</span>, <span class="s">&quot;a byte&quot;</span>, <span class="s">&quot;i&quot;</span>, <span class="s">&quot;a whole number&quot;</span>, <span class="s">&quot;d&quot;</span>, <span class="s">&quot;a number&quot;</span>, <span class="s">&quot;s&quot;</span>, <span class="s">&quot;a short whole number&quot;</span>)
+<span class="k">set</span> b <span class="k">to</span> <span class="n">48</span> <span class="k">bytes</span>
+memory's put_field(b, <span class="n">1</span>, mixed, <span class="s">&quot;i&quot;</span>, -<span class="n">7</span>)
+<span class="k">say</span> memory's get_field(b, <span class="n">1</span>, mixed, <span class="s">&quot;i&quot;</span>)</code></pre><pre class="says"><code>-7</code></pre></div>
+        </section>
+        <section class="fn" id="view">
+          <h3><a href="#view"><code>memory's view(m, place, n)</code></a></h3>
+          <p>n of m's bytes from place on, as a block of their own, places from 1: the same memory, nothing past its end reachable through it, gone when m is given back</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>n</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to view with m, place, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L353">memory.folio line 353</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>, <span class="n">7</span>, <span class="n">8</span>, <span class="n">9</span>, <span class="n">10</span>, <span class="n">11</span>, <span class="n">12</span>, <span class="n">13</span>, <span class="n">14</span>, <span class="n">15</span>, <span class="n">16</span>), <span class="s">&quot;a byte&quot;</span>)
+<span class="k">set</span> part <span class="k">to</span> memory's view(b, <span class="n">5</span>, <span class="n">4</span>)
+<span class="k">say</span> part</code></pre><pre class="says"><code>(a view of 4 bytes)</code></pre></div>
+        </section>
+        <section class="fn" id="read_only">
+          <h3><a href="#read_only"><code>memory's read_only(m)</code></a></h3>
+          <p>m's bytes, as a view that get and the rest read, and put, <a href="#put_many">put_many</a>, copy and fill refuse</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to read_only with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L380">memory.folio line 380</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>, <span class="n">7</span>, <span class="n">8</span>, <span class="n">9</span>, <span class="n">10</span>, <span class="n">11</span>, <span class="n">12</span>, <span class="n">13</span>, <span class="n">14</span>, <span class="n">15</span>, <span class="n">16</span>), <span class="s">&quot;a byte&quot;</span>)
+<span class="k">set</span> part <span class="k">to</span> memory's view(b, <span class="n">5</span>, <span class="n">4</span>)
+memory's put(part, <span class="n">1</span>, <span class="n">99</span>, <span class="s">&quot;a byte&quot;</span>)
+<span class="k">set</span> safe <span class="k">to</span> memory's read_only(part)
+<span class="k">say</span> safe</code></pre><pre class="says"><code>(a read-only view of 4 bytes)</code></pre></div>
+        </section>
+        <section class="fn" id="is_read_only">
+          <h3><a href="#is_read_only"><code>memory's is_read_only(m)</code></a></h3>
+          <p>whether put and the rest refuse m</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to is_read_only with m</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L387">memory.folio line 387</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> b <span class="k">to</span> <span class="n">16</span> <span class="k">bytes</span>
+memory's put_many(b, <span class="n">1</span>, (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>, <span class="n">7</span>, <span class="n">8</span>, <span class="n">9</span>, <span class="n">10</span>, <span class="n">11</span>, <span class="n">12</span>, <span class="n">13</span>, <span class="n">14</span>, <span class="n">15</span>, <span class="n">16</span>), <span class="s">&quot;a byte&quot;</span>)
+<span class="k">set</span> part <span class="k">to</span> memory's view(b, <span class="n">5</span>, <span class="n">4</span>)
+memory's put(part, <span class="n">1</span>, <span class="n">99</span>, <span class="s">&quot;a byte&quot;</span>)
+<span class="k">set</span> safe <span class="k">to</span> memory's read_only(part)
+<span class="k">say</span> memory's is_read_only(safe)</code></pre><pre class="says"><code>yes</code></pre></div>
+        </section>
+        <section class="fn" id="taken">
+          <h3><a href="#taken"><code>memory's taken()</code></a></h3>
+          <p>how many bytes take has given that <a href="#give_back">give_back</a> hasn't had back</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
+            
+          </div>
+          <p class="written">Written <code>to taken</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L395">memory.folio line 395</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">say</span> memory's taken()                                  <span class="c"># bytes taken and not given back, to find a leak</span></code></pre><pre class="says"><code>0</code></pre></div>
+        </section>
+        <section class="fn" id="add_atomically">
+          <h3><a href="#add_atomically"><code>memory's add_atomically(m, place, n)</code></a></h3>
+          <p>n added to the 64-bit whole number at place, at once, however many threads do it: what was there before</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>n</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to add_atomically with m, place, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L400">memory.folio line 400</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">24</span>)
+<span class="k">say</span> memory's add_atomically(block, <span class="n">9</span>, <span class="n">5</span>)</code></pre><pre class="says"><code>0</code></pre></div>
+        </section>
+        <section class="fn" id="swap_if">
+          <h3><a href="#swap_if"><code>memory's swap_if(m, place, was, now)</code></a></h3>
+          <p>now put at place if was is there, at once: whether it was</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>was</code></li><li><code>now</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to swap_if with m, place, was, now</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L405">memory.folio line 405</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">24</span>)
+<span class="k">say</span> memory's swap_if(block, <span class="n">9</span>, <span class="n">3</span>, <span class="n">10</span>)</code></pre><pre class="says"><code>no</code></pre></div>
+        </section>
+        <section class="fn" id="get_atomically">
+          <h3><a href="#get_atomically"><code>memory's get_atomically(m, place)</code></a></h3>
+          <p>the 64-bit whole number at place, as one read</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to get_atomically with m, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L410">memory.folio line 410</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">24</span>)
+<span class="k">say</span> memory's get_atomically(block, <span class="n">9</span>)</code></pre><pre class="says"><code>0</code></pre></div>
+        </section>
+        <section class="fn" id="put_atomically">
+          <h3><a href="#put_atomically"><code>memory's put_atomically(m, place, value)</code></a></h3>
+          <p>a 64-bit whole number put at place, as one write: what was there before</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>m</code></li><li><code>place</code></li><li><code>value</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to put_atomically with m, place, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/memory.folio#L415">memory.folio line 415</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;memory.folio&quot;</span> <span class="k">as</span> memory
+<span class="k">set</span> block <span class="k">to</span> memory's take(<span class="n">24</span>)
+<span class="k">say</span> memory's put_atomically(block, <span class="n">9</span>, <span class="n">7</span>)</code></pre><pre class="says"><code>0</code></pre></div>
         </section>
       </section>
     </main>

@@ -479,7 +479,9 @@ bytes and dictionaries:
   and `get_many` and `put_many` a list at a time, a million floats in a
   millisecond in a program folio builds. And memory of the program's own,
   outside the collector: `take(4096)`, `copy`, `fill`, `address_of` for C,
-  and `give_back`.
+  and `give_back`; C structures by field name (`layout`, `get_field`), views
+  with bounds of their own and read-only ones, `taken()` to find leaks, and
+  atomics for numbers threads share (`add_atomically`, `swap_if`).
 - [`sockets.folio`](tools/sockets.folio) talks over a network as Python's
   `socket` does: `connect("example.com", 80)`, `listen(9000)` and `accept`,
   `send`, `receive`, `receive_line`, `receive_all`, `finish_sending`,
