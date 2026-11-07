@@ -15,7 +15,7 @@ export { FolioError, excerpt, describeTrail, seeded, soundSamples, soundWav, SOU
 // control character other than tab (\n makes a new line). Rules this small let the compiler written in Folio,
 // which has no character codes, follow them exactly. Of text this finds only the opening quote: textEnd finds
 // where it ends, as text can be inside text.
-const TOKEN = /([\0-\x20]+)|(#[^\n]*)|(0x[\da-fA-F]+|0b[01]+|\d+(?:\.\d+)?)|([A-Za-z_]\w*)|(")|([-+*/(),]|'s(?!\w))/y;
+const TOKEN = /([\0-\x20]+)|(#[^\n]*)|(0x[\da-fA-F]+|0b[01]+|\d+(?:\.\d+)?)|([A-Za-z_]\w*)|(")|([-+*/(),[\]]|'s(?!\w))/y;
 const ESCAPES = { n: "\n", t: "\t" };
 const unescape = (raw) => raw.replace(/\\(.)/gs, (_, c) => ESCAPES[c] ?? c);
 const fitsText = (c) => c !== undefined && !/[\0-\x08\n-\x1f]/.test(c);
@@ -30,8 +30,6 @@ const HINTS = {
   "<": "write 'is less than'",
   ">": "write 'is greater than'",
   "%": "write 'is divisible by'",
-  "[": "make a list with 'list of 1, 2, 3'",
-  "]": "make a list with 'list of 1, 2, 3'",
   "{": "blocks finish with 'end', not braces",
   "}": "blocks finish with 'end', not braces",
   "'": "put text in double quotes",
@@ -1257,6 +1255,24 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     if (match("string")) return t.parts ? filledIn(t) : { kind: "value", value: t.value, at: t };
     if (word("yes") || word("no")) return { kind: "value", value: t.value === "yes", at: t };
     if (word("nothing")) return { kind: "value", value: null, at: t };
+    if (match("[")) { // `[1, 2, 3]`: a list, as `list of 1, 2, 3` is, ending at its `]` (DESIGN §177)
+      const outside = indexing;
+      indexing = false;
+      const items = [];
+      const before = hoisted.length;
+      let made = null;
+      while (!check("]")) {
+        items.push(expression());
+        if (items.length === 1 && isWord("for") && !peek().nl && wordAt(pos + 1, "each")) {
+          made = builtList(items[0], hoisted.splice(before), t);
+          break;
+        }
+        if (!match(",")) break;
+      }
+      if (!match("]")) expected("']'");
+      indexing = outside;
+      return made ?? { kind: "list", items, at: t };
+    }
     if (word("list")) {
       expectWord("of");
       const items = [];
@@ -2491,7 +2507,7 @@ function joined(pieces, line, tight) {
   pieces.forEach((p, i) => {
     const before = pieces[i - 1];
     const marked = (q) => tight.has(`${line}:${q.col}`);
-    const close = !before || before.type === "(" || p.type === ")" || p.type === "," || p.type === "'s"
+    const close = !before || before.type === "(" || p.type === ")" || before.type === "[" || p.type === "]" || p.type === "," || p.type === "'s"
       || (before.type === "-" && marked(before)) || (p.type === "(" && marked(p));
     out += (close ? "" : " ") + p.text;
   });

@@ -830,6 +830,7 @@ end
 set double to function with x gives x * 2   # a function with no name, as a value
 say double(21)
 set squares to list of n * n for each n in list of 1, 2, 3, 4   # a list built from another
+say [1, 2, 3] " " [n + 1 for each n in squares]   # a list in brackets, which ends at its ]: f([1, 2], 3)
 say list of n for each n in squares where n is greater than 5  # [9, 16]: the ones that pass
 say items 2 to 3 of squares         # [4, 9]: of a list, text or bytes
 say list of 3, 1, 3 without repeats # [3, 1]: each once, where it first is

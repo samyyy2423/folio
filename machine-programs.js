@@ -431,6 +431,8 @@ export const MACHINE_CASES = [
   // \r in text: an r, as SPEC.md promises Folio 1, beside \n and \t and in text with values in it too; \\r is a
   // backslash and an r (DESIGN §175)
   "say (\"a\\rb\\tc\\nd\") as bytes\nsay length of \"\\r\"\nsay \"\\r\" is (list of 13) as bytes as text\nset n to 4\nsay (\"x{n}\\r\\n\") as bytes\nsay list of \"\\r\", \"r\", \"\\\\r\"\nsay split \"one\\r\\ntwo\" by \"\\r\\n\"\nsay \"before\\r\" \"after\"",
+  // [1, 2, 3]: a list, as list of 1, 2, 3 is, ending at its ] (DESIGN §177)
+  "to pair with a, b\n    return [b, a]\nend\nset xs to [3, 1, 2]\nsay xs\nsay []\nsay [[1, 2], [3], []]\nsay pair([1, 2], [3])\nsay item 2 of [10, 20, 30]\nsay [x * 2 for each x in xs where x is greater than 1]\nsay [1,\n    2,\n]\nfor each n in [5, 6]\n    say n\nend",
   ...bitCases(),
 ];
 
