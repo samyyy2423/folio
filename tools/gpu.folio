@@ -25,6 +25,28 @@
 # A program that uses it is run or built with --allow-libraries. On a computer with no NVIDIA card, or no
 # driver, available() is no and the rest is a `fail with` that says so. Numbers on the card are floats: about 7
 # digits, not Folio's 15, as machine learning wants them.
+#
+# Kernels of your own (DESIGN §176), written in PTX as gpu.folio's are, and run on as many threads as you say:
+#
+#   set ptx to read "saxpy.ptx"                     # .version, .target, and .entry saxpy(...) { ... }
+#   set saxpy to gpu's kernel(ptx, "saxpy")         # its inputs' types, from its .entry line
+#   set x to gpu's upload(list of 1, 2, 3)
+#   set y to gpu's upload(list of 10, 20, 30)
+#   gpu's launch(saxpy, 1, 256, list of y, x, 2.5, 3)   # 1 block of 256 threads: y = 2.5 x + y, for 3 numbers
+#   say gpu's download(y)                           # [12.5, 25, 37.5]
+#
+# kernel(ptx, name) loads a module once, however many of its kernels are asked for, and a mistake in it is a
+# `fail with` that says what the driver said, with the line. launch(kernel, grid, block, inputs) runs it on a
+# grid of blocks of threads, each a number or a list of 1 to 3 (x, y, z); launch_with(kernel, grid, block,
+# shared, inputs) gives each block `shared` bytes of the card's fast memory too (`.extern .shared`). Each input
+# is given as its .param says: numbers or bytes on the card for a 64-bit one (.u64, .b64, .s64: where they are),
+# a number for .f32 or .f64, and a whole number in range for the rest (.u8 to .s64). A launch doesn't wait: the
+# next download, download_bytes or finish() does, and says a mistake the kernel made there (an address outside
+# what it was given, say), after which the card does nothing more for the program, as CUDA has it. For whole
+# numbers, or anything else, on the card: upload_bytes(bytes), room(size) (that many bytes, each 0), and
+# download_bytes(g); memory.folio puts numbers of C's kinds into bytes and takes them out.
+
+use "memory.folio" as gpu_memory
 
 use the library "nvcuda" or "cuda"
     "cuInit" as gpu_cu_init(a whole number) gives a whole number
@@ -64,6 +86,20 @@ kind gpu_numbers with at, count
     end
 end
 
+# bytes on the card, for kernels of your own: where they start there, and how many there are
+kind gpu_bytes with at, size
+    to shown with self
+        return self's size + " bytes on the graphics card"
+    end
+end
+
+# a kernel of your own: its name, the card's handle for it, and each of its inputs' types, as its .entry says
+kind gpu_kernel with name, handle, inputs
+    to shown with self
+        return "the kernel " + self's name + " on the graphics card"
+    end
+end
+
 set gpu_started to no
 set gpu_state to "not started"
 set gpu_card to 0
@@ -72,6 +108,7 @@ set gpu_module to nothing
 set gpu_functions to empty dictionary
 set gpu_pool to empty dictionary
 set gpu_launches to empty dictionary
+set gpu_modules to empty dictionary # each PTX text of yours loaded, its module
 
 # ---------- the card ----------
 
@@ -124,6 +161,9 @@ end
 # numbers on the card, as a list
 to download with g
     gpu_ready()
+    if gpu_is_bytes(g)
+        fail with "download brings back numbers, as upload and the rest make; for bytes, download_bytes"
+    end
     set n to g's count
     gpu_check(gpu_cu_sync(), "finish its work")
     set made to empty list
@@ -155,6 +195,14 @@ end
 # over, would wait for at every step
 to free with g
     gpu_ready()
+    if gpu_is_bytes(g) # bytes of yours: back to the driver
+        if g's at is not 0
+            gpu_check(gpu_cu_free(g's at), "give memory back")
+            set at of g to 0
+            set size of g to 0
+        end
+        return nothing
+    end
     if g's at is not 0
         if not (g's count is in gpu_pool)
             set item g's count of gpu_pool to record with places empty list, kept 0
@@ -866,32 +914,385 @@ to gpu_function with name
         return item name of gpu_functions
     end
     if gpu_module is nothing
-        set slot to 8 bytes
-        set log to 4096 bytes
-        set options to 8 bytes
-        set item 1 of options to 5 # CU_JIT_ERROR_LOG_BUFFER
-        set item 5 of options to 6 # CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES
-        set values to 16 bytes
-        gpu_convert(3, (list of gpu_address_of(log, log, 0), 4096), values)
-        set status to gpu_cu_load(slot, gpu_code(), 2, options, values)
-        if status is not 0
-            set n to 0
-            repeat while n is less than 4096 and item (n + 1) of log is not 0
-                add 1 to n
-            end
-            set said to ""
-            if n is greater than 0
-                set said to ": " + (items 1 to n of log) as text
-            end
-            fail with "the graphics card couldn't take gpu.folio's code (" + gpu_error_name(status) + ")" + said
-        end
-        set gpu_module to gpu_whole_in(slot)
+        set gpu_module to gpu_loaded(gpu_code(), "gpu.folio's code")
     end
     set slot to 8 bytes
     gpu_check(gpu_cu_function(slot, gpu_module, name), "find its code for " + name)
     set found to gpu_whole_in(slot)
     set item name of gpu_functions to found
     return found
+end
+
+# A module of PTX loaded, the driver making it the card's own: the card's handle for it, or a `fail with` that
+# says what the driver said of it, with its line (the driver's log, kept in 4,096 bytes of the program's)
+to gpu_loaded with ptx, whose
+    set slot to 8 bytes
+    set log to 4096 bytes
+    set options to 8 bytes
+    set item 1 of options to 5 # CU_JIT_ERROR_LOG_BUFFER
+    set item 5 of options to 6 # CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES
+    set values to 16 bytes
+    gpu_convert(3, (list of gpu_address_of(log, log, 0), 4096), values)
+    set status to gpu_cu_load(slot, ptx, 2, options, values)
+    if status is not 0
+        set n to 0
+        repeat while n is less than 4096 and item (n + 1) of log is not 0
+            add 1 to n
+        end
+        set said to ""
+        if n is greater than 0
+            set said to ": " + (items 1 to n of log) as text
+        end
+        fail with "the graphics card couldn't take " + whose + " (" + gpu_error_name(status) + ")" + said
+    end
+    return gpu_whole_in(slot)
+end
+
+# ---------- kernels of your own ----------
+
+# A kernel of your own, from PTX: a module's text (.version, .target, then its functions) and the name of one
+# of its .entry functions. The module is loaded once, however many of its kernels are asked for; each input's
+# type is as the .entry's .param says.
+to kernel with ptx, name
+    gpu_ready()
+    if not gpu_is_text(ptx) or not gpu_is_text(name)
+        fail with "kernel needs the PTX, as text, and the name of a kernel in it"
+    end
+    set inputs to gpu_entry_inputs(ptx, name)
+    if not (ptx is in gpu_modules)
+        set item ptx of gpu_modules to gpu_loaded(ptx, "this PTX")
+    end
+    set slot to 8 bytes
+    gpu_check(gpu_cu_function(slot, item ptx of gpu_modules, name), "find the kernel " + name)
+    return gpu_kernel(name, gpu_whole_in(slot), inputs)
+end
+
+# a kernel run on a grid of blocks of threads (each a number, or a list of 1 to 3: x, y and z), given inputs
+to launch with k, grid, block, inputs
+    launch_with(k, grid, block, 0, inputs)
+end
+
+# The same, each block with `shared` bytes of the card's fast memory, which the kernel has as its
+# `.extern .shared` array. Each input goes in its .param's 8 bytes as its type says: a place on the card for a
+# 64-bit one given numbers or bytes on the card, a float for .f32, a double for .f64, and a whole number,
+# checked against its type's range, for the rest.
+to launch_with with k, grid, block, shared, inputs
+    gpu_ready()
+    if not gpu_is_kernel(k)
+        fail with "launch needs a kernel, as kernel(ptx, name) makes, not " + k
+    end
+    set g to gpu_extent(grid, "grid", k)
+    set b to gpu_extent(block, "block", k)
+    if not gpu_is_whole(shared) or shared is less than 0
+        fail with "the shared memory for " + k's name + " is a whole number of bytes, not " + shared
+    end
+    set wanted to k's inputs
+    if not gpu_is_list(inputs)
+        fail with "launch gives " + k's name + " its inputs in a list"
+    end
+    if length of inputs is not length of wanted
+        fail with k's name + " takes " + length of wanted + " inputs (" + (join wanted with ", ") + "), not " + length of inputs
+    end
+    set n to length of inputs
+    set room to n
+    if room is 0
+        set room to 1
+    end
+    set values to (8 * room) bytes
+    for each j from 1 to n
+        gpu_put_input(values, j, item j of inputs, item j of wanted, k's name)
+    end
+    set base to gpu_address_of(values, values, 0)
+    set places to empty list
+    for each j from 1 to room
+        add base + 8 * (j - 1) to places
+    end
+    set params to (8 * room) bytes
+    gpu_convert(3, places, params)
+    gpu_check(gpu_cu_launch(k's handle, item 1 of g, item 2 of g, item 3 of g, item 1 of b, item 2 of b, item 3 of b, shared, nothing, params, nothing),
+        "run the kernel " + k's name)
+end
+
+# input j, of its PTX type, in its 8 bytes
+to gpu_put_input with values, j, v, type, name
+    set place to 8 * (j - 1) + 1
+    set said to "input " + j + " of " + name + " (" + type + ")"
+    if gpu_is_numbers(v) or gpu_is_bytes(v)
+        if type is not ".u64" and type is not ".b64" and type is not ".s64"
+            fail with said + " can't be numbers on the card: a place on the card is 64 bits, a .u64"
+        end
+        gpu_memory's put(values, place, v's at, "an unsigned long whole number")
+        return nothing
+    end
+    if not gpu_is_number(v)
+        fail with said + " is a number, not " + v
+    end
+    if type is ".f32"
+        gpu_memory's put(values, place, v, "a float")
+    else if type is ".f64"
+        gpu_memory's put(values, place, v, "a number")
+    else
+        if not gpu_is_whole(v)
+            fail with said + " is a whole number, not " + v
+        end
+        set kinds to dictionary where ".u8" is "a byte", ".s8" is "a signed byte", ".b8" is "a byte", ".u16" is "an unsigned short whole number",
+            ".s16" is "a short whole number", ".b16" is "an unsigned short whole number", ".u32" is "an unsigned whole number",
+            ".s32" is "a whole number", ".b32" is "an unsigned whole number", ".u64" is "an unsigned long whole number",
+            ".s64" is "a long whole number", ".b64" is "an unsigned long whole number"
+        set c_kind to item type of kinds
+        if v is less than 0 and (type is ".b8" or type is ".b16" or type is ".b32" or type is ".b64") # bits: a negative number's own
+            set c_kind to item (".s" + items 3 to (length of type) of type) of kinds
+        end
+        try
+            gpu_memory's put(values, place, v, c_kind)
+        if it fails
+            fail with said + " can't hold " + v
+        end
+    end
+end
+
+# a grid's or a block's size, as x, y and z
+to gpu_extent with size, what, k
+    set made to list of 1, 1, 1
+    if gpu_is_number(size)
+        set size to list of size
+    end
+    if not gpu_is_list(size) or length of size is 0 or length of size is greater than 3
+        fail with "the " + what + " for " + k's name + " is a whole number, or a list of 1 to 3 (x, y, z), not " + size
+    end
+    for each j from 1 to length of size
+        set x to item j of size
+        if not gpu_is_number(x) or not gpu_is_whole(x) or x is less than 1
+            fail with "the " + what + " for " + k's name + " is whole numbers from 1 up, not " + size
+        end
+        set item j of made to x
+    end
+    return made
+end
+
+# each input's type, as the .entry called name in the PTX says, by its .param lines
+to gpu_entry_inputs with ptx, name
+    set words to gpu_without_comments(ptx)
+    set seen to empty list
+    set pieces to split words by ".entry"
+    for each k from 2 to length of pieces
+        set piece to item k of pieces
+        set chars to split piece by ""
+        set at to 1
+        repeat while at is at most length of chars and gpu_is_space(item at of chars)
+            add 1 to at
+        end
+        set found to ""
+        repeat while at is at most length of chars and gpu_in_name(item at of chars)
+            set found to found + item at of chars
+            add 1 to at
+        end
+        if found is not ""
+            add found to seen
+        end
+        if found is name
+            repeat while at is at most length of chars and gpu_is_space(item at of chars)
+                add 1 to at
+            end
+            if at is greater than length of chars or item at of chars is not "("
+                fail with "the .entry " + name + " in this PTX has no ( for its inputs"
+            end
+            set inside to ""
+            add 1 to at
+            repeat while at is at most length of chars and item at of chars is not ")"
+                set inside to inside + item at of chars
+                add 1 to at
+            end
+            return gpu_params(inside, name)
+        end
+    end
+    if length of seen is 0
+        fail with "this PTX has no .entry: a kernel is a .entry function"
+    end
+    fail with "this PTX has no .entry called " + name + ": it has " + join seen with ", "
+end
+
+# the types of a .entry's inputs, from what's between its brackets
+to gpu_params with inside, name
+    set made to empty list
+    set types to list of ".u8", ".u16", ".u32", ".u64", ".s8", ".s16", ".s32", ".s64", ".b8", ".b16", ".b32", ".b64", ".f32", ".f64"
+    for each param in split inside by ","
+        set tokens to empty list
+        for each token in split (gpu_spaced(param)) by " "
+            if token is not ""
+                add token to tokens
+            end
+        end
+        if length of tokens is greater than 0
+            set found to nothing
+            for each token in tokens
+                if token is in types
+                    set found to token
+                end
+            end
+            if found is nothing or position of "[" in param is not 0
+                fail with "the kernel " + name + " takes " + gpu_trimmed(param) + ", and launch gives a kernel numbers, whole numbers and places on the card (" + (join types with ", ") + ")"
+            end
+            add found to made
+        end
+    end
+    return made
+end
+
+# PTX without its // and /* */ comments
+to gpu_without_comments with ptx
+    set chars to split ptx by ""
+    set made to empty list
+    set n to length of chars
+    set k to 1
+    repeat while k is at most n
+        set c to item k of chars
+        if c is "/" and k is less than n and item (k + 1) of chars is "/"
+            repeat while k is at most n and item k of chars is not "\n"
+                add 1 to k
+            end
+        else if c is "/" and k is less than n and item (k + 1) of chars is "*"
+            set k to k + 2
+            repeat while k is less than n and not (item k of chars is "*" and item (k + 1) of chars is "/")
+                add 1 to k
+            end
+            set k to k + 2
+            add " " to made
+        else
+            add c to made
+            add 1 to k
+        end
+    end
+    return join made with ""
+end
+
+# text with its line ends and tabs as spaces
+to gpu_spaced with words
+    set made to empty list
+    for each c in words
+        if gpu_is_space(c)
+            add " " to made
+        else
+            add c to made
+        end
+    end
+    return join made with ""
+end
+
+to gpu_trimmed with words
+    set chars to split (gpu_spaced(words)) by ""
+    set a to 1
+    set b to length of chars
+    repeat while a is at most b and item a of chars is " "
+        add 1 to a
+    end
+    repeat while b is at least a and item b of chars is " "
+        set b to b - 1
+    end
+    return join (items a to b of chars) with ""
+end
+
+to gpu_is_space with c
+    return c is " " or c is "\n" or c is "\t" or c is "\r"
+end
+
+# a letter of a PTX name: letters, digits, _ and $
+to gpu_in_name with c
+    return position of c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$" is not 0
+end
+
+to gpu_is_kernel with v
+    try
+        return v's handle is not nothing and v's inputs is not nothing
+    if it fails
+        return no
+    end
+end
+
+to gpu_is_bytes with v
+    try
+        return v's size is not nothing and v's at is not nothing
+    if it fails
+        return no
+    end
+end
+
+to gpu_is_text with v
+    try
+        set probe to uppercase of v
+        return yes
+    if it fails
+        return no
+    end
+end
+
+to gpu_is_number with v
+    try
+        set probe to v - 0
+        return yes
+    if it fails
+        return no
+    end
+end
+
+to gpu_is_whole with v
+    return gpu_is_number(v) and v is (v rounded down)
+end
+
+to gpu_is_list with v
+    if gpu_is_text(v) or gpu_is_number(v)
+        return no
+    end
+    try
+        set probe to length of v
+        set probe to items 1 to 0 of v
+        return yes
+    if it fails
+        return no
+    end
+end
+
+# ---------- bytes on the card ----------
+
+# bytes put on the card, for a kernel of yours that takes whole numbers, or anything else: memory.folio puts
+# numbers of C's kinds into bytes, and takes them out
+to upload_bytes with data
+    gpu_ready()
+    set size to length of data
+    if size is 0
+        return gpu_bytes(0, 0)
+    end
+    set slot to 8 bytes
+    if gpu_cu_alloc(slot, size) is not 0
+        give_back_memory()
+        set slot to 8 bytes
+        gpu_check(gpu_cu_alloc(slot, size), "find room for " + size + " bytes")
+    end
+    set made to gpu_bytes(gpu_whole_in(slot), size)
+    gpu_check(gpu_cu_up(made's at, data, size), "take bytes to the card")
+    return made
+end
+
+# size bytes on the card, each 0
+to room with size
+    if not gpu_is_whole(size) or size is less than 0
+        fail with "room is a whole number of bytes, not " + size
+    end
+    return upload_bytes((size) bytes)
+end
+
+# bytes on the card, back as bytes, once the card has done all it was asked to
+to download_bytes with g
+    gpu_ready()
+    if not gpu_is_bytes(g)
+        fail with "download_bytes brings back bytes on the card, as upload_bytes and room make; for numbers, download"
+    end
+    gpu_check(gpu_cu_sync(), "finish its work")
+    set made to (g's size) bytes
+    if g's size is greater than 0
+        gpu_check(gpu_cu_down(made, g's at, g's size), "bring bytes back from the card")
+    end
+    return made
 end
 
 # ---------- the driver ----------

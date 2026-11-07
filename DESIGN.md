@@ -7266,3 +7266,39 @@ did harm, but would break programs that write `\}` beside `\{`, as properties.te
 check` could say so instead, as it says other likely slips. A test runs `\r`, `\t` and `\n` together, `\r` with a
 value before it, `\\r`, and `\q`, on every engine, in the compiler written in Folio and through tidy, and a
 machine code case does the same; with either reader's `\r` taken out, it fails.
+
+## 176. Kernels of your own on the graphics card
+
+gpu.folio ran about 45 kernels, written in it in PTX, NVIDIA's assembly for the card, which the driver makes the
+card's own as it loads: the maths learn.folio and the GPT need. A program could use those and nothing else, so
+the card was there for what gpu.folio had thought of, and for nothing a program needed of its own. CUDA's way is
+to write a kernel in C++ and compile it with nvcc, from the CUDA toolkit; gpu.folio needs only the driver, and
+the driver takes PTX.
+
+- **kernel(ptx, name)** loads a module of PTX, once for its text however many of its kernels are asked for, and
+  finds the .entry called name. Each input's type comes from the .entry's own `.param` lines, so a launch packs
+  each as the kernel reads it, with nothing more said. A name the PTX hasn't is a mistake that lists the ones
+  it has; PTX the driver can't take is a mistake with the driver's own log, which says the line and what's
+  wrong there: the same loading gpu.folio's own code has, now one function for both.
+- **launch(kernel, grid, block, inputs)**, and **launch_with** for bytes of shared memory a block, run it on a
+  grid of blocks of threads, each a number or 1 to 3 axes. Numbers or bytes on the card go to a 64-bit input as
+  where they are; a number to `.f32` as a float and to `.f64` as a double; a whole number to the rest, checked
+  against its type's range by memory.folio, which writes each input into its 8 bytes. A count, a type, a range,
+  a whole number or a grid that's wrong is said before the card sees it, naming the input and its type. A
+  launch doesn't wait for the card, as CUDA's don't: the next download, download_bytes or finish() does, and a
+  mistake the kernel made (writing where it mustn't) is said there; after it the card does nothing more for the
+  program, as CUDA leaves a context.
+- **upload_bytes, room and download_bytes** keep bytes on the card, as a kernel wants for whole numbers or
+  anything else that isn't 32-bit floats; memory.folio puts C's kinds of number into bytes and takes them out.
+  `free` gives bytes back to the driver at once, as they don't come in the sizes training reuses.
+
+A launch of a kernel with four inputs takes 14 µs on a GTX 1650, as long as gpu.folio's own `plus` (most of it
+the driver's), so a kernel of your own costs nothing more than one of gpu.folio's.
+
+A test builds a program for the processor that loads six kernels from one module and checks each against what it
+must give: a saxpy past a block's edge, whole numbers squared in bytes, a 2D grid of 2D blocks, sums in shared
+memory, a double, a byte and a 64-bit whole number as inputs, and a kernel with no inputs on a 3D grid; then every
+mistake a launch can make, a name the module hasn't, PTX with an instruction that isn't one, and a kernel that
+writes to address 0. Putting a float input as a double, or launching with no shared memory, makes it fail. PTX is
+what's needed to write one, which is the card's assembly; kernels written in Folio itself, compiled to PTX, would
+be the next step, and Vulkan's compute for cards that aren't NVIDIA's after that.

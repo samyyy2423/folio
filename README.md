@@ -617,6 +617,8 @@ bytes and dictionaries:
 - [`gpu.folio`](tools/gpu.folio) works on numbers on an NVIDIA graphics card, through CUDA's driver: `gpu's
   upload(numbers)`, then `plus`, `times`, `relu`, `exp`, `matmul` and `sum` there, thousands at once, and
   `gpu's download` to bring them back; a 2,048 by 2,048 matrix multiply 270 times as fast as on the processor.
+  Kernels of your own, in PTX: `gpu's kernel(ptx, "saxpy")`, then `gpu's launch(saxpy, blocks, threads,
+  inputs)` on a grid of up to 3 axes, with shared memory, and bytes on the card for whole numbers.
 - [`onnx.folio`](tools/onnx.folio) runs a model trained in PyTorch, or anything
   else that saves ONNX, through ONNX Runtime (Windows 11 has it; elsewhere,
   from its releases): `onnx's run(model, dictionary where "X" is x)`, arrays

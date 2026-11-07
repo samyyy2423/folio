@@ -6,6 +6,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Kernels of your own on the graphics card.** gpu.folio's `kernel(ptx, name)` loads PTX, NVIDIA's assembly for
+  the card, and `launch(kernel, grid, block, inputs)` runs it on up to 3 axes of blocks of threads, each input
+  packed as its `.param` says; `launch_with` adds shared memory, and `upload_bytes`, `room` and `download_bytes`
+  keep whole numbers and anything else on the card. Mistakes name the input and its type, and PTX the driver
+  can't take shows its log, with the line (DESIGN §176).
 - **`\r` in text is a carriage return.** It was an `r`, as any other letter after a backslash is that letter,
   so `"\r"` meant for a line's end took `r`s off words. Now `"\r\n"` is Windows' line end, on every engine and in
   machine code, and a carriage return written back as code is `\r` (DESIGN §175).
