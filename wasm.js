@@ -790,6 +790,13 @@ class WasmCompiler extends Scope {
     this.c = this.f.code;
     const c = this.c;
     if (!parent) c.emit("local.get", 0).emit("global.set", ctx.maxSteps).emit("call", ctx.init.index).emit("call", ctx.im.grant).emit("global.set", ctx.left);
+    // A mistake the code checks for on its way, a name with no value yet or a division by 0, branches to the
+    // function's end, past its return, where the mistake is made: the code it's checked in calls nothing, so V8
+    // keeps its numbers in registers (DESIGN §172). In a `try` it's made where it is, for the `try` to catch.
+    this.tries = 0; // the `try`s being written
+    this.missing = [this.f.local(I32), this.f.local(I32), this.f.local(I32)]; // noValueYet's inputs
+    this.dividing = [this.f.local(F64), this.f.local(F64), this.f.local(I32)]; // a / b, b 0, and where
+    this.e("block").e("block");
     const captured = ctx.captured.get(body);
     this.numberSet = this.numericSlots(body, captured, parent ? params.length : 0);
     this.numbers = []; // slot -> { value, box } for the variables that only ever hold numbers
@@ -817,6 +824,12 @@ class WasmCompiler extends Scope {
     }
     for (const s of body) this.statement(s);
     if (parent) c.emit("ref.null", "eq");
+    this.e("return").e("end");
+    for (const l of this.missing) this.e("local.get", l);
+    this.e("call", ctx.R.noValueYet).e("unreachable").e("end");
+    const [a, b, k] = this.dividing;
+    this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
+    this.e("local.get", k).e("call", ctx.R.arithRest).e("unreachable");
   }
 
   // Type-directed unboxing: the variables of this function (not captured, not inputs) that can only ever
@@ -901,8 +914,15 @@ class WasmCompiler extends Scope {
       if (e.op !== "/") return void this.e({ "+": "f64.add", "-": "f64.sub", "*": "f64.mul" }[e.op]);
       const [a, b] = [this.temp(F64), this.temp(F64)];
       this.e("local.set", b).e("local.set", a).e("local.get", b).e("f64.const", 0).e("f64.eq").e("if");
-      this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
-      this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R.arithRest).e("unreachable").e("end");
+      if (this.tries) {
+        this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
+        this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R.arithRest).e("unreachable").e("end");
+      } else {
+        const [da, db, dk] = this.dividing;
+        this.keepCount();
+        this.e("local.get", a).e("local.set", da).e("local.get", b).e("local.set", db).e("i32.const", this.pos(e.at)).e("local.set", dk);
+        this.e("br", this.labels - 1).e("end");
+      }
       return void this.e("local.get", a).e("local.get", b).e("f64.div");
     }
     if (e.kind === "negate" && this.unboxed(e)) return void (this.exprNum(e.operand), this.e("f64.neg"));
@@ -981,7 +1001,16 @@ class WasmCompiler extends Scope {
   // A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
   noValueYet(name, k) {
     const [at, n] = this.ctx.spelled(name);
-    this.e("if").e("i32.const", at).e("i32.const", n).e("i32.const", k).e("call", this.ctx.R.noValueYet).e("end");
+    if (this.tries) return void this.e("if").e("i32.const", at).e("i32.const", n).e("i32.const", k).e("call", this.ctx.R.noValueYet).e("end");
+    this.e("if");
+    this.keepCount();
+    [at, n, k].forEach((v, i) => this.e("i32.const", v).e("local.set", this.missing[i]));
+    this.e("br", this.labels - 2).e("end");
+  }
+
+  // on the way to a mistake at the function's end, past the loops' catch_all: the steps left, in the global
+  keepCount() {
+    if (this.lefts.length) this.e("local.get", this.lefts.at(-1)).e("global.set", this.ctx.left);
   }
 
   // text made from the program's data where it's needed, not when the program starts, as a mistake's words are
@@ -1034,12 +1063,16 @@ class WasmCompiler extends Scope {
     this.e("global.get", ctx.left).e("local.set", counting);
     this.lefts.push(counting);
     this.e("try");
+    // the loop, inside one that asks for more steps when its count runs out, so the round itself makes no call
+    // (DESIGN §172)
     this.stops.push(this.labels);
-    this.e("block").e("loop");
+    this.e("block").e("loop").e("block").e("loop");
     test();
-    this.e("br_if", 1);
+    this.e("br_if", 3);
     body();
-    this.tick(k);
+    this.e("local.get", counting).e("i32.const", 1).e("i32.sub").e("local.tee", counting).e("i32.const", 0).e("i32.lt_s").e("br_if", 1);
+    this.e("br", 0).e("end").e("end");
+    this.e("i32.const", k).e("call", ctx.im.refill).e("local.tee", counting).e("global.set", ctx.left);
     this.e("br", 0).e("end").e("end");
     this.stops.pop();
     this.e("local.get", counting).e("global.set", ctx.left);
@@ -1260,7 +1293,9 @@ class WasmCompiler extends Scope {
         const got = this.temp(EQ);
         this.e("global.get", this.ctx.depth).e("local.set", depth).e("call", im.tryStart);
         this.e("block").e("block", EQ).e("try");
+        this.tries++;
         this.block(s.body);
+        this.tries--;
         this.e("br", 2); // nothing went wrong: past the handler
         this.e("catch", this.ctx.mistake).e("drop").e("drop").e("br", 1); // what `if it fails with` gets
         this.e("catch_all");
@@ -1268,6 +1303,10 @@ class WasmCompiler extends Scope {
         this.e("call", im.caughtValue).e("br", 1);
         this.e("end").e("unreachable").e("end");
         this.e("local.set", got).e("local.get", depth).e("global.set", this.ctx.depth);
+        // in a loop, its count the smaller of its own and the global's: a call's steps went into the global, and
+        // the mistake came back past where the call would have given them to the loop (DESIGN §172)
+        const counting = this.lefts.at(-1);
+        if (counting !== undefined) this.e("local.get", counting).e("global.get", this.ctx.left).e("local.get", counting).e("global.get", this.ctx.left).e("i32.lt_s").e("select").e("local.set", counting);
         if (s.name) this.store(s.name, () => this.e("local.get", got));
         this.block(s.handler);
         this.e("end");

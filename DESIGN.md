@@ -7109,3 +7109,60 @@ The digit reader now learns its 10 rounds on the processor in **0.65 s**, from 1
 design: its numbers are 32-bit floats, 8 to a register where Folio's doubles are 4, its multiplies fuse a multiply
 and an add, and its allocator hands back memory it hasn't zeroed. Folio's numbers are doubles, added in Folio's
 own order, everywhere.
+
+## 172. WebAssembly loops V8 can keep in registers, and a step count put right
+
+The website runs programs on the WebAssembly engine, and its loops were 2 to 6 times as slow as the same loop in
+plain JavaScript: 100 million rounds of `add i to total`, run again and again in one process, took 332 ms, to
+JavaScript's 77, though `total` and `i` were already f64 locals (DESIGN §146) and each round was an f64 compare,
+an add and a count of steps. A loop built by hand with the same instructions ran in 84 ms. What made the
+difference was calls in the round that never happen: the check that a name has a value called `noValueYet` inside
+an `if`, a division called `arithRest` for 0, and the count of steps called `refill` when it ran out. V8's
+optimizing compiler keeps a loop's numbers in registers only when nothing in the loop can call out, taken or not.
+
+- **Mistakes at the function's end.** Each function is now `block block`, its code, `return`, then the two
+  mistakes: a name with no value yet, and a division by 0. A check in the code puts what the mistake needs in
+  locals and branches there. Inside a `try` the mistake is still made where it is, as a branch out of a `try`
+  would pass its handler; on the way out of a loop, its count of steps goes into the global first.
+- **More steps outside the round.** A loop is two: the inner one runs rounds and counts down, and branches out
+  to the outer one when its count runs out, which asks JavaScript for more and goes round again.
+- **A count of steps put right.** A mistake that a `try` inside a loop caught, coming back from a call, left the
+  loop counting from where it was before the call, as the steps the call took were in the global: a program
+  limited to 500 steps did three times as many rounds on WebAssembly as on the VM and the JIT. After a `try`
+  catches, the loop's count is now the smaller of its own and the global's, as a loop's `catch_all` already did;
+  a test runs mistakes from loops caught further out under four step limits, and every engine stops at the same
+  place.
+
+wasm.folio does each the same way, and still makes wasm.js's bytes on every program the engines are tested
+with, and itself; folio.wasm is made again, 2.14 MB where it was 2.05, as each of its functions has the
+two mistakes at its end.
+
+What it gains depends on V8 having optimized the code, and V8 optimizes a WebAssembly function for its next call,
+never in the middle of one: there is no on-stack replacement. A program's top level is one function, called once,
+so a Run on the website, or the first run in a process, goes through its loops in V8's baseline compiler from
+start to end. Later runs of the same module, in the same process, get the optimized code:
+
+| on the WebAssembly engine, Node.js | first run, before | first run, now | later runs, before | later runs, now | plain JavaScript |
+|:--|--:|--:|--:|--:|--:|
+| loop: 100 million rounds of `add` | 394 ms | 393 ms | 332 ms | 95 ms | 77 ms |
+| float: 30 million of `1 / (i * i)` | 204 ms | 169 ms | 125 ms | 60 ms | 38 ms |
+| primes | 314 ms | 287 ms | 89 ms | 85 ms | 58 ms |
+| fib(32) | 166 ms | 162 ms | 134 ms | 126 ms | 23 ms |
+
+In Chrome, on the playground, the loop's Run went from 740 to 840 ms to 620 to 700. A Run as fast as a later run
+wants a program's loops in functions of their own, which V8 would optimize while they're called again; that's
+next. fib calls a function V8 has already optimized, so it's what it was.
+
+The JIT's call trail, the function and the place of each call in progress, is two arrays made at their full size
+once (2,000, as deep as the JIT goes before the VM takes over), not grown: fib on the JIT 130 to 120 ms. Its
+loops stay slower than WebAssembly's, as V8 boxes a number that a helper's other way could make text; that wants
+the JIT to know which names only hold numbers, as WebAssembly does. (JavaScript has on-stack replacement, so the
+JIT's first run is as fast as its later ones.)
+
+**Native code.** memory.folio's `get_many` made its list by copying a million zeros and adding the rest one at a
+time; it has `rt_k_room`'s block now (DESIGN §171): 10 million floats back from bytes in 18 ms, not 47, and the
+floats program in 120 ms, not 150 (C 67). A call stays about 1.4 times C's: taking out the count of calls in
+progress, the function's number in its frame or the call's number after it each saved about 2% of fib(32), and
+each is what makes "too much recursion" come at the same depth as on every engine and a mistake's trail say
+where each call came from. On Linux, under WSL, the new kernels give the JavaScript engine's numbers to the last
+bit, and the digit reader learns on the processor in 0.8 s.

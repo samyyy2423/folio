@@ -6,11 +6,13 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
-- **Training on the processor, twice as fast.** The digit reader learns its 10 rounds on the processor in
-  0.65 s, where it took 1.41 (PyTorch 0.50): Adam 4 at a time with AVX, `relu_gradient` in one go, `exp` in
-  machine code for `cross_entropy`, `matmul_turned` for a gradient without a turned copy, a matrix multiply's last
-  columns added up in registers, and arrays' room made without a copy. Every number is still Folio's own, to the
-  last bit (DESIGN §171).
+- **WebAssembly loops V8 can keep in registers.** A mistake the code checks for is made at the function's end, and
+  asking for more steps is outside the round, so once V8 has optimized a loop it keeps its numbers in registers:
+  100 million rounds of `add`, run again in one process, take 95 ms, not 332 (plain JavaScript 77). A first run,
+  as a Run on the website is, stays in V8's baseline compiler, which has no on-stack replacement for WebAssembly:
+  in Chrome that loop goes from about 800 ms to about 650. A step limit now stops the WebAssembly engine where it
+  stops the others when a `try` in a loop catches a mistake from a call. memory.folio's `get_many` is 2.6 times
+  as fast (DESIGN §172).
 - **Training as GPT-2 was trained.** learn.folio has `adamw` (weight decay), `clip_gradients` and
   `gradient_norm`, `cosine_rate` (a warmup, then down along a cosine) and `dropout` with `training(yes)` and
   `training(no)`, on the card and on the processor. On the card, decay and clipping are in Adam's launch, with

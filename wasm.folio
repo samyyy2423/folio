@@ -1426,7 +1426,13 @@ to wasm_function with cx, parent, label, params, body, place
         set f to wasm_func(m, label, inputs, (list of wasm_eq))
     end
     set fc to record with cx cx, parent parent, scope scope, f f, numbers empty dictionary, locals empty dictionary, number_set nothing,
-        slot_array nothing, env_local nothing, stops empty list, lefts empty list
+        slot_array nothing, env_local nothing, stops empty list, lefts empty list, tries 0, missing nothing, dividing nothing
+    # A mistake the code checks for on its way, a name with no value yet or a division by 0, branches to the
+    # function's end, past its return, where the mistake is made: the code it's checked in calls nothing, so V8
+    # keeps its numbers in registers (DESIGN §172). In a `try` it's made where it is, for the `try` to catch.
+    set missing of fc to list of wasm_local(f, wasm_i32), wasm_local(f, wasm_i32), wasm_local(f, wasm_i32) # R.noValueYet's inputs
+    set dividing of fc to list of wasm_local(f, wasm_f64), wasm_local(f, wasm_f64), wasm_local(f, wasm_i32) # a / b, b 0, and where
+    wasm_asm(f, "block block")
     set captured to wasm_captured(scope, body)
     set inputs_count to 0
     if parent is not nothing
@@ -1472,6 +1478,10 @@ to wasm_function with cx, parent, label, params, body, place
     if parent is not nothing
         wasm_asm(f, "ref.null eq")
     end
+    set held to missing of fc
+    wasm_asm(f, "return end local.get " + item 1 of held + " local.get " + item 2 of held + " local.get " + item 3 of held + " call R.noValueYet unreachable end")
+    set held to dividing of fc
+    wasm_asm(f, "i32.const 3 local.get " + item 1 of held + " struct.new num local.get " + item 2 of held + " struct.new num local.get " + item 3 of held + " call R.arithRest unreachable")
     return fc
 end
 
@@ -1617,8 +1627,16 @@ to wasm_expr_num with fc, e
             set a to wasm_temp(fc, wasm_f64)
             set b to wasm_temp(fc, wasm_f64)
             wasm_x(fc, "local.set " + b + " local.set " + a + " local.get " + b + " f64.const 0 f64.eq if")
-            wasm_x(fc, "i32.const 3 local.get " + a + " struct.new num local.get " + b + " struct.new num")
-            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.arithRest unreachable end local.get " + a + " local.get " + b + " f64.div")
+            if tries of fc is greater than 0
+                wasm_x(fc, "i32.const 3 local.get " + a + " struct.new num local.get " + b + " struct.new num")
+                wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.arithRest unreachable end")
+            else
+                wasm_keep_count(fc)
+                set held to dividing of fc
+                wasm_x(fc, "local.get " + a + " local.set " + item 1 of held + " local.get " + b + " local.set " + item 2 of held + " i32.const " + wasm_pos(fc, at of e) + " local.set " + item 3 of held)
+                wasm_x(fc, "br " + (labels of code of f of fc - 1) + " end")
+            end
+            wasm_x(fc, "local.get " + a + " local.get " + b + " f64.div")
         end
         return nothing
     end
@@ -1695,7 +1713,22 @@ end
 # A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
 to wasm_no_value_yet with fc, wanted, k
     set place to wasm_place(fc, wanted)
-    wasm_x(fc, "if i32.const " + item 1 of place + " i32.const " + item 2 of place + " i32.const " + k + " call R.noValueYet end")
+    if tries of fc is greater than 0
+        wasm_x(fc, "if i32.const " + item 1 of place + " i32.const " + item 2 of place + " i32.const " + k + " call R.noValueYet end")
+        return nothing
+    end
+    wasm_x(fc, "if")
+    wasm_keep_count(fc)
+    set held to missing of fc
+    wasm_x(fc, "i32.const " + item 1 of place + " local.set " + item 1 of held + " i32.const " + item 2 of place + " local.set " + item 2 of held + " i32.const " + k + " local.set " + item 3 of held)
+    wasm_x(fc, "br " + (labels of code of f of fc - 2) + " end")
+end
+
+# on the way to a mistake at the function's end, past the loops' catch_all: the steps left, in the global
+to wasm_keep_count with fc
+    if length of lefts of fc is greater than 0
+        wasm_x(fc, "local.get " + wasm_top(lefts of fc) + " global.set g.left")
+    end
 end
 
 # where text's units are in the program's data, as bytes, and how many there are, for text made where it's needed
@@ -1750,20 +1783,22 @@ to wasm_loop_start with fc
     set kept to lefts of fc
     add counting to kept
     wasm_x(fc, "try")
+    # the loop, inside one that asks for more steps when its count runs out, so the round itself makes no call
+    # (DESIGN §172)
     set kept to stops of fc
     add labels of code of f of fc to kept
-    wasm_x(fc, "block loop")
+    wasm_x(fc, "block loop block loop")
     return record with outer outer, counting counting
 end
 
 to wasm_loop_body with fc
-    wasm_x(fc, "br_if 1")
+    wasm_x(fc, "br_if 3")
 end
 
 to wasm_loop_end with fc, k, state
     set counting to counting of state
-    wasm_tick(fc, k)
-    wasm_x(fc, "br 0 end end")
+    wasm_x(fc, "local.get " + counting + " i32.const 1 i32.sub local.tee " + counting + " i32.const 0 i32.lt_s br_if 1 br 0 end end")
+    wasm_x(fc, "i32.const " + k + " call im.refill local.tee " + counting + " global.set g.left br 0 end end")
     set stops of fc to wasm_less_last(stops of fc)
     wasm_x(fc, "local.get " + counting + " global.set g.left catch_all")
     wasm_x(fc, "local.get " + counting + " global.get g.left local.get " + counting + " global.get g.left i32.lt_s select global.set g.left rethrow 0 end")
@@ -2028,10 +2063,18 @@ to wasm_statement with fc, s
         set depth to wasm_temp(fc, wasm_i32)
         set got to wasm_temp(fc, wasm_eq)
         wasm_x(fc, "global.get g.depth local.set " + depth + " call im.tryStart block block eq try")
+        set tries of fc to tries of fc + 1
         wasm_block(fc, body of s)
+        set tries of fc to tries of fc - 1
         wasm_x(fc, "br 2 catch 0 drop drop br 1") # past the handler if nothing went wrong; or what `if it fails with` gets
         wasm_x(fc, "catch_all call im.caught i32.eqz if rethrow 1 end call im.caughtValue br 1 end unreachable end") # going too deep, say: not ours
         wasm_x(fc, "local.set " + got + " local.get " + depth + " global.set g.depth")
+        # in a loop, its count the smaller of its own and the global's: a call's steps went into the global, and
+        # the mistake came back past where the call would have given them to the loop (DESIGN §172)
+        set counting to wasm_top(lefts of fc)
+        if counting is not nothing
+            wasm_x(fc, "local.get " + counting + " global.get g.left local.get " + counting + " global.get g.left i32.lt_s select local.set " + counting)
+        end
         if name of s is not nothing
             set local to wasm_store_start(fc, name of s)
             wasm_x(fc, "local.get " + got)

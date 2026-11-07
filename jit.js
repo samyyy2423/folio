@@ -252,8 +252,10 @@ function helpers(ats, print, draw, maxSteps, answer, disk, args = [], chance = s
   host.turtle = turtle;
   let steps = 0;
   let depth = 0; // a failed call needs no undoing: any error ends the run
-  const running = []; // for each call in progress, the function it runs, and where it was called (a position)
-  const from = [];
+  // for each call in progress, the function it runs, and where it was called (a position): made at their full
+  // size once, so noting a call is a store into each, not an array growing (DESIGN §172)
+  const running = new Array(MAX_DEPTH).fill(null);
+  const from = new Int32Array(MAX_DEPTH);
   const trail = () => {
     const calls = [];
     for (let i = depth - 1; i >= 0; i--) calls.push({ name: running[i].fn.name, at: ats[from[i]] });

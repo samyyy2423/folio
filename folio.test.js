@@ -680,6 +680,58 @@ test("try can't catch running out of steps, and the checker trusts it", () => {
   assert.deepEqual(problems('try\n    say 1\nif it fails with e\n    say 1 / 0\nend'), ["4:11 fails: can't divide by zero"]);
 });
 
+// The WebAssembly engine makes a mistake checked for in a loop (a name with no value yet, a division by 0) at
+// the function's end, past the loop (DESIGN §172): a `try` further out that catches it, and goes on, still
+// counts the steps every engine counts, so a step limit stops each at the same place
+test("a mistake in a loop, caught further out, leaves the steps where every engine has them", () => {
+  const source = `to sum_to with n
+    set total to 0
+    for each i from 1 to n
+        if i is 7
+            set total to total / 0
+        end
+        add i to total
+    end
+    return total
+end
+to check with n
+    for each i from 1 to n
+        if i is 5
+            add i to never
+        end
+    end
+end
+set caught to 0
+for each round from 1 to 300
+    try
+        say sum_to(round - (round / 3 rounded down) * 3 + 5)
+    if it fails with why
+        add 1 to caught
+    end
+    try
+        check(round - (round / 2 rounded down) * 2 + 4)
+    if it fails
+        add 1 to caught
+    end
+end
+say caught`;
+  for (const maxSteps of [500, 2_003, 7_777, 50_000]) {
+    const seen = {};
+    for (const engine of ENGINES) {
+      const said = [];
+      let stopped = null;
+      try {
+        run(source, (line) => said.push(line), { engine, maxSteps });
+      } catch (err) {
+        if (!(err instanceof FolioError)) throw err;
+        stopped = err.message;
+      }
+      seen[engine] = { said: said.length, last: said.at(-1), stopped };
+    }
+    for (const engine of ENGINES) assert.deepEqual(seen[engine], seen.vm, `${engine}, ${maxSteps} steps`);
+  }
+});
+
 // ---------- files and arguments ----------
 
 // Files in memory that keep a log of what was done to them.
