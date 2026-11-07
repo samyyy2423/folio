@@ -790,6 +790,7 @@ class WasmCompiler extends Scope {
     this.c = this.f.code;
     const c = this.c;
     if (!parent) c.emit("local.get", 0).emit("global.set", ctx.maxSteps).emit("call", ctx.init.index).emit("call", ctx.im.grant).emit("global.set", ctx.left);
+    this.inputs = parent ? params.length : 0; // an input always has a value: it's read with no check (DESIGN §174)
     // A mistake the code checks for on its way, a name with no value yet or a division by 0, branches to the
     // function's end, past its return, where the mistake is made: the code it's checked in calls nothing, so V8
     // keeps its numbers in registers (DESIGN §172). In a `try` it's made where it is, for the `try` to catch.
@@ -1045,6 +1046,124 @@ class WasmCompiler extends Scope {
     this.e("call", this.ctx.R.truthy);
   }
 
+  // an `if`'s or a `while`'s condition, as an i32: a comparison's yes or no as it is, anything else checked
+  // to be yes or no (DESIGN §174)
+  cond(e) {
+    if (e.kind === "compare") return this.compare(e);
+    this.expr(e);
+    this.truthy();
+  }
+
+  // whether a name is one of this function's inputs, which always have a value
+  isInput(name) {
+    const [depth, slot] = this.resolve(name);
+    return depth === 0 && slot <= this.inputs;
+  }
+
+  // A comparison, as an i32. With a whole number written in the program on one side, and a small whole number
+  // on the other, an i31 (from 2 up, as unsigned, as 0 and 1 are no and yes), they're compared here; anything
+  // else as before (DESIGN §174). Only there: inlined everywhere, the compiler's own code grew a fifth.
+  compare(e) {
+    const { R } = this.ctx;
+    if (e.op === "in") {
+      this.expr(e.left);
+      this.expr(e.right);
+      this.e("i32.const", this.pos(e.at)).e("call", R.isIn);
+    } else if (this.isNumber(e.left) && this.isNumber(e.right)) { // two numbers: no boxes, no checks
+      this.exprNum(e.left);
+      this.exprNum(e.right);
+      if (e.op === "divisible by") this.e("i32.const", this.pos(e.at)).e("call", R.dvf);
+      else this.e("call", R.ncmp), ORDER_TESTS[e.op](this.c); // to 15 digits
+    } else if (e.op === "divisible by") {
+      this.expr(e.left);
+      this.expr(e.right);
+      this.e("i32.const", this.pos(e.at)).e("call", R.dv);
+    } else if (!this.hasSmall(e, e.op === "is")) {
+      this.expr(e.left);
+      this.expr(e.right);
+      if (e.op === "is") this.e("call", R.eq);
+      else this.e("i32.const", this.pos(e.at)).e("call", R[{ "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le" }[e.op]]);
+    } else {
+      const sides = this.smallSides(e, e.op === "is");
+      const at = e.op === "is" ? null : this.pos(e.at);
+      this.e("block", I32).e("block");
+      this.smallChecks(sides, e.op !== "is");
+      this.e({ "is": "i32.eq", "less than": "i32.lt_s", "greater than": "i32.gt_s", "at least": "i32.ge_s", "at most": "i32.le_s" }[e.op]).e("br", 1).e("end");
+      this.smallSlow(sides);
+      if (e.op === "is") this.e("call", R.eq);
+      else this.e("i32.const", at).e("call", R[{ "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le" }[e.op]]);
+      this.e("end");
+    }
+    if (e.negate) this.e("i32.eqz");
+  }
+
+  // a + b or a - b, one side a whole number written in the program: two small whole numbers added here, when what
+  // comes out is one too (not 0 or 1, which are boxes); anything else as before
+  smallMath(e) {
+    if (!this.hasSmall(e, false)) {
+      this.expr(e.left);
+      this.expr(e.right);
+      this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R[e.op === "+" ? "add" : "sub"]);
+      return;
+    }
+    const sides = this.smallSides(e, false);
+    const at = this.pos(e.at);
+    const r = this.temp(I32);
+    this.e("block", EQ).e("block");
+    this.smallChecks(sides, true);
+    this.e(e.op === "+" ? "i32.add" : "i32.sub").e("local.tee", r);
+    this.e("i32.const", 2 ** 30).e("i32.add").e("i32.const", -(2 ** 31)).e("i32.ge_u").e("br_if", 0);
+    this.e("local.get", r).e("i32.const", 2).e("i32.lt_u").e("br_if", 0);
+    this.e("local.get", r).e("ref.i31").e("br", 1).e("end");
+    this.smallSlow(sides);
+    this.e("i32.const", at).e("call", this.ctx.R[e.op === "+" ? "add" : "sub"]).e("end");
+  }
+
+  // each side: a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`, as a box of
+  // its own is what those are), kept to be written as a constant; or worked out now, into a local
+  smallSides(e, boxed01) {
+    return [e.left, e.right].map((x) => {
+      const v = this.smallSide(x, boxed01);
+      if (v !== null) return { k: v, x };
+      const t = this.temp();
+      this.expr(x);
+      this.e("local.set", t);
+      return { t, x };
+    });
+  }
+
+  // a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`), or null
+  smallSide(x, boxed01) {
+    const v = x.kind === "value" && typeof x.value === "number" ? x.value : null;
+    return v !== null && Number.isInteger(v) && v >= -(2 ** 30) && v < 2 ** 30 && !(boxed01 && (v === 0 || v === 1)) ? v : null;
+  }
+
+  hasSmall(e, boxed01) {
+    return this.smallSide(e.left, boxed01) !== null || this.smallSide(e.right, boxed01) !== null;
+  }
+
+  // to the block outside unless each side in a local is an i31 (a number, from 2 up as unsigned, if numbers);
+  // then both sides' whole numbers
+  smallChecks(sides, numbers) {
+    for (const s of sides) {
+      if (s.t === undefined) continue;
+      this.e("local.get", s.t).e("ref.test", "i31").e("i32.eqz").e("br_if", 0);
+      if (numbers) this.e("local.get", s.t).e("ref.cast", "i31").e("i31.get_u").e("i32.const", 2).e("i32.lt_u").e("br_if", 0);
+    }
+    for (const s of sides) {
+      if (s.t === undefined) this.e("i32.const", s.k);
+      else this.e("local.get", s.t).e("ref.cast", "i31").e("i31.get_s");
+    }
+  }
+
+  // both sides as values, for the shared check
+  smallSlow(sides) {
+    for (const s of sides) {
+      if (s.t === undefined) this.expr(s.x);
+      else this.e("local.get", s.t);
+    }
+  }
+
   block(body) {
     for (const s of body) this.statement(s);
   }
@@ -1208,8 +1327,7 @@ class WasmCompiler extends Scope {
         this.e("i32.const", this.pos(s.at)).e("call", im.exit).e("unreachable");
         return;
       case "if":
-        this.expr(s.cond);
-        this.truthy();
+        this.cond(s.cond);
         this.e("if");
         this.block(s.then);
         this.e("else");
@@ -1217,7 +1335,7 @@ class WasmCompiler extends Scope {
         this.e("end");
         return;
       case "while":
-        return this.loop(this.pos(s.at), () => (this.expr(s.cond), this.truthy(), this.e("i32.eqz")), () => this.block(s.body));
+        return this.loop(this.pos(s.at), () => (this.cond(s.cond), this.e("i32.eqz")), () => this.block(s.body));
       case "repeat": {
         const k = this.pos(s.at);
         const n = this.temp(F64);
@@ -1528,6 +1646,7 @@ class WasmCompiler extends Scope {
         return;
       case "name": {
         if (!this.resolve(e.name)) return this.undefinedName(e.name, e.at);
+        if (this.isInput(e.name)) return void this.load(e.name);
         const value = this.temp();
         this.load(e.name);
         this.e("local.tee", value).e("global.get", this.ctx.unset).e("ref.eq");
@@ -1538,33 +1657,13 @@ class WasmCompiler extends Scope {
       case "call":
         return this.call(e);
       case "math":
+        if (e.op === "+" || e.op === "-") return this.smallMath(e);
         this.expr(e.left);
         this.expr(e.right);
         this.e("i32.const", this.pos(e.at)).e("call", R[["add", "sub", "mul", "div"][MATH.indexOf(e.op)]]);
         return;
       case "compare":
-        if (e.op === "in") {
-          this.expr(e.left);
-          this.expr(e.right);
-          this.e("i32.const", this.pos(e.at)).e("call", R.isIn);
-          if (e.negate) this.e("i32.eqz");
-          this.e("ref.i31");
-          return;
-        }
-        if (this.isNumber(e.left) && this.isNumber(e.right)) { // two numbers: no boxes, no checks
-          this.exprNum(e.left);
-          this.exprNum(e.right);
-          if (e.op === "divisible by") this.e("i32.const", this.pos(e.at)).e("call", R.dvf);
-          else this.e("call", R.ncmp), ORDER_TESTS[e.op](this.c); // to 15 digits
-          if (e.negate) this.e("i32.eqz");
-          this.e("ref.i31");
-          return;
-        }
-        this.expr(e.left);
-        this.expr(e.right);
-        if (e.op === "is") this.e("call", R.eq);
-        else this.e("i32.const", this.pos(e.at)).e("call", R[{ "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le", "divisible by": "dv" }[e.op]]);
-        if (e.negate) this.e("i32.eqz");
+        this.compare(e);
         this.e("ref.i31");
         return;
       case "and":

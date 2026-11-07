@@ -680,6 +680,82 @@ test("try can't catch running out of steps, and the checker trusts it", () => {
   assert.deepEqual(problems('try\n    say 1\nif it fails with e\n    say 1 / 0\nend'), ["4:11 fails: can't divide by zero"]);
 });
 
+// The WebAssembly engine adds, takes away and compares two small whole numbers itself, and a comparison an `if`
+// or `while` tests is a yes or no with no box (DESIGN §174): at the edges of what an i31 holds, for what comes
+// out as 0 or 1 (boxes of their own), for yes and no beside numbers, for text, and for mistakes, every engine
+// says the same
+test("small whole numbers added and compared in place say what every engine says", () => {
+  const source = `to show with a, b
+    set a to a - 0 # worked out, so an i31 where it's small and whole, as numbers written in a list aren't
+    set b to b - 0
+    say a + 1
+    say a - 1
+    say 1 - a
+    say a + 1073741823
+    say a - 1073741823
+    say a is 2
+    say a is less than 7
+    say 7 is at most a
+    say a + b
+    say a - b
+    say b - a
+    say a is b
+    say a is less than b
+    say a is at least b
+    if a is greater than b
+        say "greater"
+    end
+end
+for each pair in list of (list of 5, 3), (list of 1073741823, 1), (list of -1073741824, 1), (list of 1073741823, -1073741824), (list of 2, 1), (list of 3, 2), (list of 1, 1), (list of 0, 1), (list of -5, 7), (list of 2.5, 3), (list of 7, 7)
+    show(item 1 of pair, item 2 of pair)
+end
+set big to 1073741823
+say big + 1
+say big + 0
+say 1073741824 - 1
+say 2 - 1
+say 5 - 5
+say -3 + 4
+set flag to yes
+say flag is 1
+say flag is yes
+say no is 0
+say 1 is 1
+say "a" + 2
+say 2 + "a"
+set i to 0
+repeat while i is less than 5
+    set i to i + 1
+end
+say i
+for each probe in list of "yes and 2", "text and 2", "nothing and 2"
+    try
+        if probe is "yes and 2"
+            say yes + 2
+        else if probe is "text and 2"
+            say "x" is less than 2
+        else
+            say nothing - 2
+        end
+    if it fails with why
+        say why
+    end
+end`;
+  const said = {};
+  for (const engine of ENGINES) {
+    const out = [];
+    try {
+      run(source, (line) => out.push(line), { engine });
+    } catch (err) {
+      if (!(err instanceof FolioError)) throw err;
+      out.push(`mistake: ${err.message}`);
+    }
+    said[engine] = out;
+  }
+  assert.ok(!said.vm.some((line) => line.startsWith("mistake:")), said.vm.join(" | ")); // the program runs to its end
+  for (const engine of ENGINES) assert.deepEqual(said[engine], said.vm, engine);
+});
+
 // The WebAssembly engine runs each loop at the program's top level in a function of its own, 65,536 rounds to a
 // call, the top level's variables handed over in globals (DESIGN §173): what a loop changes is there after it,
 // across its calls, when it stops, and when a mistake leaves it for a `try` around it, and every engine says
@@ -745,7 +821,7 @@ say found
 say (item 1 of made)(5)`,
     `set n to 0
 set xs to empty list
-while n is less than 80000
+repeat while n is less than 80000
     add n * 2 to xs
     add 1 to n
 end
@@ -778,6 +854,7 @@ say length of xs`,
         }
         seen[engine] = { said, stopped };
       }
+      if (maxSteps === Infinity) assert.equal(seen.vm.stopped, null, source); // with no limit, each runs to its end
       for (const engine of ENGINES) assert.deepEqual(seen[engine], seen.vm, `${engine}, ${maxSteps} steps: ${source}`);
     }
   }

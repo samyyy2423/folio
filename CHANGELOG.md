@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Small whole numbers added and compared in place, on WebAssembly.** `n - 1`, `i + 1` and `x is less than 2`
+  work on i31 numbers without a call, an `if` tests a comparison without a box, and an input is read without a
+  check: fib(32) 162 ms to 145 on a first run, primes 148 to 136, and folio.wasm 5% smaller (DESIGN §174).
 - **Loops at the top level fast on their first run.** On the WebAssembly engine, each loop at a program's top
   level is a function of its own, called for 65,536 rounds at a time, so V8 optimizes it while it runs: a Run on
   the website of 100 million rounds of `add` takes about 450 ms in Chrome, not 674, and 172, not 374, run again;

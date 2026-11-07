@@ -7210,3 +7210,37 @@ On the playground in Chrome, a Run of the loop went from 674 ms to 449, and run 
 loop from 190 to 140. Later runs of the same module are a little slower, the count of a chunk's rounds being one
 more thing each round does; folding it into the count of steps would change what every call inside a loop hands
 over, and wasn't worth that here.
+
+## 174. Small whole numbers added and compared in place, on WebAssembly
+
+After DESIGN §173, fib(32) on the WebAssembly engine still took 162 ms on a first run, to plain JavaScript's 23.
+Taking out a call's parts one at a time (the check that it's a function, the count of its inputs, the count of
+steps, the trail a mistake shows) saved about 5% each: the time was in what fib does between its calls. `n is
+less than 2`, `n - 1`, `n - 2` and the `+` of the two calls' answers were each a call into the runtime, which
+looked at what both sides were, and the `if` called another to see its yes or no; and every read of `n` checked
+it had a value, which an input always has.
+
+- **A whole number written in the program** (`1` in `n - 1`, `2` in `n is less than 2`, from -2^30 up to 2^30)
+  is an `i32.const` beside the other side, which, when it's an i31 (a number from 2 up as unsigned, as 0 and 1
+  are no and yes), is taken away, added or compared there and then: a sum that's still an i31 (and not 0 or 1,
+  which are boxes of their own) goes on as one. Anything else goes to the runtime as before, with both sides as
+  they were, so what it says (a number that's a box, text, an amount, a mistake) is what it said. `is` keeps a
+  written 0 or 1 out of it: those are boxes, never the i31 no or yes.
+- **A comparison an `if` or a `while` tests** is its i32, with no box made and no call to see it's a yes or no.
+- **An input** is read with no check that it has a value.
+
+Inlined beside any two values, not only beside a written number, it was no faster, and folio.wasm, the compiler
+the website runs, grew from 470 KB to 562 squeezed: the compiler is made of this code too. Beside a written
+number only, folio.wasm is 445 KB squeezed (2.07 MB), smaller than before, as each written number it uses this
+way is a constant where it was a global's box.
+
+| on the WebAssembly engine, Node.js | first run, before | first run, now | later runs, before | later runs, now |
+|:--|--:|--:|--:|--:|
+| fib(32) | 162 ms | 145 ms | 127 ms | 110 ms |
+| primes | 148 ms | 136 ms | 95 ms | 89 ms |
+
+wasm.folio does the same, and makes wasm.js's bytes. A test runs both ends of what an i31 holds, sums that come
+out 0 or 1, yes and no beside numbers, text, and mistakes, on every engine; taking out the check for a sum past
+an i31, or for yes and no, makes it fail. The rest of fib's time is the call itself: a function value called
+through `call_ref`, which V8 doesn't put in line. A call to a function the program never sets again could be a
+direct `call`, and inputs only ever given numbers f64s; both are bigger changes to both compilers.

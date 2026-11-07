@@ -116,6 +116,11 @@ end
 
 # a number as the program wrote it: digits, maybe a point, or 0x and 0b whole numbers
 to wasm_literal with written
+    return wasm_double(wasm_literal_value(written))
+end
+
+# the number a number written in the program is
+to wasm_literal_value with written
     set chars to front's letters(written)
     if length of chars is at least 2 and item 1 of chars is "0" and (item 2 of chars is "x" or item 2 of chars is "b")
         set base to 16
@@ -130,9 +135,9 @@ to wasm_literal with written
             end
             set v to v * base + digit
         end
-        return wasm_double(v)
+        return v
     end
-    return wasm_double(number of written)
+    return number of written
 end
 
 # a list of bytes as text, to tell lists apart as a dictionary's key
@@ -1426,7 +1431,7 @@ to wasm_function with cx, parent, label, params, body, place
         set f to wasm_func(m, label, inputs, (list of wasm_eq))
     end
     set fc to record with cx cx, parent parent, scope scope, f f, numbers empty dictionary, locals empty dictionary, number_set nothing,
-        slot_array nothing, env_local nothing, stops empty list, lefts empty list, tries 0, missing nothing, dividing nothing
+        slot_array nothing, env_local nothing, stops empty list, lefts empty list, tries 0, missing nothing, dividing nothing, inputs 0
     # A mistake the code checks for on its way, a name with no value yet or a division by 0, branches to the
     # function's end, past its return, where the mistake is made: the code it's checked in calls nothing, so V8
     # keeps its numbers in registers (DESIGN §172). In a `try` it's made where it is, for the `try` to catch.
@@ -1438,6 +1443,7 @@ to wasm_function with cx, parent, label, params, body, place
     if parent is not nothing
         set inputs_count to length of params
     end
+    set inputs of fc to inputs_count # an input always has a value: it's read with no check (DESIGN §174)
     set number_set of fc to wasm_numeric_slots(fc, body, captured, inputs_count)
     set numbers to numbers of fc
     set locals to locals of fc
@@ -2031,8 +2037,8 @@ to wasm_statement with fc, s
         end
         wasm_x(fc, "i32.const " + wasm_pos(fc, at of s) + " call im.exit unreachable")
     else if what is "if"
-        wasm_expr(fc, cond of s)
-        wasm_x(fc, "call R.truthy if")
+        wasm_cond(fc, cond of s)
+        wasm_x(fc, "if")
         wasm_block(fc, then of s)
         wasm_x(fc, "else")
         wasm_block(fc, otherwise of s)
@@ -2040,8 +2046,8 @@ to wasm_statement with fc, s
     else if what is "while"
         set k to wasm_pos(fc, at of s)
         set state to wasm_loop_start(fc)
-        wasm_expr(fc, cond of s)
-        wasm_x(fc, "call R.truthy i32.eqz")
+        wasm_cond(fc, cond of s)
+        wasm_x(fc, "i32.eqz")
         wasm_loop_body(fc)
         wasm_block(fc, body of s)
         wasm_loop_end(fc, k, state)
@@ -2391,6 +2397,189 @@ to wasm_start_worker with fc, e
     wasm_x(fc, "local.get " + made)
 end
 
+# an `if`'s or a `while`'s condition, as an i32: a comparison's yes or no as it is, anything else checked to be
+# yes or no (DESIGN §174)
+to wasm_cond with fc, e
+    if kind of e is "compare"
+        wasm_compare(fc, e)
+        return nothing
+    end
+    wasm_expr(fc, e)
+    wasm_x(fc, "call R.truthy")
+end
+
+# whether a name is one of this function's inputs, which always have a value
+to wasm_is_input with fc, wanted
+    set where to front's resolve(scope of fc, wanted)
+    return depth of where is 0 and slot of where is at most inputs of fc
+end
+
+# A comparison, as an i32. With a whole number written in the program on one side, and a small whole number on
+# the other, an i31 (from 2 up, as unsigned, as 0 and 1 are no and yes), they're compared here; anything else as
+# before (DESIGN §174). Only there: inlined everywhere, the compiler's own code grew a fifth.
+to wasm_compare with fc, e
+    set op to op of e
+    if op is "in"
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.isIn")
+    else if wasm_numeric(fc, left of e) and wasm_numeric(fc, right of e) # two numbers: no boxes, no checks
+        wasm_expr_num(fc, left of e)
+        wasm_expr_num(fc, right of e)
+        if op is "divisible by"
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.dvf")
+        else
+            wasm_x(fc, "call R.ncmp " + wasm_order_test(op)) # to 15 digits
+        end
+    else if op is "divisible by"
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.dv")
+    else if not wasm_has_small(e, op is "is")
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        if op is "is"
+            wasm_x(fc, "call R.eq")
+        else
+            set helper to item (front's slot_of((list of "less than", "greater than", "at least", "at most"), op)) of (list of "lt", "gt", "ge", "le")
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R." + helper)
+        end
+    else
+        set sides to wasm_small_sides(fc, e, op is "is")
+        set place to nothing
+        if op is not "is"
+            set place to wasm_pos(fc, at of e)
+        end
+        wasm_x(fc, "block i32 block")
+        wasm_small_checks(fc, sides, op is not "is")
+        set test to item (front's slot_of((list of "is", "less than", "greater than", "at least", "at most"), op)) of (list of "i32.eq", "i32.lt_s", "i32.gt_s", "i32.ge_s", "i32.le_s")
+        wasm_x(fc, test + " br 1 end")
+        wasm_small_slow(fc, sides)
+        if op is "is"
+            wasm_x(fc, "call R.eq")
+        else
+            set helper to item (front's slot_of((list of "less than", "greater than", "at least", "at most"), op)) of (list of "lt", "gt", "ge", "le")
+            wasm_x(fc, "i32.const " + place + " call R." + helper)
+        end
+        wasm_x(fc, "end")
+    end
+    if negate of e
+        wasm_x(fc, "i32.eqz")
+    end
+end
+
+# a + b or a - b, one side a whole number written in the program: two small whole numbers added here, when what
+# comes out is one too (not 0 or 1, which are boxes); anything else as before
+to wasm_small_math with fc, e
+    if not wasm_has_small(e, no)
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        if op of e is "+"
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.add")
+        else
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.sub")
+        end
+        return nothing
+    end
+    set sides to wasm_small_sides(fc, e, no)
+    set place to wasm_pos(fc, at of e)
+    set r to wasm_temp(fc, wasm_i32)
+    wasm_x(fc, "block eq block")
+    wasm_small_checks(fc, sides, yes)
+    if op of e is "+"
+        wasm_x(fc, "i32.add local.tee " + r)
+    else
+        wasm_x(fc, "i32.sub local.tee " + r)
+    end
+    wasm_x(fc, "i32.const 1073741824 i32.add i32.const -2147483648 i32.ge_u br_if 0")
+    wasm_x(fc, "local.get " + r + " i32.const 2 i32.lt_u br_if 0")
+    wasm_x(fc, "local.get " + r + " ref.i31 br 1 end")
+    wasm_small_slow(fc, sides)
+    if op of e is "+"
+        wasm_x(fc, "i32.const " + place + " call R.add end")
+    else
+        wasm_x(fc, "i32.const " + place + " call R.sub end")
+    end
+end
+
+# each side: a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`, as a box of its
+# own is what those are), kept to be written as a constant; or worked out now, into a local
+to wasm_small_sides with fc, e, boxed01
+    set sides to empty list
+    for each x in list of left of e, right of e
+        set v to wasm_small_side(x, boxed01)
+        if v is not nothing
+            add record with k v, t nothing, x x to sides
+        else
+            set t to wasm_temp(fc, wasm_eq)
+            wasm_expr(fc, x)
+            wasm_x(fc, "local.set " + t)
+            add record with k nothing, t t, x x to sides
+        end
+    end
+    return sides
+end
+
+# a number written in the program that's whole, from -2^30 up to 2^30, or nothing; whole to the last bit, not to
+# 15 digits, as Folio compares
+to wasm_small_whole with x
+    if kind of x is not "value"
+        return nothing
+    end
+    if type of x is not "number"
+        return nothing
+    end
+    set v to wasm_literal_value(value of x)
+    if v - (v rounded down) is not 0 or v is less than -1073741824 or v is at least 1073741824
+        return nothing
+    end
+    return v
+end
+
+# a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`), or nothing
+to wasm_small_side with x, boxed01
+    set v to wasm_small_whole(x)
+    if v is not nothing and boxed01 and (v is 0 or v is 1)
+        return nothing
+    end
+    return v
+end
+
+to wasm_has_small with e, boxed01
+    return wasm_small_side(left of e, boxed01) is not nothing or wasm_small_side(right of e, boxed01) is not nothing
+end
+
+# to the block outside unless each side in a local is an i31 (a number, from 2 up as unsigned, if numbers); then
+# both sides' whole numbers
+to wasm_small_checks with fc, sides, numbers
+    for each side in sides
+        if t of side is not nothing
+            wasm_x(fc, "local.get " + t of side + " ref.test i31 i32.eqz br_if 0")
+            if numbers
+                wasm_x(fc, "local.get " + t of side + " ref.cast i31 i31.get_u i32.const 2 i32.lt_u br_if 0")
+            end
+        end
+    end
+    for each side in sides
+        if t of side is nothing
+            wasm_x(fc, "i32.const " + k of side)
+        else
+            wasm_x(fc, "local.get " + t of side + " ref.cast i31 i31.get_s")
+        end
+    end
+end
+
+# both sides as values, for the shared check
+to wasm_small_slow with fc, sides
+    for each side in sides
+        if t of side is nothing
+            wasm_expr(fc, x of side)
+        else
+            wasm_x(fc, "local.get " + t of side)
+        end
+    end
+end
+
 to wasm_expr with fc, e
     if wasm_unboxed(fc, e)
         wasm_expr_num(fc, e)
@@ -2416,6 +2605,10 @@ to wasm_expr with fc, e
             wasm_undefined(fc, name of e, at of e, no, no)
             return nothing
         end
+        if wasm_is_input(fc, name of e)
+            wasm_load(fc, name of e)
+            return nothing
+        end
         set value to wasm_temp(fc, wasm_eq)
         wasm_load(fc, name of e)
         wasm_x(fc, "local.tee " + value + " global.get g.unset ref.eq")
@@ -2423,38 +2616,15 @@ to wasm_expr with fc, e
         wasm_x(fc, "local.get " + value)
     else if what is "call"
         wasm_call(fc, e, no)
+    else if what is "math" and (op of e is "+" or op of e is "-")
+        wasm_small_math(fc, e)
     else if what is "math"
         wasm_expr(fc, left of e)
         wasm_expr(fc, right of e)
         set helper to item (front's slot_of((list of "+", "-", "*", "/"), op of e)) of (list of "add", "sub", "mul", "div")
         wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R." + helper)
     else if what is "compare"
-        set op to op of e
-        if op is "in"
-            wasm_expr(fc, left of e)
-            wasm_expr(fc, right of e)
-            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.isIn")
-        else if wasm_numeric(fc, left of e) and wasm_numeric(fc, right of e) # two numbers: no boxes, no checks
-            wasm_expr_num(fc, left of e)
-            wasm_expr_num(fc, right of e)
-            if op is "divisible by"
-                wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.dvf")
-            else
-                wasm_x(fc, "call R.ncmp " + wasm_order_test(op)) # to 15 digits
-            end
-        else
-            wasm_expr(fc, left of e)
-            wasm_expr(fc, right of e)
-            if op is "is"
-                wasm_x(fc, "call R.eq")
-            else
-                set helper to item (front's slot_of((list of "less than", "greater than", "at least", "at most", "divisible by"), op)) of (list of "lt", "gt", "ge", "le", "dv")
-                wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R." + helper)
-            end
-        end
-        if negate of e
-            wasm_x(fc, "i32.eqz")
-        end
+        wasm_compare(fc, e)
         wasm_x(fc, "ref.i31")
     else if what is "and" or what is "or"
         set left to wasm_temp(fc, wasm_eq)
