@@ -7150,8 +7150,8 @@ start to end. Later runs of the same module, in the same process, get the optimi
 | fib(32) | 166 ms | 162 ms | 134 ms | 126 ms | 23 ms |
 
 In Chrome, on the playground, the loop's Run went from 740 to 840 ms to 620 to 700. A Run as fast as a later run
-wants a program's loops in functions of their own, which V8 would optimize while they're called again; that's
-next. fib calls a function V8 has already optimized, so it's what it was.
+wants a program's loops in functions of their own, which V8 would optimize while they're called again (DESIGN
+§173). fib calls a function V8 has already optimized, so it's what it was.
 
 The JIT's call trail, the function and the place of each call in progress, is two arrays made at their full size
 once (2,000, as deep as the JIT goes before the VM takes over), not grown: fib on the JIT 130 to 120 ms. Its
@@ -7166,3 +7166,47 @@ progress, the function's number in its frame or the call's number after it each 
 each is what makes "too much recursion" come at the same depth as on every engine and a mistake's trail say
 where each call came from. On Linux, under WSL, the new kernels give the JavaScript engine's numbers to the last
 bit, and the digit reader learns on the processor in 0.8 s.
+
+## 173. A top-level loop in a function of its own, called a chunk of rounds at a time
+
+V8 makes a WebAssembly function's optimized code for the function's next call, and never switches to it in the
+middle of a call. A program's top level is one function, called once, so its loops ran in V8's first, plain code
+from start to end: 100 million rounds of `add` took 397 ms on a first run, where the same module run again took
+92. A loop written by hand the same way, in a function called again and again for 65,536 rounds at a time, took
+90 ms on its first run, whatever the chunk.
+
+So each loop at the top level (an outermost one; a function's loops get optimized code when it's called again) is
+now a function of its own:
+
+- **The same code.** The new function has the top level's input and locals at the same places, so the loop's
+  test and body are generated into it as they were, and a temporary the body needs is a new local after them.
+- **Handed over in globals.** A global for each of those locals; the top level puts its locals in them before the
+  first call, each call takes them at its start and puts them back as it returns, and the top level takes them
+  back after the last. A call gives 1 to be called again, after 65,536 rounds, and 0 when the loop is done.
+- **The count of steps** is the loop's own local, as before (DESIGN §172), from the global at each call's start
+  and back into it as the call returns.
+- **Mistakes.** The mistakes at the function's end put the locals back before they're made. A loop inside a `try`
+  at the top level has its rounds in a `try` of their own too, whose `catch_all` puts the locals and the count
+  back, and the top level's `catch_all` takes them, so the `try` sees what the loop changed. Without a `try`
+  around it, a mistake that leaves the loop ends the program, and its rounds aren't in a `try`: V8's code for
+  the float loop took 94 ms in one and 63 out of one. A `return` at the top level is a mistake before the
+  program runs, so a loop never needs to give one back.
+
+wasm.folio does each the same way, and makes wasm.js's bytes on every program the engines are tested with, and
+itself; folio.wasm is made again, 2.19 MB. A test runs five programs on every engine, each unlimited and under
+two step limits: loops past 65,536 rounds whose variables are used after, mistakes caught around a loop (a
+division by 0, a name with no value yet) and inside one, `stop`, a nested loop, a function made in a loop, and
+`for each`, `repeat` and `while`; taking out any of the hand-overs (the locals back after the loop, back as a
+mistake leaves it, or back before either mistake at the end) makes it fail.
+
+| on the WebAssembly engine, Node.js | first run, before | first run, now | later runs, before | later runs, now |
+|:--|--:|--:|--:|--:|
+| loop: 100 million rounds of `add` | 397 ms | 144 ms | 92 ms | 111 ms |
+| primes | 292 ms | 148 ms | 87 ms | 95 ms |
+| float: 30 million of `1 / (i * i)` | 169 ms | 98 ms | 60 ms | 64 ms |
+| fib(32) | 162 ms | 162 ms | 127 ms | 129 ms |
+
+On the playground in Chrome, a Run of the loop went from 674 ms to 449, and run again from 374 to 172; the float
+loop from 190 to 140. Later runs of the same module are a little slower, the count of a chunk's rounds being one
+more thing each round does; folding it into the count of steps would change what every call inside a loop hands
+over, and wasn't worth that here.

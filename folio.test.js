@@ -680,6 +680,109 @@ test("try can't catch running out of steps, and the checker trusts it", () => {
   assert.deepEqual(problems('try\n    say 1\nif it fails with e\n    say 1 / 0\nend'), ["4:11 fails: can't divide by zero"]);
 });
 
+// The WebAssembly engine runs each loop at the program's top level in a function of its own, 65,536 rounds to a
+// call, the top level's variables handed over in globals (DESIGN §173): what a loop changes is there after it,
+// across its calls, when it stops, and when a mistake leaves it for a `try` around it, and every engine says
+// the same and stops at the same step
+test("a loop at the top level, run a call at a time, leaves its variables as every engine has them", () => {
+  const programs = [
+    `set total to 0
+set words to ""
+set kept to empty list
+for each i from 1 to 200000
+    add i to total
+    if i is divisible by 50000
+        set words to words + i + " "
+        add i to kept
+    end
+end
+say total
+say words
+say kept`,
+    `set rounds to 0
+set total to 0.5
+try
+    for each i from 1 to 150000
+        add 1 to rounds
+        set total to total + i / 3
+        if i is 140001
+            set total to total / (i - i)
+        end
+    end
+if it fails with why
+    say "caught: " + why
+end
+say rounds
+say total`,
+    `set rounds to 0
+try
+    repeat 100000 times
+        add 1 to rounds
+        if rounds is 99999
+            add 1 to later
+        end
+    end
+    set later to 5
+if it fails with why
+    say why
+end
+say rounds`,
+    `set found to 0
+set made to empty list
+for each i from 1 to 1000000
+    for each j from 1 to 3
+        add 1 to found
+    end
+    if i is 70000
+        to seen with x
+            return x + i
+        end
+        add seen to made
+        stop
+    end
+end
+say found
+say (item 1 of made)(5)`,
+    `set n to 0
+set xs to empty list
+while n is less than 80000
+    add n * 2 to xs
+    add 1 to n
+end
+set total to 0
+for each x in xs
+    try
+        if x is 100
+            fail with "skip"
+        end
+        add x to total
+    if it fails
+        add 1 to total
+    end
+end
+say n
+say total
+say length of xs`,
+  ];
+  for (const source of programs) {
+    for (const maxSteps of [Infinity, 30_007, 250_001]) {
+      const seen = {};
+      for (const engine of ENGINES) {
+        const said = [];
+        let stopped = null;
+        try {
+          run(source, (line) => said.push(line), { engine, maxSteps });
+        } catch (err) {
+          if (!(err instanceof FolioError)) throw err;
+          stopped = err.message;
+        }
+        seen[engine] = { said, stopped };
+      }
+      for (const engine of ENGINES) assert.deepEqual(seen[engine], seen.vm, `${engine}, ${maxSteps} steps: ${source}`);
+    }
+  }
+});
+
 // The WebAssembly engine makes a mistake checked for in a loop (a name with no value yet, a division by 0) at
 // the function's end, past the loop (DESIGN §172): a `try` further out that catches it, and goes on, still
 // counts the steps every engine counts, so a step limit stops each at the same place

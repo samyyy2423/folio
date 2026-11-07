@@ -1774,6 +1774,9 @@ end
 # loop counts its steps down in a local of its own, which goes back into the global before each call and after
 # the loop; if a mistake leaves the loop, the global keeps the smaller of the two, as a count only goes down.
 to wasm_loop_start with fc
+    if parent of fc is nothing and length of lefts of fc is 0
+        return wasm_outlined_start(fc)
+    end
     set outer to wasm_top(lefts of fc)
     set counting to wasm_temp(fc, wasm_i32)
     if outer is not nothing
@@ -1788,7 +1791,7 @@ to wasm_loop_start with fc
     set kept to stops of fc
     add labels of code of f of fc to kept
     wasm_x(fc, "block loop block loop")
-    return record with outer outer, counting counting
+    return record with outer outer, counting counting, outlined no
 end
 
 to wasm_loop_body with fc
@@ -1796,6 +1799,10 @@ to wasm_loop_body with fc
 end
 
 to wasm_loop_end with fc, k, state
+    if outlined of state
+        wasm_outlined_end(fc, k, state)
+        return nothing
+    end
     set counting to counting of state
     wasm_x(fc, "local.get " + counting + " i32.const 1 i32.sub local.tee " + counting + " i32.const 0 i32.lt_s br_if 1 br 0 end end")
     wasm_x(fc, "i32.const " + k + " call im.refill local.tee " + counting + " global.set g.left br 0 end end")
@@ -1805,6 +1812,138 @@ to wasm_loop_end with fc, k, state
     set lefts of fc to wasm_less_last(lefts of fc)
     if outer of state is not nothing
         wasm_x(fc, "global.get g.left local.set " + outer of state)
+    end
+end
+
+# A loop at the program's top level, in a function of its own that runs 65,536 rounds and is called again for
+# more (DESIGN §173): V8 makes a WebAssembly function's optimized code for its next call, never during one, and
+# the top level is called once, so its loops ran in V8's first, plain code from start to end. The function has
+# the top level's locals at the same places, so the loop's code is what it was; they go into globals before the
+# first call, each call takes them and gives them back as it returns, or as a mistake leaves it, and the top
+# level takes them back after. It gives 0 when the loop is done, and 1 to be called again (a `return` at the top
+# level is a mistake before the program runs). Only a loop in a `try` has its rounds in a `try` of their own,
+# to give the locals back as a mistake leaves them: without one, a mistake ends the program, and V8's code for
+# a loop in a `try` was half as fast again.
+to wasm_outlined_start with fc
+    set m to m of cx of fc
+    set f to f of fc
+    set types to list of wasm_f64 # the top level's input, the steps it may take, and its locals
+    for each t in locals of f
+        add t to types
+    end
+    set globals to empty list
+    for each t in types
+        add wasm_loop_global(m, t) to globals
+    end
+    wasm_keep_locals(fc, globals)
+    set made to wasm_func(m, "loop", (list of wasm_f64), (list of wasm_i32))
+    set mirrored to locals of made
+    for each t in locals of f
+        add t to mirrored
+    end
+    set state to record with outer nothing, counting nothing, outlined yes, chunk nothing, globals globals, made made, caller_f f,
+        caller_stops stops of fc, caller_lefts lefts of fc, caller_tries tries of fc
+    set f of fc to made
+    set stops of fc to empty list
+    set lefts of fc to empty list
+    set tries of fc to 0
+    wasm_take_locals(fc, globals)
+    wasm_x(fc, "block block") # the mistakes at its end, as each function has them
+    set counting to wasm_temp(fc, wasm_i32)
+    set chunk to wasm_temp(fc, wasm_i32)
+    set counting of state to counting
+    set chunk of state to chunk
+    wasm_x(fc, "global.get g.left local.set " + counting + " i32.const 65536 local.set " + chunk)
+    set kept to lefts of fc
+    add counting to kept
+    if caller_tries of state is greater than 0
+        wasm_x(fc, "try")
+    end
+    wasm_x(fc, "block")
+    set kept to stops of fc
+    add labels of code of f of fc to kept
+    wasm_x(fc, "block loop block loop")
+    return state
+end
+
+to wasm_outlined_end with fc, k, state
+    set counting to counting of state
+    set chunk to chunk of state
+    set globals to globals of state
+    wasm_x(fc, "local.get " + counting + " i32.const 1 i32.sub local.tee " + counting + " i32.const 0 i32.lt_s br_if 1")
+    wasm_x(fc, "local.get " + chunk + " i32.const 1 i32.sub local.tee " + chunk + " i32.eqz br_if 4")
+    wasm_x(fc, "br 0 end end")
+    wasm_x(fc, "i32.const " + k + " call im.refill local.tee " + counting + " global.set g.left br 0 end end")
+    set stops of fc to wasm_less_last(stops of fc)
+    for each status in list of 0, 1 # the loop done; then this call's rounds done
+        wasm_keep_locals(fc, globals)
+        wasm_x(fc, "local.get " + counting + " global.set g.left i32.const " + status + " return")
+        if status is 0
+            wasm_x(fc, "end")
+        end
+    end
+    set guarded to caller_tries of state is greater than 0
+    if guarded
+        wasm_x(fc, "catch_all")
+        wasm_keep_locals(fc, globals)
+        wasm_x(fc, "local.get " + counting + " global.get g.left local.get " + counting + " global.get g.left i32.lt_s select global.set g.left")
+        wasm_x(fc, "rethrow 0 end")
+    end
+    wasm_x(fc, "unreachable end")
+    wasm_keep_locals(fc, globals)
+    set held to missing of fc
+    wasm_x(fc, "local.get " + item 1 of held + " local.get " + item 2 of held + " local.get " + item 3 of held + " call R.noValueYet unreachable end")
+    wasm_keep_locals(fc, globals)
+    set held to dividing of fc
+    wasm_x(fc, "i32.const 3 local.get " + item 1 of held + " struct.new num local.get " + item 2 of held + " struct.new num local.get " + item 3 of held + " call R.arithRest unreachable")
+    set f of fc to caller_f of state
+    set stops of fc to caller_stops of state
+    set lefts of fc to caller_lefts of state
+    set tries of fc to caller_tries of state
+    if guarded
+        wasm_x(fc, "try")
+    end
+    wasm_x(fc, "loop local.get 0 call " + index of made of state + " br_if 0 end")
+    if guarded
+        wasm_x(fc, "catch_all")
+        wasm_take_locals(fc, globals)
+        wasm_x(fc, "rethrow 0 end")
+    end
+    wasm_take_locals(fc, globals)
+end
+
+# a global for a top-level loop's function to have a local in, 0 or null at first
+to wasm_loop_global with m, type
+    set init to empty list
+    if item 1 of type is 124 # f64
+        set init to list of 68, 0, 0, 0, 0, 0, 0, 0, 0
+    else if item 1 of type is 127 # i32
+        set init to list of 65, 0
+    else # (ref null heap): ref.null heap
+        add 208 to init
+        for each b in items 2 to length of type of type
+            add b to init
+        end
+    end
+    set kept to globals of m
+    add record with type type, mutable yes, init init to kept
+    return length of kept - 1
+end
+
+# each local, from the first, into its global; and back
+to wasm_keep_locals with fc, globals
+    set j to 0
+    for each g in globals
+        wasm_x(fc, "local.get " + j + " global.set " + g)
+        add 1 to j
+    end
+end
+
+to wasm_take_locals with fc, globals
+    set j to 0
+    for each g in globals
+        wasm_x(fc, "global.get " + g + " local.set " + j)
+        add 1 to j
     end
 end
 

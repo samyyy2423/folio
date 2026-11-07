@@ -6,6 +6,10 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Loops at the top level fast on their first run.** On the WebAssembly engine, each loop at a program's top
+  level is a function of its own, called for 65,536 rounds at a time, so V8 optimizes it while it runs: a Run on
+  the website of 100 million rounds of `add` takes about 450 ms in Chrome, not 674, and 172, not 374, run again;
+  a first run in Node.js takes 144 ms, not 397 (DESIGN §173).
 - **WebAssembly loops V8 can keep in registers.** A mistake the code checks for is made at the function's end, and
   asking for more steps is outside the round, so once V8 has optimized a loop it keeps its numbers in registers:
   100 million rounds of `add`, run again in one process, take 95 ms, not 332 (plain JavaScript 77). A first run,

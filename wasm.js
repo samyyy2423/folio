@@ -1056,6 +1056,7 @@ class WasmCompiler extends Scope {
   // keeps the smaller of the two, as a count only goes down, so every step is counted as the other engines
   // count them.
   loop(k, test, body) {
+    if (!this.parent && !this.lefts.length) return this.outlinedLoop(k, test, body);
     const { ctx } = this;
     const outer = this.lefts.at(-1);
     const counting = this.temp(I32);
@@ -1082,6 +1083,76 @@ class WasmCompiler extends Scope {
     this.e("end");
     this.lefts.pop();
     if (outer !== undefined) this.e("global.get", ctx.left).e("local.set", outer);
+  }
+
+  // A loop at the program's top level, in a function of its own that runs 65,536 rounds and is called again for
+  // more (DESIGN §173): V8 makes a WebAssembly function's optimized code for its next call, never during one, and
+  // the top level is called once, so its loops ran in V8's first, plain code from start to end. The function has
+  // the top level's locals at the same places, so the loop's code is what it was; they go into globals before the
+  // first call, each call takes them and gives them back as it returns, or as a mistake leaves it, and the top
+  // level takes them back after. It gives 0 when the loop is done, and 1 to be called again (a `return` at the top
+  // level is a mistake before the program runs). Only a loop in a `try` has its rounds in a `try` of their own,
+  // to give the locals back as a mistake leaves them: without one, a mistake ends the program, and V8's code for
+  // a loop in a `try` was half as fast again.
+  outlinedLoop(k, test, body) {
+    const { ctx } = this;
+    const { m, T } = ctx;
+    const types = [F64, ...this.f.locals]; // the top level's input, the steps it may take, and its locals
+    const globals = types.map((t) => m.global(t, true, typeof t === "string" ? new Code().emit(t === F64 ? "f64.const" : "i32.const", 0) : new Code().emit("ref.null", t.heap)));
+    const keep = () => globals.forEach((g, j) => this.e("local.get", j).e("global.set", g));
+    const take = () => globals.forEach((g, j) => this.e("global.get", g).e("local.set", j));
+    keep();
+    const caller = { f: this.f, c: this.c, labels: this.labels, stops: this.stops, lefts: this.lefts, tries: this.tries };
+    const guarded = this.tries > 0;
+    const f = m.func("loop", [F64], [I32]);
+    f.locals.push(...this.f.locals);
+    Object.assign(this, { f, c: f.code, labels: 0, stops: [], lefts: [], tries: 0 });
+    take();
+    this.e("block").e("block"); // the mistakes at its end, as each function has them
+    const [counting, chunk] = [this.temp(I32), this.temp(I32)];
+    this.e("global.get", ctx.left).e("local.set", counting).e("i32.const", 65536).e("local.set", chunk);
+    this.lefts.push(counting);
+    if (guarded) this.e("try");
+    this.e("block");
+    this.stops.push(this.labels);
+    this.e("block").e("loop").e("block").e("loop");
+    test();
+    this.e("br_if", 3);
+    body();
+    this.e("local.get", counting).e("i32.const", 1).e("i32.sub").e("local.tee", counting).e("i32.const", 0).e("i32.lt_s").e("br_if", 1);
+    this.e("local.get", chunk).e("i32.const", 1).e("i32.sub").e("local.tee", chunk).e("i32.eqz").e("br_if", 4);
+    this.e("br", 0).e("end").e("end");
+    this.e("i32.const", k).e("call", ctx.im.refill).e("local.tee", counting).e("global.set", ctx.left);
+    this.e("br", 0).e("end").e("end");
+    this.stops.pop();
+    for (const status of [0, 1]) { // the loop done; then this call's rounds done
+      keep();
+      this.e("local.get", counting).e("global.set", ctx.left).e("i32.const", status).e("return");
+      if (status === 0) this.e("end");
+    }
+    if (guarded) {
+      this.e("catch_all");
+      keep();
+      this.e("local.get", counting).e("global.get", ctx.left).e("local.get", counting).e("global.get", ctx.left).e("i32.lt_s").e("select").e("global.set", ctx.left);
+      this.e("rethrow", 0).e("end");
+    }
+    this.e("unreachable").e("end");
+    keep();
+    for (const l of this.missing) this.e("local.get", l);
+    this.e("call", ctx.R.noValueYet).e("unreachable").e("end");
+    keep();
+    const [a, b, d] = this.dividing;
+    this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
+    this.e("local.get", d).e("call", ctx.R.arithRest).e("unreachable");
+    Object.assign(this, caller);
+    if (guarded) this.e("try");
+    this.e("loop").e("local.get", 0).e("call", f.index).e("br_if", 0).e("end");
+    if (guarded) {
+      this.e("catch_all");
+      take();
+      this.e("rethrow", 0).e("end");
+    }
+    take();
   }
 
   // around a call that may count steps of its own: the loop's count given to the global, and taken back after
