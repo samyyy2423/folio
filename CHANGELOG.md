@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **`\r` in text is a carriage return.** It was an `r`, as any other letter after a backslash is that letter,
+  so `"\r"` meant for a line's end took `r`s off words. Now `"\r\n"` is Windows' line end, on every engine and in
+  machine code, and a carriage return written back as code is `\r` (DESIGN §175).
 - **Small whole numbers added and compared in place, on WebAssembly.** `n - 1`, `i + 1` and `x is less than 2`
   work on i31 numbers without a call, an `if` tests a comparison without a box, and an input is read without a
   check: fib(32) 162 ms to 145 on a first run, primes 148 to 136, and folio.wasm 5% smaller (DESIGN §174).

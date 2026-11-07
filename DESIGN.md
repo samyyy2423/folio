@@ -7244,3 +7244,25 @@ out 0 or 1, yes and no beside numbers, text, and mistakes, on every engine; taki
 an i31, or for yes and no, makes it fail. The rest of fib's time is the call itself: a function value called
 through `call_ref`, which V8 doesn't put in line. A call to a function the program never sets again could be a
 direct `call`, and inputs only ever given numbers f64s; both are bigger changes to both compilers.
+
+## 175. \r in text is a carriage return
+
+Text had two escapes for characters that can't be typed into it, `\n` and `\t`, and a backslash before anything
+else stood for what came after it, so that `\"`, `\\` and `\{` work. `"\r"` was therefore an `r`, with no word
+from Folio, and code that wrote it for a carriage return did something else. Writing the tokenizer package, a
+line's end trimmed with `"\r"` took the `r` off `for` in a BERT vocabulary; the Bob exercise's example answer,
+trimming its spaces, trimmed `r`s too; folio.folio's language server made its carriage return out of the byte 13,
+and the standard library's JSON, XML, TOML and JWT readers did the same.
+
+`\r` is now a carriage return, in text with values in it too, in both of the readers of Folio: folio.js's and
+compiler.folio's, which wasm.folio and machine.folio use, so every engine and the machine code agree. What
+writes text as code writes a carriage return as `\r`: compiler.folio's JavaScript strings (as `JSON.stringify`
+does, which jit.js uses), folio.folio's Folio text, and the scripts that put files in Folio source
+(make-stdlib.mjs, make-web.mjs, make-wasm-runtime.mjs, make-checker-rules.mjs). Text shown in a list already
+showed one as `\r`, on every engine, so a carriage return now reads back as it shows.
+
+Any other letter after a backslash is still that letter. Making it a mistake would find the next `\r` before it
+did harm, but would break programs that write `\}` beside `\{`, as properties.test.folio does, or `\'`; `folio
+check` could say so instead, as it says other likely slips. A test runs `\r`, `\t` and `\n` together, `\r` with a
+value before it, `\\r`, and `\q`, on every engine, in the compiler written in Folio and through tidy, and a
+machine code case does the same; with either reader's `\r` taken out, it fails.

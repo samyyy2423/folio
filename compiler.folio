@@ -270,6 +270,8 @@ to tokens_from with source, file, begins
                         set d to "\n"
                     else if d is "t"
                         set d to "\t"
+                    else if d is "r"
+                        set d to "\r"
                     end
                 end
                 add d to text
@@ -387,6 +389,8 @@ to text_parts with chars, first, upto, line, col, file
                 set c to "\n"
             else if c is "t"
                 set c to "\t"
+            else if c is "r"
+                set c to "\r"
             end
             add c to piece
             add width(item i of chars) + width(item (i + 1) of chars) to col
@@ -4152,7 +4156,8 @@ to remember with at
     return length of ats - 1
 end
 
-# a JavaScript string, as JSON.stringify writes it (text holds no control characters but tab and new line)
+# a JavaScript string, as JSON.stringify writes it (text written in a program holds no control characters but
+# tab, new line and carriage return)
 to quote with text
     set out to "\""
     for each c in text
@@ -4164,6 +4169,8 @@ to quote with text
             add "\\n" to out
         else if c is "\t"
             add "\\t" to out
+        else if c is "\r"
+            add "\\r" to out
         else
             add c to out
         end

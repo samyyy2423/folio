@@ -16,7 +16,7 @@ export { FolioError, excerpt, describeTrail, seeded, soundSamples, soundWav, SOU
 // which has no character codes, follow them exactly. Of text this finds only the opening quote: textEnd finds
 // where it ends, as text can be inside text.
 const TOKEN = /([\0-\x20]+)|(#[^\n]*)|(0x[\da-fA-F]+|0b[01]+|\d+(?:\.\d+)?)|([A-Za-z_]\w*)|(")|([-+*/(),]|'s(?!\w))/y;
-const ESCAPES = { n: "\n", t: "\t" };
+const ESCAPES = { n: "\n", t: "\t", r: "\r" };
 const unescape = (raw) => raw.replace(/\\(.)/gs, (_, c) => ESCAPES[c] ?? c);
 const fitsText = (c) => c !== undefined && !/[\0-\x08\n-\x1f]/.test(c);
 // a '{' right before one of these starts a value in text: a name, or a bracket

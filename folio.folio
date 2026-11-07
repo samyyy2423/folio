@@ -778,6 +778,8 @@ to cli_folio_text with cli_text
             add "\\" + cli_c to cli_out
         else if cli_c is "\n"
             add "\\n" to cli_out
+        else if cli_c is "\r"
+            add "\\r" to cli_out
         else
             add cli_c to cli_out
         end
@@ -2730,7 +2732,7 @@ end
 # reads them as they come). Lines and columns are counted from 0 there, and columns as JavaScript counts
 # them, as Folio's are.
 
-set cli_cr to ((list of 13) as bytes) as text # a carriage return, which Folio text can't write
+set cli_cr to "\r" # a carriage return
 # what can come next in a line, for completion
 set cli_lsp_words to list of "set", "to", "say", "if", "else", "end", "repeat", "while", "for each", "return", "add", "remove",
     "kind", "use", "try", "if it fails", "either way", "fail with", "stop", "expect", "match", "when", "every", "ask", "read",

@@ -1352,6 +1352,27 @@ test("read the folder, on all three engines and in the compiler written in Folio
   assert.deepEqual(compiled((s) => folio(s, used), using), compiled((s) => compileToJs(s, { files: (name) => used[name] }), using));
 });
 
+// \r in text is a carriage return, as \n is a new line and \t a tab, in text with values in it too (DESIGN §175):
+// on every engine, in the compiler written in Folio, and as tidy leaves it. \\r is a backslash and an r, and any
+// other letter after a backslash is that letter, as it always was.
+test("\\r in text is a carriage return, on every engine and in the compiler written in Folio", () => {
+  const source = [
+    'say ("a\\rb\\tc\\nd") as bytes',
+    'say length of "\\r"',
+    'say "\\r" is (list of 13) as bytes as text',
+    "set n to 4",
+    'say ("x{n}\\r\\n") as bytes',
+    'say list of "\\r", "r", "\\\\r", "\\q"',
+    'say split "one\\r\\ntwo" by "\\r\\n"',
+  ].join("\n");
+  const want = [["out", "(7 bytes: 97, 13, 98, 9, 99, 10, 100)"], ["out", "1"], ["out", "yes"], ["out", "(4 bytes: 120, 52, 13, 10)"],
+    ["out", '["\\r", "r", "\\\\r", "q"]'], ["out", '["one", "two"]']];
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  const folio = folioCompiler(COMPILER);
+  assert.deepEqual(compiled(folio, source), compiled(compileToJs, source));
+  assert.equal(format(source), `${source}\n`);
+});
+
 // ---------- tidying ----------
 
 test("format() tidies code the one way, without changing a piece of it, and tidy code stays as it is", () => {

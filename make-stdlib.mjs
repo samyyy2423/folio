@@ -13,7 +13,7 @@ export const STANDARD = ["math.folio", "folio-profiler.folio", "folio-coverage.f
   "stats", "sync", "system", "tasks", "text", "toml", "ui", "websocket", "windows", "wire", "xlsx", "xml", "yaml", "zip", "zones"].map((name) => `tools/${name}.folio`)];
 
 // a file's text as a Folio text: \ " and { escaped, line ends and tabs as \n and \t
-const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n").replace(/\t/g, "\\t")}"`;
+const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n").replace(/\t/g, "\\t").replace(/\r/g, "\\r")}"`;
 
 export function stdlib(read = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8")) {
   const lines = [
