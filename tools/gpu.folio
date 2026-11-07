@@ -1193,8 +1193,10 @@ to gpu_trimmed with words
 end
 
 to gpu_is_space with c
-    return c is " " or c is "\n" or c is "\t" or c is "\r"
+    return c is " " or c is "\n" or c is "\t" or c is gpu_cr
 end
+
+set gpu_cr to (list of 13) as bytes as text # a carriage return
 
 # a letter of a PTX name: letters, digits, _ and $
 to gpu_in_name with c

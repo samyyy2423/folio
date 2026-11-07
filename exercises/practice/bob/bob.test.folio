@@ -36,6 +36,15 @@ to test_prolonged_silence
     expect exercise's response("          ") is "Fine. Be that way!"
 end
 
+to test_alternate_silence
+    expect exercise's response("\t\t\t\t\t\t\t\t\t\t") is "Fine. Be that way!"
+end
+
+# a new line, a carriage return, a space and a tab
+to test_other_whitespace
+    expect exercise's response("\n" + (list of 13) as bytes as text + " \t") is "Fine. Be that way!"
+end
+
 to test_question_with_spaces_after_it
     expect exercise's response("Okay if like my  spacebar  quite a bit?   ") is "Sure."
 end

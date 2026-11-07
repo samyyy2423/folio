@@ -270,15 +270,14 @@ to tokens_from with source, file, begins
                         set d to "\n"
                     else if d is "t"
                         set d to "\t"
-                    else if d is "r"
-                        set d to "\r"
                     end
                 end
                 add d to text
                 add 1 to ti
             end
             set parts to text_parts(chars, k + 1, k of ends - 1, line, col + 1, file)
-            add record with type "string", value text, line line, col start, nl nl, file file, parts parts to tokens
+            add record with type "string", value text, line line, col start, nl nl, file file, parts parts,
+                slips text_slips(chars, k + 1, k of ends - 1, col + 1) to tokens
             set col to col_at(chars, k, col, k of ends)
             set k to k of ends
             set nl to no
@@ -373,6 +372,32 @@ to col_at with chars, here, here_col, there
     return ca_col
 end
 
+# The columns where text written from `first` to just before `upto`, from column `col`, has \r, not in a value
+# in it: an r, as SPEC.md has it for Folio 1, where a carriage return was likely meant, which folio check says
+# (DESIGN §175)
+to text_slips with chars, first, upto, col
+    set found to empty list
+    set i to first
+    repeat while i is less than upto
+        set c to item i of chars
+        if c is "\\"
+            if item (i + 1) of chars is "r"
+                add col to found
+            end
+            add width(c) + width(item (i + 1) of chars) to col
+            set i to i + 2
+        else if c is "{" and starts_value(item (i + 1) of chars)
+            set closing to k of value_end(chars, i)
+            set col to col_at(chars, i, col, closing + 1)
+            set i to closing + 1
+        else
+            add width(c) to col
+            add 1 to i
+        end
+    end
+    return found
+end
+
 # "Hi {name}!": text with values in it. A '{' right before a letter, '_' or '(' starts a value, which ends at
 # its own '}'; any other '{' is itself, and so is '\{'. Gives the text and each value's tokens, in order, each
 # a record of its text or its tokens, or nothing for text with no value in it. The text as written is chars
@@ -389,8 +414,6 @@ to text_parts with chars, first, upto, line, col, file
                 set c to "\n"
             else if c is "t"
                 set c to "\t"
-            else if c is "r"
-                set c to "\r"
             end
             add c to piece
             add width(item i of chars) + width(item (i + 1) of chars) to col
@@ -4156,8 +4179,7 @@ to remember with at
     return length of ats - 1
 end
 
-# a JavaScript string, as JSON.stringify writes it (text written in a program holds no control characters but
-# tab, new line and carriage return)
+# a JavaScript string, as JSON.stringify writes it (text holds no control characters but tab and new line)
 to quote with text
     set out to "\""
     for each c in text
@@ -4169,8 +4191,6 @@ to quote with text
             add "\\n" to out
         else if c is "\t"
             add "\\t" to out
-        else if c is "\r"
-            add "\\r" to out
         else
             add c to out
         end

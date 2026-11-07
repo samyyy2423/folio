@@ -63,7 +63,7 @@ export function checkerRules() {
   lines.push(`actions=${TURTLE_ACTIONS.join("|")}`);
 
   // the lines, as Folio text: a backslash, quote and brace written with a backslash before them, a new line as \n
-  const folio = (text) => `"${text.replace(/[\\"{\n\r]/g, (c) => (c === "\n" ? "\\n" : c === "\r" ? "\\r" : `\\${c}`))}"`;
+  const folio = (text) => `"${text.replace(/[\\"{\n]/g, (c) => (c === "\n" ? "\\n" : `\\${c}`))}"`;
   const chunks = (all) => {
     const out = [];
     for (let i = 0; i < all.length; i += 60) out.push(`    add ${folio(all.slice(i, i + 60).join("\n") + "\n")} to made`);

@@ -1141,9 +1141,9 @@ set name to choose a file to open           # or: to save; nothing if none is ch
   `to` line; otherwise the variable is the function's own. A name a function
   only reads can be set anywhere around it, even below. Functions remember the
   variables around them.
-- **Text:** any character but control characters; write `\n` for a new line,
-  `\t` for a tab and `\r` for a carriage return. Upper or lower case doesn't
-  matter in names and words.
+- **Text:** any character but control characters; write `\n` for a new line and
+  `\t` for a tab (`\r` is an `r`, which `folio check` points out). Upper or
+  lower case doesn't matter in names and words.
 
 Mistakes get a message in plain words that points at the exact spot, with the
 right name when you misspell one, the right word when you type a symbol from

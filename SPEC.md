@@ -121,7 +121,8 @@ word straight after a number makes an amount: `5 km` (section 4).
 Text is written between double quotes on one line. Inside it:
 
 - `\n` is a new line, `\t` a tab, and `\` before any other character is that character, so `\"` is a quote,
-  `\\` a backslash and `\{` a brace.
+  `\\` a backslash and `\{` a brace. `\r` is therefore an `r`, not a carriage return, which `folio check` warns
+  of where it's written (its warnings aren't guaranteed); a carriage return is `(list of 13) as bytes as text`.
 - Any character but a control character can be written as itself; a tab can too.
 - **Values in text.** A `{` right before a letter, `_` or `(` starts a value, which ends at its own `}`:
   `"Hi, {name}!"` is `"Hi, " + name + "!"`. The value is any expression, and can hold text of its own:

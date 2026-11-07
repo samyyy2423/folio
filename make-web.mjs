@@ -54,7 +54,7 @@ export function webpage(read = (file) => readFileSync(new URL(`./${file}`, impor
 }
 
 // the page as a Folio text, for folio.folio: \ " and { escaped, line ends and tabs as \n and \t
-const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n").replace(/\t/g, "\\t").replace(/\r/g, "\\r")}"`;
+const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n").replace(/\t/g, "\\t")}"`;
 
 export function webpageFolio(read) {
   const html = webpage(read);

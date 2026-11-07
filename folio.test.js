@@ -1352,10 +1352,10 @@ test("read the folder, on all three engines and in the compiler written in Folio
   assert.deepEqual(compiled((s) => folio(s, used), using), compiled((s) => compileToJs(s, { files: (name) => used[name] }), using));
 });
 
-// \r in text is a carriage return, as \n is a new line and \t a tab, in text with values in it too (DESIGN §175):
-// on every engine, in the compiler written in Folio, and as tidy leaves it. \\r is a backslash and an r, and any
-// other letter after a backslash is that letter, as it always was.
-test("\\r in text is a carriage return, on every engine and in the compiler written in Folio", () => {
+// \r in text is an r, as SPEC.md promises every Folio 1 (a backslash before a letter but n or t is that letter), on
+// every engine and in the compiler written in Folio, and tidy leaves it as written; and check() says where it's
+// written, in a value in text too, as a carriage return was likely meant (DESIGN §175). \\r is a backslash and an r.
+test("\\r in text is an r, as Folio 1 promises, and check() says where it's written", () => {
   const source = [
     'say ("a\\rb\\tc\\nd") as bytes',
     'say length of "\\r"',
@@ -1364,13 +1364,19 @@ test("\\r in text is a carriage return, on every engine and in the compiler writ
     'say ("x{n}\\r\\n") as bytes',
     'say list of "\\r", "r", "\\\\r", "\\q"',
     'say split "one\\r\\ntwo" by "\\r\\n"',
+    'say "{("\\r")} and \\\\r"',
   ].join("\n");
-  const want = [["out", "(7 bytes: 97, 13, 98, 9, 99, 10, 100)"], ["out", "1"], ["out", "yes"], ["out", "(4 bytes: 120, 52, 13, 10)"],
-    ["out", '["\\r", "r", "\\\\r", "q"]'], ["out", '["one", "two"]']];
+  const want = [["out", "(7 bytes: 97, 114, 98, 9, 99, 10, 100)"], ["out", "1"], ["out", "no"], ["out", "(4 bytes: 120, 52, 114, 10)"],
+    ["out", '["r", "r", "\\\\r", "q"]'], ["out", '["one", "two"]'], ["out", "r and \\r"]];
   for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
   const folio = folioCompiler(COMPILER);
   assert.deepEqual(compiled(folio, source), compiled(compileToJs, source));
   assert.equal(format(source), `${source}\n`);
+  const message = "'\\r' is the letter r in Folio 1, not a carriage return: for one, write (list of 13) as bytes as text";
+  assert.deepEqual(check(source).map((p) => [p.line, p.col, p.kind, p.message]),
+    [[1, 8, "looks wrong", message], [2, 16, "looks wrong", message], [3, 6, "looks wrong", message], [5, 11, "looks wrong", message],
+      [6, 14, "looks wrong", message], [7, 15, "looks wrong", message], [7, 28, "looks wrong", message], [8, 9, "looks wrong", message]]);
+  assert.deepEqual(check('say "\\\\r, \\\\n and r"'), []);
 });
 
 // ---------- tidying ----------

@@ -16,7 +16,7 @@ export { FolioError, excerpt, describeTrail, seeded, soundSamples, soundWav, SOU
 // which has no character codes, follow them exactly. Of text this finds only the opening quote: textEnd finds
 // where it ends, as text can be inside text.
 const TOKEN = /([\0-\x20]+)|(#[^\n]*)|(0x[\da-fA-F]+|0b[01]+|\d+(?:\.\d+)?)|([A-Za-z_]\w*)|(")|([-+*/(),]|'s(?!\w))/y;
-const ESCAPES = { n: "\n", t: "\t", r: "\r" };
+const ESCAPES = { n: "\n", t: "\t" };
 const unescape = (raw) => raw.replace(/\\(.)/gs, (_, c) => ESCAPES[c] ?? c);
 const fitsText = (c) => c !== undefined && !/[\0-\x08\n-\x1f]/.test(c);
 // a '{' right before one of these starts a value in text: a name, or a bracket
@@ -117,6 +117,8 @@ function tokenize(src, file, start) {
     if (string) {
       const parts = textParts(src, at + 1, at + text.length - 1, place, file);
       if (parts) token.parts = parts;
+      const slips = rEscapes(src, at + 1, at + text.length - 1);
+      if (slips.length) token.slips = slips.map(place);
       TOKEN.lastIndex = at + text.length; // past the text, which reading a value in it moved
     }
     tokens.push(token);
@@ -125,6 +127,19 @@ function tokenize(src, file, start) {
   if (start) tokens.push({ type: "}", value: "}", line, col: src.length - lineStart + 1, nl: true, ...(file && { file }) });
   tokens.push({ type: "eof", value: "", line, col: src.length - lineStart + 1, nl: true, ...(file && { file }) });
   return tokens;
+}
+
+// Where text written from `from` to just before `upto` has \r, not in a value in it: an r, as SPEC.md has it for
+// Folio 1, where a carriage return was likely meant, which check() says (DESIGN §175)
+function rEscapes(src, from, upto) {
+  const found = [];
+  for (let i = from; i < upto; i++) {
+    if (src[i] === "\\") {
+      if (src[i + 1] === "r") found.push(i);
+      i++;
+    } else if (src[i] === "{" && startsValue(src[i + 1])) i = valueEnd(src, i).end;
+  }
+  return found;
 }
 
 // "Hi {name}!": text with values in it. A '{' right before a letter, '_' or '(' starts a value, which ends at
@@ -2400,11 +2415,23 @@ export function compileToWasmBytes(source, options) {
 // can't even be read comes back as a single problem of kind "error".
 export function check(source, options) {
   try {
-    return build(source, checkProgram, options);
+    const problems = build(source, checkProgram, options);
+    const slips = rWarnings(tokenize(source));
+    return slips.length ? [...problems, ...slips].sort((a, b) => a.line - b.line || a.col - b.col) : problems;
   } catch (err) {
     if (!(err instanceof FolioError)) throw err;
     return [{ line: err.line, col: err.col, kind: "error", message: err.reason, ...(err.file && { file: err.file }) }];
   }
+}
+
+// each \r in a program's text, a warning where it's written (see rEscapes)
+const R_SLIP = "'\\r' is the letter r in Folio 1, not a carriage return: for one, write (list of 13) as bytes as text";
+function rWarnings(tokens, found = []) {
+  for (const token of tokens) {
+    for (const at of token.slips ?? []) found.push({ line: at.line, col: at.col, kind: "looks wrong", message: R_SLIP });
+    for (const part of token.parts ?? []) if (Array.isArray(part)) rWarnings(part, found);
+  }
+  return found;
 }
 
 // ---------- fixing ----------

@@ -11,9 +11,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
   packed as its `.param` says; `launch_with` adds shared memory, and `upload_bytes`, `room` and `download_bytes`
   keep whole numbers and anything else on the card. Mistakes name the input and its type, and PTX the driver
   can't take shows its log, with the line (DESIGN §176).
-- **`\r` in text is a carriage return.** It was an `r`, as any other letter after a backslash is that letter,
-  so `"\r"` meant for a line's end took `r`s off words. Now `"\r\n"` is Windows' line end, on every engine and in
-  machine code, and a carriage return written back as code is `\r` (DESIGN §175).
+- **`folio check` warns of `\r` in text.** It's an `r` in Folio 1, as SPEC.md promises, where a carriage return
+  was likely meant: the warning says where, in the playground and editors too, and how to write one. gpu.folio
+  and the Bob exercise's example had the slip, and are fixed (DESIGN §175).
 - **Small whole numbers added and compared in place, on WebAssembly.** `n - 1`, `i + 1` and `x is less than 2`
   work on i31 numbers without a call, an `if` tests a comparison without a box, and an input is read without a
   check: fib(32) 162 ms to 145 on a first run, primes 148 to 136, and folio.wasm 5% smaller (DESIGN §174).

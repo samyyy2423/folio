@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { RUNTIME } from "./wasm-runtime.js";
 
 // text as a Folio literal: \ " and { escaped, line ends as \n
-const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n").replace(/\r/g, "\\r")}"`;
+const literal = (text) => `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\{/g, "\\{").replace(/\n/g, "\\n")}"`;
 
 export function wasmRuntimeFolio() {
   const out = [

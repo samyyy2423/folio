@@ -7245,27 +7245,30 @@ an i31, or for yes and no, makes it fail. The rest of fib's time is the call its
 through `call_ref`, which V8 doesn't put in line. A call to a function the program never sets again could be a
 direct `call`, and inputs only ever given numbers f64s; both are bigger changes to both compilers.
 
-## 175. \r in text is a carriage return
+## 175. \r is an r, and folio check says so
 
-Text had two escapes for characters that can't be typed into it, `\n` and `\t`, and a backslash before anything
-else stood for what came after it, so that `\"`, `\\` and `\{` work. `"\r"` was therefore an `r`, with no word
-from Folio, and code that wrote it for a carriage return did something else. Writing the tokenizer package, a
-line's end trimmed with `"\r"` took the `r` off `for` in a BERT vocabulary; the Bob exercise's example answer,
-trimming its spaces, trimmed `r`s too; folio.folio's language server made its carriage return out of the byte 13,
-and the standard library's JSON, XML, TOML and JWT readers did the same.
+Text has two escapes for characters that can't be typed into it, `\n` and `\t`, and a backslash before anything
+else stands for what comes after it, so that `\"`, `\\` and `\{` work: SPEC.md promises it, for every Folio 1.
+`"\r"` is therefore an `r`, and code that wrote it for a carriage return did something else, with no word from
+Folio. Writing the tokenizer package, a line's end trimmed with `"\r"` took the `r` off `for` in a BERT
+vocabulary, and the Bob exercise's example answer, trimming its spaces, trimmed `r`s.
 
-`\r` is now a carriage return, in text with values in it too, in both of the readers of Folio: folio.js's and
-compiler.folio's, which wasm.folio and machine.folio use, so every engine and the machine code agree. What
-writes text as code writes a carriage return as `\r`: compiler.folio's JavaScript strings (as `JSON.stringify`
-does, which jit.js uses), folio.folio's Folio text, and the scripts that put files in Folio source
-(make-stdlib.mjs, make-web.mjs, make-wasm-runtime.mjs, make-checker-rules.mjs). Text shown in a list already
-showed one as `\r`, on every engine, so a carriage return now reads back as it shows.
+Making `\r` a carriage return would be the fix, and it was made, then taken back: a program that wrote `"\r"` and
+meant the `r` it has always been would change, and Folio 1 keeps every program meaning what it meant
+(VERSIONING.md). So `\r` stays an `r` in Folio 1, and is a carriage return for Folio 2 to make.
 
-Any other letter after a backslash is still that letter. Making it a mistake would find the next `\r` before it
-did harm, but would break programs that write `\}` beside `\{`, as properties.test.folio does, or `\'`; `folio
-check` could say so instead, as it says other likely slips. A test runs `\r`, `\t` and `\n` together, `\r` with a
-value before it, `\\r`, and `\q`, on every engine, in the compiler written in Folio and through tidy, and a
-machine code case does the same; with either reader's `\r` taken out, it fails.
+What Folio 1 can do is say so. Both of Folio's readers, folio.js's and compiler.folio's, note each `\r` in text,
+in a value in text too, as they read it, and `folio check` and the playground's checker give a warning there: it
+"looks wrong", a kind of its own that, as "unused" does, leaves folio check ending with 0. The language server
+shows it as you type, as it shows the rest. Making the letter after any backslash a warning would be too much:
+`\}` beside `\{` (as properties.test.folio has it) and `\'` mean what they say.
+
+The trying-out found that "\r" was written for a carriage return in three of Folio's own files: gpu.folio's PTX
+reader (where it made `r` a space), compiler.folio's JavaScript strings, and the Bob example; each now makes a
+carriage return from its byte, `(list of 13) as bytes as text`, which is what Folio 1 has for one, and Bob's tests
+have exercism's "other whitespace" case, which the old example fails. A test runs `\r` beside `\n` and `\t`, in a
+value in text, `\\r` and `\q` on every engine, in the compiler written in Folio and through tidy, with check()'s
+warning at each place; folio.exe's check says what check() says of the same program.
 
 ## 176. Kernels of your own on the graphics card
 
