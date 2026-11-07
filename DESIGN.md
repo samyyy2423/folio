@@ -7022,3 +7022,90 @@ On Linux the same: `add` 176 ms to 80 under WSL, and `for each` 120 to 37.
 - **Calls**: `fib(32)`, 7 million calls, is 15 ms of work in Folio to C's 10, with C's numbers doubles too, as
   Folio's are, so the difference is in the call: the calls in progress counted, the function's number pushed
   for a mistake's trail, and its inputs kept in its frame. Keeping a function's inputs in registers is next.
+
+## 170. Training as GPT-2 was trained: AdamW, a warmup and a cosine, clipping and dropout
+
+gpt.folio trained with plain Adam at one rate. Most transformers are trained with four more things, and
+learn.folio has them now, on the card and on the processor:
+
+- **`adamw(parameters, rate, decay)`**: Adam, and each parameter of more than one row (the weights and
+  embeddings, not a bias or a layer norm's row, as nanoGPT has it) times `1 - rate * decay` at each step, apart
+  from its gradient. On the card it's in the launch Adam was already: each entry of `adam_many`'s table has a
+  flag for it, and the factor is in the table's first bytes, where there was room.
+- **`clip_gradients(opt, most)`**: at each step, when the square root of the sum of the squares of every
+  gradient is more than `most`, each gradient times `most` over it, as PyTorch's `clip_grad_norm_`. On the card
+  nothing waits for it: `sumsq_many` adds up the squares of every gradient into one number on the card, a warp
+  at a time with one atomic add each, and `adam_many` reads that number and works out its own factor, so a
+  step is still two launches and no copy back. `gradient_norm(opt)` gives the number, for a program that wants
+  to see it.
+- **`cosine_rate(s, steps, warmup, top, bottom)`**: up from 0 to `top` over the first `warmup` steps, then down
+  to `bottom` along half a cosine. A program sets `opt's rate` to it at each step, as `opt's rate` was always
+  read at the step.
+- **`dropout(m, chance)`**, with `training(no)` to use a network and `training(yes)` to train it again: each
+  number 0 at the chance, the rest over `1 - chance`, and the gradient through the same ones. On the card the
+  choice is a hash of each number's place and a seed, one launch for the mask, with no random numbers to
+  upload.
+
+For gpt.folio, AdamW with a decay of 0.1, a warmup of 100 steps, a cosine down to a tenth and clipping to 1 took
+the loss on text it hadn't seen from 1.72 to 1.64 in the same 2,000 steps, at a higher rate (0.006, where 0.003
+was best for plain Adam), and the step still takes 3.0 ms. Dropout hurt at 2,000 steps (1.64 to 1.67), as a
+model this small hasn't started learning the text by heart, and helped at 6,000 (1.66 to 1.59), so gpt.folio
+uses 0.1 only past 3,000 steps.
+
+- **Checked**: AdamW's decay against the sum worked out by hand, a bias not decayed, clipping to 1 of gradients 3
+  and 4, the cosine at its ends and middle, and dropout's share and gradient, on every engine; on the card,
+  AdamW and clipping over four steps against the processor's to a float's precision (and without clipping the
+  card's numbers are 0.02 away, so the test would see it gone), and dropout's share of 100,000, its gradient, a
+  new choice each time and nothing dropped while `training(no)`.
+- **Writing** was already quick: 400 letters in 0.24 s, the model run over up to 64 letters for each one. A cache
+  of each place's keys and values would save most of that, and isn't worth its size here.
+
+## 171. Training on the processor, twice as fast
+
+The digit reader learned its 10 rounds on the processor in 1.41 s, to PyTorch's 0.50. A step of it, 200 drawings
+through layers of 256 by 256 and 256 by 10, took 4.0 ms, and its two big matrix multiplies were only 0.75 ms of
+that. The rest was the small things around them, which, timed one at a time, were each slower than they had to be:
+
+| a step's part | before | now |
+|:--|--:|--:|
+| `adam_step`, 65,536 numbers | 637 µs | 133 µs |
+| relu's gradient: `above_zero`, then `times` | 474 µs | 137 µs, `relu_gradient` |
+| `cross_entropy`, 200 by 10 | 310 µs | 73 µs |
+| 200 by 256 times 256 by 10 | 183 µs | 73 µs |
+| a turned copy of 200 by 256, for a gradient | 167 µs | none, `matmul_turned` |
+| a new array of 51,200 zeros | 87 µs | 50 µs |
+| the whole step | 4.0 ms | 1.64 ms |
+
+- **Adam 4 at a time.** `rt_k_adam` works through the numbers with AVX, 4 to a register, each of the 4 the same
+  multiply, add, square root and divide as one at a time, so the same bits; the check before anything is changed
+  is a compare of the 4 at once, gathered over the whole pass and looked at once at the end.
+- **relu's gradient in one go.** `arrays's relu_gradient(g, x)`, g where x is above 0 and 0 elsewhere, is one
+  compare and a mask in `rt_k_binary`; `above_zero` is a compare and a mask too, where it was a branch for each
+  number that, on numbers whose signs are as likely either way, went the wrong way half the time.
+- **exp in machine code.** math.folio's `exp` is Folio: the nearest whole number of halvings, a 20-term series,
+  then doubling back, 131 ns a call. `rt_k_exp` does the same steps 4 at a time, the doubling as a multiply by 2
+  to the power of the halvings, which is exact while the numbers stay in the doubles' range; past 700 either way
+  it leaves them to Folio. `arrays's exp` uses it, and learn.folio's `cross_entropy` on the processor is now
+  arrays' `max`, `minus`, `exp`, `sum` and `divided_by` and a loop over the rows, not a loop over every number.
+- **`matmul_turned(a, b)`**, a turned over times b, reads a where it is: the kernel steps along a's column for
+  each term, not its row, and that step is kept for its threads with the rest. A layer's weights' gradient, x
+  turned over times what came back, needed a turned copy of x first.
+- **The last columns.** A matrix multiply does 4 rows by 8 columns at a time in registers, and the columns past a
+  multiple of 8 one row at a time, out's row in memory, a load and a store for every term, each waiting on the
+  last: for 256 by 10, the last 2 columns were nearly all of the time. They're 4 rows by 2 columns at a time now,
+  each number added up in a register.
+- **Room without a copy.** arrays.folio made every array's numbers by copying the first n of a list of zeros it
+  kept, on top of the zeros the collector's new block already is. `rt_k_room` gives a new list that block; own
+  kernels run with the program's lists to themselves, and the collector looks through the whole stack and every
+  register, so the kernel can ask for it.
+
+Each is still Folio's own numbers, to the last bit: tests run Adam over 1,003 numbers with AdamW's keep and
+without, relu's gradient and slope, `exp` from -690 to 690 and past 700, and matrix multiplies of shapes with rows
+past the fours, columns past the eights, a b too long to copy and enough to share over threads, normal and turned,
+in machine code and on the JavaScript engine, and compare their bits.
+
+The digit reader now learns its 10 rounds on the processor in **0.65 s**, from 1.41, to PyTorch's 0.50, still
+99.4% right, the loss the same to the last digit shown. What's left is mostly what PyTorch does differently by
+design: its numbers are 32-bit floats, 8 to a register where Folio's doubles are 4, its multiplies fuse a multiply
+and an add, and its allocator hands back memory it hasn't zeroed. Folio's numbers are doubles, added in Folio's
+own order, everywhere.

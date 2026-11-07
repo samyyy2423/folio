@@ -15,7 +15,8 @@
 # For learn.folio, which trains networks on the card: transpose, add_rows (a row added to each row),
 # column_sums, softmax_rows, cross_entropy (each row's softmax against its label, its loss and gradient at
 # once), argmax_rows, relu_gradient, add_scaled (in place) and adam_step; matmul_turned (a side turned over,
-# into a gradient), column_sums_into and adam_many (every parameter in a launch). Memory free gives back is kept for
+# into a gradient), column_sums_into and adam_many (every parameter in a launch, with AdamW's decay and
+# clipping if wanted), sum_of_squares (of many at once) and dropout_mask. Memory free gives back is kept for
 # the next numbers of as many, as a training loop makes the same sizes over and over; give_back_memory()
 # hands it to the driver. For transformers: gather_rows and scatter_add_rows (an embedding and its gradient),
 # gelu and gelu_gradient, layer_norm and layer_norm_gradient, and attention and attention_gradient, with a causal
@@ -471,24 +472,60 @@ end
 
 # Adam's step for many parameters at once (DESIGN §168): entries a list of lists of p, g, m and v, numbers on
 # the card, as adam_step takes them, 64 to a launch, not one each; zero_grads leaves each g 0, for the next
-# step's gradients to be added to
-to adam_many with entries, rate, b1, b2, eps, t, zero_grads
+# step's gradients to be added to. And AdamW's and clipping's, as PyTorch has them (DESIGN §170): an entry with
+# a fifth item, yes, has its p times keep first (keep 1 - rate times the decay); and with norm, numbers on the
+# card, one, the sum of the squares of every g is put in it, and each g is made smaller by most over its square
+# root, when that is more than most, all on the card, with nothing to wait for
+to adam_many with entries, rate, b1, b2, eps, t, zero_grads, keep or 1, norm or nothing, most or 0
     set c1 to 1 / (1 - (b1 to the power of t))
     set c2 to 1 / (1 - (b2 to the power of t))
+    if norm is not nothing
+        gpu_squares_into(norm, entries)
+    end
     set first to 1
     repeat while first is at most length of entries
         set last to first + 63
         if last is greater than length of entries
             set last to length of entries
         end
-        gpu_adam_launch(entries, first, last, (list of rate, b1, b2, eps, c1, c2), zero_grads)
+        gpu_adam_launch(entries, first, last, (list of rate, b1, b2, eps, c1, c2, keep, most), zero_grads, "adam_many", norm)
+        set first to last + 1
+    end
+end
+
+# the sum of the squares of every number in each of a list of numbers on the card
+to sum_of_squares with parts
+    set entries to empty list
+    for each part in parts
+        add (list of part, part, part, part) to entries
+    end
+    set norm to gpu_allocate(1)
+    gpu_squares_into(norm, entries)
+    set total to item 1 of download(norm)
+    free(norm)
+    return total
+end
+
+# norm, one number on the card, the sum of the squares of each entry's g
+to gpu_squares_into with norm, entries
+    gpu_run_flat("fill", 1, (list of norm's at), 0, 1)
+    set first to 1
+    repeat while first is at most length of entries
+        set last to first + 63
+        if last is greater than length of entries
+            set last to length of entries
+        end
+        gpu_adam_launch(entries, first, last, (list of 0, 0, 0, 0, 0, 0, 0, 0), no, "sumsq_many", norm)
         set first to last + 1
     end
 end
 
 set gpu_adam_table to nothing
 
-to gpu_adam_launch with entries, first, last, scalars, zero_grads
+# the table adam_many and sumsq_many read: rate, b1, b2, eps, c1 and c2, floats 8 bytes apart from 0, keep at 4,
+# most at 12, zero_grads at 48 and where norm is at 56; then for each entry, from 64, 40 bytes: where p, g, m and
+# v are, and their count, with 1 at 36 for an entry that decays
+to gpu_adam_launch with entries, first, last, scalars, zero_grads, kernel, norm
     if gpu_adam_table is nothing
         set values to 2624 bytes
         set params to 8 bytes
@@ -507,22 +544,32 @@ to gpu_adam_launch with entries, first, last, scalars, zero_grads
     if zero_grads
         set item 7 of wholes to 1
     end
+    if norm is not nothing
+        set item 8 of wholes to norm's at
+    end
     set widest to 0
     set at to 8
     for each j from first to last
         set entry to item j of entries
         set n to (item 1 of entry)'s count
-        for each part in entry
+        for each k from 1 to 4
+            set part to item k of entry
             if part's count is not n
                 fail with "adam_many needs as many numbers in each of p, g, m and v"
             end
-        end
-        for each part in entry
             add 1 to at
             set item at of wholes to part's at
         end
         add 1 to at
-        set item at of wholes to n
+        set decays to no
+        if length of entry is at least 5
+            set decays to item 5 of entry
+        end
+        if decays
+            set item at of wholes to n + 4294967296
+        else
+            set item at of wholes to n
+        end
         if n is greater than widest
             set widest to n
         end
@@ -531,16 +578,32 @@ to gpu_adam_launch with entries, first, last, scalars, zero_grads
     gpu_convert(3, wholes, values)
     set one to kept's one
     set four to kept's four
-    for each k from 1 to 6
+    set places to list of 0, 8, 16, 24, 32, 40, 4, 12
+    for each k from 1 to 8
         set item 1 of one to item k of scalars
         gpu_convert(1, one, four)
         for each j from 1 to 4
-            set item (8 * (k - 1) + j) of values to item j of four
+            set item (item k of places + j) of values to item j of four
         end
     end
     if widest is greater than 0
-        gpu_check(gpu_cu_launch(gpu_function("adam_many"), gpu_blocks(widest), last - first + 1, 1, 256, 1, 1, 0, nothing, kept's params, nothing), "run adam_many")
+        gpu_check(gpu_cu_launch(gpu_function(kernel), gpu_blocks(widest), last - first + 1, 1, 256, 1, 1, 0, nothing, kept's params, nothing), "run " + kernel)
     end
+end
+
+# count numbers on the card for dropout: each 0 at the chance given, or else 1 / (1 - chance), chosen from
+# seed, a whole number from 0 to 2^32 - 1, and each one's place, so a new seed is a new choice
+to dropout_mask with count, chance, seed
+    set made to gpu_allocate(count)
+    set below to ((1 - chance) * 4294967296) rounded down
+    if below is greater than 4294967295
+        set below to 4294967295
+    end
+    if count is greater than 0
+        gpu_launch("dropout_mask", gpu_blocks(count), 1, 256, 1, (list of made's at, count, seed, below, 1 / (1 - chance)),
+            (list of "pointer", "whole", "whole", "whole", "float"))
+    end
+    return made
 end
 
 to gpu_shape with a, rows, columns, what
@@ -1068,6 +1131,8 @@ to gpu_fast_code
     add ".visible .entry column_parts(.param .u64 p_out, .param .u64 p_a, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<16>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<10>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_a];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nadd.u32 %r7, %r5, 31;\nshr.u32 %r7, %r7, 5;\nmul.lo.u32 %r7, %r7, %r6;\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r7;\n@%p1 bra DONE;\ncvta.to.global.u64 %rd3, %rd1;\ncvta.to.global.u64 %rd4, %rd2;\nrem.u32 %r8, %r4, %r6;\ndiv.u32 %r9, %r4, %r6;\nshl.b32 %r9, %r9, 5;\nadd.u32 %r10, %r9, 32;\nmin.u32 %r10, %r10, %r5;\nmov.f32 %f1, 0f00000000;\nLOOP:\nsetp.ge.u32 %p2, %r9, %r10;\n@%p2 bra END;\nmad.lo.s32 %r11, %r9, %r6, %r8;\nmul.wide.u32 %rd5, %r11, 4;\nadd.s64 %rd6, %rd4, %rd5;\nld.global.f32 %f2, [%rd6];\nadd.f32 %f1, %f1, %f2;\nadd.u32 %r9, %r9, 1;\nbra LOOP;\nEND:\nmul.wide.u32 %rd7, %r8, 4;\nadd.s64 %rd8, %rd3, %rd7;\nred.global.add.f32 [%rd8], %f1;\nDONE:\nret;\n}\n" to lines
     add ".visible .entry layernorm(.param .u64 p_out, .param .u64 p_xhat, .param .u64 p_rstd, .param .u64 p_x, .param .u64 p_gamma, .param .u64 p_beta, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<16>;\n.reg .f32 %f<16>;\n.reg .b64 %rd<24>;\nld.param.u64 %rd1, [p_out];\nld.param.u64 %rd2, [p_xhat];\nld.param.u64 %rd3, [p_rstd];\nld.param.u64 %rd4, [p_x];\nld.param.u64 %rd5, [p_gamma];\nld.param.u64 %rd6, [p_beta];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nshr.u32 %r7, %r4, 5;\nand.b32 %r8, %r4, 31;\nsetp.ge.u32 %p1, %r7, %r5;\n@%p1 bra DONE;\ncvt.rn.f32.u32 %f9, %r6;\nmul.lo.u32 %r9, %r7, %r6;\nmul.wide.u32 %rd13, %r9, 4;\ncvta.to.global.u64 %rd7, %rd1;\ncvta.to.global.u64 %rd8, %rd2;\ncvta.to.global.u64 %rd9, %rd3;\ncvta.to.global.u64 %rd10, %rd4;\ncvta.to.global.u64 %rd11, %rd5;\ncvta.to.global.u64 %rd12, %rd6;\nadd.s64 %rd14, %rd10, %rd13;\nmov.f32 %f1, 0f00000000;\nmov.u32 %r10, %r8;\nSUM:\nsetp.ge.u32 %p2, %r10, %r6;\n@%p2 bra SUMMED;\nmul.wide.u32 %rd15, %r10, 4;\nadd.s64 %rd16, %rd14, %rd15;\nld.global.f32 %f2, [%rd16];\nadd.f32 %f1, %f1, %f2;\nadd.u32 %r10, %r10, 32;\nbra SUM;\nSUMMED:\nshfl.sync.bfly.b32 %f10, %f1, 16, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 8, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 4, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 2, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 1, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\ndiv.rn.f32 %f3, %f1, %f9;\nmov.f32 %f4, 0f00000000;\nmov.u32 %r10, %r8;\nVAR:\nsetp.ge.u32 %p2, %r10, %r6;\n@%p2 bra VARIED;\nmul.wide.u32 %rd15, %r10, 4;\nadd.s64 %rd16, %rd14, %rd15;\nld.global.f32 %f2, [%rd16];\nsub.f32 %f2, %f2, %f3;\nfma.rn.f32 %f4, %f2, %f2, %f4;\nadd.u32 %r10, %r10, 32;\nbra VAR;\nVARIED:\nshfl.sync.bfly.b32 %f10, %f4, 16, 31, 0xffffffff;\nadd.f32 %f4, %f4, %f10;\nshfl.sync.bfly.b32 %f10, %f4, 8, 31, 0xffffffff;\nadd.f32 %f4, %f4, %f10;\nshfl.sync.bfly.b32 %f10, %f4, 4, 31, 0xffffffff;\nadd.f32 %f4, %f4, %f10;\nshfl.sync.bfly.b32 %f10, %f4, 2, 31, 0xffffffff;\nadd.f32 %f4, %f4, %f10;\nshfl.sync.bfly.b32 %f10, %f4, 1, 31, 0xffffffff;\nadd.f32 %f4, %f4, %f10;\ndiv.rn.f32 %f4, %f4, %f9;\nadd.f32 %f4, %f4, 0f3727C5AC;\nsqrt.rn.f32 %f4, %f4;\nrcp.rn.f32 %f5, %f4;\nsetp.ne.u32 %p3, %r8, 0;\nmul.wide.u32 %rd17, %r7, 4;\nadd.s64 %rd18, %rd9, %rd17;\n@!%p3 st.global.f32 [%rd18], %f5;\nadd.s64 %rd19, %rd8, %rd13;\nadd.s64 %rd20, %rd7, %rd13;\nmov.u32 %r10, %r8;\nNORM:\nsetp.ge.u32 %p2, %r10, %r6;\n@%p2 bra DONE;\nmul.wide.u32 %rd15, %r10, 4;\nadd.s64 %rd16, %rd14, %rd15;\nld.global.f32 %f2, [%rd16];\nsub.f32 %f2, %f2, %f3;\nmul.f32 %f2, %f2, %f5;\nadd.s64 %rd21, %rd19, %rd15;\nst.global.f32 [%rd21], %f2;\nadd.s64 %rd22, %rd11, %rd15;\nld.global.f32 %f6, [%rd22];\nadd.s64 %rd23, %rd12, %rd15;\nld.global.f32 %f7, [%rd23];\nfma.rn.f32 %f8, %f2, %f6, %f7;\nadd.s64 %rd21, %rd20, %rd15;\nst.global.f32 [%rd21], %f8;\nadd.u32 %r10, %r10, 32;\nbra NORM;\nDONE:\nret;\n}\n" to lines
     add ".visible .entry layernorm_grad(.param .u64 p_dx, .param .u64 p_dy, .param .u64 p_xhat, .param .u64 p_rstd, .param .u64 p_gamma, .param .u32 p_rows, .param .u32 p_cols)\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<16>;\n.reg .f32 %f<16>;\n.reg .b64 %rd<24>;\nld.param.u64 %rd1, [p_dx];\nld.param.u64 %rd2, [p_dy];\nld.param.u64 %rd3, [p_xhat];\nld.param.u64 %rd4, [p_rstd];\nld.param.u64 %rd5, [p_gamma];\nld.param.u32 %r5, [p_rows];\nld.param.u32 %r6, [p_cols];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nshr.u32 %r7, %r4, 5;\nand.b32 %r8, %r4, 31;\nsetp.ge.u32 %p1, %r7, %r5;\n@%p1 bra DONE;\ncvt.rn.f32.u32 %f9, %r6;\nmul.lo.u32 %r9, %r7, %r6;\nmul.wide.u32 %rd13, %r9, 4;\ncvta.to.global.u64 %rd6, %rd1;\ncvta.to.global.u64 %rd7, %rd2;\ncvta.to.global.u64 %rd8, %rd3;\ncvta.to.global.u64 %rd9, %rd4;\ncvta.to.global.u64 %rd10, %rd5;\nadd.s64 %rd12, %rd7, %rd13;\nadd.s64 %rd14, %rd8, %rd13;\nadd.s64 %rd11, %rd6, %rd13;\nmov.f32 %f1, 0f00000000;\nmov.f32 %f2, 0f00000000;\nmov.u32 %r10, %r8;\nSUMS:\nsetp.ge.u32 %p2, %r10, %r6;\n@%p2 bra SUMMED;\nmul.wide.u32 %rd15, %r10, 4;\nadd.s64 %rd16, %rd12, %rd15;\nld.global.f32 %f3, [%rd16];\nadd.s64 %rd17, %rd10, %rd15;\nld.global.f32 %f4, [%rd17];\nmul.f32 %f3, %f3, %f4;\nadd.f32 %f1, %f1, %f3;\nadd.s64 %rd18, %rd14, %rd15;\nld.global.f32 %f5, [%rd18];\nfma.rn.f32 %f2, %f3, %f5, %f2;\nadd.u32 %r10, %r10, 32;\nbra SUMS;\nSUMMED:\nshfl.sync.bfly.b32 %f10, %f1, 16, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 8, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 4, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 2, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f1, 1, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f10;\nshfl.sync.bfly.b32 %f10, %f2, 16, 31, 0xffffffff;\nadd.f32 %f2, %f2, %f10;\nshfl.sync.bfly.b32 %f10, %f2, 8, 31, 0xffffffff;\nadd.f32 %f2, %f2, %f10;\nshfl.sync.bfly.b32 %f10, %f2, 4, 31, 0xffffffff;\nadd.f32 %f2, %f2, %f10;\nshfl.sync.bfly.b32 %f10, %f2, 2, 31, 0xffffffff;\nadd.f32 %f2, %f2, %f10;\nshfl.sync.bfly.b32 %f10, %f2, 1, 31, 0xffffffff;\nadd.f32 %f2, %f2, %f10;\ndiv.rn.f32 %f1, %f1, %f9;\ndiv.rn.f32 %f2, %f2, %f9;\nmul.wide.u32 %rd19, %r7, 4;\nadd.s64 %rd20, %rd9, %rd19;\nld.global.f32 %f6, [%rd20];\nmov.u32 %r10, %r8;\nEACH:\nsetp.ge.u32 %p2, %r10, %r6;\n@%p2 bra DONE;\nmul.wide.u32 %rd15, %r10, 4;\nadd.s64 %rd16, %rd12, %rd15;\nld.global.f32 %f3, [%rd16];\nadd.s64 %rd17, %rd10, %rd15;\nld.global.f32 %f4, [%rd17];\nmul.f32 %f3, %f3, %f4;\nadd.s64 %rd18, %rd14, %rd15;\nld.global.f32 %f5, [%rd18];\nsub.f32 %f3, %f3, %f1;\nmul.f32 %f7, %f5, %f2;\nsub.f32 %f3, %f3, %f7;\nmul.f32 %f3, %f3, %f6;\nadd.s64 %rd21, %rd11, %rd15;\nst.global.f32 [%rd21], %f3;\nadd.u32 %r10, %r10, 32;\nbra EACH;\nDONE:\nret;\n}\n" to lines
-    add ".visible .entry adam_many(.param .align 8 .b8 p_table[2624])\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<12>;\n.reg .f32 %f<20>;\n.reg .b64 %rd<20>;\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nmov.u32 %r6, %ctaid.y;\nmov.u64 %rd1, p_table;\nmul.wide.u32 %rd2, %r6, 40;\nadd.s64 %rd3, %rd1, %rd2;\nld.param.u32 %r5, [%rd3+96];\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\nld.param.u64 %rd14, [%rd3+64];\nld.param.u64 %rd15, [%rd3+72];\nld.param.u64 %rd16, [%rd3+80];\nld.param.u64 %rd17, [%rd3+88];\nld.param.f32 %f10, [%rd1];\nld.param.f32 %f11, [%rd1+8];\nld.param.f32 %f12, [%rd1+16];\nld.param.f32 %f13, [%rd1+24];\nld.param.f32 %f14, [%rd1+32];\nld.param.f32 %f15, [%rd1+40];\nld.param.u32 %r7, [%rd1+48];\ncvta.to.global.u64 %rd5, %rd14;\ncvta.to.global.u64 %rd6, %rd15;\ncvta.to.global.u64 %rd7, %rd16;\ncvta.to.global.u64 %rd8, %rd17;\nmul.wide.u32 %rd9, %r4, 4;\nadd.s64 %rd10, %rd5, %rd9;\nadd.s64 %rd11, %rd6, %rd9;\nadd.s64 %rd12, %rd7, %rd9;\nadd.s64 %rd13, %rd8, %rd9;\nld.global.f32 %f1, [%rd10];\nld.global.f32 %f2, [%rd11];\nld.global.f32 %f3, [%rd12];\nld.global.f32 %f4, [%rd13];\nsub.f32 %f5, 0f3F800000, %f11;\nmul.f32 %f3, %f3, %f11;\nfma.rn.f32 %f3, %f5, %f2, %f3;\nsub.f32 %f6, 0f3F800000, %f12;\nmul.f32 %f7, %f2, %f2;\nmul.f32 %f4, %f4, %f12;\nfma.rn.f32 %f4, %f6, %f7, %f4;\nst.global.f32 [%rd12], %f3;\nst.global.f32 [%rd13], %f4;\nmul.f32 %f8, %f4, %f15;\nsqrt.rn.f32 %f8, %f8;\nadd.f32 %f8, %f8, %f13;\nmul.f32 %f9, %f3, %f14;\ndiv.rn.f32 %f9, %f9, %f8;\nmul.f32 %f9, %f9, %f10;\nsub.f32 %f1, %f1, %f9;\nst.global.f32 [%rd10], %f1;\nsetp.ne.u32 %p2, %r7, 0;\nmov.f32 %f16, 0f00000000;\n@%p2 st.global.f32 [%rd11], %f16;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry adam_many(.param .align 8 .b8 p_table[2624])\n\{\n.reg .pred %p<6>;\n.reg .b32 %r<12>;\n.reg .f32 %f<24>;\n.reg .b64 %rd<24>;\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nmov.u32 %r6, %ctaid.y;\nmov.u64 %rd1, p_table;\nmul.wide.u32 %rd2, %r6, 40;\nadd.s64 %rd3, %rd1, %rd2;\nld.param.u32 %r5, [%rd3+96];\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\nld.param.u64 %rd14, [%rd3+64];\nld.param.u64 %rd15, [%rd3+72];\nld.param.u64 %rd16, [%rd3+80];\nld.param.u64 %rd17, [%rd3+88];\nld.param.f32 %f10, [%rd1];\nld.param.f32 %f11, [%rd1+8];\nld.param.f32 %f12, [%rd1+16];\nld.param.f32 %f13, [%rd1+24];\nld.param.f32 %f14, [%rd1+32];\nld.param.f32 %f15, [%rd1+40];\nld.param.u32 %r7, [%rd1+48];\nld.param.u32 %r8, [%rd3+100];\nld.param.f32 %f17, [%rd1+4];\nld.param.u64 %rd18, [%rd1+56];\ncvta.to.global.u64 %rd5, %rd14;\ncvta.to.global.u64 %rd6, %rd15;\ncvta.to.global.u64 %rd7, %rd16;\ncvta.to.global.u64 %rd8, %rd17;\nmul.wide.u32 %rd9, %r4, 4;\nadd.s64 %rd10, %rd5, %rd9;\nadd.s64 %rd11, %rd6, %rd9;\nadd.s64 %rd12, %rd7, %rd9;\nadd.s64 %rd13, %rd8, %rd9;\nld.global.f32 %f1, [%rd10];\nld.global.f32 %f2, [%rd11];\nld.global.f32 %f3, [%rd12];\nld.global.f32 %f4, [%rd13];\nsetp.eq.u64 %p3, %rd18, 0;\n@%p3 bra KEPT;\ncvta.to.global.u64 %rd19, %rd18;\nld.global.f32 %f18, [%rd19];\nsqrt.rn.f32 %f18, %f18;\nadd.f32 %f18, %f18, 0f358637BD;\nld.param.f32 %f19, [%rd1+12];\ndiv.rn.f32 %f19, %f19, %f18;\nmin.f32 %f19, %f19, 0f3F800000;\nmul.f32 %f2, %f2, %f19;\nKEPT:\nsetp.ne.u32 %p4, %r8, 0;\n@%p4 mul.f32 %f1, %f1, %f17;\nsub.f32 %f5, 0f3F800000, %f11;\nmul.f32 %f3, %f3, %f11;\nfma.rn.f32 %f3, %f5, %f2, %f3;\nsub.f32 %f6, 0f3F800000, %f12;\nmul.f32 %f7, %f2, %f2;\nmul.f32 %f4, %f4, %f12;\nfma.rn.f32 %f4, %f6, %f7, %f4;\nst.global.f32 [%rd12], %f3;\nst.global.f32 [%rd13], %f4;\nmul.f32 %f8, %f4, %f15;\nsqrt.rn.f32 %f8, %f8;\nadd.f32 %f8, %f8, %f13;\nmul.f32 %f9, %f3, %f14;\ndiv.rn.f32 %f9, %f9, %f8;\nmul.f32 %f9, %f9, %f10;\nsub.f32 %f1, %f1, %f9;\nst.global.f32 [%rd10], %f1;\nsetp.ne.u32 %p2, %r7, 0;\nmov.f32 %f16, 0f00000000;\n@%p2 st.global.f32 [%rd11], %f16;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry sumsq_many(.param .align 8 .b8 p_table[2624])\n\{\n.reg .pred %p<4>;\n.reg .b32 %r<12>;\n.reg .f32 %f<8>;\n.reg .b64 %rd<12>;\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nmov.u32 %r6, %ctaid.y;\nmov.u64 %rd1, p_table;\nmul.wide.u32 %rd2, %r6, 40;\nadd.s64 %rd3, %rd1, %rd2;\nld.param.u32 %r5, [%rd3+96];\nand.b32 %r7, %r3, 31;\nsub.u32 %r8, %r4, %r7;\nsetp.ge.u32 %p1, %r8, %r5;\n@%p1 bra DONE;\nmov.f32 %f1, 0f00000000;\nsetp.ge.u32 %p2, %r4, %r5;\n@%p2 bra SUM;\nld.param.u64 %rd4, [%rd3+72];\ncvta.to.global.u64 %rd5, %rd4;\nmul.wide.u32 %rd6, %r4, 4;\nadd.s64 %rd7, %rd5, %rd6;\nld.global.f32 %f2, [%rd7];\nmul.f32 %f1, %f2, %f2;\nSUM:\nshfl.sync.bfly.b32 %f2, %f1, 16, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f2;\nshfl.sync.bfly.b32 %f2, %f1, 8, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f2;\nshfl.sync.bfly.b32 %f2, %f1, 4, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f2;\nshfl.sync.bfly.b32 %f2, %f1, 2, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f2;\nshfl.sync.bfly.b32 %f2, %f1, 1, 31, 0xffffffff;\nadd.f32 %f1, %f1, %f2;\nsetp.ne.u32 %p3, %r7, 0;\n@%p3 bra DONE;\nld.param.u64 %rd8, [%rd1+56];\ncvta.to.global.u64 %rd9, %rd8;\nred.global.add.f32 [%rd9], %f1;\nDONE:\nret;\n}\n" to lines
+    add ".visible .entry dropout_mask(.param .u64 p_out, .param .u32 p_n, .param .u32 p_seed, .param .u32 p_below, .param .f32 p_scale)\n\{\n.reg .pred %p<3>;\n.reg .b32 %r<12>;\n.reg .f32 %f<4>;\n.reg .b64 %rd<8>;\nld.param.u64 %rd1, [p_out];\nld.param.u32 %r5, [p_n];\nld.param.u32 %r6, [p_seed];\nld.param.u32 %r7, [p_below];\nld.param.f32 %f1, [p_scale];\nmov.u32 %r1, %ctaid.x;\nmov.u32 %r2, %ntid.x;\nmov.u32 %r3, %tid.x;\nmad.lo.s32 %r4, %r1, %r2, %r3;\nsetp.ge.u32 %p1, %r4, %r5;\n@%p1 bra DONE;\nmad.lo.u32 %r8, %r4, -1640531535, %r6;\nshr.u32 %r9, %r8, 16;\nxor.b32 %r8, %r8, %r9;\nmul.lo.u32 %r8, %r8, -2048144789;\nshr.u32 %r9, %r8, 13;\nxor.b32 %r8, %r8, %r9;\nmul.lo.u32 %r8, %r8, -1028477387;\nshr.u32 %r9, %r8, 16;\nxor.b32 %r8, %r8, %r9;\nsetp.lt.u32 %p2, %r8, %r7;\nselp.f32 %f2, %f1, 0f00000000, %p2;\ncvta.to.global.u64 %rd2, %rd1;\nmul.wide.u32 %rd3, %r4, 4;\nadd.s64 %rd4, %rd2, %rd3;\nst.global.f32 [%rd4], %f2;\nDONE:\nret;\n}\n" to lines
     return lines
 end

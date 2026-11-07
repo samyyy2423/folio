@@ -46,9 +46,9 @@
 
   <div class="layout wrap">
     <nav class="toc" aria-label="arrays.folio's functions">
-      <h2>55 functions</h2>
+      <h2>57 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
-      <ol id="toc"><li><a href="#array">array</a></li><li><a href="#shaped">shaped</a></li><li><a href="#filled">filled</a></li><li><a href="#zeros">zeros</a></li><li><a href="#ones">ones</a></li><li><a href="#random">random</a></li><li><a href="#random_normal">random_normal</a></li><li><a href="#counting">counting</a></li><li><a href="#evenly">evenly</a></li><li><a href="#identity">identity</a></li><li><a href="#copy_of">copy_of</a></li><li><a href="#size">size</a></li><li><a href="#rank">rank</a></li><li><a href="#value_at">value_at</a></li><li><a href="#set_value_at">set_value_at</a></li><li><a href="#to_list">to_list</a></li><li><a href="#numbers_of">numbers_of</a></li><li><a href="#plus">plus</a></li><li><a href="#minus">minus</a></li><li><a href="#times">times</a></li><li><a href="#divided_by">divided_by</a></li><li><a href="#maximum">maximum</a></li><li><a href="#minimum">minimum</a></li><li><a href="#negate">negate</a></li><li><a href="#absolute">absolute</a></li><li><a href="#relu">relu</a></li><li><a href="#square">square</a></li><li><a href="#apply">apply</a></li><li><a href="#sqrt">sqrt</a></li><li><a href="#above_zero">above_zero</a></li><li><a href="#exp">exp</a></li><li><a href="#ln">ln</a></li><li><a href="#tanh">tanh</a></li><li><a href="#sigmoid">sigmoid</a></li><li><a href="#power">power</a></li><li><a href="#reshape">reshape</a></li><li><a href="#flatten">flatten</a></li><li><a href="#transpose">transpose</a></li><li><a href="#slice">slice</a></li><li><a href="#row">row</a></li><li><a href="#stack">stack</a></li><li><a href="#join_along">join_along</a></li><li><a href="#use_blas">use_blas</a></li><li><a href="#stop_using_blas">stop_using_blas</a></li><li><a href="#matmul">matmul</a></li><li><a href="#dot">dot</a></li><li><a href="#sum">sum</a></li><li><a href="#mean">mean</a></li><li><a href="#max">max</a></li><li><a href="#min">min</a></li><li><a href="#argmax">argmax</a></li><li><a href="#softmax">softmax</a></li><li><a href="#close">close</a></li><li><a href="#same">same</a></li><li><a href="#adam_step">adam_step</a></li></ol>
+      <ol id="toc"><li><a href="#array">array</a></li><li><a href="#shaped">shaped</a></li><li><a href="#filled">filled</a></li><li><a href="#zeros">zeros</a></li><li><a href="#ones">ones</a></li><li><a href="#random">random</a></li><li><a href="#random_normal">random_normal</a></li><li><a href="#counting">counting</a></li><li><a href="#evenly">evenly</a></li><li><a href="#identity">identity</a></li><li><a href="#copy_of">copy_of</a></li><li><a href="#size">size</a></li><li><a href="#rank">rank</a></li><li><a href="#value_at">value_at</a></li><li><a href="#set_value_at">set_value_at</a></li><li><a href="#to_list">to_list</a></li><li><a href="#numbers_of">numbers_of</a></li><li><a href="#plus">plus</a></li><li><a href="#minus">minus</a></li><li><a href="#times">times</a></li><li><a href="#divided_by">divided_by</a></li><li><a href="#maximum">maximum</a></li><li><a href="#minimum">minimum</a></li><li><a href="#negate">negate</a></li><li><a href="#absolute">absolute</a></li><li><a href="#relu">relu</a></li><li><a href="#square">square</a></li><li><a href="#apply">apply</a></li><li><a href="#sqrt">sqrt</a></li><li><a href="#above_zero">above_zero</a></li><li><a href="#relu_gradient">relu_gradient</a></li><li><a href="#exp">exp</a></li><li><a href="#ln">ln</a></li><li><a href="#tanh">tanh</a></li><li><a href="#sigmoid">sigmoid</a></li><li><a href="#power">power</a></li><li><a href="#reshape">reshape</a></li><li><a href="#flatten">flatten</a></li><li><a href="#transpose">transpose</a></li><li><a href="#slice">slice</a></li><li><a href="#row">row</a></li><li><a href="#stack">stack</a></li><li><a href="#join_along">join_along</a></li><li><a href="#use_blas">use_blas</a></li><li><a href="#stop_using_blas">stop_using_blas</a></li><li><a href="#matmul">matmul</a></li><li><a href="#matmul_turned">matmul_turned</a></li><li><a href="#dot">dot</a></li><li><a href="#sum">sum</a></li><li><a href="#mean">mean</a></li><li><a href="#max">max</a></li><li><a href="#min">min</a></li><li><a href="#argmax">argmax</a></li><li><a href="#softmax">softmax</a></li><li><a href="#close">close</a></li><li><a href="#same">same</a></li><li><a href="#adam_step">adam_step</a></li></ol>
       <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio">The source</a></p>
     </nav>
     <main>
@@ -67,7 +67,7 @@
 <span class="k">say</span> arrays's reshape(a, <span class="k">list</span> <span class="k">of</span> <span class="n">3</span>, <span class="n">2</span>)       <span class="c"># the same numbers, 3 by 2; -1 for one axis works it out</span>
 <span class="k">say</span> arrays's slice(a, <span class="n">2</span>, <span class="n">2</span>, <span class="n">3</span>)              <span class="c"># axis 2, from its 2nd to its 3rd: [[2, 3], [5, 6]]</span>
 <span class="k">say</span> arrays's value_at(a, <span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">3</span>)      <span class="c"># 6: places count from 1, as items do</span></code></pre></div>
-          <p>Made with <a href="#array">array</a>(nested lists), <a href="#shaped">shaped</a>(numbers, shape), <a href="#zeros">zeros</a>(shape), <a href="#ones">ones</a>(shape), <a href="#filled">filled</a>(shape, x), <a href="#random">random</a>(shape) (from 0 up to 1), <a href="#random_normal">random_normal</a>(shape), <a href="#counting">counting</a>(first, last, step), <a href="#evenly">evenly</a>(first, last, n) and <a href="#identity">identity</a>(n). Element by element: plus, minus, times, <a href="#divided_by">divided_by</a>, maximum, minimum (each of two arrays, or an array and a number), negate, absolute, square, relu, <a href="#above_zero">above_zero</a> (relu's slope), sqrt, exp, ln, tanh, sigmoid, <a href="#power">power</a>(t, p) and <a href="#apply">apply</a>(t, f). Then matmul, dot, transpose, flatten, row, stack, <a href="#join_along">join_along</a>, softmax, <a href="#to_list">to_list</a>, <a href="#numbers_of">numbers_of</a>, <a href="#copy_of">copy_of</a>, size, rank, <a href="#close">close</a>(a, b) and <a href="#same">same</a>(a, b). Axes and places count from 1. A shape that can't be, shapes that don't go together, or a place outside an array is a <code>fail with</code> that says so.</p>
+          <p>Made with <a href="#array">array</a>(nested lists), <a href="#shaped">shaped</a>(numbers, shape), <a href="#zeros">zeros</a>(shape), <a href="#ones">ones</a>(shape), <a href="#filled">filled</a>(shape, x), <a href="#random">random</a>(shape) (from 0 up to 1), <a href="#random_normal">random_normal</a>(shape), <a href="#counting">counting</a>(first, last, step), <a href="#evenly">evenly</a>(first, last, n) and <a href="#identity">identity</a>(n). Element by element: plus, minus, times, <a href="#divided_by">divided_by</a>, maximum, minimum (each of two arrays, or an array and a number), negate, absolute, square, relu, <a href="#above_zero">above_zero</a> (relu's slope), <a href="#relu_gradient">relu_gradient</a>(g, x), sqrt, exp, ln, tanh, sigmoid, <a href="#power">power</a>(t, p) and <a href="#apply">apply</a>(t, f). Then matmul, <a href="#matmul_turned">matmul_turned</a>(a, b) (a turned over, times b), dot, transpose, flatten, row, stack, <a href="#join_along">join_along</a>, softmax, <a href="#to_list">to_list</a>, <a href="#numbers_of">numbers_of</a>, <a href="#copy_of">copy_of</a>, size, rank, <a href="#close">close</a>(a, b) and <a href="#same">same</a>(a, b). Axes and places count from 1. A shape that can't be, shapes that don't go together, or a place outside an array is a <code>fail with</code> that says so.</p>
       </section>
       <section class="fns">
         <h2>Functions</h2>
@@ -78,7 +78,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>values</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to array with values</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L73">arrays.folio line 73</a></p>
+          <p class="written">Written <code>to array with values</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L76">arrays.folio line 76</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -91,7 +91,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>values</code></li><li><code>shape</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to shaped with values, shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L111">arrays.folio line 111</a></p>
+          <p class="written">Written <code>to shaped with values, shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L114">arrays.folio line 114</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's shaped((<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">3</span>, <span class="n">2</span>))'s shape</code></pre><pre class="says"><code>[3, 2]</code></pre></div>
@@ -103,7 +103,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>shape</code></li><li><code>value</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to filled with shape, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L128">arrays.folio line 128</a></p>
+          <p class="written">Written <code>to filled with shape, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L131">arrays.folio line 131</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's filled((<span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">1</span>), <span class="n">7.5</span>))</code></pre><pre class="says"><code>[7.5, 7.5]</code></pre></div>
@@ -115,7 +115,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>shape</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to zeros with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L141">arrays.folio line 141</a></p>
+          <p class="written">Written <code>to zeros with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L144">arrays.folio line 144</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's zeros(<span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">2</span>))</code></pre><pre class="says"><code>[0, 0, 0, 0]</code></pre></div>
@@ -127,7 +127,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>shape</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ones with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L146">arrays.folio line 146</a></p>
+          <p class="written">Written <code>to ones with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L149">arrays.folio line 149</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's ones(<span class="n">3</span>))</code></pre><pre class="says"><code>[1, 1, 1]</code></pre></div>
@@ -139,7 +139,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>shape</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to random with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L151">arrays.folio line 151</a></p>
+          <p class="written">Written <code>to random with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L154">arrays.folio line 154</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> r <span class="k">to</span> arrays's <span class="k">random</span>(<span class="k">list</span> <span class="k">of</span> <span class="n">50</span>, <span class="n">40</span>)
@@ -152,7 +152,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>shape</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to random_normal with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L161">arrays.folio line 161</a></p>
+          <p class="written">Written <code>to random_normal with shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L164">arrays.folio line 164</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> g <span class="k">to</span> arrays's random_normal(<span class="n">10000</span>)
@@ -165,7 +165,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>first</code></li><li><code>last</code></li><li><code>step</code> <span class="optional">optional: 1 if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to counting with first, last, step or 1</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L178">arrays.folio line 178</a></p>
+          <p class="written">Written <code>to counting with first, last, step or 1</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L181">arrays.folio line 181</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's counting(<span class="n">1</span>, <span class="n">10</span>, <span class="n">3</span>))</code></pre><pre class="says"><code>[1, 4, 7, 10]</code></pre></div>
@@ -177,7 +177,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>first</code></li><li><code>last</code></li><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to evenly with first, last, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L194">arrays.folio line 194</a></p>
+          <p class="written">Written <code>to evenly with first, last, n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L197">arrays.folio line 197</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's evenly(<span class="n">0</span>, <span class="n">1</span>, <span class="n">5</span>))</code></pre><pre class="says"><code>[0, 0.25, 0.5, 0.75, 1]</code></pre></div>
@@ -189,7 +189,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>n</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to identity with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L206">arrays.folio line 206</a></p>
+          <p class="written">Written <code>to identity with n</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L209">arrays.folio line 209</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's to_list(arrays's identity(<span class="n">3</span>))</code></pre><pre class="says"><code>[[1, 0, 0], [0, 1, 0], [0, 0, 1]]</code></pre></div>
@@ -201,7 +201,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to copy_of with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L216">arrays.folio line 216</a></p>
+          <p class="written">Written <code>to copy_of with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L219">arrays.folio line 219</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -215,7 +215,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to size with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L224">arrays.folio line 224</a></p>
+          <p class="written">Written <code>to size with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L227">arrays.folio line 227</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -228,7 +228,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to rank with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L229">arrays.folio line 229</a></p>
+          <p class="written">Written <code>to rank with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L232">arrays.folio line 232</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -241,7 +241,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>place</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to value_at with t, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L234">arrays.folio line 234</a></p>
+          <p class="written">Written <code>to value_at with t, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L237">arrays.folio line 237</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -254,7 +254,7 @@
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>place</code></li><li><code>value</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to set_value_at with t, place, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L241">arrays.folio line 241</a></p>
+          <p class="written">Written <code>to set_value_at with t, place, value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L244">arrays.folio line 244</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -269,7 +269,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to to_list with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L251">arrays.folio line 251</a></p>
+          <p class="written">Written <code>to to_list with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L254">arrays.folio line 254</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's to_list(arrays's identity(<span class="n">3</span>))</code></pre><pre class="says"><code>[[1, 0, 0], [0, 1, 0], [0, 0, 1]]</code></pre></div>
@@ -281,7 +281,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to numbers_of with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L276">arrays.folio line 276</a></p>
+          <p class="written">Written <code>to numbers_of with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L279">arrays.folio line 279</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -294,7 +294,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to plus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L287">arrays.folio line 287</a></p>
+          <p class="written">Written <code>to plus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L290">arrays.folio line 290</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -307,7 +307,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to minus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L292">arrays.folio line 292</a></p>
+          <p class="written">Written <code>to minus with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L295">arrays.folio line 295</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -320,7 +320,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to times with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L297">arrays.folio line 297</a></p>
+          <p class="written">Written <code>to times with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L300">arrays.folio line 300</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -333,7 +333,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to divided_by with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L302">arrays.folio line 302</a></p>
+          <p class="written">Written <code>to divided_by with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L305">arrays.folio line 305</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -346,7 +346,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to maximum with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L307">arrays.folio line 307</a></p>
+          <p class="written">Written <code>to maximum with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L310">arrays.folio line 310</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -360,7 +360,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to minimum with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L312">arrays.folio line 312</a></p>
+          <p class="written">Written <code>to minimum with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L315">arrays.folio line 315</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -374,7 +374,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to negate with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L317">arrays.folio line 317</a></p>
+          <p class="written">Written <code>to negate with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L320">arrays.folio line 320</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> m <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> -<span class="n">2</span>, -<span class="n">0.5</span>, <span class="n">0</span>, <span class="n">3</span>)
@@ -387,7 +387,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to absolute with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L322">arrays.folio line 322</a></p>
+          <p class="written">Written <code>to absolute with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L325">arrays.folio line 325</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> m <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> -<span class="n">2</span>, -<span class="n">0.5</span>, <span class="n">0</span>, <span class="n">3</span>)
@@ -400,7 +400,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to relu with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L327">arrays.folio line 327</a></p>
+          <p class="written">Written <code>to relu with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L330">arrays.folio line 330</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> m <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> -<span class="n">2</span>, -<span class="n">0.5</span>, <span class="n">0</span>, <span class="n">3</span>)
@@ -413,7 +413,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to square with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L332">arrays.folio line 332</a></p>
+          <p class="written">Written <code>to square with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L335">arrays.folio line 335</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -426,7 +426,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>f</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to apply with t, f</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L337">arrays.folio line 337</a></p>
+          <p class="written">Written <code>to apply with t, f</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L340">arrays.folio line 340</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -439,7 +439,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sqrt with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L351">arrays.folio line 351</a></p>
+          <p class="written">Written <code>to sqrt with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L354">arrays.folio line 354</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's sqrt(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">9</span>, <span class="n">2</span>)))</code></pre><pre class="says"><code>[2, 3, 1.4142135623731]</code></pre></div>
@@ -451,20 +451,32 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to above_zero with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L356">arrays.folio line 356</a></p>
+          <p class="written">Written <code>to above_zero with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L359">arrays.folio line 359</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> m <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> -<span class="n">2</span>, -<span class="n">0.5</span>, <span class="n">0</span>, <span class="n">3</span>)
 <span class="k">say</span> arrays's numbers_of(arrays's above_zero(m))</code></pre><pre class="says"><code>[0, 0, 0, 1]</code></pre></div>
         </section>
+        <section class="fn" id="relu_gradient">
+          <h3><a href="#relu_gradient"><code>arrays's relu_gradient(g, x)</code></a></h3>
+          <p>g's number where x's is above 0, and 0 for the rest: relu's gradient, g from after it and x what went in, in one go (DESIGN §171)</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>g</code></li><li><code>x</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to relu_gradient with g, x</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L365">arrays.folio line 365</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
+arrays's relu_gradient(g, x)</code></pre></div>
+        </section>
         <section class="fn" id="exp">
           <h3><a href="#exp"><code>arrays's exp(t)</code></a></h3>
-          <p>e to the power of each number</p>
+          <p>e to the power of each number, as math.folio's exp has it; in a program folio build makes, 4 at a time in machine code (DESIGN §171)</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to exp with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L361">arrays.folio line 361</a></p>
+          <p class="written">Written <code>to exp with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L371">arrays.folio line 371</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's exp(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">1</span>)))</code></pre><pre class="says"><code>[1, 2.71828182845904]</code></pre></div>
@@ -476,7 +488,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to ln with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L366">arrays.folio line 366</a></p>
+          <p class="written">Written <code>to ln with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L383">arrays.folio line 383</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's ln(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2.718281828459045</span>)))</code></pre><pre class="says"><code>[0, 1]</code></pre></div>
@@ -488,7 +500,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to tanh with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L371">arrays.folio line 371</a></p>
+          <p class="written">Written <code>to tanh with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L388">arrays.folio line 388</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's tanh(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">1</span>, -<span class="n">100</span>)))</code></pre><pre class="says"><code>[0, 0.761594155955765, -1]</code></pre></div>
@@ -500,7 +512,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sigmoid with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L376">arrays.folio line 376</a></p>
+          <p class="written">Written <code>to sigmoid with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L393">arrays.folio line 393</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's sigmoid(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">0</span>, <span class="n">2</span>, -<span class="n">2</span>)))</code></pre><pre class="says"><code>[0.5, 0.880797077977883, 0.119202922022118]</code></pre></div>
@@ -512,7 +524,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>p</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to power with t, p</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L381">arrays.folio line 381</a></p>
+          <p class="written">Written <code>to power with t, p</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L398">arrays.folio line 398</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's numbers_of(arrays's <span class="k">power</span>(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">2</span>, <span class="n">9</span>), <span class="n">0.5</span>))</code></pre><pre class="says"><code>[1.41421356237309, 3]</code></pre></div>
@@ -524,7 +536,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>shape</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to reshape with t, shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L412">arrays.folio line 412</a></p>
+          <p class="written">Written <code>to reshape with t, shape</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L429">arrays.folio line 429</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -537,7 +549,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to flatten with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L449">arrays.folio line 449</a></p>
+          <p class="written">Written <code>to flatten with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L466">arrays.folio line 466</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -550,7 +562,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to transpose with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L454">arrays.folio line 454</a></p>
+          <p class="written">Written <code>to transpose with t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L471">arrays.folio line 471</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -564,7 +576,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code></li><li><code>first</code></li><li><code>last</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to slice with t, axis, first, last</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L472">arrays.folio line 472</a></p>
+          <p class="written">Written <code>to slice with t, axis, first, last</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L489">arrays.folio line 489</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -577,7 +589,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>place</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to row with t, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L488">arrays.folio line 488</a></p>
+          <p class="written">Written <code>to row with t, place</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L505">arrays.folio line 505</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -590,7 +602,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>arrays</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to stack with arrays</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L501">arrays.folio line 501</a></p>
+          <p class="written">Written <code>to stack with arrays</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L518">arrays.folio line 518</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -604,7 +616,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><ul class="inputs"><li><code>arrays</code></li><li><code>axis</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to join_along with arrays, axis</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L524">arrays.folio line 524</a></p>
+          <p class="written">Written <code>to join_along with arrays, axis</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L541">arrays.folio line 541</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -617,7 +629,7 @@ arrays's set_value_at(c, (<span class="k">list</span> <span class="k">of</span> 
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to use_blas</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L568">arrays.folio line 568</a></p>
+          <p class="written">Written <code>to use_blas</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L585">arrays.folio line 585</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 arrays's use_blas()</code></pre></div>
@@ -629,7 +641,7 @@ arrays's use_blas()</code></pre></div>
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to stop_using_blas</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L585">arrays.folio line 585</a></p>
+          <p class="written">Written <code>to stop_using_blas</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L602">arrays.folio line 602</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 arrays's stop_using_blas()</code></pre></div>
@@ -641,12 +653,26 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to matmul with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L592">arrays.folio line 592</a></p>
+          <p class="written">Written <code>to matmul with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L609">arrays.folio line 609</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
 <span class="k">set</span> b <span class="k">to</span> arrays's transpose(a)              <span class="c"># 3 by 2</span>
 <span class="k">say</span> arrays's matmul(a, b)                   <span class="c"># [[14, 32], [32, 77]]</span></code></pre><pre class="says"><code>[[14, 32], [32, 77]]</code></pre></div>
+        </section>
+        <section class="fn" id="matmul_turned">
+          <h3><a href="#matmul_turned"><code>arrays's matmul_turned(a, b)</code></a></h3>
+          <p>a turned over, times b: a k by m, b k by n, and m by n what comes out, as <a href="#matmul">matmul</a>(<a href="#transpose">transpose</a>(a), b) has it to the last bit, with no turned copy made (DESIGN §171)</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to matmul_turned with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L661">arrays.folio line 661</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
+<span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
+<span class="k">set</span> b <span class="k">to</span> arrays's transpose(a)              <span class="c"># 3 by 2</span>
+arrays's matmul_turned(a, b)</code></pre></div>
         </section>
         <section class="fn" id="dot">
           <h3><a href="#dot"><code>arrays's dot(a, b)</code></a></h3>
@@ -655,7 +681,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to dot with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L650">arrays.folio line 650</a></p>
+          <p class="written">Written <code>to dot with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L686">arrays.folio line 686</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">say</span> arrays's dot(arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), arrays's array(<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))</code></pre><pre class="says"><code>32</code></pre></div>
@@ -667,7 +693,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to sum with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L662">arrays.folio line 662</a></p>
+          <p class="written">Written <code>to sum with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L698">arrays.folio line 698</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -680,7 +706,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to mean with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L667">arrays.folio line 667</a></p>
+          <p class="written">Written <code>to mean with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L703">arrays.folio line 703</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -693,7 +719,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to max with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L684">arrays.folio line 684</a></p>
+          <p class="written">Written <code>to max with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L720">arrays.folio line 720</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> r <span class="k">to</span> arrays's <span class="k">random</span>(<span class="k">list</span> <span class="k">of</span> <span class="n">50</span>, <span class="n">40</span>)
@@ -706,7 +732,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to min with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L689">arrays.folio line 689</a></p>
+          <p class="written">Written <code>to min with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L725">arrays.folio line 725</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> r <span class="k">to</span> arrays's <span class="k">random</span>(<span class="k">list</span> <span class="k">of</span> <span class="n">50</span>, <span class="n">40</span>)
@@ -719,7 +745,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to argmax with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L695">arrays.folio line 695</a></p>
+          <p class="written">Written <code>to argmax with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L731">arrays.folio line 731</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -732,7 +758,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>t</code></li><li><code>axis</code> <span class="optional">optional: nothing if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to softmax with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L731">arrays.folio line 731</a></p>
+          <p class="written">Written <code>to softmax with t, axis or nothing</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L767">arrays.folio line 767</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> probabilities <span class="k">to</span> arrays's softmax(arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">1000</span>, <span class="n">1000</span>, <span class="n">1000</span>)))
@@ -745,7 +771,7 @@ arrays's stop_using_blas()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li><li><code>tolerance</code> <span class="optional">optional: 0.000000001 if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to close with a, b, tolerance or 0.000000001</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L758">arrays.folio line 758</a></p>
+          <p class="written">Written <code>to close with a, b, tolerance or 0.000000001</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L794">arrays.folio line 794</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
@@ -759,23 +785,23 @@ arrays's close(a, b, tolerance)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>a</code></li><li><code>b</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to same with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L777">arrays.folio line 777</a></p>
+          <p class="written">Written <code>to same with a, b</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L813">arrays.folio line 813</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
 <span class="k">set</span> a <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>), (<span class="k">list</span> <span class="k">of</span> <span class="n">4</span>, <span class="n">5</span>, <span class="n">6</span>))
 <span class="k">say</span> arrays's same(arrays's matmul(a, arrays's identity(<span class="n">3</span>)), a)</code></pre><pre class="says"><code>yes</code></pre></div>
         </section>
         <section class="fn" id="adam_step">
-          <h3><a href="#adam_step"><code>arrays's adam_step(p, g, m, v, rate, b1, b2, eps, t)</code></a></h3>
-          <p>an array, or a mistake that says what wanted one Adam's step for an array of parameters p, from g, their gradient, and m and v, its running averages, for step t (from 1), as learn.folio's adam moves a parameter: p, m and v changed in place. In a program folio build makes, one loop over the numbers, not ten arrays one after another, and no new ones (DESIGN §168)</p>
+          <h3><a href="#adam_step"><code>arrays's adam_step(p, g, m, v, rate, b1, b2, eps, t, keep)</code></a></h3>
+          <p>an array, or a mistake that says what wanted one Adam's step for an array of parameters p, from g, their gradient, and m and v, its running averages, for step t (from 1), as learn.folio's adam moves a parameter: p, m and v changed in place, and p times keep first, for AdamW's weight decay (keep 1 - rate times the decay, DESIGN §170). In a program folio build makes, one loop over the numbers, not ten arrays one after another, and no new ones (DESIGN §168)</p>
           <div class="facts">
-            <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>g</code></li><li><code>m</code></li><li><code>v</code></li><li><code>rate</code></li><li><code>b1</code></li><li><code>b2</code></li><li><code>eps</code></li><li><code>t</code></li></ul></div>
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>p</code></li><li><code>g</code></li><li><code>m</code></li><li><code>v</code></li><li><code>rate</code></li><li><code>b1</code></li><li><code>b2</code></li><li><code>eps</code></li><li><code>t</code></li><li><code>keep</code> <span class="optional">optional: 1 if it's left out</span></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to adam_step with p, g, m, v, rate, b1, b2, eps, t</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L1214">arrays.folio line 1214</a></p>
+          <p class="written">Written <code>to adam_step with p, g, m, v, rate, b1, b2, eps, t, keep or 1</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/arrays.folio#L1257">arrays.folio line 1257</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
-arrays's adam_step(p, g, m, v, rate, b1, b2, eps, t)</code></pre></div>
+arrays's adam_step(p, g, m, v, rate, b1, b2, eps, t, keep)</code></pre></div>
         </section>
       </section>
     </main>

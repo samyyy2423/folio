@@ -3042,7 +3042,7 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
   const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "28 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "29 passed");
 });
 
 // arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
@@ -3075,6 +3075,96 @@ say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") 
 `), { engine: "jit", files: (name) => files[name] });
   assert.equal(native.stdout.split(" ").length, 16000);
   assert.ok(native.stdout === folio, "machine code's sums aren't Folio's own");
+});
+
+// arrays.folio's matmul_turned and columns past the blocks (DESIGN §171): a turned over read where it is, and
+// the last 1 to 7 columns added up in registers, on shapes with rows past the fours, columns past the eights, b
+// too long to copy (k past 1,024) and enough to share out over threads, each number Folio's own to the last bit
+test("arrays.folio's matmul_turned and columns past the blocks give Folio's own sums to the last bit", { skip }, () => {
+  const files = {};
+  for (const name of ["arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+  files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+  const source = `use "arrays.folio" as arrays
+use "memory.folio" as memory
+use "math.folio" as m
+to wave with rows, columns, f
+    set made to empty list
+    for each k from 1 to rows * columns
+        add m's sine(k * f) * 2.3 to made
+    end
+    return arrays's shaped(made, list of rows, columns)
+end
+set got to empty list
+for each shape in list of (list of 40, 300, 203), (list of 7, 13, 9), (list of 200, 256, 10), (list of 13, 1030, 11), (list of 256, 200, 10), (list of 4, 5, 1), (list of 1, 3, 2)
+    set a to wave(item 1 of shape, item 2 of shape, 1.37)
+    set b to wave(item 2 of shape, item 3 of shape, 0.71)
+    for each y in arrays's numbers_of(arrays's matmul(a, b))
+        add y to got
+    end
+    for each y in arrays's numbers_of(arrays's matmul_turned(arrays's transpose(a), b))
+        add y to got
+    end
+end
+set b to (8 * length of got) bytes
+memory's put_many(b, 1, got, "a number")
+say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") with " "`;
+  const native = taskRun(source, { allow: [], files });
+  assert.deepEqual([native.stderr, native.status], ["", 0]);
+  let folio = "";
+  run(source, (line) => (folio += `${line}
+`), { engine: "jit", files: (name) => files[name] });
+  const count = [[40, 300, 203], [7, 13, 9], [200, 256, 10], [13, 1030, 11], [256, 200, 10], [4, 5, 1], [1, 3, 2]].reduce((t, [m, , n]) => t + 2 * m * n, 0);
+  assert.equal(native.stdout.split(" ").length, 2 * count);
+  assert.ok(native.stdout === folio, "machine code's sums aren't Folio's own");
+});
+
+// arrays.folio's adam_step 4 at a time with AVX, relu's slope and gradient as a compare and a mask, and exp 4 at a
+// time (DESIGN §171): each number's bits Folio's own, worked out by the JavaScript engine, over 1,003 numbers so
+// the last 3 are one at a time, with AdamW's keep and without, exp from -690 to 690 and past 700, which Folio does
+test("arrays.folio's adam_step 4 at a time, relu_gradient and above_zero without a branch, and exp in machine code give Folio's own numbers to the last bit", { skip }, () => {
+  const files = {};
+  for (const name of ["arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+  files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+  const source = `use "arrays.folio" as arrays
+use "memory.folio" as memory
+use "math.folio" as m
+to wave with n, f, s
+    set made to empty list
+    for each k from 1 to n
+        add m's sine(k * f) * s to made
+    end
+    return arrays's shaped(made, list of n)
+end
+set n to 1003
+set p to wave(n, 1.37, 3.1)
+set mm to arrays's zeros(list of n)
+set v to arrays's zeros(list of n)
+for each t from 1 to 3
+    set keep to 1
+    if t is 2
+        set keep to 0.993
+    end
+    arrays's adam_step(p, wave(n, 0.71 * t, 0.5), mm, v, 0.01, 0.9, 0.999, 0.00000001, t, keep)
+end
+set x to wave(n, 2.3, 1)
+set got to empty list
+set wide to arrays's times(wave(n, 0.53, 1), 690)
+set past to arrays's shaped((list of 1, -2, 701, 0.5), list of 4)
+for each part in list of p, mm, v, arrays's relu_gradient(wave(n, 0.37, 2), x), arrays's above_zero(x), arrays's relu_gradient(arrays's shaped((list of -1, 2, -3, 4), list of 4), arrays's shaped((list of 0, 0, -1, 1), list of 4)), arrays's exp(x), arrays's exp(wide), arrays's exp(past)
+    for each y in arrays's numbers_of(part)
+        add y to got
+    end
+end
+set b to (8 * length of got) bytes
+memory's put_many(b, 1, got, "a number")
+say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") with " "`;
+  const native = taskRun(source, { allow: [], files });
+  assert.deepEqual([native.stderr, native.status], ["", 0]);
+  let folio = "";
+  run(source, (line) => (folio += `${line}
+`), { engine: "jit", files: (name) => files[name] });
+  assert.equal(native.stdout.split(" ").length, 2 * (7 * 1003 + 8));
+  assert.ok(native.stdout === folio, "machine code's numbers aren't Folio's own");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
@@ -3353,6 +3443,7 @@ test("learn.folio works out the same losses and gradients on the graphics card a
     };
     const kernels = run(KERNELS, "kernels");
     assert.deepEqual(kernels.filter((line) => !line.startsWith("ok ")), ["failures: 0"], kernels.join("\n"));
+    assert.deepEqual(run(DROPOUT, "dropout"), ["on the card: yes", "dropped: yes", "the rest made larger: yes", "a new choice: yes", "the gradient through the same ones: yes", "not while training(no): yes"]);
     const card = run(LOSSES.replace("WHERE", "yes"), "card");
     const processor = run(LOSSES.replace("WHERE", "no"), "processor");
     assert.deepEqual([card[0], processor[0]], ["on the card: yes", "on the card: no"]);
@@ -3708,6 +3799,60 @@ end
 for each p in list of table, w, b, gamma, beta, extra
     say learn's numbers_of(p)
 end
+
+# AdamW and clipping (DESIGN §170): the weights made smaller as they move, and the gradients, too big together,
+# clipped; on the card in the launches Adam had, with nothing to wait for
+set table to learn's parameter(learn's matrix(list of (list of 0.1, -0.2, 0.3, 0.05), (list of -0.3, 0.2, 0.1, 0.4), (list of 0.25, 0.15, -0.1, -0.2)))
+set w to learn's parameter(learn's matrix(list of (list of 0.2, -0.1, 0.4), (list of 0.3, 0.5, -0.2), (list of -0.4, 0.1, 0.2), (list of 0.1, 0.3, 0.6)))
+set b to learn's parameter(learn's matrix(list of (list of 0.01, -0.02, 0.03)))
+set opt to learn's adamw((list of table, w, b), 0.05, 0.1)
+learn's clip_gradients(opt, 0.05)
+for each s from 1 to 4
+    set scores to learn's add_row(learn's matmul(learn's embedding(table, ids), w), b)
+    set loss to learn's cross_entropy(learn's times(scores, 5), targets)
+    learn's backward(loss)
+    say learn's value(loss)
+    say learn's gradient_norm(opt)
+    learn's step(opt)
+end
+for each p in list of table, w, b
+    say learn's numbers_of(p)
+end
+`;
+
+// dropout on the card (DESIGN §170): about the chance dropped, the rest made larger, the gradient through the
+// same ones, and a new choice each time
+const DROPOUT = `use "learn.folio" as learn
+say "on the card: " + learn's on_card()
+set ones to empty list
+for each k from 1 to 100000
+    add 1 to ones
+end
+set x to learn's parameter(learn's matrix_of(ones, 100, 1000))
+set ds to learn's numbers_of(learn's dropout(x, 0.3))
+set d to learn's dropout(x, 0.3)
+set again to learn's numbers_of(d)
+set dropped to 0
+set others to yes
+set differ to 0
+for each k from 1 to 100000
+    set y to item k of again
+    if y is 0
+        add 1 to dropped
+    else if y - 1 / 0.7 is greater than 0.00001 or 1 / 0.7 - y is greater than 0.00001
+        set others to no
+    end
+    if (y is 0) is not (item k of ds is 0)
+        add 1 to differ
+    end
+end
+say "dropped: " + (dropped is greater than 29000 and dropped is less than 31000)
+say "the rest made larger: " + others
+say "a new choice: " + (differ is greater than 30000)
+learn's backward(learn's sum(d))
+say "the gradient through the same ones: " + (learn's numbers_of(learn's gradient_of(x)) is again)
+learn's training(no)
+say "not while training(no): " + (learn's numbers_of(learn's dropout(x, 0.3)) is ones)
 `;
 
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program
