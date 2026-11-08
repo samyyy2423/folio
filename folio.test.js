@@ -1559,6 +1559,19 @@ test("Folio's own words as field names, where no phrase starts: r's length, reco
   assert.deepEqual(streams("set read to 1", { engine: "vm" }).log, [["mistake", "line 1: 'read' is a Folio word, so it can't be used as a variable name"]]);
 });
 
+test("a record's own function called in a file used as a name is the record's: one's cost() in cart.folio, used as cart", () => {
+  const files = {
+    "cart.folio": "kind thing with price\n    to cost with self\n        return self's price * 2\n    end\nend\nto total with things\n    set sum to 0\n    for each one in things\n        set sum to sum + one's cost()\n    end\n    return sum\nend\n",
+    "wrong.folio": "to cost_of with r\n    return r's nope()\nend\n",
+  };
+  const source = "use \"cart.folio\" as cart\nsay cart's total([cart's thing(3), cart's thing(4)])";
+  const wrong = "use \"wrong.folio\" as w\nsay w's cost_of(record with price 1)";
+  for (const engine of ENGINES) {
+    assert.deepEqual(streams(source, { engine, files: (n) => files[n] }).log, [["out", "14"]], engine);
+    assert.deepEqual(streams(wrong, { engine, files: (n) => files[n] }).log, [["mistake", "wrong.folio, line 2: there is no function called 'nope'"]], engine);
+  }
+});
+
 // ---------- tidying ----------
 
 test("format() tidies code the one way, without changing a piece of it, and tidy code stays as it is", () => {

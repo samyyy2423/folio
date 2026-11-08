@@ -16,6 +16,8 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **Folio's words as field names.** `r's length`, `record with read yes`, `rows in order by number`
   (DESIGN §181).
 - Each of these was a mistake before, so no program that ran means anything else.
+- **Fixed:** a record's own function called in a file used `as` a name (`one's cost()` in `cart.folio`, used
+  as cart) looked for a field called `cart's cost`; it reads the record's own `cost`.
 - **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
   `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
   A `[` was a mistake before, so no program that ran changes (DESIGN §177).

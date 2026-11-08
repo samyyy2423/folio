@@ -1534,6 +1534,7 @@ to parse with tokens, reading
                     add own_one to own_given
                 end
                 set own_made to made_call(own_named, own_given, own_at)
+                set own of own_made to own_named # the field's name, which a file used `as` a name doesn't change
                 set own_calls_made to owns of reading # a record's own function, if nothing else has its name (see own_calls)
                 add own_made to own_calls_made
             else
@@ -3704,13 +3705,13 @@ to own_calls with reading, body
                 add "input " + (k - 1) to params
                 add -1 to kinds
             end
-            set guess to closest(own, order of names)
-            set why to "there is no function called '" + own + "'"
+            set guess to closest(own of call, order of names)
+            set why to "there is no function called '" + own of call + "'"
             if guess is not nothing
                 set why to why + ". Did you mean '" + guess + "'?"
             end
             set the_record to record with kind "name", name "the record", at t
-            set got to record with kind "set", name own, value (record with kind "field", name own, subject the_record, at t), at t
+            set got to record with kind "set", name own, value (record with kind "field", name own of call, subject the_record, at t), at t
             set failed to record with kind "fail", value (record with kind "value", type "string", value why, at t), at t
             set tried to record with kind "try", body (list of got), name nothing, handler (list of failed), at t
             set inputs to empty list

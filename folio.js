@@ -690,6 +690,7 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       const named = fieldName("a function's or a field's name");
       if (tight(match("("))) {
         node = madeCall(named, [node, ...argList()], t);
+        node.own = named; // the field's name, which a file used `as` a name doesn't change, as it does the call's
         reading.owns.push(node); // a record's own function, if nothing else has its name (see ownCalls)
       } else node = { kind: "field", name: named, of: node, at: t };
     }
@@ -2000,10 +2001,10 @@ function ownCalls(reading, body) {
     const helper = `${own} of the record on line ${t.line}${onLine.get(key) > 1 ? ` (${onLine.get(key)})` : ""}`;
     const params = ["the record", ...call.args.slice(1).map((_, i) => `input ${i + 1}`)];
     const at = (kind, rest) => ({ ...rest, kind, at: t });
-    const guess = closest(own, [...names]);
-    const why = `there is no function called '${own}'${guess ? `. Did you mean '${guess}'?` : ""}`;
+    const guess = closest(call.own, [...names]);
+    const why = `there is no function called '${call.own}'${guess ? `. Did you mean '${guess}'?` : ""}`;
     helpers.push(at("define", { name: helper, params, kinds: params.map(() => -1), body: [
-      at("try", { body: [at("set", { name: own, value: at("field", { name: own, of: at("name", { name: "the record" }) }) })], name: null,
+      at("try", { body: [at("set", { name: own, value: at("field", { name: call.own, of: at("name", { name: "the record" }) }) })], name: null,
         handler: [at("fail", { value: at("value", { value: why }) })] }),
       at("return", { value: at("call", { name: own, args: params.map((p) => at("name", { name: p })) }) }),
     ] }));
