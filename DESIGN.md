@@ -7504,3 +7504,56 @@ Tests check matmul_floats against matmul to 7 digits for shapes on and off the b
 code and on every engine, where it's matmul; numbers_binary's every operation 4 at a time against Folio's own,
 to the bit, with b one number or a row, and a NaN in the middle of the fours; and learn's gradients through
 matmul in floats against the slopes worked out by nudging.
+
+## 186. ONNX outputs kept where ONNX Runtime made them
+
+folio-ask, a program that answers questions from a folder of documents, writes its answers with
+Qwen2.5-0.5B-Instruct (int8, 512 MB) through onnx.folio. Each token is a run of the model, given the keys and
+values of every token before it (24 layers, two of each, 1 by 2 by the tokens so far by 64) and giving them back
+with one more. `run` made every output an array of Folio's numbers and every input a tensor again, so each token
+carried the whole cache out of ONNX Runtime and back in, and copied each input twice on the way (`array` copied an
+array it was given, and `numbers_of` copied its numbers again). On a Ryzen 5 4600H, after a prompt of 662 tokens,
+a token took 277 ms at best, and reading the prompt 7.3 s. (Each time here is the best of three runs, taken in
+turn: on this laptop the same run takes up to half again as long from one time to the next.)
+
+- **Outputs kept (`run_keeping`).** `run_keeping(model, inputs, names)` runs the model as `run` does, but each
+  output it names stays where ONNX Runtime put it: an `onnx_value` record holding its OrtValue, shape and type. An
+  ONNX value given to `run` or `run_keeping` as an input goes in as it is, after a check that it's the type the
+  model takes. The writer keeps every `present.*` and the logits, gives the presents back as the next token's
+  `past_key_values.*`, and releases the ones before.
+- **Only what's wanted read (`numbers_from`).** The logits are 151,936 numbers for each token given, so a prompt
+  read 64 tokens at a time made 9.7 million numbers a run, of which the writer wants the last row.
+  `numbers_from(value, first, count)` copies those `count` numbers from the tensor's memory and converts only
+  them. `array_of` reads them all, and `shape_of` says the shape.
+- **Given back (`release`).** A kept value holds ONNX Runtime's memory until `release`, which marks it released:
+  using it again is a mistake that says so, and releasing it again does nothing.
+- **No copies of an array given.** `run` takes an array's own numbers, which it reads and doesn't change, where it
+  made two copies.
+
+A token went from 277 ms to 189, and reading the prompt from 7.3 s to 4.6. Of the 189 ms, about 2 are Folio's: the
+inputs, the last row read, and picking the most likely token from it. The rest was ONNX Runtime, and its own
+time had a cause of its own: the model keeps its table of token vectors (151,936 by 896) as 8-bit whole numbers,
+and uses it twice, to look up each token's vector and, turned, to make the logits. ONNX Runtime keeps a
+DequantizeLinear on a weight as it is, so as not to break the patterns it fuses, so the whole table was made
+floats again on every run: 136 million numbers.
+
+- **Settings for a session (`load_with`).** `load_with(file, settings)` makes the session with a dictionary of
+  settings: `"threads"` (SetIntraOpNumThreads), `"optimization"` (`"none"`, `"basic"`, `"extended"` or `"all"`,
+  SetSessionGraphOptimizationLevel) and any of ONNX Runtime's session settings by name (AddSessionConfigEntry,
+  the C API's 131st function, which onnx.folio asks for from version 4 of the API, so an older ONNX Runtime says
+  it doesn't have it rather than calling what isn't there). With `"session.disable_quant_qdq"` set to `"1"`,
+  ONNX Runtime folds the DequantizeLinear of a weight into a weight of floats once, when the model's loaded.
+  It's a setting, not the default: it takes more memory, and a model made to be fused that way is faster with
+  the patterns kept.
+
+With it, a token takes 49 ms and the prompt 2.5 s, 5.6 and 2.9 times as fast as before. Loading takes as long,
+within the noise (4.4, 4.6 and 4.6 s at best), and the program 2.8 GB at most instead of 2.4. Two things found on the way are the model's and Windows' ONNX Runtime's, not onnx.folio's,
+and folio-ask works round them: ONNX Runtime 1.17 reads ONNX's format up to 9, and onnx-community's export says
+10 while using nothing 10 added; and with nothing in the cache yet, it let each of several tokens given at once
+see the ones after it, so the writer gives the first token alone.
+
+Tested in machine code, with a model the test writes that's relu(x + 1) of 3 numbers: an output kept, its shape,
+two of its numbers and all of them, given back as an input, kept again and read, released twice, and shown once
+released; and a released value read, a double given where a float is taken, numbers past the end, an output the
+model doesn't have, a setting it doesn't know, a negative number of threads, and a list where an ONNX value is
+wanted, each with what it says.

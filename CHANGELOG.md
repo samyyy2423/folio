@@ -6,6 +6,14 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **ONNX models' outputs kept where ONNX Runtime made them.** onnx.folio's `run_keeping(model, inputs, names)`
+  leaves the outputs named in ONNX Runtime's memory, unread, as ONNX values, and `run` takes one as an input as
+  it is: a language model's cache of keys and values goes from one token to the next with no copy.
+  `numbers_from(value, first, count)` reads only the numbers wanted, `array_of` all of them, `shape_of` its shape,
+  and `release` gives its memory back. `run` no longer copies each array it's given twice. `load_with(file,
+  settings)` sets a session's `"threads"`, `"optimization"` and ONNX Runtime's own settings by name. Qwen2.5-0.5B
+  (int8) writing on a Ryzen 5 4600H, the best of three runs: 277 ms a token to 189, and 49 with
+  `"session.disable_quant_qdq"` (DESIGN §186).
 - **Training on the processor faster, and in floats when asked.** Machine code checks a matmul's numbers and
   does `+`, `-`, `*`, relu and the rest 4 at a time with AVX, to the same bits; and learn.folio's
   `use_floats(yes)` multiplies matrices in 32-bit floats, as the graphics card does (arrays.folio's

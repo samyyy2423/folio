@@ -622,7 +622,12 @@ bytes and dictionaries:
 - [`onnx.folio`](tools/onnx.folio) runs a model trained in PyTorch, or anything
   else that saves ONNX, through ONNX Runtime (Windows 11 has it; elsewhere,
   from its releases): `onnx's run(model, dictionary where "X" is x)`, arrays
-  in and arrays out.
+  in and arrays out. `run_keeping(model, inputs, names)` leaves the outputs
+  named where ONNX Runtime made them, to go back in as inputs unread, as a
+  language model's keys and values do from one token to the next
+  (`numbers_from`, `array_of` and `release` read them and give them back), and
+  `load_with(file, settings)` sets a session's threads, optimization and
+  ONNX Runtime's own session settings.
 - [`python.folio`](tools/python.folio) runs Python inside the program, CPython
   through its C API: code, and the modules installed (NumPy, scikit-learn,
   anything), with numbers, text, lists and dictionaries going across as each

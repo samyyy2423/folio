@@ -3235,7 +3235,7 @@ say found("abs")`, []);
 
 // A small ONNX model, written byte by byte as protobuf: Y = Relu(X · W + B), X [batch, 3], W [3, 2], B [2], in
 // floats (1) or doubles (11)
-function onnxModel(type) {
+function onnxModel(type, width = 2, w = [1, -1, 0.5, 2, 2, 0.25], b = [0.5, 1]) {
   const varint = (n) => {
     const out = [];
     let v = BigInt(n);
@@ -3260,19 +3260,20 @@ function onnxModel(type) {
   const valueInfo = (name, dims) => [...str(1, name), ...bytes(2, bytes(1, [...int(1, type), ...bytes(2, dims.flatMap(dim))]))];
   const node = (inputs, outputs, op) => [...inputs.flatMap((i) => str(1, i)), ...outputs.flatMap((o) => str(2, o)), ...str(4, op)];
   const graph = [...bytes(1, node(["X", "W"], ["XW"], "MatMul")), ...bytes(1, node(["XW", "B"], ["Z"], "Add")), ...bytes(1, node(["Z"], ["Y"], "Relu")),
-    ...str(2, "dense"), ...bytes(5, tensor("W", [3, 2], [1, -1, 0.5, 2, 2, 0.25])), ...bytes(5, tensor("B", [2], [0.5, 1])),
-    ...bytes(11, valueInfo("X", ["batch", 3])), ...bytes(12, valueInfo("Y", ["batch", 2]))];
+    ...str(2, "dense"), ...bytes(5, tensor("W", [3, width], w)), ...bytes(5, tensor("B", [width], b)),
+    ...bytes(11, valueInfo("X", ["batch", 3])), ...bytes(12, valueInfo("Y", ["batch", width]))];
   return Buffer.from([...int(1, 7), ...str(2, "folio"), ...bytes(7, graph), ...bytes(8, [...str(1, ""), ...int(2, 13)])]);
 }
 
 // ONNX Runtime comes with Windows 11; on Linux, from its release, where the test looks for it
 const onnxHere = target === "windows" ? existsSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "onnxruntime.dll"))
   : ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib", "/usr/local/lib"].some((d) => existsSync(join(d, "libonnxruntime.so")) || existsSync(join(d, "libonnxruntime.so.1")));
-test("tools/onnx.folio runs an ONNX model through ONNX Runtime's C API, in floats and in doubles", { skip: skip || (!onnxHere && "ONNX Runtime isn't installed") }, () => {
+test("tools/onnx.folio runs an ONNX model through ONNX Runtime's C API, in floats and in doubles, keeping outputs where it made them", { skip: skip || (!onnxHere && "ONNX Runtime isn't installed") }, () => {
   const dir = mkdtempSync(join(tmpdir(), "folio-onnx-"));
   try {
     writeFileSync(join(dir, "dense.onnx"), onnxModel(1));
     writeFileSync(join(dir, "dense64.onnx"), onnxModel(11));
+    writeFileSync(join(dir, "square.onnx"), onnxModel(1, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1], [1, 1, 1]));
     const files = {};
     for (const name of ["onnx.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
@@ -3306,6 +3307,31 @@ try
 if it fails with why
     say "fails: " position of "nowhere.onnx" in why is greater than 0
 end
+# outputs kept where ONNX Runtime made them, and given back as they are: square is relu(x + 1)
+set square to onnx's load_with("square.onnx", dictionary where "threads" is 1, "optimization" is "basic", "session.disable_quant_qdq" is "1")
+set got to onnx's run_keeping(square, (dictionary where "X" is arrays's array(list of (list of 1, 2, 3))), list of "Y")
+set y to item "Y" of got
+say y
+say onnx's shape_of(y) " " onnx's numbers_from(y, 2, 2) " " onnx's array_of(y)
+say item "Y" of onnx's run(square, dictionary where "X" is y)
+set twice to item "Y" of onnx's run_keeping(square, (dictionary where "X" is y), list of "Y")
+say onnx's numbers_from(twice, 1, 3)
+onnx's release(twice)
+onnx's release(y)
+onnx's release(y)
+say y
+set wide to item "Y" of onnx's run_keeping(onnx's load("dense64.onnx"), (dictionary where "X" is arrays's array(list of (list of 1, 2, 3))), list of "Y")
+set wrongs to list of (function with u gives onnx's numbers_from(y, 1, 1)), (function with u gives onnx's run_keeping(square, (dictionary where "X" is wide), empty list)),
+    (function with u gives onnx's numbers_from(wide, 2, 2)), (function with u gives onnx's run_keeping(square, (dictionary where "X" is wide), list of "Z")),
+    (function with u gives onnx's load_with("square.onnx", dictionary where "speed" is 1)), (function with u gives onnx's load_with("square.onnx", dictionary where "threads" is -1)),
+    (function with u gives onnx's shape_of(list of 1))
+for each wrong in wrongs
+    try
+        wrong(0)
+    if it fails with why
+        say why
+    end
+end
 `, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8" });
@@ -3321,6 +3347,18 @@ Y double [-1, 2]
 the model needs an input called 'X'
 ONNX Runtime: Got invalid dimensions for input: X for the following indices
 fails: yes
+an ONNX value (float [1, 3])
+[1, 3] [3, 4] [[2, 3, 4]]
+[[3, 4, 5]]
+[3, 4, 5]
+an ONNX value, released
+'numbers_from' was given an ONNX value that was released
+the model takes 'X' as float, and this ONNX value is double
+this ONNX value has 2 numbers, so there are no 2 from number 2
+the model has no output called 'Z'
+load_with knows "threads", "optimization" and ONNX Runtime's session settings, which have a . in their names, not "speed"
+load_with's "threads" is a whole number of 0 or more, not -1
+'shape_of' needs an ONNX value that run_keeping kept, not a list
 `, "", 0]);
   } finally {
     rmSync(dir, { recursive: true, force: true });

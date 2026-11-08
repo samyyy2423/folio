@@ -13,8 +13,24 @@
 #   say item "Y" of answers
 #   onnx's close(model)
 #
+#   # a session with settings: how many threads a run uses, how much the graph is optimized ("none", "basic",
+#   # "extended" or "all", the default), and any of ONNX Runtime's session settings by name
+#   set model to onnx's load_with("model.onnx", dictionary where "threads" is 4, "session.disable_quant_qdq" is "1")
+#
 # A program that uses it is built with --allow-libraries. Inputs are converted to the type the model takes:
 # floats, doubles, or whole numbers of 64 bits. ONNX Runtime's mistakes are a `fail with` that says what it said.
+#
+# An output can stay where ONNX Runtime made it, unread, and go back into the model as an input as it is, as a
+# language model's cache of keys and values does from one token to the next:
+#
+#   set got to onnx's run_keeping(model, inputs, list of "present")   # "present" kept, the rest arrays
+#   set present to item "present" of got                              # an ONNX value: onnx's shape_of(present)
+#   onnx's run(model, dictionary where "past" is present, "x" is x)   # given back, not copied
+#   say onnx's numbers_from(present, 1, 10)                           # 10 of its numbers, the rest unread
+#   say onnx's array_of(present)                                      # all of them, as an array
+#   onnx's release(present)                                           # its memory given back
+#
+# A kept value holds ONNX Runtime's memory until it's released.
 
 use "arrays.folio" as onnx_arrays
 
@@ -26,6 +42,8 @@ use the library "onnxruntime"
     "at an address" as onnx_release(a pointer, a pointer)
     "at an address" as onnx_create_env(a pointer, a whole number, text, bytes) gives a pointer
     "at an address" as onnx_create_options(a pointer, bytes) gives a pointer
+    "at an address" as onnx_set_whole(a pointer, a pointer, a whole number) gives a pointer
+    "at an address" as onnx_config_entry(a pointer, a pointer, text, text) gives a pointer
     "at an address" as onnx_create_session_wide(a pointer, a pointer, wide text, a pointer, bytes) gives a pointer
     "at an address" as onnx_create_session_text(a pointer, a pointer, text, a pointer, bytes) gives a pointer
     "at an address" as onnx_count(a pointer, a pointer, bytes) gives a pointer
@@ -145,12 +163,42 @@ kind onnx_model with session, options, file, inputs, outputs, input_names, outpu
     end
 end
 
+# an output kept where ONNX Runtime made it: its OrtValue, shape, type and ONNX's number for the type
+kind onnx_value with pointer, shape, type, code
+    to shown with self
+        if self's pointer is nothing
+            return "an ONNX value, released"
+        end
+        return "an ONNX value (" + self's type + " " + self's shape + ")"
+    end
+end
+
 # a model from a file, ready to run
 to load with path
+    return load_with(path, empty dictionary)
+end
+
+set onnx_levels to dictionary where "none" is 0, "basic" is 1, "extended" is 2, "all" is 99
+
+# A model from a file, its session made with these settings, a dictionary:
+# - "threads": how many of the processor's threads a run uses (0, the default, is ONNX Runtime's choice);
+# - "optimization": how much the graph is optimized when it's loaded, "none", "basic", "extended" or "all";
+# - any of ONNX Runtime's session settings, by its name (onnxruntime_session_options_config_keys.h), as text:
+#   "session.disable_quant_qdq" is "1" lets weights stored as 8-bit whole numbers be made floats once, when the
+#   model is loaded, instead of on every run, which is faster on the processor and takes more memory.
+to load_with with path, settings
     onnx_start()
     set slot to 8 bytes
     onnx_check(onnx_create_options(onnx_api(10), slot))
     set options to onnx_pointer_in(slot)
+    try
+        for each name in keys of settings
+            onnx_setting(options, name, item name of settings)
+        end
+    if it fails with why
+        onnx_release(onnx_api(100), options)
+        fail with why
+    end
     if onnx_windows
         onnx_check(onnx_create_session_wide(onnx_api(7), onnx_env, path, options, slot))
     else
@@ -179,6 +227,40 @@ to load with path
         end
     end
     return onnx_model(session, options, path, described_ins, described_outs, names_in, names_out)
+end
+
+# one of load_with's settings put in a session's options
+to onnx_setting with options, name, value
+    if name is "threads"
+        if not (value is a number) or not (value is divisible by 1) or value is less than 0
+            fail with "load_with's \"threads\" is a whole number of 0 or more, not " + value
+        end
+        onnx_check(onnx_set_whole(onnx_api(24), options, value))
+    else if name is "optimization"
+        if not (value is in onnx_levels)
+            fail with "load_with's \"optimization\" is \"none\", \"basic\", \"extended\" or \"all\", not " + value
+        end
+        onnx_check(onnx_set_whole(onnx_api(23), options, item value of onnx_levels))
+    else if "." is in name
+        onnx_need_settings()
+        onnx_check(onnx_config_entry(onnx_api(130), options, name, value as text))
+    else
+        fail with "load_with knows \"threads\", \"optimization\" and ONNX Runtime's session settings, which have a . in their names, not \"" + name + "\""
+    end
+end
+
+# the C API from version 4 on, which has AddSessionConfigEntry (its 131st function), the first time it's wanted
+set onnx_settings_ready to no
+to onnx_need_settings
+    if onnx_settings_ready
+        return nothing
+    end
+    set api to onnx_get_api(item 1 of onnx_pointers(OrtGetApiBase(), 2), 4)
+    if api is nothing
+        fail with "this ONNX Runtime is older than 1.4, and doesn't take session settings by name"
+    end
+    set onnx_table to onnx_pointers(api, 131)
+    set onnx_settings_ready to yes
 end
 
 # a C text's bytes, up to its 0, as text
@@ -236,11 +318,23 @@ to outputs with model
     return model's outputs
 end
 
-# The model run on its inputs, a dictionary of each input's name to an array (or a number, or a list of them):
-# a dictionary of each output's name to an array
+# The model run on its inputs, a dictionary of each input's name to an array (or a number, or a list of them,
+# or an ONNX value run_keeping kept): a dictionary of each output's name to an array
 to run with model, given
+    return run_keeping(model, given, empty list)
+end
+
+# The same, but the outputs named in `keep` stay where ONNX Runtime made them, unread: each an ONNX value, which
+# can be given to the model again as an input, read with numbers_from or array_of, and released with release
+to run_keeping with model, given, keep
     onnx_start()
+    for each name in keep
+        if not (name is in list of o's name for each o in model's outputs)
+            fail with "the model has no output called '" + name + "'"
+        end
+    end
     set values to empty list
+    set made to empty list # the tensors made here, of arrays, given back after the run
     set names to empty list
     set kept to empty list # what the tensors' memory is, kept while they're used
     try
@@ -248,8 +342,21 @@ to run with model, given
             if not (input's name is in given)
                 fail with "the model needs an input called '" + input's name + "'"
             end
-            set given_one to onnx_arrays's array(item (input's name) of given)
-            add onnx_tensor(given_one, input's code, kept) to values
+            set given_one to item (input's name) of given
+            if onnx_is_value(given_one)
+                set v to onnx_live(given_one, "run")
+                if v's code is not input's code
+                    fail with "the model takes '" + input's name + "' as " + input's type + ", and this ONNX value is " + v's type
+                end
+                add v's pointer to values
+            else
+                if not onnx_arrays's arrays_is_array(given_one)
+                    set given_one to onnx_arrays's array(given_one)
+                end
+                set tensor to onnx_tensor(given_one, input's code, kept)
+                add tensor to values
+                add tensor to made
+            end
             add item (length of values) of model's input_names to names
         end
         set outs to onnx_wholes(onnx_arrays's arrays_zeros_list(length of model's outputs))
@@ -260,12 +367,17 @@ to run with model, given
         set k to 0
         for each value in out_values
             add 1 to k
-            set item (name of item k of model's outputs) of answers to onnx_array(value)
-            onnx_release(onnx_api(96), value)
+            set name to name of item k of model's outputs
+            if name is in keep
+                set item name of answers to onnx_value_of(value)
+            else
+                set item name of answers to onnx_array(value)
+                onnx_release(onnx_api(96), value)
+            end
         end
         return answers
     either way
-        for each value in values
+        for each value in made
             onnx_release(onnx_api(96), value)
         end
     end
@@ -275,7 +387,7 @@ end
 to onnx_tensor with t, code, kept
     set slot to 8 bytes
     set shape to onnx_wholes(t's shape)
-    set data to onnx_arrays's numbers_of(t)
+    set data to t's data # the array's own numbers, read here and not changed
     add data to kept
     add shape to kept
     set n to length of data
@@ -329,6 +441,85 @@ to onnx_array with value
         end
     end
     return onnx_arrays's shaped(data, described's shape)
+end
+
+# an output's OrtValue as an ONNX value, with its shape and type
+to onnx_value_of with value
+    set slot to 8 bytes
+    onnx_check(onnx_tensor_shape(onnx_api(65), value, slot))
+    set info to onnx_pointer_in(slot)
+    set described to onnx_info(info)
+    onnx_release(onnx_api(99), info)
+    return onnx_value(value, described's shape, described's type, described's code)
+end
+
+to onnx_is_value with v
+    try
+        return kind of v is "onnx_value"
+    if it fails
+        return no
+    end
+end
+
+# an ONNX value that hasn't been released, or a mistake that says what wanted one
+to onnx_live with v, what
+    if not onnx_is_value(v)
+        fail with "'" + what + "' needs an ONNX value that run_keeping kept, not " + onnx_arrays's arrays_kind_name(v)
+    end
+    if v's pointer is nothing
+        fail with "'" + what + "' was given an ONNX value that was released"
+    end
+    return v
+end
+
+# a kept value's shape, a list of its axes' lengths
+to shape_of with value
+    return items 1 to length of onnx_live(value, "shape_of")'s shape of onnx_live(value, "shape_of")'s shape
+end
+
+# a kept value's numbers, all of them, as an array; the value stays kept
+to array_of with value
+    return onnx_array(onnx_live(value, "array_of")'s pointer)
+end
+
+# `count` of a kept value's numbers, in order from the first-th (from 1), as a list; the rest aren't read
+to numbers_from with value, first, count
+    set v to onnx_live(value, "numbers_from")
+    set n to onnx_arrays's arrays_product(v's shape)
+    if count is less than 0 or first is less than 1 or first + count - 1 is greater than n
+        fail with "this ONNX value has " + n + " numbers, so there are no " + count + " from number " + first
+    end
+    set data to onnx_arrays's arrays_zeros_list(count)
+    if count is 0
+        return data
+    end
+    set slot to 8 bytes
+    onnx_check(onnx_tensor_data(onnx_api(51), v's pointer, slot))
+    set at to onnx_pointer_in(slot)
+    if v's code is 11
+        onnx_copy_numbers(data, at + 8 * (first - 1), 8 * count)
+    else if v's code is 1 or v's code is 7
+        set size to 4
+        set way to 2
+        if v's code is 7
+            set size to 8
+            set way to 4
+        end
+        set raw to (size * count) bytes
+        onnx_copy_bytes(raw, at + size * (first - 1), size * count)
+        onnx_convert(way, data, raw)
+    else
+        fail with "onnx.folio can't read ONNX's type " + v's code + " yet: only float, double and int64"
+    end
+    return data
+end
+
+# a kept value's memory given back to ONNX Runtime; using it after is a mistake, and releasing it again does nothing
+to release with value
+    if onnx_is_value(value) and value's pointer is not nothing
+        onnx_release(onnx_api(96), value's pointer)
+        set value's pointer to nothing
+    end
 end
 
 # what the model holds, given back
