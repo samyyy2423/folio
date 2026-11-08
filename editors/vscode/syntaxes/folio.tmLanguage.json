@@ -7,6 +7,9 @@
       "include": "#comment"
     },
     {
+      "include": "#textBlock"
+    },
+    {
       "include": "#text"
     },
     {
@@ -35,6 +38,21 @@
     "comment": {
       "name": "comment.line.number-sign.folio",
       "match": "#.*$"
+    },
+    "textBlock": {
+      "name": "string.quoted.triple.folio",
+      "begin": "\"\"\"(?=[ \t]*$)",
+      "end": "^[ \t]*\"\"\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.folio"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.folio"
+        }
+      }
     },
     "text": {
       "name": "string.quoted.double.folio",

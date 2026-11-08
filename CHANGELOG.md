@@ -6,6 +6,24 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **What kind a value is.** `x is a number`, `a list`, `a record`, `a dictionary`, `a function`, `bytes`,
+  `some text`, `either yes or no`, and `x is a dog` for a kind's records, with `is not` too, on every engine
+  (DESIGN §178).
+- **add to a field or an item.** `add x to r's items`, `add 1 to count of r` and `add 1 to item "a" of
+  counts`, as `set` takes them (DESIGN §179).
+- **Text on the lines after `"""`.** `"""` at a line's end starts text written on the lines after it, up to
+  a line with only `"""`, less that line's indent, with `{`, `\` and quotes as themselves (DESIGN §180).
+- **Folio's words as field names.** `r's length`, `record with read yes`, `rows in order by number`
+  (DESIGN §181).
+- Each of these was a mistake before, so no program that ran means anything else.
+- **Fixed:** a record's own function called in a file used `as` a name (`one's cost()` in `cart.folio`, used
+  as cart) looked for a field called `cart's cost`; it reads the record's own `cost`.
+- **Operations of your own that train.** learn.folio's `custom(inputs, forward, backward)`: forward makes the
+  result, backward each input's gradient, with learn's operations or kernels of your own on the card
+  (DESIGN §182).
+- **16-bit floats in safetensors.** learn.folio's `load` reads F16 and BF16 weights, as most models on
+  Hugging Face keep them, and `save(named, file, "F16")` or `"BF16"` writes them, in half the room
+  (DESIGN §183).
 - **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
   `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
   A `[` was a mistake before, so no program that ran changes (DESIGN §177).

@@ -797,6 +797,8 @@ export const BUILTINS = [
   { name: "has ended", needs: [["record"]], gives: "yes/no", run: ([task], error) => taskEnded(task, error) },
   // `start count(10) on another core`: each engine makes the call itself (see startWorker)
   { name: "start worker", needs: [["number", "text", "yes/no", "nothing", "list", "record", "dictionary", "bytes", "function", ...MEASURE_TYPES]], gives: "record", run: (_, error) => error("a worker is started by the engine") },
+  // `x is a number`, `x is some text`... (DESIGN §178): whether a value is of a kind, numbered as KINDS numbers them
+  { name: "is kind", needs: [["number", "text", "yes/no", "nothing", "list", "record", "dictionary", "bytes", "function", ...MEASURE_TYPES], ["number"]], gives: "yes/no", run: ([v, k]) => fitsKind(k, v) },
   // `ask for 64 bytes` (DESIGN §108): the next that many bytes of the input, or as many as come before it ends, waited
   // for but not to a line's end, as a language server reads what an editor sends. Only machine code reads it so.
   {

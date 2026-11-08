@@ -7327,3 +7327,116 @@ programs that ran mean. A `{[` in text is still a `{` and a `[`, not a value, as
 A test runs lists in brackets on every engine (empty, inside one another, as one input of two, over lines, built
 `for each`, in `for each`, inside `list of`), has the compiler written in Folio write the JavaScript the JIT
 writes for them and for their mistakes, and tidies them; a machine code case does the same.
+
+## 178. What kind a value is
+
+Folio had no way to ask what kind a value is. A program that read JSON, where a field may be a number, text or a
+list, had to try something only one kind allows and catch the mistake: the packages of 2026-11-07 did that in a
+dozen places, and the language's own `shown` does it with a function whose input says `as a function`.
+
+`x is a number` asks it now, and so do `x is a list`, `a record`, `a dictionary`, `a function`, `bytes`,
+`some text`, `either yes or no`, and `x is a dog`, a record the kind dog made; `is not` turns each round. Each
+is the same test an input's kind is (`with x as a number`), so a number is a number and not an amount, and on
+every engine it's one: the VM's, the JIT's and WebAssembly's through vm.js's `fitsKind`, machine code through the
+routine that checks inputs, `rt_fits_kind`. `a dog` is a function of the language's own, `made_by`, which looks
+at the record's `kind` field; a puppy made `from dog(...)` is a puppy, not a dog.
+
+`x is text` and `x is yes or no` would read best, but they meant something already: `is text` compares x with a
+variable called text, which many functions have as an input, and `x is yes or no` is `(x is yes) or no`. Folio 1
+keeps what lines that ran mean (VERSIONING.md), so text is `some text` and yes or no is `either yes or no`;
+`x is a text` is a mistake that says to write `some text`.
+
+Every phrase was a mistake before, with one care. A say's values stand side by side, so `say x is a dog` said
+`x is a`, then `dog`, where the program had variables called a and dog. In a say, outside brackets, a phrase
+that starts with a name (`a dog`, `a function`, `some text`, `either yes or no`) keeps that meaning in a file
+that may give the name a value: one where the word is written anywhere but in a phrase of the language, or
+that uses another file without `as`. Elsewhere, and in brackets, it's always what kind the value is. `a number`,
+`a list`, `a record` and `a dictionary` need no care: `say x is a number of "5"` and the like, where the next
+word makes them a value, keep their meaning, and anywhere else they were mistakes.
+
+A test runs every kind against every kind of value on every engine, the say that keeps its meaning, and the
+compiler written in Folio writing the same JavaScript; a machine code case does the same.
+
+## 179. add to a field or an item
+
+`add x to r's items` was a mistake: add took a variable, and a field had to be read into one, added to and set
+back, three lines for one thought. It was the second most common slip writing the packages, after the list in
+brackets. Now `add` takes what `set` takes: a variable, a field (`r's items`, `count of r`, `self's total`) or an
+item (`item "a" of counts`, `byte 3 of block`).
+
+Both readers write it as what a program would write: what's added, then what has the field or item and its
+item's number, each worked out once, then what's there read into a variable of the program's own, added to as
+add adds to a variable, and set back. So a list grows where it is, which every other variable holding it sees,
+and a number or text is changed in its record. No engine changed. A field that isn't there is the mistake
+reading it is, and adding text to a number the mistake add makes of it.
+
+## 180. Text on the lines after `"""`
+
+Text was written on one line, with `\n` for each new line, which made a page of HTML, a prompt for a model or a
+block of JSON hard to read and harder to change. `"""` at the end of a line now starts text written on the lines
+after it, up to a line with only `"""`:
+
+```text
+set prompt to """
+    You answer from these notes only.
+    Say "I don't know" when they don't say.
+    """
+```
+
+Each line is the text as it's written, less the closing `"""`'s indent, so the text can be indented with the
+code; a line of only spaces is an empty line, and a line that starts left of the closing `"""` is a mistake.
+Nothing in it is a value or follows a `\`: `{`, `\` and `"` are themselves, as JSON and regular expressions want.
+For a value in it, join it on or use `replace`.
+
+`"""` was the empty text and then a text that isn't closed, at a line's end a mistake, so no program that ran
+means anything else; with anything after it on its line (`"""a"""`, `""""""`) it's the texts it was. Both
+tokenizers read it; tidy, in folio.js and folio.folio, moves the text's lines with its closing `"""` to 4 in from
+the line that opens it, so what the text holds doesn't change. A text with no closing line is a mistake the shell
+waits on for more lines. VS Code's grammar colours it; tree-sitter's still reads it as the texts it was.
+
+## 181. Folio's own words as field names
+
+`length`, `number`, `read`, `keys`, `list` and the other words of the language couldn't be names, so a record from
+JSON with a field called `length` or `number` couldn't be read, and a package couldn't call a field what it is.
+After `'s`, in `record with`, and after `in order by`, no phrase of the language can start, so any word can be a
+field's name there now: `r's length`, `record with read yes, number 3`, `set r's list to xs`, `add 1 to r's
+length`, `rows in order by number`. Each was a mistake before. Variables, inputs and functions keep the rule,
+since there a word starts its phrase, and `length of r` is still the length.
+
+## 182. Operations of your own that train
+
+learn.folio's operations each know their gradient, and a model could only be made of them. A new activation, a
+loss of your own, or a kernel written for the card (DESIGN §176) couldn't train: backward() didn't know how to send
+a gradient through it.
+
+`custom(inputs, forward, backward)` is an operation of your own. forward is given the inputs, a list of matrices,
+and gives the result; backward is given the result's gradient, the inputs and the result, and gives each input's
+gradient, or nothing for one it doesn't change. The result is remembered as learn's own results are, so
+backward() calls the function at its turn and adds what it gives to each input that a parameter went into. Both
+functions are given the matrices as they are, sharing their numbers, but remembered by nothing, so they can use
+learn's operations freely, or launch kernels of their own on each matrix's data. As PyTorch's
+`torch.autograd.Function` has it, with a forward and a backward, and nothing else to register.
+
+A test checks the gradients through two of them, x cubed and a product with a matrix that learns nothing, against
+the slopes worked out by nudging each number, on every engine and in machine code; and on the card, x squared
+written as two PTX kernels, its forward and its backward, gives the gradient 2 x w exactly and trains until x
+squared is its target. A backward that gives a gradient of the wrong shape, or a forward that gives no matrix, is
+a mistake that says so.
+
+## 183. 16-bit floats in safetensors
+
+Models on Hugging Face keep their weights in 16-bit floats more often than not: half floats (F16), or brain
+floats (BF16), a float's first 16 bits. learn.folio's load() read F32 and F64 only, so it couldn't open them, and
+save() wrote twice the room needed.
+
+load() reads F16 and BF16 now, each pattern's number looked up in a table of all 65,536 made the first time, and
+save(named, file, "F16") or "BF16" writes them, each number rounded to the nearest pattern, a half to the even
+one, as IEEE 754 and PyTorch round; too big is infinity. Rounding a number to the nearest whole one with Folio's
+comparisons, which go to 15 digits, could be wrong for a number a hair from a half, so it adds 2^52 and takes it
+away, which the processor rounds exactly. A test saves ten numbers each way, among them 0.1, 65,504, the smallest
+half float and 70,000, and checks the bytes against Python's struct (F16) and against rounding worked out exactly
+(BF16), and what load() gives back.
+
+The card still works in 32-bit floats: training in 16 is for cards with the arithmetic for it, which a GTX 1650
+has only in part. folio-tokenizer's gpt.folio, a GPT of 931,584 parameters on BPE tokens the package learns from
+its text, saves its weights in F16: 1.9 MB, not 3.7.

@@ -1860,7 +1860,9 @@ test("folio.exe tidies code to the same bytes format() does, and --check only sa
   const wide = 'say  "é😀"   # a comment with 😀 in it\nsay   item  1  of   "héllo"\n'; // columns counted as JavaScript counts them
   // values in text, with text in them, which a piece of text ends after
   const values = 'set   words to list of "a","b"\nsay  "{join words with ", "}!"\nto f with x\nreturn x+"!"\nend\nsay "{f("{x} {f("{(1+2)}")}")}"+"x"\n';
-  const sources = [messy, wide, values, ...brokenPrograms(7, 150)];
+  // text on the lines after a """, each line moved as its closing """ moves (DESIGN §180)
+  const blocks = 'to page with title\n  return """\n      <h1>\n        hi {title}\n\n      </h1>\n      """\nend\nset   x to """\r\n\t a\r\n\t """\r\nsay x\n';
+  const sources = [messy, wide, values, blocks, ...brokenPrograms(7, 150)];
   const names = [];
   const wanted = [];
   sources.forEach((source, i) => {
@@ -3042,7 +3044,7 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
   const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "29 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "31 passed");
 });
 
 // arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
@@ -3430,6 +3432,141 @@ end
 // number, past a block's edge, on 2D and 3D grids, and with shared memory; each mistake a launch can make, said
 // before the card sees it; the driver's own words, with the line, for PTX it can't take; and a kernel that writes
 // where it mustn't, found at the next wait
+// learn.folio's custom() with kernels of your own (DESIGN §182): x squared and its gradient, each a PTX kernel
+const CUSTOM_KERNELS = `# An operation of your own on the graphics card (DESIGN §182): x squared, with a kernel that works it out and
+# another that sends its gradient back, trained as learn's own operations are
+use "learn.folio" as learn
+use "gpu.folio" as gpu
+
+set ptx to """
+    .version 6.0
+    .target sm_50
+    .address_size 64
+
+    // y[i] = x[i] * x[i], for i below n
+    .visible .entry square_forward(.param .u64 p_y, .param .u64 p_x, .param .u32 p_n)
+    {
+        .reg .pred %p<2>;
+        .reg .b32 %r<6>;
+        .reg .f32 %f<3>;
+        .reg .b64 %rd<8>;
+        ld.param.u64 %rd1, [p_y];
+        ld.param.u64 %rd2, [p_x];
+        ld.param.u32 %r5, [p_n];
+        mov.u32 %r1, %ctaid.x;
+        mov.u32 %r2, %ntid.x;
+        mov.u32 %r3, %tid.x;
+        mad.lo.s32 %r4, %r1, %r2, %r3;
+        setp.ge.u32 %p1, %r4, %r5;
+        @%p1 bra DONE;
+        cvta.to.global.u64 %rd3, %rd1;
+        cvta.to.global.u64 %rd4, %rd2;
+        mul.wide.u32 %rd5, %r4, 4;
+        add.s64 %rd6, %rd3, %rd5;
+        add.s64 %rd7, %rd4, %rd5;
+        ld.global.f32 %f1, [%rd7];
+        mul.f32 %f2, %f1, %f1;
+        st.global.f32 [%rd6], %f2;
+    DONE:
+        ret;
+    }
+
+    // gx[i] = 2 * x[i] * g[i], for i below n
+    .visible .entry square_backward(.param .u64 p_gx, .param .u64 p_g, .param .u64 p_x, .param .u32 p_n)
+    {
+        .reg .pred %p<2>;
+        .reg .b32 %r<6>;
+        .reg .f32 %f<5>;
+        .reg .b64 %rd<11>;
+        ld.param.u64 %rd1, [p_gx];
+        ld.param.u64 %rd2, [p_g];
+        ld.param.u64 %rd3, [p_x];
+        ld.param.u32 %r5, [p_n];
+        mov.u32 %r1, %ctaid.x;
+        mov.u32 %r2, %ntid.x;
+        mov.u32 %r3, %tid.x;
+        mad.lo.s32 %r4, %r1, %r2, %r3;
+        setp.ge.u32 %p1, %r4, %r5;
+        @%p1 bra DONE;
+        cvta.to.global.u64 %rd4, %rd1;
+        cvta.to.global.u64 %rd5, %rd2;
+        cvta.to.global.u64 %rd6, %rd3;
+        mul.wide.u32 %rd7, %r4, 4;
+        add.s64 %rd8, %rd4, %rd7;
+        add.s64 %rd9, %rd5, %rd7;
+        add.s64 %rd10, %rd6, %rd7;
+        ld.global.f32 %f1, [%rd9];
+        ld.global.f32 %f2, [%rd10];
+        add.f32 %f3, %f2, %f2;
+        mul.f32 %f4, %f3, %f1;
+        st.global.f32 [%rd8], %f4;
+    DONE:
+        ret;
+    }
+    """
+
+set forward_kernel to gpu's kernel(ptx, "square_forward")
+set backward_kernel to gpu's kernel(ptx, "square_backward")
+
+to blocks_for with n
+    return ((n + 255) / 256) rounded down
+end
+
+to square_forward with xs
+    set x to item 1 of xs
+    set n to x's rows * x's columns
+    set y to learn's zeros(x's rows, x's columns)
+    gpu's launch(forward_kernel, blocks_for(n), 256, [y's data, x's data, n])
+    return y
+end
+
+to square_backward with g, xs, made
+    set x to item 1 of xs
+    set n to x's rows * x's columns
+    set gx to learn's zeros(x's rows, x's columns)
+    gpu's launch(backward_kernel, blocks_for(n), 256, [gx's data, g's data, x's data, n])
+    return [gx]
+end
+
+# the gradient through the kernels, against 2 x w worked out here
+set start to [[0.5, -1, 2], [1.5, 0.25, -3]]
+set weights to [[1, 2, -1], [0.5, -2, 3]]
+set x to learn's parameter(learn's matrix(start))
+set w to learn's matrix(weights)
+set squared to learn's custom([x], square_forward, square_backward)
+say learn's rows_of(squared)
+learn's backward(learn's sum(learn's times(squared, w)))
+set got to learn's rows_of(learn's gradient_of(x))
+set worst to 0
+for each r from 1 to 2
+    for each c from 1 to 3
+        set off to item c of item r of got - 2 * item c of item r of start * item c of item r of weights
+        if off is less than 0
+            set off to -off
+        end
+        if off is greater than worst
+            set worst to off
+        end
+    end
+end
+say "gradient off by at most " + worst
+learn's forget()
+
+# and it trains: x moves until x squared is the target
+set target to learn's matrix([[1, 4, 9], [0.25, 2.25, 16]])
+set x to learn's parameter(learn's matrix([[0.5, 1, 2], [1, 1, 3]]))
+set opt to learn's adam([x], 0.05)
+for each round from 1 to 400
+    set loss to learn's mean_squared_error(learn's custom([x], square_forward, square_backward), target)
+    learn's backward(loss)
+    if round is 400
+        say "loss after 400 steps: " + ((learn's value(loss) * 1000000) rounded) / 1000000
+    end
+    learn's step(opt)
+end
+say "on the card: " + learn's on_card()
+`;
+
 const KERNELS_PTX = `// kernels for trying gpu.folio's kernel() and launch()
 .version 6.0
 .target sm_50
@@ -3765,6 +3902,7 @@ test("learn.folio works out the same losses and gradients on the graphics card a
     };
     const kernels = run(KERNELS, "kernels");
     assert.deepEqual(kernels.filter((line) => !line.startsWith("ok ")), ["failures: 0"], kernels.join("\n"));
+    assert.deepEqual(run(CUSTOM_KERNELS, "custom"), ["[[0.25, 1, 4], [2.25, 0.0625, 9]]", "gradient off by at most 0", "loss after 400 steps: 0", "on the card: yes"]);
     assert.deepEqual(run(DROPOUT, "dropout"), ["on the card: yes", "dropped: yes", "the rest made larger: yes", "a new choice: yes", "the gradient through the same ones: yes", "not while training(no): yes"]);
     const card = run(LOSSES.replace("WHERE", "yes"), "card");
     const processor = run(LOSSES.replace("WHERE", "no"), "processor");

@@ -433,6 +433,14 @@ export const MACHINE_CASES = [
   "say (\"a\\rb\\tc\\nd\") as bytes\nsay length of \"\\r\"\nsay \"\\r\" is (list of 13) as bytes as text\nset n to 4\nsay (\"x{n}\\r\\n\") as bytes\nsay list of \"\\r\", \"r\", \"\\\\r\"\nsay split \"one\\r\\ntwo\" by \"\\r\\n\"\nsay \"before\\r\" \"after\"",
   // [1, 2, 3]: a list, as list of 1, 2, 3 is, ending at its ] (DESIGN §177)
   "to pair with a, b\n    return [b, a]\nend\nset xs to [3, 1, 2]\nsay xs\nsay []\nsay [[1, 2], [3], []]\nsay pair([1, 2], [3])\nsay item 2 of [10, 20, 30]\nsay [x * 2 for each x in xs where x is greater than 1]\nsay [1,\n    2,\n]\nfor each n in [5, 6]\n    say n\nend",
+  // x is a number, some text, a dog...: what kind a value is, and a say's values side by side where a has a value (DESIGN §178)
+  "kind dog with name\n    to speak with self\n        return 1\n    end\nend\nset things to [1, \"one\", yes, [1], (record with b 1), (dictionary where \"b\" is 1), (2) bytes, dog(\"Rex\"), function with x gives x, nothing, 5 km]\nfor each v in things\n    say [v is a number, v is some text, v is either yes or no, v is a list, v is a record, v is a dictionary, v is bytes, v is a function, v is a dog, v is not a dog]\nend\nset a to 1\nset rex to \"!\"\nsay 1 is a rex\nsay (1 is a rex)\nif 2.5 is a number and not (2.5 is a list)\n    say \"fine\"\nend",
+  // add to a field or an item: add x to r's items, add 1 to item "a" of counts (DESIGN §179)
+  "kind basket with items\n    to put with self, thing\n        add thing to self's items\n    end\nend\nset b to basket([])\nb's put(\"apple\")\nb's put(\"pear\")\nsay b's items\nset r to record with count 1, name \"a\", tags [\"x\"]\nadd 2 to r's count\nadd \"b\" to name of r\nadd \"y\" to r's tags\nsay r\nset counts to dictionary where \"a\" is 1\nadd 5 to item \"a\" of counts\nset xs to [1, [2]]\nadd 3 to item 2 of xs\nadd 10 to item 1 of xs\nsay counts \" \" xs\nset bs to (3) bytes\nadd 7 to byte 2 of bs\nsay bs\nset n to record with inner (record with total 1)\nadd 4 to n's inner's total\nsay n",
+  // text on the lines after a """, up to a line with only """ (DESIGN §180)
+  "set name to \"Sam\"\nset poem to \"\"\"\n    Roses are \"red\",\n      violets \\n are {blue}\n\n    \"\"\"\nsay poem\nsay length of poem\nto page with title\n    return \"\"\"\n        <h1>{title}</h1>\n        \"\"\"\nend\nsay page(\"x\")\nsay \"\"\"\n\"\"\"\nsay \"\"\"\"\"\" \"!\"",
+  // Folio's own words as field names: r's length, record with read yes (DESIGN §181)
+  "set r to record with read yes, length 3, list [1], kind \"x\"\nsay r's read \" \" r's length \" \" r's list\nset r's length to 4\nadd 1 to r's length\nsay r\nset f to record with split (function with s gives s + \"!\")\nsay f's split()\nset rows to [(record with number 2), (record with number 1)]\nsay rows in order by number",
   ...bitCases(),
 ];
 

@@ -48204,6 +48204,14 @@ to gen_expr with fc, e
         gen_task_wait(fc, e)
     else if what is "builtin" and name of e is "has ended"
         gen_task_ended(fc, e)
+    else if what is "builtin" and name of e is "is kind" # `x is a number` (DESIGN §178): as an input's kind is checked
+        gen_expr(fc, item 1 of args of e)
+        movq_rx(a, rax, xmm0)
+        movi(a, rdx, number of (value of item 2 of args of e))
+        call_to(a, "rt_fits_kind")
+        movi64(a, rcx, bits_no)
+        alu(a, "add", rax, rcx)
+        movq_xr(a, xmm0, rax)
     else if what is "task_made" # the number of the task just started
         movsd_load(a, xmm0, rip("task_made"))
     else if what is "builtin" and name of e is "library call" # the body of a library's function
