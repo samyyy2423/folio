@@ -1073,6 +1073,46 @@ test("folio.exe build --web makes a page that holds the program and the files it
 // folio build --target wasm (DESIGN §125): app.wasm, the module wasm.folio makes, here made by wasm.folio as machine
 // code, which must be wasm.js's bytes; what running it needs follows in a section of its own, and runWasm runs it
 // as the VM runs the program. A program with a mistake says it, and makes no module.
+// math.folio's sqrt in machine code is the processor's own, sqrtsd (DESIGN §187): the same double the JavaScript
+// engines work out in Folio, which r * r - x would show a step apart; and the same mistakes, for a number below
+// 0, for text and for an amount
+test("math.folio's sqrt in machine code gives what the JavaScript engine works out in Folio, to the last bit", { skip }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
+  try {
+    const source = `use "math.folio" as math
+set tiny to (1 / (2 to the power of 1000)) / (2 to the power of 74)
+set values to list of 0, 1, 2, 3, 16, 0.1, 1 / 3, 1234567.891, 2 to the power of 1000, 10 to the power of 300, tiny, 1 / (2 to the power of 600), 99999999999999.9
+for each x in values
+    set r to math's sqrt(x)
+    say r " " r * r - x
+end
+set total to 0
+for each i from 1 to 100000
+    set total to total + math's sqrt(i * 7.25)
+end
+say total
+for each wrong in list of -1, "four", 4 km
+    try
+        say math's sqrt(wrong)
+    if it fails with why
+        say why
+    end
+end
+`;
+    const files = { "math.folio": here("math.folio") };
+    let want = "";
+    run(source, (line) => (want += `${line}\n`), { files: (name) => files[name] });
+    const exe = executable(dir, "s");
+    writeFileSync(exe, machine(source, { target, name: "s.folio", files }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 60_000 });
+    assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: want, stderr: "", status: 0 });
+    assert.match(want, /^0 0\n1 0\n1\.4142135623731 4\.44089209850063e-16\n/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("folio.exe build --target wasm makes wasm.js's module, which runs as the VM runs the program", { skip }, () => {
   const { dir, exe } = folioExe();
   const sub = join(dir, "wasm");
@@ -1860,7 +1900,9 @@ test("folio.exe tidies code to the same bytes format() does, and --check only sa
   const wide = 'say  "é😀"   # a comment with 😀 in it\nsay   item  1  of   "héllo"\n'; // columns counted as JavaScript counts them
   // values in text, with text in them, which a piece of text ends after
   const values = 'set   words to list of "a","b"\nsay  "{join words with ", "}!"\nto f with x\nreturn x+"!"\nend\nsay "{f("{x} {f("{(1+2)}")}")}"+"x"\n';
-  const sources = [messy, wide, values, ...brokenPrograms(7, 150)];
+  // text on the lines after a """, each line moved as its closing """ moves (DESIGN §180)
+  const blocks = 'to page with title\n  return """\n      <h1>\n        hi {title}\n\n      </h1>\n      """\nend\nset   x to """\r\n\t a\r\n\t """\r\nsay x\n';
+  const sources = [messy, wide, values, blocks, ...brokenPrograms(7, 150)];
   const names = [];
   const wanted = [];
   sources.forEach((source, i) => {
@@ -2939,7 +2981,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, toml.folio, options.fol
   const ran = spawnSync(exe, ["test", "text.test.folio", "dates.test.folio", "hash.test.folio", "big.test.folio", "xml.test.folio", "zip.test.folio", "math.test.folio",
     "base64.test.folio", "toml.test.folio", "options.test.folio", "collections.test.folio", "lists.test.folio", "stats.test.folio", "sync.test.folio", "fractions.test.folio", "sets.test.folio", "images.test.folio", "crypto.test.folio", "charts.test.folio"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "94 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "95 passed");
 });
 
 // memory.folio's own loop (DESIGN §160), on its own: each kind of number, each order, written into bytes past their
@@ -3042,7 +3084,7 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
   const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "29 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "33 passed");
 });
 
 // arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
@@ -3200,6 +3242,67 @@ memcpy(to_here, (list of 1, "two"), 16)`);
   assert.throws(() => machine('use the library "msvcrt"\n    f(a whole number) gives a list of numbers\nend\n', { target, name: "p.folio" }),
     (err) => err.reason === "a library's function can't give a list of numbers: only a function's input can be one");
 });
+// Folio's own kernels are in every program, with no --allow-libraries (DESIGN §188), so they take only what Folio's
+// own files give them: memory at an address only when libraries are allowed (a kernel refuses it, without
+// touching it, and memory.folio then goes to the C library, which asks), a list where a list is named and bytes
+// where bytes are, and each kernel named only as Folio's own files name it.
+test("Folio's own kernels reach memory by its address only with --allow-libraries, and take only what they're named to", { skip }, () => {
+  const kernels = libraryRun(`use the library "folio"
+    "numbers_memory" as k_raw(a long whole number, a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_atomic" as k_atomic_raw(a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_room" as k_room(a list of numbers, a long whole number) gives a long whole number
+    "numbers_convert" as k_convert(a long whole number, a list of numbers, bytes) gives a long whole number
+end
+set back to list of 0, 0
+say k_raw(4, 5, back, 0, 4096, 8, 0, 1) " " back
+say k_atomic_raw(11, back, 4096, 8, 0, 0, 0) " " back
+set wrongs to list of (function with u gives k_room("text", 1)), (function with u gives k_room(16 bytes, 1)), (function with u gives k_convert(4, back, (list of 1, 2)))
+for each wrong in wrongs
+    try
+        say wrong(0)
+    if it fails with why
+        say why
+    end
+end
+say k_convert(4, back, 16 bytes) " " back`, []);
+  assert.deepEqual([kernels.stderr, kernels.status], ["", 0]);
+  const said = kernels.stdout.split("\n");
+  assert.deepEqual(said.slice(0, 2), ["1 [0, 0]", "1 [0, 0]"]);
+  assert.match(said[2], /^'k_room' needs input 1 to be a list, not text/);
+  assert.match(said[3], /^'k_room' needs input 1 to be a list, not /);
+  assert.match(said[4], /^'k_convert' needs input 3 to be bytes, not /);
+  assert.equal(said[5], "0 [0, 0]");
+  const memoryFiles = { "memory.folio": here("tools/memory.folio") };
+  const dir = mkdtempSync(join(tmpdir(), "folio-own-"));
+  try {
+    const exe = executable(dir, "m");
+    writeFileSync(exe, machine(`use "memory.folio" as memory
+set m to memory's block_at(4096, 8)
+try
+    say memory's get(m, 1, "a whole number")
+if it fails with why
+    say why
+end
+`, { target, name: "m.folio", files: memoryFiles }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "" });
+    assert.deepEqual([ran.stderr, ran.status], ["", 0]);
+    assert.match(ran.stdout, /isn't allowed to use libraries \(start it with --allow-libraries\)\n$/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const named = (line) => () => machine(`use the library "folio"
+    ${line}
+end
+say 1`, { target, name: "p.folio" });
+  assert.throws(named(`"numbers_room" as k_room(a long whole number, a long whole number) gives a long whole number`),
+    /the library 'folio''s 'numbers_room' is named only as Folio's own files name it: \(a list of numbers, a long whole number\) gives a long whole number/);
+  assert.throws(named(`"numbers_memory" as k(a long whole number, a long whole number, a long whole number, a long whole number, bytes, a long whole number, a long whole number, a long whole number) gives a long whole number`),
+    /the library 'folio''s 'numbers_memory' is named only as Folio's own files name it/);
+  assert.throws(named(`"numbers_exp" as k(a list of numbers, a list of numbers, a long whole number) gives a number`),
+    /the library 'folio''s 'numbers_exp' is named only as Folio's own files name it/);
+  assert.throws(named(`"number_sqrt" as k(a long whole number) gives a number`), /'number_sqrt' takes a number and gives a number/);
+});
 
 // A library's function "at an address" (DESIGN §119): the first input is where the function is, a pointer C
 // gave, as ONNX Runtime's C API gives a table of them
@@ -3233,7 +3336,7 @@ say found("abs")`, []);
 
 // A small ONNX model, written byte by byte as protobuf: Y = Relu(X · W + B), X [batch, 3], W [3, 2], B [2], in
 // floats (1) or doubles (11)
-function onnxModel(type) {
+function onnxModel(type, width = 2, w = [1, -1, 0.5, 2, 2, 0.25], b = [0.5, 1]) {
   const varint = (n) => {
     const out = [];
     let v = BigInt(n);
@@ -3258,19 +3361,20 @@ function onnxModel(type) {
   const valueInfo = (name, dims) => [...str(1, name), ...bytes(2, bytes(1, [...int(1, type), ...bytes(2, dims.flatMap(dim))]))];
   const node = (inputs, outputs, op) => [...inputs.flatMap((i) => str(1, i)), ...outputs.flatMap((o) => str(2, o)), ...str(4, op)];
   const graph = [...bytes(1, node(["X", "W"], ["XW"], "MatMul")), ...bytes(1, node(["XW", "B"], ["Z"], "Add")), ...bytes(1, node(["Z"], ["Y"], "Relu")),
-    ...str(2, "dense"), ...bytes(5, tensor("W", [3, 2], [1, -1, 0.5, 2, 2, 0.25])), ...bytes(5, tensor("B", [2], [0.5, 1])),
-    ...bytes(11, valueInfo("X", ["batch", 3])), ...bytes(12, valueInfo("Y", ["batch", 2]))];
+    ...str(2, "dense"), ...bytes(5, tensor("W", [3, width], w)), ...bytes(5, tensor("B", [width], b)),
+    ...bytes(11, valueInfo("X", ["batch", 3])), ...bytes(12, valueInfo("Y", ["batch", width]))];
   return Buffer.from([...int(1, 7), ...str(2, "folio"), ...bytes(7, graph), ...bytes(8, [...str(1, ""), ...int(2, 13)])]);
 }
 
 // ONNX Runtime comes with Windows 11; on Linux, from its release, where the test looks for it
 const onnxHere = target === "windows" ? existsSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "onnxruntime.dll"))
   : ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib", "/usr/local/lib"].some((d) => existsSync(join(d, "libonnxruntime.so")) || existsSync(join(d, "libonnxruntime.so.1")));
-test("tools/onnx.folio runs an ONNX model through ONNX Runtime's C API, in floats and in doubles", { skip: skip || (!onnxHere && "ONNX Runtime isn't installed") }, () => {
+test("tools/onnx.folio runs an ONNX model through ONNX Runtime's C API, in floats and in doubles, keeping outputs where it made them", { skip: skip || (!onnxHere && "ONNX Runtime isn't installed") }, () => {
   const dir = mkdtempSync(join(tmpdir(), "folio-onnx-"));
   try {
     writeFileSync(join(dir, "dense.onnx"), onnxModel(1));
     writeFileSync(join(dir, "dense64.onnx"), onnxModel(11));
+    writeFileSync(join(dir, "square.onnx"), onnxModel(1, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1], [1, 1, 1]));
     const files = {};
     for (const name of ["onnx.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
@@ -3304,6 +3408,31 @@ try
 if it fails with why
     say "fails: " position of "nowhere.onnx" in why is greater than 0
 end
+# outputs kept where ONNX Runtime made them, and given back as they are: square is relu(x + 1)
+set square to onnx's load_with("square.onnx", dictionary where "threads" is 1, "optimization" is "basic", "session.disable_quant_qdq" is "1")
+set got to onnx's run_keeping(square, (dictionary where "X" is arrays's array(list of (list of 1, 2, 3))), list of "Y")
+set y to item "Y" of got
+say y
+say onnx's shape_of(y) " " onnx's numbers_from(y, 2, 2) " " onnx's array_of(y)
+say item "Y" of onnx's run(square, dictionary where "X" is y)
+set twice to item "Y" of onnx's run_keeping(square, (dictionary where "X" is y), list of "Y")
+say onnx's numbers_from(twice, 1, 3)
+onnx's release(twice)
+onnx's release(y)
+onnx's release(y)
+say y
+set wide to item "Y" of onnx's run_keeping(onnx's load("dense64.onnx"), (dictionary where "X" is arrays's array(list of (list of 1, 2, 3))), list of "Y")
+set wrongs to list of (function with u gives onnx's numbers_from(y, 1, 1)), (function with u gives onnx's run_keeping(square, (dictionary where "X" is wide), empty list)),
+    (function with u gives onnx's numbers_from(wide, 2, 2)), (function with u gives onnx's run_keeping(square, (dictionary where "X" is wide), list of "Z")),
+    (function with u gives onnx's load_with("square.onnx", dictionary where "speed" is 1)), (function with u gives onnx's load_with("square.onnx", dictionary where "threads" is -1)),
+    (function with u gives onnx's shape_of(list of 1))
+for each wrong in wrongs
+    try
+        wrong(0)
+    if it fails with why
+        say why
+    end
+end
 `, { target, name: "p.folio", files, allow: ["--allow-libraries"] }));
     if (target === "linux") chmodSync(exe, 0o755);
     const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8" });
@@ -3319,6 +3448,18 @@ Y double [-1, 2]
 the model needs an input called 'X'
 ONNX Runtime: Got invalid dimensions for input: X for the following indices
 fails: yes
+an ONNX value (float [1, 3])
+[1, 3] [3, 4] [[2, 3, 4]]
+[[3, 4, 5]]
+[3, 4, 5]
+an ONNX value, released
+'numbers_from' was given an ONNX value that was released
+the model takes 'X' as float, and this ONNX value is double
+this ONNX value has 2 numbers, so there are no 2 from number 2
+the model has no output called 'Z'
+load_with knows "threads", "optimization" and ONNX Runtime's session settings, which have a . in their names, not "speed"
+load_with's "threads" is a whole number of 0 or more, not -1
+'shape_of' needs an ONNX value that run_keeping kept, not a list
 `, "", 0]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -3430,6 +3571,141 @@ end
 // number, past a block's edge, on 2D and 3D grids, and with shared memory; each mistake a launch can make, said
 // before the card sees it; the driver's own words, with the line, for PTX it can't take; and a kernel that writes
 // where it mustn't, found at the next wait
+// learn.folio's custom() with kernels of your own (DESIGN §182): x squared and its gradient, each a PTX kernel
+const CUSTOM_KERNELS = `# An operation of your own on the graphics card (DESIGN §182): x squared, with a kernel that works it out and
+# another that sends its gradient back, trained as learn's own operations are
+use "learn.folio" as learn
+use "gpu.folio" as gpu
+
+set ptx to """
+    .version 6.0
+    .target sm_50
+    .address_size 64
+
+    // y[i] = x[i] * x[i], for i below n
+    .visible .entry square_forward(.param .u64 p_y, .param .u64 p_x, .param .u32 p_n)
+    {
+        .reg .pred %p<2>;
+        .reg .b32 %r<6>;
+        .reg .f32 %f<3>;
+        .reg .b64 %rd<8>;
+        ld.param.u64 %rd1, [p_y];
+        ld.param.u64 %rd2, [p_x];
+        ld.param.u32 %r5, [p_n];
+        mov.u32 %r1, %ctaid.x;
+        mov.u32 %r2, %ntid.x;
+        mov.u32 %r3, %tid.x;
+        mad.lo.s32 %r4, %r1, %r2, %r3;
+        setp.ge.u32 %p1, %r4, %r5;
+        @%p1 bra DONE;
+        cvta.to.global.u64 %rd3, %rd1;
+        cvta.to.global.u64 %rd4, %rd2;
+        mul.wide.u32 %rd5, %r4, 4;
+        add.s64 %rd6, %rd3, %rd5;
+        add.s64 %rd7, %rd4, %rd5;
+        ld.global.f32 %f1, [%rd7];
+        mul.f32 %f2, %f1, %f1;
+        st.global.f32 [%rd6], %f2;
+    DONE:
+        ret;
+    }
+
+    // gx[i] = 2 * x[i] * g[i], for i below n
+    .visible .entry square_backward(.param .u64 p_gx, .param .u64 p_g, .param .u64 p_x, .param .u32 p_n)
+    {
+        .reg .pred %p<2>;
+        .reg .b32 %r<6>;
+        .reg .f32 %f<5>;
+        .reg .b64 %rd<11>;
+        ld.param.u64 %rd1, [p_gx];
+        ld.param.u64 %rd2, [p_g];
+        ld.param.u64 %rd3, [p_x];
+        ld.param.u32 %r5, [p_n];
+        mov.u32 %r1, %ctaid.x;
+        mov.u32 %r2, %ntid.x;
+        mov.u32 %r3, %tid.x;
+        mad.lo.s32 %r4, %r1, %r2, %r3;
+        setp.ge.u32 %p1, %r4, %r5;
+        @%p1 bra DONE;
+        cvta.to.global.u64 %rd4, %rd1;
+        cvta.to.global.u64 %rd5, %rd2;
+        cvta.to.global.u64 %rd6, %rd3;
+        mul.wide.u32 %rd7, %r4, 4;
+        add.s64 %rd8, %rd4, %rd7;
+        add.s64 %rd9, %rd5, %rd7;
+        add.s64 %rd10, %rd6, %rd7;
+        ld.global.f32 %f1, [%rd9];
+        ld.global.f32 %f2, [%rd10];
+        add.f32 %f3, %f2, %f2;
+        mul.f32 %f4, %f3, %f1;
+        st.global.f32 [%rd8], %f4;
+    DONE:
+        ret;
+    }
+    """
+
+set forward_kernel to gpu's kernel(ptx, "square_forward")
+set backward_kernel to gpu's kernel(ptx, "square_backward")
+
+to blocks_for with n
+    return ((n + 255) / 256) rounded down
+end
+
+to square_forward with xs
+    set x to item 1 of xs
+    set n to x's rows * x's columns
+    set y to learn's zeros(x's rows, x's columns)
+    gpu's launch(forward_kernel, blocks_for(n), 256, [y's data, x's data, n])
+    return y
+end
+
+to square_backward with g, xs, made
+    set x to item 1 of xs
+    set n to x's rows * x's columns
+    set gx to learn's zeros(x's rows, x's columns)
+    gpu's launch(backward_kernel, blocks_for(n), 256, [gx's data, g's data, x's data, n])
+    return [gx]
+end
+
+# the gradient through the kernels, against 2 x w worked out here
+set start to [[0.5, -1, 2], [1.5, 0.25, -3]]
+set weights to [[1, 2, -1], [0.5, -2, 3]]
+set x to learn's parameter(learn's matrix(start))
+set w to learn's matrix(weights)
+set squared to learn's custom([x], square_forward, square_backward)
+say learn's rows_of(squared)
+learn's backward(learn's sum(learn's times(squared, w)))
+set got to learn's rows_of(learn's gradient_of(x))
+set worst to 0
+for each r from 1 to 2
+    for each c from 1 to 3
+        set off to item c of item r of got - 2 * item c of item r of start * item c of item r of weights
+        if off is less than 0
+            set off to -off
+        end
+        if off is greater than worst
+            set worst to off
+        end
+    end
+end
+say "gradient off by at most " + worst
+learn's forget()
+
+# and it trains: x moves until x squared is the target
+set target to learn's matrix([[1, 4, 9], [0.25, 2.25, 16]])
+set x to learn's parameter(learn's matrix([[0.5, 1, 2], [1, 1, 3]]))
+set opt to learn's adam([x], 0.05)
+for each round from 1 to 400
+    set loss to learn's mean_squared_error(learn's custom([x], square_forward, square_backward), target)
+    learn's backward(loss)
+    if round is 400
+        say "loss after 400 steps: " + ((learn's value(loss) * 1000000) rounded) / 1000000
+    end
+    learn's step(opt)
+end
+say "on the card: " + learn's on_card()
+`;
+
 const KERNELS_PTX = `// kernels for trying gpu.folio's kernel() and launch()
 .version 6.0
 .target sm_50
@@ -3765,6 +4041,7 @@ test("learn.folio works out the same losses and gradients on the graphics card a
     };
     const kernels = run(KERNELS, "kernels");
     assert.deepEqual(kernels.filter((line) => !line.startsWith("ok ")), ["failures: 0"], kernels.join("\n"));
+    assert.deepEqual(run(CUSTOM_KERNELS, "custom"), ["[[0.25, 1, 4], [2.25, 0.0625, 9]]", "gradient off by at most 0", "loss after 400 steps: 0", "on the card: yes"]);
     assert.deepEqual(run(DROPOUT, "dropout"), ["on the card: yes", "dropped: yes", "the rest made larger: yes", "a new choice: yes", "the gradient through the same ones: yes", "not while training(no): yes"]);
     const card = run(LOSSES.replace("WHERE", "yes"), "card");
     const processor = run(LOSSES.replace("WHERE", "no"), "processor");
@@ -5578,6 +5855,26 @@ say "done"
 `);
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], [`200 OK <h1>Hello</h1> text/html; charset=utf-8\nPUT a body é | text/plain; charset=utf-8 | mine | nobody | one two\nPOST {\"name\":\"Sam\"} | application/json | nothing | nobody | json\nPATCH hi | none | nothing | nobody | bytes\nDELETE  | none | nothing | nobody | gone\n200 0\n(dictionary where \"name\" is \"Sam\", \"scores\" is [1, 2, 3])\nGET  | none | nothing | nobody | after302 at http://127.0.0.1:${port}/echo?q=after302\nGET  | none | nothing | nobody | after303\nPOST kept | text/plain; charset=utf-8 | nothing | nobody | after307\nGET  | none | nothing | nobody | far\nsqueezed é, squeezed é, squeezed é 37\n404 nothing at /missing\nthe server said 404 Not Found to http://127.0.0.1:${port}/missing\ntoo many redirects, from http://127.0.0.1:${port}/loop\na%20b%26c%3Dd%2F%C3%A9 a b&c=d/é\nq=folio%20lang&n=2\nhello world\nhttp.folio asks http:// and https:// addresses, not ftp://example.com/\n'http:///nohost' has no host\n'http://[::1/x' has a [ with no ]\ncan't connect to 127.0.0.1 port 1: nothing answered there\ndone\n`, `listening on http://127.0.0.1:${port}/
 `, 0]);
+});
+
+// server.folio sends no answer with a line break in a header, which would end it there and start another header,
+// or another answer, perhaps of the client's making, nor a status that isn't a number from 100 to 999: it sends a
+// 500 instead (DESIGN §188)
+test("server.folio answers 500 rather than send a header with a line break in it", { skip }, () => {
+  const ran = libraryRun(`use "server.folio" as web
+set answers to list of (record with status 302, headers (dictionary where "Location" is "/home")),
+    (record with status 302, headers (dictionary where "Location" is "/x\\nSet-Cookie: stolen=1")),
+    (record with status 302, headers (dictionary where "X-Name" + ((list of 13) as bytes as text) is "1")),
+    (record with body "hi", type "text/html\\nX-Evil: 1"),
+    (record with status "200 OK\\nX-Evil: 1", body "hi"),
+    (record with status 99, body "hi")
+for each answer in answers
+    set c to record with keep no
+    web's web_ready(c, answer, "GET")
+    set head to (item 1 of out of c) as text
+    say items 1 to 12 of head " " ("stolen" is in head) " " ("X-Evil" is in head)
+end`);
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["HTTP/1.1 302 no no\n" + "HTTP/1.1 500 no no\n".repeat(5), "", 0]);
 });
 
 // tools/websocket.folio: an echo server in a task of the program's, and the program connecting to it: text, a

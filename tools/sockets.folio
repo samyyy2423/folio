@@ -909,7 +909,10 @@ to secure with connection, host
     if not net_is_address(host)
         tls_control(session, 55, 0, host) # SSL_CTRL_SET_TLSEXT_HOSTNAME: the name it asked for, for a server with many
     end
-    tls_expect_host(session, host)
+    if tls_expect_host(session, host) is not 1 # the name the certificate must have, or no connection (DESIGN §188)
+        tls_free(session)
+        fail with "can't connect securely to " + host + ": OpenSSL wouldn't check its certificate for that name"
+    end
     if tls_connect(session) is not 1
         set checked to tls_verify_result(session)
         tls_free(session)

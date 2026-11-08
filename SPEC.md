@@ -105,6 +105,8 @@ function's inputs, `the time` and the other times (section 8.11), `rounded`, `wi
 repeats`, `to the power of`, `has ended`, `in order`, `bit and`, and `total`, `average`, `largest` and
 `smallest` before `of`.
 A field called `total` can't be read with `of`, since `total of` means a total; `x's total` reads it.
+A field's name after `'s`, in `record with` and after `in order by` can be any word, the words above too:
+`r's length`, `record with read yes`.
 
 ### 1.4 Numbers written out
 
@@ -118,7 +120,7 @@ word straight after a number makes an amount: `5 km` (section 4).
 
 ### 1.5 Text written out
 
-Text is written between double quotes on one line. Inside it:
+Text is written between double quotes on one line, or on the lines after a `"""` (below). Inside quotes:
 
 - `\n` is a new line, `\t` a tab, and `\` before any other character is that character, so `\"` is a quote,
   `\\` a backslash and `\{` a brace. `\r` is therefore an `r`, not a carriage return, which `folio check` warns
@@ -131,6 +133,13 @@ Text is written between double quotes on one line. Inside it:
   text, even `"{a}{b}"`.
 
 A text that isn't closed on its line, or a `{` whose value has no `}`, is a mistake.
+
+**Text on the lines after `"""`.** `"""` with only spaces after it on its line starts text written on the
+lines after it, up to a line with only `"""` (and spaces). Each line is the text as written, less the closing
+line's indent, joined by new lines; a line of only spaces is empty, and a line that doesn't start with the
+closing line's indent is a mistake. Nothing in it is a value or follows a `\`: `{`, `\` and `"` are
+themselves. A tab can be in it, and no other control character. `"""` with anything else after it on its
+line is the texts it reads as: `""""""` is three empty texts.
 
 ### 1.6 Comments
 
@@ -331,6 +340,15 @@ comparison = sum "is" [ "not" ] [ "less than" | "greater than" | "at least" | "a
 
 `not` before a comparison turns it round, as `is not` does.
 
+**What kind a value is.** After `is` or `is not`: `a number`, `a list`, `a record`, `a dictionary`, `a
+function`, `bytes`, `some text`, `either yes or no` (each as an input's kind is checked, section 7.2), or `a`
+or `an` and a kind's name, for a record that kind made (its `kind` field is the name). `a number of`, `a
+list of`, `a record with`, `a dictionary where` and `a function with` are the values they start, after a
+name `a`. `x is a text` is a mistake. In a say's values, outside brackets, a phrase that starts with a name
+(`a dog`, `a function`, `some text`, `either yes or no`) is that name and what follows, as values side by
+side, in a file where the name is written other than after `is`, `is not`, `gives`, `play`, `choose`,
+`when` or `as` with more on the line, or that uses a file without `as`.
+
 ### 5.3 Arithmetic and joining
 
 - `+` adds two numbers, or two amounts of a measure. If either side is text, `+` joins the two as text,
@@ -410,12 +428,13 @@ set = "set" name "to" expression
 ### 6.2 add
 
 ```text
-add = "add" expression "to" name
+add = "add" expression "to" ( name | field | item )
 ```
 
 To a list, adds the value at its end. To text, joins the value on, shown as `say` shows it. To a number,
-adds a number; to an amount, an amount of the same measure. Anything else is a mistake. `add` takes a
-variable, not a field: `add x to items of r` is a mistake.
+adds a number; to an amount, an amount of the same measure. Anything else is a mistake. To a field
+(`r's items`, `items of r`) or an item (`item "a" of counts`, `byte 2 of b`), it reads what's there, adds
+to it so, and sets it back, working out what's added first, then what has the field or item, once each.
 
 ### 6.3 say
 

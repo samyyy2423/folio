@@ -1113,7 +1113,8 @@ class WasmCompiler extends Scope {
     this.smallChecks(sides, true);
     this.e(e.op === "+" ? "i32.add" : "i32.sub").e("local.tee", r);
     this.e("i32.const", 2 ** 30).e("i32.add").e("i32.const", -(2 ** 31)).e("i32.ge_u").e("br_if", 0);
-    this.e("local.get", r).e("i32.const", 2).e("i32.lt_u").e("br_if", 0);
+    // 0 and 1 are boxes made once, which box gives without working anything out again (DESIGN §184)
+    this.e("local.get", r).e("i32.const", 2).e("i32.lt_u").e("if").e("local.get", r).e("f64.convert_i32_s").e("call", this.ctx.R.box).e("br", 2).e("end");
     this.e("local.get", r).e("ref.i31").e("br", 1).e("end");
     this.smallSlow(sides);
     this.e("i32.const", at).e("call", this.ctx.R[e.op === "+" ? "add" : "sub"]).e("end");

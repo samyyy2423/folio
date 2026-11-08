@@ -81,6 +81,13 @@ function tokenize(src, file, start) {
     TOKEN.lastIndex = at;
     const m = TOKEN.exec(src);
     const where = place(at);
+    const block = !start && src.startsWith('"""', at) ? textBlock(src, at, where, file) : null;
+    if (block) { // `"""` at a line's end, and the lines up to one with only `"""` (DESIGN §180)
+      tokens.push({ type: "string", value: block.value, ...where, nl, block: true });
+      [line, lineStart, nl] = [block.line, block.lineStart, false];
+      TOKEN.lastIndex = block.end;
+      continue;
+    }
     if (!m) {
       const c = String.fromCodePoint(src.codePointAt(at)); // a whole emoji, not half of one
       const hint = start ? BRACE_HINT : HINTS[c];
@@ -125,6 +132,37 @@ function tokenize(src, file, start) {
   if (start) tokens.push({ type: "}", value: "}", line, col: src.length - lineStart + 1, nl: true, ...(file && { file }) });
   tokens.push({ type: "eof", value: "", line, col: src.length - lineStart + 1, nl: true, ...(file && { file }) });
   return tokens;
+}
+
+// `"""` at the end of a line starts text written on the lines after it, up to a line with only `"""`
+// (DESIGN §180): each line as it's written, less the closing line's indent, nothing in it a value or after a
+// `\`, and a line of only spaces empty. Gives the text, and the line and place its closing `"""` ends at; or
+// null where something else comes after the `"""` on its line, which is then the text it was before.
+function textBlock(src, at, where, file) {
+  let i = at + 3;
+  while (src[i] === " " || src[i] === "\t" || src[i] === "\r") i++;
+  if (src[i] !== "\n") return null;
+  const spot = (line, col) => (file ? { line, col, file } : { line, col });
+  const lines = [];
+  for (let from = i + 1, line = where.line + 1; from <= src.length; line++) {
+    const upto = src.includes("\n", from) ? src.indexOf("\n", from) : src.length;
+    const text = src.slice(from, upto).replace(/\r$/, "");
+    const closing = /^([ \t]*)"""[ \t]*$/.exec(text);
+    if (closing) {
+      const indent = closing[1];
+      const value = lines.map((l) => {
+        if (/^[ \t]*$/.test(l.text)) return "";
+        if (!l.text.startsWith(indent)) fail(spot(l.line, 1), 'this line of the text starts left of the """ that ends it');
+        const bad = [...l.text].findIndex((c) => !fitsText(c));
+        if (bad >= 0) fail(spot(l.line, bad + 1), "text can't hold a control character, but for a tab");
+        return l.text.slice(indent.length);
+      });
+      return { value: value.join("\n"), line, lineStart: from, end: from + indent.length + 3 };
+    }
+    lines.push({ text, line });
+    from = upto + 1;
+  }
+  return fail({ ...where, type: "eof" }, 'this text has no line with only """ to end it'); // the shell asks for more lines
 }
 
 // Where text written from `from` to just before `upto` has \r, not in a value in it: an r, as SPEC.md has it for
@@ -207,6 +245,9 @@ const TURTLE_WORDS = new Map([["move", ["forward", "back", "to"]], ["turn", ["le
 // `draw picture` followed by any other word, or by text, a number or a bracket with a space before it (one
 // with none calls `picture`), draws a picture from a file
 const CARRY_ON = ["at", "of", "bit", "is", "and", "or", "in", "as", "bytes"];
+// after `is a`, the kinds' words (KINDS in vm.js numbers them), each with the word after it that makes it a
+// value instead, as in `say x is a list of 1, 2` (see kindAfter)
+const KIND_WORDS = { number: [0, "of"], list: [3, "of"], record: [4, "with"], dictionary: [5, "where"], function: [7, "with"] };
 
 // The language's own functions, in Folio, put in a program that needs them as a file used as "the language" is
 // (DESIGN §97); compiler.folio has the same text, and a test holds them to each other.
@@ -314,6 +355,20 @@ end
 
 to a_function with f as a function
 end
+
+# whether a value is a record the kind called named made, for x is a dog (DESIGN §178)
+to made_by with value, named
+    if not (value is a record)
+        return no
+    end
+    set made to nothing
+    try
+        set made to value's kind
+    if it fails
+        return no
+    end
+    return made is named
+end
 `;
 
 // Every node keeps the token it came from (`at`), so errors can point at it. `reading` is shared with the
@@ -331,6 +386,8 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
   let hoisted = []; // functions the statement being read makes for its values (see unnamed)
   const unnamedOnLine = new Map(); // how many each line has made, so each has a name of its own
   let converting = true; // `trip in miles`; not in `position of ... in`, whose `in` is its own
+  let saying = false; // in a say's values, outside brackets, where values stand side by side (see kindAfter)
+  let mayName = null; // the words this file may give values to, worked out when a say needs them (see kindAfter)
   const unitAt = (i) => tokens[i].type === "word" && !tokens[i].nl && unitNamed(tokens[i].value) !== undefined;
   const peek = () => tokens[pos];
   const check = (type) => tokens[pos].type === type;
@@ -401,6 +458,15 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     const t = peek();
     if (t.type !== "word") expected(what);
     if (RESERVED.has(t.value)) fail(t, `'${t.value}' is a Folio word, so it can't be used as ${what}`);
+    pos++;
+    return t.value;
+  }
+
+  // a field's name, after `'s`, in `record with` or after `in order by`, where no phrase can start, so any word
+  // can be one, Folio's own too: `r's length`, `record with read yes` (DESIGN §181)
+  function fieldName(what) {
+    const t = peek();
+    if (t.type !== "word") expected(what);
     pos++;
     return t.value;
   }
@@ -621,9 +687,10 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     while (check("'s")) {
       pos++;
       const t = peek();
-      const named = name("a function's or a field's name");
+      const named = fieldName("a function's or a field's name");
       if (tight(match("("))) {
         node = madeCall(named, [node, ...argList()], t);
+        node.own = named; // the field's name, which a file used `as` a name doesn't change, as it does the call's
         reading.owns.push(node); // a record's own function, if nothing else has its name (see ownCalls)
       } else node = { kind: "field", name: named, of: node, at: t };
     }
@@ -685,14 +752,25 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       expectWord("to");
       return { kind: "set", name: variable, value: expression(), at: t };
     }
-    if (word("add")) {
+    if (word("add")) { // `add 1 to count`, and to a field or an item: `add x to r's items` (DESIGN §179)
       const value = expression();
       expectWord("to");
-      return { kind: "add", value, name: name("a variable name"), at: t };
+      if (isWord("item") || isWord("byte")) return addedTo(value, primary(), t);
+      const named = peek();
+      const variable = name("a variable name");
+      if (check("'s") && !aliases.has(variable)) {
+        const field = possessive({ kind: "name", name: variable, at: named });
+        if (field.kind !== "field") fail(field.at, `a call can't be added to: add to a field, as in 'add 1 to ${variable}'s count'`);
+        return addedTo(value, field, t);
+      }
+      if (word("of")) return addedTo(value, { kind: "field", name: variable, of: unary(), at: named }, t);
+      return { kind: "add", value, name: variable, at: t };
     }
     if (word("say")) { // `say "oops" to the error output`
+      saying = true;
       const parts = [expression()];
       while (!peek().nl && !isWord("to")) parts.push(expression());
+      saying = false;
       const said = { kind: "say", parts, at: t };
       reading.shows.push(said); // a kind's `shown` shows its parts, if one has it (see LANGUAGE)
       if (peek().nl || !word("to")) return said;
@@ -1148,9 +1226,55 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     const t = word("is");
     if (!t) return left;
     const negate = Boolean(word("not"));
+    const kind = kindAfter(left, t);
+    if (kind) return negate ? { kind: "not", operand: kind, at: t } : kind;
     const phrase = check("word") && tokens[pos + 1].type === "word" ? `${peek().value} ${tokens[pos + 1].value}` : "";
     const op = Object.hasOwn(COMPARISONS, phrase) ? ((pos += 2), phrase) : word("in") ? "in" : "is";
     return { kind: "compare", op, negate, left, right: bitwise(), at: t };
+  }
+
+  // `x is a number`, `a list`, `a record`, `a dictionary`, `a function`, `bytes`, `some text`, `either yes or
+  // no`, and `a dog`, a record the kind dog made, after `is` or `is not` (DESIGN §178); or null. Each was a
+  // mistake before, so no line that ran means anything else, with one care: a say's values stand side by side,
+  // so `say x is a dog` said `x is a`, then `dog`, where a and dog had values. In a say, outside brackets, a
+  // phrase that starts with a name keeps that meaning in a file that may give the name a value.
+  function kindAfter(left, t) {
+    const at = (k) => (tokens[pos + k]?.type === "word" && !tokens[pos + k].nl ? tokens[pos + k].value : null);
+    const [first, second, after] = [at(0), at(1), at(2)];
+    let [kind, named, length] = [-1, null, 0];
+    if (first === "bytes") [kind, length] = [6, 1];
+    else if ((first === "a" || first === "an") && second) {
+      const fixed = KIND_WORDS[second]; // its kind, and the word after it that made it a value: `a list of 1, 2`
+      if (fixed && after !== fixed[1]) [kind, length] = [fixed[0], 2];
+      else if (!fixed && !RESERVED.has(second)) [kind, named, length] = [4, second, 2];
+    } else if (first === "some" && second === "text") [kind, length] = [1, 2];
+    else if (first === "either" && second === "yes" && after === "or" && at(3) === "no") [kind, length] = [2, 4];
+    if (kind < 0) return null;
+    if (saying && (named || second === "function" || first === "some" || first === "either") && mayBeNamed(first)) return null;
+    if (named === "text") fail(tokens[pos], "for whether a value is text, write 'is some text'");
+    pos += length;
+    if (named === null) return { kind: "builtin", name: "is kind", args: [left, numberAt(kind, t)], at: t };
+    reading.wants.add("kinds");
+    return madeCall("the language's made_by", [left, { kind: "value", value: named, at: t }], t);
+  }
+
+  // whether this file may give the word a value, as far as a say's `x is a dog` needs to know (see kindAfter):
+  // the word is anywhere in it but after `is`, `is not`, `gives`, `play`, `choose` or `when`, or after `as` where
+  // the line goes on (`as a number`), or `either way`; or the file uses another without `as`, whose names come in
+  function mayBeNamed(w) {
+    if (!mayName) {
+      mayName = new Set();
+      const wordAt = (i, v) => tokens[i]?.type === "word" && tokens[i].value === v;
+      for (let i = 0; i < tokens.length; i++) {
+        const tk = tokens[i];
+        if (tk.type !== "word") continue;
+        if (tk.value === "use" && tokens[i + 1]?.type === "string" && (tokens[i + 2].nl || tokens[i + 2].type === "eof")) mayName.add("*");
+        const goesOn = !tokens[i + 1].nl && tokens[i + 1].type !== "eof";
+        const phrase = !tk.nl && i > 0 && (["is", "gives", "play", "choose", "when"].some((v) => wordAt(i - 1, v)) || (wordAt(i - 1, "not") && wordAt(i - 2, "is")) || (wordAt(i - 1, "as") && goesOn));
+        if (!phrase && !(tk.value === "either" && goesOn && wordAt(i + 1, "way"))) mayName.add(tk.value);
+      }
+    }
+    return mayName.has(w) || mayName.has("*");
   }
 
   function bitwise() {
@@ -1210,7 +1334,7 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       if (isWord("by") && !tokens[pos + 1].nl) {
         pos++;
         const field = peek();
-        return { kind: "builtin", name: `${how} by`, args: [left, { kind: "value", value: name("a field name"), at: field }], at: t };
+        return { kind: "builtin", name: `${how} by`, args: [left, { kind: "value", value: fieldName("a field name"), at: field }], at: t };
       }
       return { kind: "builtin", name: how, args: [left], at: t };
     }
@@ -1256,8 +1380,8 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     if (word("yes") || word("no")) return { kind: "value", value: t.value === "yes", at: t };
     if (word("nothing")) return { kind: "value", value: null, at: t };
     if (match("[")) { // `[1, 2, 3]`: a list, as `list of 1, 2, 3` is, ending at its `]` (DESIGN §177)
-      const outside = indexing;
-      indexing = false;
+      const [outside, wasSaying] = [indexing, saying];
+      [indexing, saying] = [false, false];
       const items = [];
       const before = hoisted.length;
       let made = null;
@@ -1270,7 +1394,7 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
         if (!match(",")) break;
       }
       if (!match("]")) expected("']'");
-      indexing = outside;
+      [indexing, saying] = [outside, wasSaying];
       return made ?? { kind: "list", items, at: t };
     }
     if (word("list")) {
@@ -1287,7 +1411,7 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       expectWord("with");
       const [fields, values] = [[], []];
       do {
-        fields.push(name("a field name"));
+        fields.push(fieldName("a field name"));
         values.push(expression());
       } while (match(","));
       return { kind: "record", fields, values, at: t };
@@ -1474,10 +1598,10 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
       return { kind: "item", index, of: unary(), at: t };
     }
     if (match("(")) {
-      const [outside, wasConverting] = [indexing, converting];
-      [indexing, converting] = [false, true];
+      const [outside, wasConverting, wasSaying] = [indexing, converting, saying];
+      [indexing, converting, saying] = [false, true, false];
       const inner = expression();
-      [indexing, converting] = [outside, wasConverting];
+      [indexing, converting, saying] = [outside, wasConverting, wasSaying];
       if (!match(")")) expected("')'");
       return possessive(inner); // `(item 2 of dogs)'s name`
     }
@@ -1580,15 +1704,15 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
   }
 
   function argList() {
-    const outside = indexing;
-    indexing = false;
+    const [outside, wasSaying] = [indexing, saying];
+    [indexing, saying] = [false, false];
     const args = [];
     while (!check(")")) {
       anInput(args);
       if (!match(",")) break;
     }
     if (!match(")")) expected("')'");
-    indexing = outside;
+    [indexing, saying] = [outside, wasSaying];
     return args;
   }
 
@@ -1656,6 +1780,27 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
     }
     names.forEach((n, i) => made.push(at("set", { name: n, value: at("item", { index: numberAt(i + 1, t), of: at("name", { name: kept }) }) })));
     return made;
+  }
+
+  // `add x to r's items`, `add 1 to count of r`, `add 1 to item "a" of counts` (DESIGN §179): what's added, then
+  // what has the field or item, and its item's number, each worked out once; then add to what's there, as add
+  // adds to a variable, and set it back, so a list grows where it is and a number or text is changed
+  function addedTo(value, target, t) {
+    const at = (kind, rest) => ({ ...rest, kind, at: t });
+    const ref = (n) => at("name", { name: n });
+    const [adding, holder, was] = [hidden("what's added", t), hidden("what it's added to", t), hidden("what was there", t)];
+    const body = [at("set", { name: adding, value }), at("set", { name: holder, value: target.of })];
+    if (target.kind === "field") {
+      body.push(at("set", { name: was, value: { ...target, of: ref(holder) } }), at("add", { value: ref(adding), name: was }),
+        at("setField", { name: target.name, target: ref(holder), value: ref(was) }));
+    } else {
+      const place = hidden("which item", t);
+      // a node of its own for each, as a file used as a name renames each name it walks past (DESIGN §188)
+      const item = () => ({ ...target, index: ref(place), of: ref(holder) });
+      body.push(at("set", { name: place, value: target.index }), at("set", { name: was, value: item() }), at("add", { value: ref(adding), name: was }),
+        at("setItem", { target: item(), value: ref(was) }));
+    }
+    return { kind: "several", body, at: t };
   }
 
   // `for each k from 10 to 1 by -2`: a count from 0 to the steps there's room for, with k worked out from it
@@ -1857,10 +2002,10 @@ function ownCalls(reading, body) {
     const helper = `${own} of the record on line ${t.line}${onLine.get(key) > 1 ? ` (${onLine.get(key)})` : ""}`;
     const params = ["the record", ...call.args.slice(1).map((_, i) => `input ${i + 1}`)];
     const at = (kind, rest) => ({ ...rest, kind, at: t });
-    const guess = closest(own, [...names]);
-    const why = `there is no function called '${own}'${guess ? `. Did you mean '${guess}'?` : ""}`;
+    const guess = closest(call.own, [...names]);
+    const why = `there is no function called '${call.own}'${guess ? `. Did you mean '${guess}'?` : ""}`;
     helpers.push(at("define", { name: helper, params, kinds: params.map(() => -1), body: [
-      at("try", { body: [at("set", { name: own, value: at("field", { name: own, of: at("name", { name: "the record" }) }) })], name: null,
+      at("try", { body: [at("set", { name: own, value: at("field", { name: call.own, of: at("name", { name: "the record" }) }) })], name: null,
         handler: [at("fail", { value: at("value", { value: why }) })] }),
       at("return", { value: at("call", { name: own, args: params.map((p) => at("name", { name: p })) }) }),
     ] }));
@@ -2490,6 +2635,10 @@ function piecesOf(line) {
     let [text, space, comment, number, word, string] = TOKEN.exec(line);
     if (comment) return { pieces, comment: text.trimEnd(), commentCol: at };
     if (space) continue;
+    if (string && line.startsWith('"""', at) && /^[ \t\r]*$/.test(line.slice(at + 3))) { // text on the lines after (DESIGN §180)
+      pieces.push({ type: "string", text: '"""', col: at + 1, end: at + 3 });
+      return { pieces, comment: null, opens: true };
+    }
     if (string) {
       text = line.slice(at, textEnd(line, at).end); // the parser read it already, so it ends
       TOKEN.lastIndex = at + text.length;
@@ -2530,8 +2679,11 @@ export function format(source) {
   const tidy = [];
   let indent = 0; // the indent of the statement being written, for the lines that carry it on
   let waiting = []; // lines with only a comment, which take the indent of the code after them
-  source.split("\n").forEach((line, i) => {
-    const { pieces, comment, commentCol } = piecesOf(line);
+  const lines = source.split("\n");
+  let past = -1; // the last line of the text after a `"""`, written with it (DESIGN §180)
+  lines.forEach((line, i) => {
+    if (i <= past) return;
+    const { pieces, comment, commentCol, opens } = piecesOf(line);
     if (!pieces.length) {
       if (comment) waiting.push(tidy.push(comment) - 1);
       else if (tidy.length && tidy.at(-1) !== "") tidy.push("");
@@ -2548,6 +2700,16 @@ export function format(source) {
     let text = " ".repeat(here) + joined(pieces, i + 1, tight);
     if (comment) text += " ".repeat(Math.max(1, commentCol - pieces.at(-1).end)) + comment;
     tidy.push(text);
+    if (opens) { // the text's lines, each moved as far as its closing `"""` moves, to 4 in from this line
+      past = i + 1;
+      while (!/^[ \t]*"""[ \t]*\r?$/.test(lines[past])) past++;
+      const was = /^[ \t]*/.exec(lines[past])[0].length;
+      for (let k = i + 1; k < past; k++) {
+        const written = lines[k].replace(/\r$/, "");
+        tidy.push(/^[ \t]*$/.test(written) ? "" : " ".repeat(here + 4) + written.slice(was));
+      }
+      tidy.push(" ".repeat(here + 4) + '"""');
+    }
   });
   while (tidy.at(-1) === "") tidy.pop();
   const result = tidy.length ? `${tidy.join("\n")}\n` : "";

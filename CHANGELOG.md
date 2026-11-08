@@ -6,6 +6,58 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Security: Folio's own kernels keep to what a program was allowed.** Folio's own loops in machine code (`use the
+  library "folio"`) need no `--allow-libraries`, and two ways into them could reach any of the program's memory,
+  and so get round every `--allow` flag: memory.folio's memory at an address (`block_at`, or the kernel named
+  directly), and a kernel named with a number where Folio's own files give it a list or bytes. Memory at an
+  address now needs `--allow-libraries`, as C's memory does, and a kernel can be named only as Folio's own files
+  name it. Programs that use arrays.folio, memory.folio and the rest as they're documented do as they did
+  (DESIGN §188).
+- **Security: a zip file's things no bigger than it says.** zip.folio's `unzipped` stops a thing as soon as it
+  would be bigger than the zip file's list says, where a few bytes could stand for gigabytes; `inflate(data,
+  most)` takes the same limit.
+- **Security: no line breaks in server.folio's headers.** An answer whose type, headers or status would have a
+  line break in them, which would end a header and start another, is a 500 instead. sockets.folio's secure
+  connections fail if OpenSSL won't check the certificate's name, rather than go on without.
+- **Fixed:** `add x to item k of d` in a file used as a name (`use "m.folio" as m`) said `'m' has nothing called
+  ...`, as the item it read and the item it set were one node, renamed twice.
+- **math.folio's sqrt in machine code is the processor's own.** One instruction, sqrtsd, the same double
+  math.folio works out in Folio on the JavaScript engines. The n-body simulation (500,000 steps of 5 planets) on
+  a Ryzen 5 4600H: 1.20 s to 0.41 s, against Rust's 0.02 (DESIGN §187).
+- **ONNX models' outputs kept where ONNX Runtime made them.** onnx.folio's `run_keeping(model, inputs, names)`
+  leaves the outputs named in ONNX Runtime's memory, unread, as ONNX values, and `run` takes one as an input as
+  it is: a language model's cache of keys and values goes from one token to the next with no copy.
+  `numbers_from(value, first, count)` reads only the numbers wanted, `array_of` all of them, `shape_of` its shape,
+  and `release` gives its memory back. `run` no longer copies each array it's given twice. `load_with(file,
+  settings)` sets a session's `"threads"`, `"optimization"` and ONNX Runtime's own settings by name. Qwen2.5-0.5B
+  (int8) writing on a Ryzen 5 4600H, the best of three runs: 277 ms a token to 189, and 49 with
+  `"session.disable_quant_qdq"` (DESIGN §186).
+- **Training on the processor faster, and in floats when asked.** Machine code checks a matmul's numbers and
+  does `+`, `-`, `*`, relu and the rest 4 at a time with AVX, to the same bits; and learn.folio's
+  `use_floats(yes)` multiplies matrices in 32-bit floats, as the graphics card does (arrays.folio's
+  `matmul_floats` and `matmul_turned_floats`). The digit reader on a Ryzen 5 4600H: 0.65 s to 0.60, and 0.52
+  with floats, beside PyTorch's 0.50 (DESIGN §185).
+- **What kind a value is.** `x is a number`, `a list`, `a record`, `a dictionary`, `a function`, `bytes`,
+  `some text`, `either yes or no`, and `x is a dog` for a kind's records, with `is not` too, on every engine
+  (DESIGN §178).
+- **add to a field or an item.** `add x to r's items`, `add 1 to count of r` and `add 1 to item "a" of
+  counts`, as `set` takes them (DESIGN §179).
+- **Text on the lines after `"""`.** `"""` at a line's end starts text written on the lines after it, up to
+  a line with only `"""`, less that line's indent, with `{`, `\` and quotes as themselves (DESIGN §180).
+- **Folio's words as field names.** `r's length`, `record with read yes`, `rows in order by number`
+  (DESIGN §181).
+- Each of these was a mistake before, so no program that ran means anything else.
+- **Fixed:** a record's own function called in a file used `as` a name (`one's cost()` in `cart.folio`, used
+  as cart) looked for a field called `cart's cost`; it reads the record's own `cost`.
+- **Operations of your own that train.** learn.folio's `custom(inputs, forward, backward)`: forward makes the
+  result, backward each input's gradient, with learn's operations or kernels of your own on the card
+  (DESIGN §182).
+- **16-bit floats in safetensors.** learn.folio's `load` reads F16 and BF16 weights, as most models on
+  Hugging Face keep them, and `save(named, file, "F16")` or `"BF16"` writes them, in half the room
+  (DESIGN §183).
+- **0 and 1 from a small sum boxed at once, on WebAssembly.** `n - 1` that comes out 0 or 1 goes straight to
+  the boxes made once for them: fib(32) 146 ms to 138 on a first run, 114 to 104 again. Calling functions by
+  their index, not `call_ref`, was tried and measured no faster, so it isn't in (DESIGN §184).
 - **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
   `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
   A `[` was a mistake before, so no program that ran changes (DESIGN §177).

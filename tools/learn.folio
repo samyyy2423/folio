@@ -27,10 +27,14 @@
 # forget() lets go of every matrix worked out since the last step,
 # for a program that only uses a network; free(m) lets go of one. save(named, file), load(file) and
 # load_into(named, file) keep matrices in a safetensors file, as Hugging Face does, and named_parameters(net)
-# names a network's.
+# names a network's; save(named, file, "F16") or "BF16" keeps 16-bit floats, in half the room.
+# custom(inputs, forward, backward) is an operation of your own, which trains as these do: forward makes the
+# result from the inputs, and backward each input's gradient from the result's, with learn's operations or
+# kernels of your own on the card.
 #
 # A program that uses the card is run or built with --allow-libraries; without that, or with no NVIDIA card, it
-# all works on the processor, more slowly, and use_card(no) asks for that. On the card numbers are floats, about 7
+# all works on the processor, more slowly, and use_card(no) asks for that; use_floats(yes) multiplies there in
+# 32-bit floats, as the card does, twice as fast or more. On the card numbers are floats, about 7
 # digits, as machine learning keeps them. A matrix worked out before a step is let go at the step: its value is a
 # mistake after, so a loss is read with value() first.
 
@@ -59,6 +63,7 @@ set learn_wants_card to yes
 set learn_card to nothing
 set learn_tape to empty list
 set learn_training to yes
+set learn_floats to no
 
 # ---------- where the numbers are ----------
 
@@ -68,6 +73,12 @@ to use_card with wanted
         fail with "use_card comes before the first matrix: they're all on the card or all on the processor"
     end
     set learn_wants_card to wanted
+end
+
+# on the processor, matmul in 32-bit floats, as the graphics card works, in a program folio build makes: about 7
+# digits, not 15, and twice as fast or more (DESIGN §185); use_floats(no), as at first, for Folio's own numbers
+to use_floats with wanted
+    set learn_floats to wanted
 end
 
 # whether the matrices are on the graphics card
@@ -160,6 +171,8 @@ to matmul with a, b
     end
     if a's card
         set data to learn_gpu's matmul(a's data, b's data, a's rows, a's columns, b's columns)
+    else if learn_floats
+        set data to learn_arrays's matmul_floats(a's data, b's data)
     else
         set data to learn_arrays's matmul(a's data, b's data)
     end
@@ -483,6 +496,62 @@ to dropout with m, chance
     return learn_result(data, m's rows, m's columns, "dropout", (list of m), mask)
 end
 
+# ---------- operations of your own (DESIGN §182) ----------
+
+# An operation learn hasn't got, which trains as learn's own do. forward is given the inputs, a list of
+# matrices, and gives the result, a matrix. backward is given the result's gradient, a matrix of the result's
+# shape, then the inputs and the result, and gives a list with each input's gradient, a matrix of that input's
+# shape, or nothing for one it doesn't change. Neither is remembered for backward, so either can work with
+# learn's operations, or with kernels of your own on the card, launched with gpu.folio on each matrix's data.
+to custom with inputs, forward, backward
+    if not learn_is_list(inputs) or length of inputs is 0
+        fail with "'custom' needs a list of the matrices that go in, not {inputs}"
+    end
+    for each m in inputs
+        learn_live(m, "custom")
+    end
+    set made to forward(learn_untracked(inputs))
+    if not learn_is_matrix(made)
+        fail with "'custom' needs forward to give a matrix, not {made}"
+    end
+    learn_live(made, "custom")
+    return learn_result(made's data, made's rows, made's columns, "custom", inputs, backward)
+end
+
+# matrices as they are, sharing their numbers, but remembered by nothing: what custom's functions are given
+to learn_untracked with ms
+    set plain to empty list
+    for each m in ms
+        add learn_matrix(m's rows, m's columns, m's data, m's card, nothing, no, no, nothing, empty list, nothing, no, no) to plain
+    end
+    return plain
+end
+
+# an operation of your own's gradient sent back, as its backward works it out (see custom)
+to learn_back_custom with m, g
+    set back to m's extra
+    set gradient to learn_matrix(m's rows, m's columns, g, m's card, nothing, no, no, nothing, empty list, nothing, no, no)
+    set made to item 1 of learn_untracked(list of m)
+    set grads to back(gradient, learn_untracked(m's inputs), made)
+    if not learn_is_list(grads) or length of grads is not length of m's inputs
+        fail with "'custom' needs backward to give a list with a gradient for each of the " + length of m's inputs + " inputs, or nothing for one, not {grads}"
+    end
+    for each k from 1 to length of grads
+        set a to item k of m's inputs
+        set ga to item k of grads
+        if ga is not nothing and a's tracks
+            if not learn_is_matrix(ga)
+                fail with "'custom' needs backward to give input " + k + "'s gradient as a matrix, or nothing, not {ga}"
+            end
+            learn_live(ga, "custom")
+            if ga's rows is not a's rows or ga's columns is not a's columns
+                fail with "'custom' needs backward to give input " + k + "'s gradient as a " + a's rows + " by " + a's columns + " matrix, not " + ga's rows + " by " + ga's columns
+            end
+            learn_add_grad(a, learn_copy(ga's data, m's card))
+        end
+    end
+end
+
 # ---------- what they are ----------
 
 # a 1 by 1 matrix's number, or a matrix's numbers row after row
@@ -603,7 +672,9 @@ to learn_back with m
     set g to m's grad
     set how to m's made_by
     set a to item 1 of m's inputs
-    if how is "matmul"
+    if how is "custom"
+        learn_back_custom(m, g)
+    else if how is "matmul"
         set b to item 2 of m's inputs
         if a's tracks # g times b turned over
             if m's card
@@ -617,7 +688,11 @@ to learn_back with m
             if m's card
                 learn_add_grad_mm(b, a's data, g, a's columns, a's rows, m's columns, yes, no)
             else
-                learn_add_grad(b, learn_arrays's matmul_turned(a's data, g))
+                if learn_floats
+                    learn_add_grad(b, learn_arrays's matmul_turned_floats(a's data, g))
+                else
+                    learn_add_grad(b, learn_arrays's matmul_turned(a's data, g))
+                end
             end
         end
     else if how is "plus" or how is "minus"
@@ -922,6 +997,9 @@ to learn_mm with a, b, rows, inner, columns, card
     if card
         return learn_gpu's matmul(a, b, rows, inner, columns)
     end
+    if learn_floats
+        return learn_arrays's matmul_floats(a, b)
+    end
     return learn_arrays's matmul(a, b)
 end
 
@@ -1224,9 +1302,17 @@ end
 # ---------- weights in a file: safetensors, as Hugging Face keeps them (DESIGN §167) ----------
 
 # matrices saved to a file, each by its name: a dictionary of names to matrices. The file is safetensors: 8
-# bytes, the header's length; the header, JSON, each name's dtype ("F32"), shape and where its numbers are;
-# then the numbers, 32-bit floats, row after row
-to save with named, file
+# bytes, the header's length; the header, JSON, each name's dtype, shape and where its numbers are; then the
+# numbers, row after row: 32-bit floats ("F32"), or as dtype says, 16-bit half floats ("F16") or brain floats
+# ("BF16"), each rounded to the nearest, in half the room (DESIGN §183)
+to save with named, file, dtype or "F32"
+    if dtype is not "F32" and dtype is not "F16" and dtype is not "BF16"
+        fail with "'save' keeps numbers as F32, F16 or BF16, not " + dtype
+    end
+    set width to 4
+    if dtype is not "F32"
+        set width to 2
+    end
     set names to keys of named
     set header to "\{"
     set at to 0
@@ -1238,8 +1324,8 @@ to save with named, file
         if k is greater than 1
             add "," to header
         end
-        set size to 4 * m's rows * m's columns
-        add learn_json_text(name) + ":\{\"dtype\":\"F32\",\"shape\":[" + m's rows + "," + m's columns + "],\"data_offsets\":[" + at + "," + (at + size) + "]}" to header
+        set size to width * m's rows * m's columns
+        add learn_json_text(name) + ":\{\"dtype\":\"" + dtype + "\",\"shape\":[" + m's rows + "," + m's columns + "],\"data_offsets\":[" + at + "," + (at + size) + "]}" to header
         set at to at + size
     end
     add "}" to header
@@ -1254,16 +1340,19 @@ to save with named, file
     for each name in names
         set m to item name of named
         set numbers to numbers_of(m)
-        if length of numbers is greater than 0
+        if length of numbers is greater than 0 and dtype is "F32"
             learn_memory's put_many(made, at, numbers, "a float")
+        else if length of numbers is greater than 0
+            set patterns to list of learn_small_pattern(x, dtype) for each x in numbers
+            learn_memory's put_many(made, at, patterns, "an unsigned short whole number")
         end
-        set at to at + 4 * length of numbers
+        set at to at + width * length of numbers
     end
     write made to file
 end
 
-# the matrices a safetensors file holds, a dictionary of their names to them: 32-bit floats ("F32") or 64-bit
-# ("F64"), of one axis (a row) or two. parameter() makes one learn again
+# the matrices a safetensors file holds, a dictionary of their names to them: 32-bit floats ("F32"), 64-bit
+# ("F64") or 16-bit ("F16" and "BF16"), of one axis (a row) or two. parameter() makes one learn again
 to load with file
     set b to read bytes file
     if length of b is less than 8
@@ -1286,8 +1375,11 @@ to load with file
             if kind_of is "F64"
                 set width to 8
                 set kind_name to "a number"
+            else if kind_of is "F16" or kind_of is "BF16" # 16-bit floats (DESIGN §183)
+                set width to 2
+                set kind_name to "an unsigned short whole number"
             else if kind_of is not "F32"
-                fail with "'load' reads F32 and F64 numbers, not " + name + "'s " + kind_of
+                fail with "'load' reads F32, F64, F16 and BF16 numbers, not " + name + "'s " + kind_of
             end
             set rows to 1
             set columns to 1
@@ -1306,6 +1398,10 @@ to load with file
             set numbers to empty list
             if count is greater than 0
                 set numbers to learn_memory's get_many(b, 9 + n + item 1 of places, count, kind_name)
+                if width is 2
+                    set table to learn_small_table(kind_of)
+                    set numbers to list of item (h + 1) of table for each h in numbers
+                end
             end
             set item name of made to matrix_of(numbers, rows, columns)
         end
@@ -1356,6 +1452,94 @@ to learn_json_text with t
         end
     end
     return made + "\""
+end
+
+# ---------- 16-bit floats (DESIGN §183) ----------
+
+# What each of a 16-bit float's 65,536 patterns is, worked out once: half floats ("F16": a sign, 5 bits of power
+# and 10 of fraction) and brain floats ("BF16": a float's first 16 bits, 8 of power and 7 of fraction)
+set learn_small_tables to empty dictionary
+
+# a 16-bit float's layout: bits of fraction, the power's bias, and its biggest power, which is for infinity
+set learn_small_layouts to dictionary where "F16" is (record with fraction_bits 10, bias 15, top 31),
+    "BF16" is (record with fraction_bits 7, bias 127, top 255)
+
+to learn_small_layout with dtype
+    return item dtype of learn_small_layouts
+end
+
+to learn_small_table with dtype
+    if dtype is in learn_small_tables
+        return item dtype of learn_small_tables
+    end
+    set lay to learn_small_layout(dtype)
+    set fractions to 2 to the power of lay's fraction_bits
+    set infinity to (2 to the power of 1023) * 2
+    set made to empty list
+    for each h from 0 to 65535
+        set f to remainder of h divided by fractions
+        set e to remainder of ((h / fractions) rounded down) divided by (lay's top + 1)
+        set v to 0
+        if e is 0
+            set v to (f / fractions) * (2 to the power of (1 - lay's bias))
+        else if e is lay's top
+            set v to infinity
+            if f is not 0
+                set v to infinity - infinity
+            end
+        else
+            set v to (1 + f / fractions) * (2 to the power of (e - lay's bias))
+        end
+        if h is at least 32768
+            set v to -v
+        end
+        add v to made
+    end
+    set item dtype of learn_small_tables to made
+    return made
+end
+
+# x as a 16-bit float's pattern, rounded to the nearest, a half to the even one, as IEEE 754 rounds: too big
+# for one is infinity, and not a number stays not a number
+to learn_small_pattern with x, dtype
+    set lay to learn_small_layout(dtype)
+    set fractions to 2 to the power of lay's fraction_bits
+    set sign to 0
+    set a to x
+    if not (x is at least 0) and not (x is less than 0) # not a number
+        return lay's top * fractions + fractions / 2
+    end
+    if x is less than 0
+        set sign to 32768
+        set a to -x
+    end
+    set whole to 4503599627370496 # 2^52: adding it and taking it away rounds to a whole number, a half to even
+    if a is less than 2 to the power of (1 - lay's bias) # too small for a power: a fraction of the smallest
+        return sign + ((a / (2 to the power of (1 - lay's bias - lay's fraction_bits)) + whole) - whole)
+    end
+    if a is at least 2 to the power of (lay's bias + 1)
+        return sign + lay's top * fractions
+    end
+    set low to 1 - lay's bias # the power: 2^e at most a, found by halving where it can be
+    set high to lay's bias
+    repeat while low is less than high
+        set middle to ((low + high + 1) / 2) rounded down
+        if a is at least 2 to the power of middle
+            set low to middle
+        else
+            set high to middle - 1
+        end
+    end
+    set e to low
+    set r to (a / (2 to the power of (e - lay's fraction_bits)) + whole) - whole
+    if r is 2 * fractions # rounded up to the next power
+        set e to e + 1
+        set r to fractions
+    end
+    if e is greater than lay's bias
+        return sign + lay's top * fractions
+    end
+    return sign + (e + lay's bias) * fractions + (r - fractions)
 end
 
 # ---------- in here ----------

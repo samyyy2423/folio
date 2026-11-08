@@ -206,8 +206,10 @@ to dynamic_tables with reader
     return record with letters letters, distances far
 end
 
-# DEFLATE's blocks from byte `start`, into `made` (a list of numbers): gives the byte after the last
-to inflate_into with block, start, made
+# DEFLATE's blocks from byte `start`, into `made` (a list of numbers): gives the byte after the last. With `most`,
+# a mistake as soon as there'd be more bytes than that (DESIGN §188): a few bytes of copies can stand for gigabytes,
+# and a zip file says how big each thing in it is, so a damaged or hostile one stops there, not when memory's gone
+to inflate_into with block, start, made, most or nothing
     set reader to new_reader(block, start)
     set last to 0
     repeat while last is 0
@@ -227,6 +229,9 @@ to inflate_into with block, start, made
             end
             if at + 3 + size is greater than length of block
                 fail with "the compressed data ends too soon"
+            end
+            if most is not nothing and length of made + size is greater than most
+                fail with "the compressed data stands for more than the " + most + " bytes it should"
             end
             for each k from at + 4 to at + 3 + size
                 add byte k of block to made
@@ -262,6 +267,10 @@ to inflate_into with block, start, made
                     if back is greater than length of made
                         fail with "the compressed data goes back past its start"
                     end
+                    if most is not nothing and length of made + size is greater than most # a literal adds a byte for a
+                        # code of a bit or more, so copies are what can stand for far more than they take
+                        fail with "the compressed data stands for more than the " + most + " bytes it should"
+                    end
                     set from to length of made - back + 1
                     for each k from from to from + size - 1
                         add item k of made to made
@@ -273,10 +282,11 @@ to inflate_into with block, start, made
     return next of reader
 end
 
-# the bytes raw DEFLATE (RFC 1951, with no header around it) stands for
-to inflate with data
+# the bytes raw DEFLATE (RFC 1951, with no header around it) stands for: no more than `most` of them, if it's given,
+# or a mistake
+to inflate with data, most or nothing
     set made to empty list
-    inflate_into(data as bytes, 1, made)
+    inflate_into(data as bytes, 1, made, most)
     return made as bytes
 end
 
@@ -975,7 +985,7 @@ to unzipped with data
         if method is 0
             set content to held
         else if method is 8
-            set content to inflate(held)
+            set content to inflate(held, size) # no more than its list says it is
         else
             fail with "this zip file's " + name + " is compressed some way other than DEFLATE"
         end

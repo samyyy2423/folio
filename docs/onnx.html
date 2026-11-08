@@ -46,9 +46,9 @@
 
   <div class="layout wrap">
     <nav class="toc" aria-label="onnx.folio's functions">
-      <h2>6 functions</h2>
+      <h2>12 functions</h2>
       <input type="search" id="filter" placeholder="Filter" aria-label="Filter the functions">
-      <ol id="toc"><li><a href="#version">version</a></li><li><a href="#load">load</a></li><li><a href="#inputs">inputs</a></li><li><a href="#outputs">outputs</a></li><li><a href="#run">run</a></li><li><a href="#close">close</a></li></ol>
+      <ol id="toc"><li><a href="#version">version</a></li><li><a href="#load">load</a></li><li><a href="#load_with">load_with</a></li><li><a href="#inputs">inputs</a></li><li><a href="#outputs">outputs</a></li><li><a href="#run">run</a></li><li><a href="#run_keeping">run_keeping</a></li><li><a href="#shape_of">shape_of</a></li><li><a href="#array_of">array_of</a></li><li><a href="#numbers_from">numbers_from</a></li><li><a href="#release">release</a></li><li><a href="#close">close</a></li></ol>
       <p class="more"><a href="./">Every library</a> · <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio">The source</a></p>
     </nav>
     <main>
@@ -63,8 +63,20 @@
 <span class="k">set</span> x <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>))
 <span class="k">set</span> answers <span class="k">to</span> onnx's run(model, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;X&quot;</span> <span class="k">is</span> x)   <span class="c"># each output by its name, an array</span>
 <span class="k">say</span> <span class="k">item</span> <span class="s">&quot;Y&quot;</span> <span class="k">of</span> answers
-onnx's close(model)</code></pre></div>
+onnx's close(model)
+
+<span class="c"># a session with settings: how many threads a run uses, how much the graph is optimized (&quot;none&quot;, &quot;basic&quot;,</span>
+<span class="c"># &quot;extended&quot; or &quot;all&quot;, the default), and any of ONNX Runtime's session settings by name</span>
+<span class="k">set</span> model <span class="k">to</span> onnx's load_with(<span class="s">&quot;model.onnx&quot;</span>, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;threads&quot;</span> <span class="k">is</span> <span class="n">4</span>, <span class="s">&quot;session.disable_quant_qdq&quot;</span> <span class="k">is</span> <span class="s">&quot;1&quot;</span>)</code></pre></div>
           <p>A program that uses it is built with --allow-libraries. Inputs are converted to the type the model takes: floats, doubles, or whole numbers of 64 bits. ONNX Runtime's mistakes are a <code>fail with</code> that says what it said.</p>
+          <p>An output can stay where ONNX Runtime made it, unread, and go back into the model as an input as it is, as a language model's cache of keys and values does from one token to the next:</p>
+          <div class="code"><pre><code><span class="k">set</span> got <span class="k">to</span> onnx's run_keeping(model, inputs, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;present&quot;</span>)   <span class="c"># &quot;present&quot; kept, the rest arrays</span>
+<span class="k">set</span> present <span class="k">to</span> <span class="k">item</span> <span class="s">&quot;present&quot;</span> <span class="k">of</span> got                              <span class="c"># an ONNX value: onnx's shape_of(present)</span>
+onnx's run(model, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;past&quot;</span> <span class="k">is</span> present, <span class="s">&quot;x&quot;</span> <span class="k">is</span> x)   <span class="c"># given back, not copied</span>
+<span class="k">say</span> onnx's numbers_from(present, <span class="n">1</span>, <span class="n">10</span>)                           <span class="c"># 10 of its numbers, the rest unread</span>
+<span class="k">say</span> onnx's array_of(present)                                      <span class="c"># all of them, as an array</span>
+onnx's release(present)                                           <span class="c"># its memory given back</span></code></pre></div>
+          <p>A kept value holds ONNX Runtime's memory until it's released.</p>
       </section>
       <section class="fns">
         <h2>Functions</h2>
@@ -75,7 +87,7 @@ onnx's close(model)</code></pre></div>
             <div><h4>Inputs</h4><p class="takes">Takes nothing.</p></div>
             
           </div>
-          <p class="written">Written <code>to version</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L104">onnx.folio line 104</a></p>
+          <p class="written">Written <code>to version</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L122">onnx.folio line 122</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 onnx's version()</code></pre></div>
@@ -87,10 +99,22 @@ onnx's version()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>path</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to load with path</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L149">onnx.folio line 149</a></p>
+          <p class="written">Written <code>to load with path</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L177">onnx.folio line 177</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)</code></pre></div>
+        </section>
+        <section class="fn" id="load_with">
+          <h3><a href="#load_with"><code>onnx's load_with(path, settings)</code></a></h3>
+          <p>A model from a file, its session made with these settings, a dictionary: - &quot;threads&quot;: how many of the processor's threads a run uses (0, the default, is ONNX Runtime's choice); - &quot;optimization&quot;: how much the graph is optimized when it's loaded, &quot;none&quot;, &quot;basic&quot;, &quot;extended&quot; or &quot;all&quot;; - any of ONNX Runtime's session settings, by its name (onnxruntime_session_options_config_keys.h), as text:</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>path</code></li><li><code>settings</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to load_with with path, settings</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L189">onnx.folio line 189</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="s">&quot;session.disable_quant_qdq&quot;</span> <span class="k">is</span> <span class="s">&quot;1&quot;</span> lets weights stored <span class="k">as</span> <span class="n">8</span>-<span class="k">bit</span> whole numbers be made floats once, <span class="k">when</span> the
+model <span class="k">is</span> loaded, instead <span class="k">of</span> on <span class="k">every</span> run, which <span class="k">is</span> faster on the processor <span class="k">and</span> takes more memory.</code></pre></div>
         </section>
         <section class="fn" id="inputs">
           <h3><a href="#inputs"><code>onnx's inputs(model)</code></a></h3>
@@ -99,7 +123,7 @@ onnx's version()</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to inputs with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L230">onnx.folio line 230</a></p>
+          <p class="written">Written <code>to inputs with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L312">onnx.folio line 312</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">use</span> <span class="s">&quot;arrays.folio&quot;</span> <span class="k">as</span> arrays
@@ -109,7 +133,11 @@ onnx's version()</code></pre></div>
 <span class="k">set</span> x <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>))
 <span class="k">set</span> answers <span class="k">to</span> onnx's run(model, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;X&quot;</span> <span class="k">is</span> x)   <span class="c"># each output by its name, an array</span>
 <span class="k">say</span> <span class="k">item</span> <span class="s">&quot;Y&quot;</span> <span class="k">of</span> answers
-onnx's close(model)</code></pre></div>
+onnx's close(model)
+
+<span class="c"># a session with settings: how many threads a run uses, how much the graph is optimized (&quot;none&quot;, &quot;basic&quot;,</span>
+<span class="c"># &quot;extended&quot; or &quot;all&quot;, the default), and any of ONNX Runtime's session settings by name</span>
+<span class="k">set</span> model <span class="k">to</span> onnx's load_with(<span class="s">&quot;model.onnx&quot;</span>, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;threads&quot;</span> <span class="k">is</span> <span class="n">4</span>, <span class="s">&quot;session.disable_quant_qdq&quot;</span> <span class="k">is</span> <span class="s">&quot;1&quot;</span>)</code></pre></div>
         </section>
         <section class="fn" id="outputs">
           <h3><a href="#outputs"><code>onnx's outputs(model)</code></a></h3>
@@ -118,25 +146,91 @@ onnx's close(model)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to outputs with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L235">onnx.folio line 235</a></p>
+          <p class="written">Written <code>to outputs with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L317">onnx.folio line 317</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
-<span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
+<span class="k">set</span> model <span class="k">to</span> onnx's load_with(<span class="s">&quot;model.onnx&quot;</span>, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;threads&quot;</span> <span class="k">is</span> <span class="n">4</span>, <span class="s">&quot;session.disable_quant_qdq&quot;</span> <span class="k">is</span> <span class="s">&quot;1&quot;</span>)
 onnx's outputs(model)</code></pre></div>
         </section>
         <section class="fn" id="run">
           <h3><a href="#run"><code>onnx's run(model, given)</code></a></h3>
-          <p>The model run on its inputs, a dictionary of each input's name to an array (or a number, or a list of them): a dictionary of each output's name to an array</p>
+          <p>The model run on its inputs, a dictionary of each input's name to an array (or a number, or a list of them, or an ONNX value <a href="#run_keeping">run_keeping</a> kept): a dictionary of each output's name to an array</p>
           <div class="facts">
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li><li><code>given</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to run with model, given</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L241">onnx.folio line 241</a></p>
+          <p class="written">Written <code>to run with model, given</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L323">onnx.folio line 323</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)
 <span class="k">set</span> x <span class="k">to</span> arrays's array(<span class="k">list</span> <span class="k">of</span> (<span class="k">list</span> <span class="k">of</span> <span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>))
 <span class="k">set</span> answers <span class="k">to</span> onnx's run(model, <span class="k">dictionary</span> <span class="k">where</span> <span class="s">&quot;X&quot;</span> <span class="k">is</span> x)   <span class="c"># each output by its name, an array</span></code></pre></div>
+        </section>
+        <section class="fn" id="run_keeping">
+          <h3><a href="#run_keeping"><code>onnx's run_keeping(model, given, keep)</code></a></h3>
+          <p>The same, but the outputs named in <code>keep</code> stay where ONNX Runtime made them, unread: each an ONNX value, which can be given to the model again as an input, read with <a href="#numbers_from">numbers_from</a> or <a href="#array_of">array_of</a>, and released with release</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li><li><code>given</code></li><li><code>keep</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to run_keeping with model, given, keep</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L329">onnx.folio line 329</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+<span class="k">set</span> got <span class="k">to</span> onnx's run_keeping(model, inputs, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;present&quot;</span>)   <span class="c"># &quot;present&quot; kept, the rest arrays</span></code></pre></div>
+        </section>
+        <section class="fn" id="shape_of">
+          <h3><a href="#shape_of"><code>onnx's shape_of(value)</code></a></h3>
+          <p>a kept value's shape, a list of its axes' lengths</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>value</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to shape_of with value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L476">onnx.folio line 476</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+onnx's shape_of(value)</code></pre></div>
+        </section>
+        <section class="fn" id="array_of">
+          <h3><a href="#array_of"><code>onnx's array_of(value)</code></a></h3>
+          <p>a kept value's numbers, all of them, as an array; the value stays kept</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>value</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to array_of with value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L481">onnx.folio line 481</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+<span class="k">set</span> got <span class="k">to</span> onnx's run_keeping(model, inputs, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;present&quot;</span>)   <span class="c"># &quot;present&quot; kept, the rest arrays</span>
+<span class="k">set</span> present <span class="k">to</span> <span class="k">item</span> <span class="s">&quot;present&quot;</span> <span class="k">of</span> got                              <span class="c"># an ONNX value: onnx's shape_of(present)</span>
+<span class="k">say</span> onnx's array_of(present)                                      <span class="c"># all of them, as an array</span></code></pre></div>
+        </section>
+        <section class="fn" id="numbers_from">
+          <h3><a href="#numbers_from"><code>onnx's numbers_from(value, first, count)</code></a></h3>
+          <p><code>count</code> of a kept value's numbers, in order from the first-th (from 1), as a list; the rest aren't read</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>value</code></li><li><code>first</code></li><li><code>count</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to numbers_from with value, first, count</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L486">onnx.folio line 486</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+<span class="k">set</span> got <span class="k">to</span> onnx's run_keeping(model, inputs, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;present&quot;</span>)   <span class="c"># &quot;present&quot; kept, the rest arrays</span>
+<span class="k">set</span> present <span class="k">to</span> <span class="k">item</span> <span class="s">&quot;present&quot;</span> <span class="k">of</span> got                              <span class="c"># an ONNX value: onnx's shape_of(present)</span>
+<span class="k">say</span> onnx's numbers_from(present, <span class="n">1</span>, <span class="n">10</span>)                           <span class="c"># 10 of its numbers, the rest unread</span></code></pre></div>
+        </section>
+        <section class="fn" id="release">
+          <h3><a href="#release"><code>onnx's release(value)</code></a></h3>
+          <p>a kept value's memory given back to ONNX Runtime; using it after is a mistake, and releasing it again does nothing</p>
+          <div class="facts">
+            <div><h4>Inputs</h4><ul class="inputs"><li><code>value</code></li></ul></div>
+            
+          </div>
+          <p class="written">Written <code>to release with value</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L518">onnx.folio line 518</a></p>
+          <h4>Example</h4>
+          <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
+<span class="k">set</span> got <span class="k">to</span> onnx's run_keeping(model, inputs, <span class="k">list</span> <span class="k">of</span> <span class="s">&quot;present&quot;</span>)   <span class="c"># &quot;present&quot; kept, the rest arrays</span>
+<span class="k">set</span> present <span class="k">to</span> <span class="k">item</span> <span class="s">&quot;present&quot;</span> <span class="k">of</span> got                              <span class="c"># an ONNX value: onnx's shape_of(present)</span>
+onnx's release(present)                                           <span class="c"># its memory given back</span></code></pre></div>
         </section>
         <section class="fn" id="close">
           <h3><a href="#close"><code>onnx's close(model)</code></a></h3>
@@ -145,7 +239,7 @@ onnx's outputs(model)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>model</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to close with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L335">onnx.folio line 335</a></p>
+          <p class="written">Written <code>to close with model</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/onnx.folio#L526">onnx.folio line 526</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;onnx.folio&quot;</span> <span class="k">as</span> onnx
 <span class="k">set</span> model <span class="k">to</span> onnx's load(<span class="s">&quot;model.onnx&quot;</span>)

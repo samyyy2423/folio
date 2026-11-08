@@ -83,7 +83,7 @@ flags that decide what it may do without asking.
 | write or remove a file | `--allow-write`, or `--allow-write=out` |
 | read a site, or send to one | `--allow-net`, or `--allow-net=example.com` for only that host |
 | start another program (`run program`) | `--allow-run` |
-| call a C library (`use the library`) | `--allow-libraries` |
+| call a C library (`use the library`), or reach memory by its address (memory.folio's `take`, `block_at` and the rest) | `--allow-libraries` |
 | all of these | `--allow-all` |
 
 Without the flag, a person at a terminal is asked, once for each file, site, program or library (`a` says
@@ -97,7 +97,9 @@ With no flags, a Folio program you didn't write can't, without someone saying ye
 
 - read or change any file, list any folder, or remove anything;
 - go online, or send anything anywhere;
-- start a program, or load a library that could.
+- start a program, or load a library that could;
+- reach memory by its address, which could change what the flags allow. Folio's own loops in machine code
+  (`use the library "folio"`) need no flag, and take only the lists and bytes they're given.
 
 With flags that name what they allow, it stays inside them:
 

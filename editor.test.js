@@ -111,6 +111,16 @@ test("the editor colours the words the playground colours, and text, values in t
   assert.deepEqual(scopesOf(line, "'s"), ["keyword.operator.possessive.folio"]);
   assert.deepEqual(scopesOf(tokenize("SAY nothing"), "SAY"), ["keyword.control.folio"]); // Folio's words don't care about case
   assert.deepEqual(scopesOf(tokenize("say nothing"), "nothing"), ["constant.language.folio"]);
+  // text on the lines after a """, to a line with only """, with nothing in it a value or after a \ (DESIGN §180)
+  const stack = [];
+  assert.deepEqual(scopesOf(tokenize('set page to """', stack), '"""'), ["string.quoted.triple.folio", "punctuation.definition.string.begin.folio"]);
+  assert.deepEqual(tokenize('    <p>{name} \\n "x"</p>', stack), [{ text: '    <p>{name} \\n "x"</p>', scopes: ["string.quoted.triple.folio"] }]);
+  assert.deepEqual(scopesOf(tokenize('    """', stack), '    """'), ["string.quoted.triple.folio", "punctuation.definition.string.end.folio"]);
+  assert.equal(stack.length, 0);
+  // and anything after the """ on its line makes it the text it was before: here three empty texts
+  line = tokenize('say """"""');
+  assert.ok(line.every((p) => !p.scopes.includes("string.quoted.triple.folio")));
+  assert.equal(line.filter((p) => p.scopes.includes("punctuation.definition.string.end.folio")).length, 3);
   // every example's text ends on its own line
   for (const [name, source] of Object.entries(examples)) {
     for (const [i, text] of source.split("\n").entries()) {

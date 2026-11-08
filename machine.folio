@@ -29165,8 +29165,8 @@ to emit_runtime with st
     if workers of a and target of st is "windows"
         add (list of "KERNEL32.dll", wk_imports) to wanted
     end
-    if ("numbers_matmul" is in own_kernels of a or "numbers_matmul_turned" is in own_kernels of a) and target of st is "windows" # matmul on every core (DESIGN §166)
-        add (list of "KERNEL32.dll", (list of "CreateThread", "WaitForSingleObject", "CloseHandle", "GetSystemInfo", "CreateEventW", "SetEvent")) to wanted
+    if ("numbers_matmul" is in own_kernels of a or "numbers_matmul_turned" is in own_kernels of a or "numbers_matmul_floats" is in own_kernels of a or "numbers_matmul_turned_floats" is in own_kernels of a) and target of st is "windows" # matmul on every core (DESIGN §166), and room for floats (§185)
+        add (list of "KERNEL32.dll", (list of "CreateThread", "WaitForSingleObject", "CloseHandle", "GetSystemInfo", "CreateEventW", "SetEvent", "VirtualAlloc", "VirtualFree")) to wanted
     end
     if threading of a
         emit_guards(a, target of st)
@@ -37606,7 +37606,56 @@ end
 set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "numbers_matmul" is "rt_k_matmul",
     "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory",
     "numbers_atomic" is "rt_k_atomic", "numbers_adam" is "rt_k_adam", "numbers_matmul_turned" is "rt_k_matmul_t",
-    "numbers_exp" is "rt_k_exp", "numbers_room" is "rt_k_room"
+    "numbers_exp" is "rt_k_exp", "numbers_room" is "rt_k_room", "numbers_matmul_floats" is "rt_k_matmul_f",
+    "numbers_matmul_turned_floats" is "rt_k_matmul_tf", "number_sqrt" is "sqrtsd, in line"
+
+# What each of Folio's own kernels takes, as Folio's own files name them (DESIGN §188), and nothing else: a kernel
+# trusts that an input said to be a list of numbers is a list, that bytes are bytes, and that a number is a number,
+# so a program that named one another way could have it take a number for where a list is, and reach any memory.
+set own_kernel_shapes to empty dictionary
+
+to own_shape with name, types
+    if not (name is in own_kernel_shapes)
+        set item name of own_kernel_shapes to empty list
+    end
+    add types to item name of own_kernel_shapes
+end
+
+set own_w to "a long whole number"
+set own_l to "a list of numbers"
+set own_b to "bytes"
+own_shape("numbers_binary", list of own_w, own_l, own_l, own_l, own_w, own_w, own_w, own_w, own_w, own_w, own_w, own_w, own_w)
+for each matmul_name in list of "numbers_matmul", "numbers_matmul_turned", "numbers_matmul_floats", "numbers_matmul_turned_floats"
+    own_shape(matmul_name, list of own_l, own_l, own_l, own_w, own_w, own_w, own_w, own_w, own_w)
+end
+own_shape("numbers_reduce", list of own_w, own_l, own_l, own_w, own_w, own_w, own_w)
+own_shape("numbers_exp", list of own_l, own_l, own_w)
+own_shape("numbers_adam", list of own_l, own_l, own_l, own_l, own_l, own_w)
+own_shape("numbers_room", list of own_l, own_w)
+own_shape("numbers_convert", list of own_w, own_l, own_b)
+own_shape("numbers_memory", list of own_w, own_w, own_l, own_w, own_b, own_w, own_w, own_w)
+own_shape("numbers_memory", list of own_w, own_w, own_l, own_w, own_w, own_w, own_w, own_w)
+own_shape("numbers_atomic", list of own_w, own_l, own_b, own_w, own_w, own_w, own_w)
+own_shape("numbers_atomic", list of own_w, own_l, own_w, own_w, own_w, own_w, own_w)
+
+# jumps on if rax, an input of one of Folio's own kernels, is of this kind (kind_list or kind_bytes); else the
+# mistake that it isn't, as an input given to a C library that isn't what it takes says it
+to own_kind_check with fc, e, f, i, kind, what
+    set a to a of fc
+    set wrong to new_label(a)
+    mov_rr(a, rcx, rax)
+    shifti(a, "shr", rcx, 48)
+    alui(a, "cmp", rcx, kind)
+    jcc(a, cc_ne, wrong)
+    set was to enter_cold(a)
+    mark(a, wrong)
+    store(a, rip("err_a"), rax)
+    stub_start(fc, at of e)
+    stub_text(a, "'" + name of f + "' needs input " + i + " to be " + what + ", not ")
+    stub_kind(a, "err_a")
+    jmp_to(a, "rt_e_end")
+    leave_cold(a, was)
+end
 
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
@@ -37736,13 +37785,16 @@ to emit_kernels with a, target
     if "numbers_binary" is in used
         emit_kernel_binary(a, target)
     end
-    if "numbers_matmul" is in used or "numbers_matmul_turned" is in used
+    if "numbers_matmul" is in used or "numbers_matmul_turned" is in used or "numbers_matmul_floats" is in used or "numbers_matmul_turned_floats" is in used
         emit_kernel_matmul(a, target)
         mark(a, "rt_mm_blocks")
         matmul_blocks(a)
         ret(a)
         mark(a, "rt_mm_blocks_avx")
         matmul_blocks_avx(a)
+        ret(a)
+        mark(a, "rt_mm_blocks_floats")
+        matmul_blocks_floats(a)
         ret(a)
         emit_matmul_thread(a, target)
         emit_matmul_cores(a, target)
@@ -38243,6 +38295,9 @@ to emit_kernel_atomic with a, target
     load(a, rax, kernel_input(1))
     alui(a, "and", rax, 8)
     jcc(a, cc_e, from_bytes)
+    load(a, rax, rip("allow_all")) # memory at an address, which could be any, only with --allow-libraries (DESIGN §188)
+    alui(a, "and", rax, 16)
+    jcc(a, cc_e, refuse)
     load(a, r9, kernel_input(3))
     load(a, rdx, kernel_input(4))
     test_rr(a, rdx, rdx)
@@ -38347,6 +38402,9 @@ to emit_kernel_memory with a, target
     load(a, rax, kernel_input(1)) # the memory: r9 where it is, rdx how many bytes it has
     alui(a, "and", rax, 4)
     jcc(a, cc_e, from_bytes)
+    load(a, rax, rip("allow_all")) # memory at an address, which could be any, only with --allow-libraries (DESIGN §188)
+    alui(a, "and", rax, 16)
+    jcc(a, cc_e, refuse)
     load(a, r9, kernel_input(5))
     load(a, rdx, kernel_input(6))
     test_rr(a, rdx, rdx)
@@ -38556,6 +38614,83 @@ end
 # number where b's is above 0 and 0 otherwise (ReLU's gradient, DESIGN §171). max is a if a is greater than b,
 # else b, as maxsd has it; min is a if a is less than b, else b. The slope and the gradient are a compare and a
 # mask, with no branch to guess wrong.
+# numbers_binary's row 4 numbers at a time with AVX (DESIGN §185), where a's numbers are side by side (rbx 8) and
+# b's are too (rsi 8) or are one number (rsi 0): each of the 4 the one at a time's to the bit (vaddpd's, vmaxpd's
+# and the rest are addsd's and maxsd's, each place on its own), any NaN that would refuse kept in ymm3 and refused
+# after; then the last 1 to 3 one at a time, or on to row_end if there are none. rcx is the row's numbers, r8, r9
+# and r10 where a's, b's and out's are
+to binary_fours with a, op, row_end, refuse
+    set one_at_a_time to new_label(a)
+    set fours to new_label(a)
+    set b_set to new_label(a)
+    set b_one to new_label(a)
+    set one_input to op is "relu" or op is "copy"
+    load(a, rax, rip("avx_state"))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ne, one_at_a_time)
+    alui(a, "cmp", rbx, 8)
+    jcc(a, cc_ne, one_at_a_time)
+    mov_rr(a, rdx, rcx)
+    shifti(a, "shr", rdx, 2)
+    jcc(a, cc_e, one_at_a_time)
+    if not one_input
+        alui(a, "cmp", rsi, 8)
+        jcc(a, cc_e, b_set)
+        test_rr(a, rsi, rsi)
+        jcc(a, cc_ne, one_at_a_time)
+        vbroadcastsd(a, 1, mem(r9, 0)) # one number of b's for the whole row
+        mark(a, b_set)
+    end
+    vxorpd(a, 3)
+    vxorpd(a, 4)
+    mark(a, fours)
+    vmovupd_load(a, 0, mem(r8, 0))
+    if not one_input
+        set loaded to new_label(a)
+        test_rr(a, rsi, rsi)
+        jcc(a, cc_e, loaded)
+        vmovupd_load(a, 1, mem(r9, 0))
+        mark(a, loaded)
+    end
+    if op is "+" or op is "-" or op is "*"
+        vop(a, op, 0, 0, reg_at(1))
+        vcmppd(a, 2, 0, reg_at(0), 3)
+        vop(a, "or", 3, 3, reg_at(2))
+    else if op is "max" or op is "min"
+        vcmppd(a, 2, 0, reg_at(1), 3)
+        vop(a, "or", 3, 3, reg_at(2))
+        vop(a, op, 0, 0, reg_at(1))
+    else if op is "relu"
+        vcmppd(a, 2, 0, reg_at(0), 3)
+        vop(a, "or", 3, 3, reg_at(2))
+        vop(a, "max", 0, 0, reg_at(4))
+    else if op is "relu_grad" # a where b is above 0
+        vcmppd(a, 2, 0, reg_at(1), 3)
+        vop(a, "or", 3, 3, reg_at(2))
+        vcmppd(a, 2, 4, reg_at(1), 1)
+        vop(a, "and", 0, 0, reg_at(2))
+    end
+    vmovupd_store(a, mem(r10, 0), 0)
+    alui(a, "add", r8, 32)
+    if not one_input
+        alu(a, "add", r9, rsi)
+        alu(a, "add", r9, rsi)
+        alu(a, "add", r9, rsi)
+        alu(a, "add", r9, rsi)
+    end
+    alui(a, "add", r10, 32)
+    dec_r(a, rdx)
+    jcc(a, cc_ne, fours)
+    vmovmskpd(a, rax, 3)
+    vzeroupper(a)
+    test_rr(a, rax, rax)
+    jcc(a, cc_ne, refuse)
+    xorpd(a, xmm4, reg_at(xmm4)) # 0 again, for the one at a time
+    alui(a, "and", rcx, 3)
+    jcc(a, cc_e, row_end)
+    mark(a, one_at_a_time)
+end
+
 to emit_kernel_binary with a, target
     set refuse to new_label(a)
     set done to new_label(a)
@@ -38591,6 +38726,7 @@ to emit_kernel_binary with a, target
         alu_load(a, "add", rax, kernel_input(item 2 of places))
         kernel_inside(a, item 1 of places, refuse)
     end
+    avx_check(a)
     kernel_items(a, r13, 3, 7)
     kernel_items(a, r14, 4, 10)
     kernel_items(a, r15, 2, 13)
@@ -38633,6 +38769,10 @@ to emit_kernel_binary with a, target
         mov_rr(a, r9, r14)
         mov_rr(a, r10, r15)
         load(a, rcx, kernel_input(6))
+        set row_end to new_label(a)
+        if op is "copy" or op is "+" or op is "-" or op is "*" or op is "max" or op is "min" or op is "relu" or op is "relu_grad"
+            binary_fours(a, op, row_end, refuse)
+        end
         mark(a, places)
         movsd_plain(a, xmm0, mem(r8, 0))
         if op is "+" or op is "-" or op is "*"
@@ -38687,6 +38827,7 @@ to emit_kernel_binary with a, target
         alui(a, "add", r10, 8)
         dec_r(a, rcx)
         jcc(a, cc_ne, places)
+        mark(a, row_end)
         alu_load(a, "add", r13, kernel_input(14))
         alu_load(a, "add", r14, kernel_input(15))
         mov_rr(a, r15, r10)
@@ -38791,7 +38932,8 @@ end
 # y = x op what's at `at` (a register or memory), 4 doubles at a time: "+" vaddpd, "*" vmulpd, "-" vsubpd, "/"
 # vdivpd and "or" vorpd; and "sqrt", vsqrtpd, of what's at `at` alone (x 0)
 to vop with a, op, y, x, at
-    set codes to dictionary where "+" is 0x58, "*" is 0x59, "-" is 0x5C, "/" is 0x5E, "or" is 0x56, "sqrt" is 0x51
+    set codes to dictionary where "+" is 0x58, "*" is 0x59, "-" is 0x5C, "/" is 0x5E, "or" is 0x56, "sqrt" is 0x51,
+        "max" is 0x5F, "min" is 0x5D, "and" is 0x54
     vex(a, 1, 1, 1, 0, item op of codes, y, x, at)
 end
 
@@ -38806,6 +38948,58 @@ end
 # register r: the sign bits of y's 4 doubles, 1 for each that's all ones
 to vmovmskpd with a, r, y
     vex(a, 1, 0, 1, 0, 0x50, r, 0, reg_at(y))
+end
+
+# ---------- 32-bit floats, 8 to a ymm register (DESIGN §185) ----------
+
+# y = x op z, 8 floats at a time: "*" vmulps, "+" vaddps
+to vmath_ps with a, op, y, x, z
+    set code_of_op to 0x58
+    if op is "*"
+        set code_of_op to 0x59
+    end
+    vex(a, 1, 0, 1, 0, code_of_op, y, x, reg_at(z))
+end
+
+# 8 floats from memory into y
+to vmovups_load with a, y, at
+    vex(a, 1, 0, 1, 0, 0x10, y, 0, at)
+end
+
+# 4 floats, xmm x, into memory
+to vmovups_store_x with a, at, x
+    vex(a, 1, 0, 0, 0, 0x11, x, 0, at)
+end
+
+# one float from memory, in all 8 of y's places
+to vbroadcastss with a, y, at
+    vex(a, 2, 1, 1, 0, 0x18, y, 0, at)
+end
+
+# xmm x: 4 doubles from memory (32 bytes), each rounded to a float
+to vcvtpd2ps_mem with a, x, at
+    vex(a, 1, 1, 1, 0, 0x5A, x, 0, at)
+end
+
+# y: xmm x's 4 floats, each as a double
+to vcvtps2pd with a, y, x
+    vex(a, 1, 0, 1, 0, 0x5A, y, 0, reg_at(x))
+end
+
+# xmm x's first float: the double in memory, rounded to a float
+to vcvtsd2ss_mem with a, x, at
+    vex(a, 1, 3, 0, 0, 0x5A, x, x, at)
+end
+
+# xmm x's first float into memory
+to vmovss_store with a, at, x
+    vex(a, 1, 2, 0, 0, 0x11, x, 0, at)
+end
+
+# xmm x: the upper 4 floats of ymm y
+to vextractf128_high with a, x, y
+    vex(a, 3, 1, 1, 0, 0x19, y, 0, reg_at(x))
+    raw(a, list of 1)
 end
 
 # rax 2 if the processor has AVX and the system keeps its registers (CPUID's AVX and OSXSAVE, and XGETBV's
@@ -39062,6 +39256,13 @@ to matmul_call_blocks with a
     for each r in list of r12, r13, r14, r15, rsi, rdi
         push_r(a, r)
     end
+    set by_doubles to new_label(a)
+    load(a, rax, kernel_input(22)) # in floats (DESIGN §185)
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, by_doubles)
+    call_to(a, "rt_mm_blocks_floats")
+    jmp_to(a, called)
+    mark(a, by_doubles)
     load(a, rax, rip("avx_state"))
     alui(a, "cmp", rax, 2)
     jcc(a, cc_ne, by_sse2)
@@ -39097,6 +39298,8 @@ to emit_matmul_thread with a, target
     end
     load(a, rax, mem(r9, -56 - 8 * 21)) # and a's step from term to term
     store(a, kernel_input(21), rax)
+    load(a, rax, mem(r9, -56 - 8 * 22)) # and b's floats, or 0 (DESIGN §185)
+    store(a, kernel_input(22), rax)
     load(a, rax, mem(r8, 8))
     store(a, kernel_input(17), rax)
     load(a, rax, mem(r8, 16))
@@ -39696,6 +39899,268 @@ to matmul_blocks_avx with a
     alui(a, "add", rsp, 128)
 end
 
+# rt_k_matmul in floats (rt_k_matmul_f, rt_k_matmul_tf), where it can be (DESIGN §185): with AVX, at most 4,096
+# terms, a four of rows and 16 columns, and the floats' room not taken by a multiply on another thread. b's
+# columns in sixteens are made floats once, here, into room kept from one multiply to the next (mmf_room), 64
+# bytes a term, one sixteen after another, for every thread to read; kernel_input(22) is where, or 0 for the
+# multiply in Folio's numbers, and kernel_input(12) the columns in sixteens
+to matmul_floats_setup with a, target
+    set without to new_label(a)
+    set have_room to new_label(a)
+    set set_up to new_label(a)
+    set pack_cols to new_label(a)
+    set pack_terms to new_label(a)
+    set packed to new_label(a)
+    reserve(a, "mmf_room", 8, 8)
+    reserve(a, "mmf_size", 8, 8)
+    reserve(a, "mmf_busy", 8, 8)
+    load(a, rax, kernel_input(22))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, without)
+    load(a, rax, rip("avx_state"))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ne, without)
+    load(a, rax, kernel_input(5))
+    alui(a, "cmp", rax, 4096)
+    jcc(a, cc_a, without)
+    load(a, rax, kernel_input(6))
+    alui(a, "and", rax, -16)
+    jcc(a, cc_e, without)
+    load(a, rax, kernel_input(11))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, without)
+    lea(a, rdx, rip("mmf_busy"))
+    movi(a, rax, 0)
+    movi(a, rcx, 1)
+    raw(a, list of 0xF0, 0x48, 0x0F, 0xB1, 0x0A) # lock cmpxchg [rdx], rcx
+    jcc(a, cc_ne, without)
+    load(a, rax, kernel_input(6)) # the room: (n in sixteens) k floats
+    alui(a, "and", rax, -16)
+    load(a, rcx, kernel_input(5))
+    imul_rr(a, rax, rcx)
+    shifti(a, "shl", rax, 2)
+    alu_load(a, "cmp", rax, rip("mmf_size"))
+    jcc(a, cc_be, have_room)
+    store(a, kernel_input(13), rax) # what's wanted, while the old room goes back and the new is made
+    load(a, rax, rip("mmf_room"))
+    test_rr(a, rax, rax)
+    set none_yet to new_label(a)
+    jcc(a, cc_e, none_yet)
+    if target is "windows"
+        mov_rr(a, rcx, rax)
+        movi(a, rdx, 0)
+        movi(a, r8, 0x8000) # MEM_RELEASE
+        win_enter(a)
+        call_import(a, "imp_VirtualFree")
+        win_leave(a)
+    else
+        mov_rr(a, rdi, rax)
+        load(a, rsi, rip("mmf_size"))
+        sys_call(a, 11) # munmap
+    end
+    storei(a, rip("mmf_room"), 0)
+    storei(a, rip("mmf_size"), 0)
+    mark(a, none_yet)
+    if target is "windows"
+        movi(a, rcx, 0)
+        load(a, rdx, kernel_input(13))
+        movi(a, r8, 0x3000) # MEM_RESERVE | MEM_COMMIT
+        movi(a, r9, 4) # PAGE_READWRITE
+        win_enter(a)
+        call_import(a, "imp_VirtualAlloc")
+        win_leave(a)
+        test_rr(a, rax, rax)
+        set made to new_label(a)
+        jcc(a, cc_ne, made)
+        storei(a, rip("mmf_busy"), 0)
+        jmp_to(a, without)
+        mark(a, made)
+    else
+        movi(a, rdi, 0)
+        load(a, rsi, kernel_input(13))
+        movi(a, rdx, 3) # PROT_READ | PROT_WRITE
+        movi(a, r10, 34) # MAP_PRIVATE | MAP_ANONYMOUS
+        movi(a, r8, -1)
+        movi(a, r9, 0)
+        sys_call(a, 9) # mmap
+        alui(a, "cmp", rax, -4096)
+        set mapped to new_label(a)
+        jcc(a, cc_be, mapped)
+        storei(a, rip("mmf_busy"), 0)
+        jmp_to(a, without)
+        mark(a, mapped)
+    end
+    store(a, rip("mmf_room"), rax)
+    load(a, rax, kernel_input(13))
+    store(a, rip("mmf_size"), rax)
+    mark(a, have_room)
+    load(a, rax, rip("mmf_room"))
+    store(a, kernel_input(22), rax)
+    load(a, rax, kernel_input(6))
+    alui(a, "and", rax, -16)
+    store(a, kernel_input(12), rax)
+    load(a, r10, rip("mmf_room")) # b's sixteens, a term at a time, as floats
+    movi(a, rdi, 0)
+    mark(a, pack_cols)
+    alu_load(a, "cmp", rdi, kernel_input(12))
+    jcc(a, cc_ae, packed)
+    mov_rr(a, rdx, rdi)
+    shifti(a, "shl", rdx, 3)
+    alu_load(a, "add", rdx, kernel_input(15))
+    load(a, rcx, kernel_input(5))
+    mark(a, pack_terms)
+    for each q from 0 to 3
+        vcvtpd2ps_mem(a, q, mem(rdx, 32 * q))
+    end
+    for each q from 0 to 3
+        vmovups_store_x(a, mem(r10, 16 * q), q)
+    end
+    alu(a, "add", rdx, rbx)
+    alui(a, "add", r10, 64)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, pack_terms)
+    alui(a, "add", rdi, 16)
+    jmp_to(a, pack_cols)
+    mark(a, packed)
+    vzeroupper(a)
+    jmp_to(a, set_up)
+    mark(a, without)
+    storei(a, kernel_input(22), 0)
+    mark(a, set_up)
+end
+
+# the floats' room given back to whoever multiplies next, if this multiply took it
+to matmul_floats_release with a
+    set kept to new_label(a)
+    load(a, rax, kernel_input(22))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, kept)
+    storei(a, rip("mmf_busy"), 0)
+    mark(a, kept)
+end
+
+# rt_mm_blocks_floats: rt_mm_blocks_avx's rows (kernel_input(17) to (18), in fours) and columns in sixteens, in
+# floats (DESIGN §185). For each four of rows, a's 4 rows made floats once, onto the stack, a term's 4 together;
+# then for each sixteen of columns, 4 by 16 sums, 8 to a ymm register in ymm8 to ymm15, each a float multiply then
+# a float add, a term at a time, made doubles as they go into out
+to matmul_blocks_floats with a
+    set rows_loop to new_label(a)
+    set rows_done to new_label(a)
+    set convert_loop to new_label(a)
+    set cols_loop to new_label(a)
+    set cols_done to new_label(a)
+    set terms_loop to new_label(a)
+    set probing to new_label(a)
+    set probed to new_label(a)
+    alui(a, "sub", rsp, 128)
+    for each k from 0 to 7
+        movdqu_store(a, mem(rsp, 16 * k), 8 + k)
+    end
+    load(a, rax, kernel_input(5)) # a's four rows, 16 bytes a term
+    shifti(a, "shl", rax, 4)
+    alui(a, "add", rax, 16)
+    alu(a, "sub", rsp, rax)
+    mov_rr(a, rcx, rax) # each page of it touched, from the top down, as Windows grows a stack
+    mark(a, probing)
+    alui(a, "cmp", rcx, 4096)
+    jcc(a, cc_b, probed)
+    alui(a, "sub", rcx, 4096)
+    mov_rr(a, rdx, rsp)
+    alu(a, "add", rdx, rcx)
+    store8i(a, mem(rdx, 0), 0)
+    jmp_to(a, probing)
+    mark(a, probed)
+    store8i(a, mem(rsp, 0), 0)
+    load(a, rsi, kernel_input(17))
+    mark(a, rows_loop)
+    alu_load(a, "cmp", rsi, kernel_input(18))
+    jcc(a, cc_ae, rows_done)
+    load(a, r8, kernel_input(10)) # a's 4 rows from row i: r8, r10, r11 and rax
+    mov_rr(a, rdx, rsi)
+    imul_rr(a, rdx, r8)
+    mov_rr(a, r8, rdx)
+    alu_load(a, "add", r8, kernel_input(14))
+    load(a, rdx, kernel_input(10))
+    mov_rr(a, r10, r8)
+    alu(a, "add", r10, rdx)
+    mov_rr(a, r11, r10)
+    alu(a, "add", r11, rdx)
+    mov_rr(a, rax, r11)
+    alu(a, "add", rax, rdx)
+    load(a, r14, kernel_input(21))
+    load(a, rcx, kernel_input(5))
+    mov_rr(a, rdx, rsp)
+    mark(a, convert_loop)
+    set k to 0
+    for each row_at in list of r8, r10, r11, rax
+        vcvtsd2ss_mem(a, 0, mem(row_at, 0))
+        vmovss_store(a, mem(rdx, 4 * k), 0)
+        alu(a, "add", row_at, r14)
+        add 1 to k
+    end
+    alui(a, "add", rdx, 16)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, convert_loop)
+    load(a, r9, kernel_input(22)) # b's first sixteen, as floats
+    movi(a, rdi, 0)
+    mark(a, cols_loop)
+    alu_load(a, "cmp", rdi, kernel_input(12))
+    jcc(a, cc_ae, cols_done)
+    for each y from 8 to 15
+        vxorpd(a, y)
+    end
+    mov_rr(a, rdx, rsp)
+    mov_rr(a, r13, r9)
+    load(a, rcx, kernel_input(5))
+    mark(a, terms_loop)
+    vmovups_load(a, 0, mem(r13, 0))
+    vmovups_load(a, 1, mem(r13, 32))
+    for each k from 0 to 3
+        vbroadcastss(a, 2, mem(rdx, 4 * k))
+        vmath_ps(a, "*", 3, 2, 0)
+        vmath_ps(a, "+", 8 + 2 * k, 8 + 2 * k, 3)
+        vmath_ps(a, "*", 3, 2, 1)
+        vmath_ps(a, "+", 9 + 2 * k, 9 + 2 * k, 3)
+    end
+    alui(a, "add", rdx, 16)
+    alui(a, "add", r13, 64)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, terms_loop)
+    mov_rr(a, r9, r13) # the next sixteen's floats follow this one's
+    mov_rr(a, r8, rsi) # out's 4 by 16 from row i, column j, as doubles
+    imul_rr(a, r8, rbx)
+    alu_load(a, "add", r8, kernel_input(16))
+    mov_rr(a, rdx, rdi)
+    shifti(a, "shl", rdx, 3)
+    alu(a, "add", r8, rdx)
+    for each k from 0 to 3
+        for each half in list of 0, 1
+            set y to 8 + 2 * k + half
+            vcvtps2pd(a, 4, y)
+            vmovupd_store(a, mem(r8, 64 * half), 4)
+            vextractf128_high(a, 5, y)
+            vcvtps2pd(a, 5, 5)
+            vmovupd_store(a, mem(r8, 64 * half + 32), 5)
+        end
+        alu(a, "add", r8, rbx)
+    end
+    alui(a, "add", rdi, 16)
+    jmp_to(a, cols_loop)
+    mark(a, cols_done)
+    alui(a, "add", rsi, 4)
+    jmp_to(a, rows_loop)
+    mark(a, rows_done)
+    vzeroupper(a)
+    load(a, rax, kernel_input(5))
+    shifti(a, "shl", rax, 4)
+    alui(a, "add", rax, 16)
+    alu(a, "add", rsp, rax)
+    for each k from 0 to 7
+        movdqu_load(a, 8 + k, mem(rsp, 16 * k))
+    end
+    alui(a, "add", rsp, 128)
+end
+
 # rt_k_matmul's columns past the blocks (from kernel_input(12)), for the rows in fours (to kernel_input(11)):
 # 4 rows by 2 columns at a time, then by 1, each of out's numbers added up in a register over every term and
 # put in out once (DESIGN §171). It was out's row in memory, a load and a store for every term, each waiting on
@@ -39890,13 +40355,25 @@ to emit_kernel_matmul with a, target
     set refuse to new_label(a)
     set done to new_label(a)
     set common to new_label(a)
+    mark(a, "rt_k_matmul_tf") # in floats, where it can be (DESIGN §185)
+    kernel_enter(a, target, 9)
+    storei(a, kernel_input(21), 1)
+    storei(a, kernel_input(22), 1)
+    jmp_to(a, common)
+    mark(a, "rt_k_matmul_f")
+    kernel_enter(a, target, 9)
+    storei(a, kernel_input(21), 0)
+    storei(a, kernel_input(22), 1)
+    jmp_to(a, common)
     mark(a, "rt_k_matmul_t") # a turned over: a is k by m, its column i out's row i (DESIGN §171)
     kernel_enter(a, target, 9)
     storei(a, kernel_input(21), 1)
+    storei(a, kernel_input(22), 0)
     jmp_to(a, common)
     mark(a, "rt_k_matmul")
     kernel_enter(a, target, 9)
     storei(a, kernel_input(21), 0)
+    storei(a, kernel_input(22), 0)
     mark(a, common)
     for each k in list of 4, 5, 6, 7, 8, 9
         kernel_small(a, k, refuse)
@@ -39915,13 +40392,36 @@ to emit_kernel_matmul with a, target
         dec_r(a, rax)
         kernel_inside(a, item 1 of places, refuse)
     end
+    avx_check(a)
     for each places in list of (list of 2, 4, 5, 7), (list of 3, 5, 6, 8) # a's and b's numbers, each a number
         set scan to new_label(a)
         set scanned to new_label(a)
+        set one_at_a_time to new_label(a)
+        set quads to new_label(a)
         kernel_items(a, r8, item 1 of places, item 4 of places)
         load(a, rcx, kernel_input(item 2 of places))
         load(a, rax, kernel_input(item 3 of places))
         imul_rr(a, rcx, rax)
+        load(a, rax, rip("avx_state")) # with AVX, 4 at a time, any NaN among them kept in ymm5 (DESIGN §185)
+        alui(a, "cmp", rax, 2)
+        jcc(a, cc_ne, one_at_a_time)
+        mov_rr(a, rdx, rcx)
+        shifti(a, "shr", rdx, 2)
+        jcc(a, cc_e, one_at_a_time)
+        vxorpd(a, 5)
+        mark(a, quads)
+        vmovupd_load(a, 0, mem(r8, 0))
+        vcmppd(a, 1, 0, reg_at(0), 3)
+        vop(a, "or", 5, 5, reg_at(1))
+        alui(a, "add", r8, 32)
+        dec_r(a, rdx)
+        jcc(a, cc_ne, quads)
+        vmovmskpd(a, rax, 5)
+        vzeroupper(a)
+        test_rr(a, rax, rax)
+        jcc(a, cc_ne, refuse)
+        alui(a, "and", rcx, 3)
+        mark(a, one_at_a_time)
         mark(a, scan)
         test_rr(a, rcx, rcx)
         jcc(a, cc_e, scanned)
@@ -39981,11 +40481,13 @@ to emit_kernel_matmul with a, target
     alui(a, "and", rcx, -4)
     mark(a, widths_set)
     store(a, kernel_input(12), rcx)
+    matmul_floats_setup(a, target)
     matmul_on_cores(a, target)
     # the rest: the columns past the blocks for the rows in fours, in registers, then the rows past them, a term
     # at a time
     matmul_rest_columns(a)
     matmul_rest(a, 11, 0, 0)
+    matmul_floats_release(a)
     mark(a, done)
     movi(a, rax, 0)
     kernel_leave(a)
@@ -40605,10 +41107,22 @@ to gen_library_call with fc, e
     set nat to native of f
     set target to target of st
     set own to own_library(nat)
+    if own and symbol of nat is "number_sqrt" # math.folio's sqrt (DESIGN §187): the processor's own, right here
+        if types of nat is not list of "a number" or gives of nat is not "a number"
+            fail with front's problem(at of e, "'number_sqrt' takes a number and gives a number")
+        end
+        movsd_plain(a, xmm0, mem(rbp, 16))
+        sqrt_sd(a, xmm0, xmm0)
+        return "value"
+    end
     set desc to nothing
     if own # Folio's own (DESIGN §118): in the program already, so nothing to load or ask for
         if symbol of nat is not in own_kernel_names
             fail with front's problem(at of e, "the library 'folio' has no function called '" + symbol of nat + "'")
+        end
+        if not (types of nat is in item (symbol of nat) of own_kernel_shapes) or gives of nat is not "a long whole number"
+            fail with front's problem(at of e, "the library 'folio''s '" + symbol of nat + "' is named only as Folio's own files name it: (" +
+                (join item 1 of item (symbol of nat) of own_kernel_shapes with ", ") + ") gives a long whole number")
         end
         set kernels_used to own_kernels of a
         set item (symbol of nat) of kernels_used to yes
@@ -40771,12 +41285,18 @@ to gen_library_call with fc, e
         load(a, rax, mem(rbp, 16 + 8 * (n - i)))
         if type_name is "bytes" # Folio's own kernels get the bytes themselves, and check them; anything else
             # where they are
+            if own # a kernel reads their count and where they are, so they must be bytes (DESIGN §188)
+                own_kind_check(fc, e, f, i, kind_bytes, "bytes")
+            end
             untag(a, rax)
             if not own
                 load(a, rax, mem(rax, 8))
             end
         else if type_name is "a list of numbers" # Folio's own kernels get the list, and check it themselves;
             # anything else where its numbers are, each checked to be one
+            if own # a kernel reads its length and where its numbers are, so it must be a list (DESIGN §188)
+                own_kind_check(fc, e, f, i, kind_list, "a list of numbers")
+            end
             untag(a, rax)
             if not own
                 set wrong to new_label(a)
@@ -48204,6 +48724,14 @@ to gen_expr with fc, e
         gen_task_wait(fc, e)
     else if what is "builtin" and name of e is "has ended"
         gen_task_ended(fc, e)
+    else if what is "builtin" and name of e is "is kind" # `x is a number` (DESIGN §178): as an input's kind is checked
+        gen_expr(fc, item 1 of args of e)
+        movq_rx(a, rax, xmm0)
+        movi(a, rdx, number of (value of item 2 of args of e))
+        call_to(a, "rt_fits_kind")
+        movi64(a, rcx, bits_no)
+        alu(a, "add", rax, rcx)
+        movq_xr(a, xmm0, rax)
     else if what is "task_made" # the number of the task just started
         movsd_load(a, xmm0, rip("task_made"))
     else if what is "builtin" and name of e is "library call" # the body of a library's function

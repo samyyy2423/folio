@@ -142,6 +142,108 @@ to test_transformer_gradients
     expect item 4 of out is item 4 of qkv
 end
 
+# an operation of your own (DESIGN §182): x cubed, forward and backward worked out with learn's operations, then
+# times a matrix that learns nothing, whose backward gives nothing for it
+to cube_forward with xs
+    set cubes to empty list
+    for each row in learn's rows_of(item 1 of xs)
+        add (list of v * v * v for each v in row) to cubes
+    end
+    return learn's matrix(cubes)
+end
+
+to cube_backward with g, xs, made
+    set slopes to empty list
+    for each row in learn's rows_of(item 1 of xs)
+        add (list of 3 * v * v for each v in row) to slopes
+    end
+    return list of learn's times(g, learn's matrix(slopes))
+end
+
+to times_forward with xs
+    return learn's times(item 1 of xs, item 2 of xs)
+end
+
+to times_backward with g, xs, made
+    return list of learn's times(g, item 2 of xs), nothing
+end
+
+to loss_custom with ps
+    set w to learn's matrix(list of (list of 1, -2, 0.5), (list of 3, 1, -1))
+    set cubed to learn's custom((list of item 1 of ps), cube_forward, cube_backward)
+    return learn's sum(learn's custom((list of cubed, w), times_forward, times_backward))
+end
+
+to wrong_backward with g, xs, made
+    return list of learn's matrix(list of (list of 1))
+end
+
+to test_custom
+    learn's use_card(no)
+    check_gradients(loss_custom, (list of "x"), list of (list of (list of 0.3, -1.2, 2), (list of 0.5, 1, -0.4)))
+    set x to learn's parameter(learn's matrix(list of (list of 1, 2)))
+    set cubed to learn's custom((list of x), cube_forward, cube_backward)
+    expect learn's numbers_of(cubed) is list of 1, 8
+    try
+        learn's custom((list of x), cube_forward, wrong_backward)
+        learn's backward(learn's sum(learn's custom((list of x), cube_forward, wrong_backward)))
+        expect "a gradient of the wrong shape" is "a mistake"
+    if it fails with why
+        expect why is "'custom' needs backward to give input 1's gradient as a 1 by 2 matrix, not 1 by 1"
+    end
+    learn's forget()
+    try
+        learn's custom(x, cube_forward, cube_backward)
+        expect "a matrix, not a list" is "a mistake"
+    if it fails with why
+        expect why is "'custom' needs a list of the matrices that go in, not (a 1 by 2 matrix)"
+    end
+end
+
+# 16-bit floats (DESIGN §183): each number rounded to the nearest pattern, as Python's struct and PyTorch round
+to test_small_floats
+    learn's use_card(no)
+    set numbers to list of 1, -2, 0.1, 65504, 0.333333, 2 to the power of -24, 0.00000001, -0.5, 3.14159, 70000
+    set m to learn's matrix(list of numbers)
+    for each dtype in list of "F16", "BF16"
+        learn's save((dictionary where "m" is m), "small.safetensors", dtype)
+        set raw to read bytes "small.safetensors"
+        set n to byte 1 of raw + 256 * byte 2 of raw
+        set patterns to empty list
+        for each k from 0 to length of numbers - 1
+            add byte (9 + n + 2 * k) of raw + 256 * byte (10 + n + 2 * k) of raw to patterns
+        end
+        set back to learn's numbers_of(item "m" of learn's load("small.safetensors"))
+        if dtype is "F16"
+            expect patterns is list of 15360, 49152, 11878, 31743, 13653, 1, 0, 47104, 16968, 31744
+            expect item 3 of back is 0.0999755859375
+            expect item 6 of back is 2 to the power of -24
+        else
+            expect patterns is list of 16256, 49152, 15821, 18304, 16043, 13184, 12844, 48896, 16457, 18313
+            expect item 3 of back is 0.10009765625
+        end
+        expect item 1 of back is 1
+        expect item 2 of back is -2
+    end
+    try
+        learn's save((dictionary where "m" is m), "small.safetensors", "F8")
+        expect "F8" is "a mistake"
+    if it fails with why
+        expect why is "'save' keeps numbers as F32, F16 or BF16, not F8"
+    end
+end
+
+# use_floats (DESIGN §185): the matmuls in floats, in machine code, and a network learns as well
+to test_floats
+    learn's use_card(no)
+    learn's use_floats(yes)
+    set a to learn's matrix(list of (list of 1, 2, 3), (list of 4, 5, 6))
+    set b to learn's matrix(list of (list of 1, 0), (list of 0, 1), (list of 1, 1))
+    expect learn's rows_of(learn's matmul(a, b)) is list of (list of 4, 5), (list of 10, 11)
+    check_gradients(loss_matmul, (list of "a", "b"), list of (list of (list of 1, 2, -1), (list of 0.5, 3, 2)), (list of (list of 1, -2), (list of 0.3, 4), (list of 2, 1)))
+    learn's use_floats(no)
+end
+
 # a network's parameters saved to a safetensors file and put back, and a file's header as the format has it
 to test_saving
     learn's use_card(no)

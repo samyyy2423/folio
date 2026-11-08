@@ -7327,3 +7327,330 @@ programs that ran mean. A `{[` in text is still a `{` and a `[`, not a value, as
 A test runs lists in brackets on every engine (empty, inside one another, as one input of two, over lines, built
 `for each`, in `for each`, inside `list of`), has the compiler written in Folio write the JavaScript the JIT
 writes for them and for their mistakes, and tidies them; a machine code case does the same.
+
+## 178. What kind a value is
+
+Folio had no way to ask what kind a value is. A program that read JSON, where a field may be a number, text or a
+list, had to try something only one kind allows and catch the mistake: the packages of 2026-11-07 did that in a
+dozen places, and the language's own `shown` does it with a function whose input says `as a function`.
+
+`x is a number` asks it now, and so do `x is a list`, `a record`, `a dictionary`, `a function`, `bytes`,
+`some text`, `either yes or no`, and `x is a dog`, a record the kind dog made; `is not` turns each round. Each
+is the same test an input's kind is (`with x as a number`), so a number is a number and not an amount, and on
+every engine it's one: the VM's, the JIT's and WebAssembly's through vm.js's `fitsKind`, machine code through the
+routine that checks inputs, `rt_fits_kind`. `a dog` is a function of the language's own, `made_by`, which looks
+at the record's `kind` field; a puppy made `from dog(...)` is a puppy, not a dog.
+
+`x is text` and `x is yes or no` would read best, but they meant something already: `is text` compares x with a
+variable called text, which many functions have as an input, and `x is yes or no` is `(x is yes) or no`. Folio 1
+keeps what lines that ran mean (VERSIONING.md), so text is `some text` and yes or no is `either yes or no`;
+`x is a text` is a mistake that says to write `some text`.
+
+Every phrase was a mistake before, with one care. A say's values stand side by side, so `say x is a dog` said
+`x is a`, then `dog`, where the program had variables called a and dog. In a say, outside brackets, a phrase
+that starts with a name (`a dog`, `a function`, `some text`, `either yes or no`) keeps that meaning in a file
+that may give the name a value: one where the word is written anywhere but in a phrase of the language, or
+that uses another file without `as`. Elsewhere, and in brackets, it's always what kind the value is. `a number`,
+`a list`, `a record` and `a dictionary` need no care: `say x is a number of "5"` and the like, where the next
+word makes them a value, keep their meaning, and anywhere else they were mistakes.
+
+A test runs every kind against every kind of value on every engine, the say that keeps its meaning, and the
+compiler written in Folio writing the same JavaScript; a machine code case does the same.
+
+## 179. add to a field or an item
+
+`add x to r's items` was a mistake: add took a variable, and a field had to be read into one, added to and set
+back, three lines for one thought. It was the second most common slip writing the packages, after the list in
+brackets. Now `add` takes what `set` takes: a variable, a field (`r's items`, `count of r`, `self's total`) or an
+item (`item "a" of counts`, `byte 3 of block`).
+
+Both readers write it as what a program would write: what's added, then what has the field or item and its
+item's number, each worked out once, then what's there read into a variable of the program's own, added to as
+add adds to a variable, and set back. So a list grows where it is, which every other variable holding it sees,
+and a number or text is changed in its record. No engine changed. A field that isn't there is the mistake
+reading it is, and adding text to a number the mistake add makes of it.
+
+## 180. Text on the lines after `"""`
+
+Text was written on one line, with `\n` for each new line, which made a page of HTML, a prompt for a model or a
+block of JSON hard to read and harder to change. `"""` at the end of a line now starts text written on the lines
+after it, up to a line with only `"""`:
+
+```text
+set prompt to """
+    You answer from these notes only.
+    Say "I don't know" when they don't say.
+    """
+```
+
+Each line is the text as it's written, less the closing `"""`'s indent, so the text can be indented with the
+code; a line of only spaces is an empty line, and a line that starts left of the closing `"""` is a mistake.
+Nothing in it is a value or follows a `\`: `{`, `\` and `"` are themselves, as JSON and regular expressions want.
+For a value in it, join it on or use `replace`.
+
+`"""` was the empty text and then a text that isn't closed, at a line's end a mistake, so no program that ran
+means anything else; with anything after it on its line (`"""a"""`, `""""""`) it's the texts it was. Both
+tokenizers read it; tidy, in folio.js and folio.folio, moves the text's lines with its closing `"""` to 4 in from
+the line that opens it, so what the text holds doesn't change. A text with no closing line is a mistake the shell
+waits on for more lines. VS Code's grammar colours it; tree-sitter's still reads it as the texts it was.
+
+## 181. Folio's own words as field names
+
+`length`, `number`, `read`, `keys`, `list` and the other words of the language couldn't be names, so a record from
+JSON with a field called `length` or `number` couldn't be read, and a package couldn't call a field what it is.
+After `'s`, in `record with`, and after `in order by`, no phrase of the language can start, so any word can be a
+field's name there now: `r's length`, `record with read yes, number 3`, `set r's list to xs`, `add 1 to r's
+length`, `rows in order by number`. Each was a mistake before. Variables, inputs and functions keep the rule,
+since there a word starts its phrase, and `length of r` is still the length.
+
+## 182. Operations of your own that train
+
+learn.folio's operations each know their gradient, and a model could only be made of them. A new activation, a
+loss of your own, or a kernel written for the card (DESIGN §176) couldn't train: backward() didn't know how to send
+a gradient through it.
+
+`custom(inputs, forward, backward)` is an operation of your own. forward is given the inputs, a list of matrices,
+and gives the result; backward is given the result's gradient, the inputs and the result, and gives each input's
+gradient, or nothing for one it doesn't change. The result is remembered as learn's own results are, so
+backward() calls the function at its turn and adds what it gives to each input that a parameter went into. Both
+functions are given the matrices as they are, sharing their numbers, but remembered by nothing, so they can use
+learn's operations freely, or launch kernels of their own on each matrix's data. As PyTorch's
+`torch.autograd.Function` has it, with a forward and a backward, and nothing else to register.
+
+A test checks the gradients through two of them, x cubed and a product with a matrix that learns nothing, against
+the slopes worked out by nudging each number, on every engine and in machine code; and on the card, x squared
+written as two PTX kernels, its forward and its backward, gives the gradient 2 x w exactly and trains until x
+squared is its target. A backward that gives a gradient of the wrong shape, or a forward that gives no matrix, is
+a mistake that says so.
+
+## 183. 16-bit floats in safetensors
+
+Models on Hugging Face keep their weights in 16-bit floats more often than not: half floats (F16), or brain
+floats (BF16), a float's first 16 bits. learn.folio's load() read F32 and F64 only, so it couldn't open them, and
+save() wrote twice the room needed.
+
+load() reads F16 and BF16 now, each pattern's number looked up in a table of all 65,536 made the first time, and
+save(named, file, "F16") or "BF16" writes them, each number rounded to the nearest pattern, a half to the even
+one, as IEEE 754 and PyTorch round; too big is infinity. Rounding a number to the nearest whole one with Folio's
+comparisons, which go to 15 digits, could be wrong for a number a hair from a half, so it adds 2^52 and takes it
+away, which the processor rounds exactly. A test saves ten numbers each way, among them 0.1, 65,504, the smallest
+half float and 70,000, and checks the bytes against Python's struct (F16) and against rounding worked out exactly
+(BF16), and what load() gives back.
+
+The card still works in 32-bit floats: training in 16 is for cards with the arithmetic for it, which a GTX 1650
+has only in part. folio-tokenizer's gpt.folio, a GPT of 931,584 parameters on BPE tokens the package learns from
+its text, saves its weights in F16: 1.9 MB, not 3.7.
+
+## 184. Where fib's time went on WebAssembly
+
+fib(32) took 146 ms on a first run on the WebAssembly engine, and 114 run again in the same process, where
+JavaScript takes 78 and machine code 23. Each call goes through `call_ref`, a closure's function, so the guess was
+that calling a function straight, by its index, would be the next step. It was tried: a call to a function made by
+one `to` at the program's top level, whose name nothing else sets, checked to have its value and then called by
+`call` with the scope from its closure, or, in its own code, with its own. fib's 7 million calls went that way, and
+it took the same time, 138 ms with it and 137 without, 105 and 103 again: V8 sees that each `call_ref` here always
+calls the same function, and calls it as directly. It was left out.
+
+A profile said where the time was: a third of it in three small functions of the runtime's, `box`, `add` and `sub`,
+called from fib. `n - 1` and `n - 2` are worked out in place on small whole numbers (DESIGN §174), but 0 and 1 are
+boxes (the i31 values 0 and 1 are no and yes), so an answer of 0 or 1 went to the shared code, which checked both
+sides again, worked the sum out in floats, and boxed it. Most of fib's calls are near the bottom of its tree,
+where n - 1 and n - 2 are 0 or 1. Now an answer of 0 or 1 goes straight to `box`, which gives the box made once
+for it: fib(32) takes 138 ms on a first run, not 146, and 104 run again, not 114. Adding two values worked out
+in place as floats, where neither side is written in the program, was tried too and made no difference, as V8
+already makes the call cheap; it was left out too.
+
+Both back ends write the same bytes, as a test holds them to, and folio.wasm makes itself again.
+
+## 185. Training on the processor, faster, and in floats when asked
+
+On a Ryzen 5 4600H, digits-learn.folio took 0.65 s on the processor for 10 rounds of 6,000 pictures, where PyTorch
+takes 0.50; on a GTX 1650 Folio was already faster than PyTorch. A batch of 200 took 1.8 ms: the two large
+matmuls 45% of it, Adam's step 16%, and the rest elementwise work and the loss.
+
+Three things were tried and measured no faster, and are left out: two terms at a time in matmul's inner loop (the
+processor wasn't short of instructions to run), 6 threads (one for
+each core) instead of 8, which was 3 to 5% faster but needs the cores counted on every processor, and the pool's
+threads spinning longer between multiplies, which was slower, as they took time from the thread with the rest of
+the work.
+
+What helped:
+
+- **Each kernel's numbers checked 4 at a time.** Before a matmul, machine code checks that every number it's given
+  is a number, as anything else is for Folio to say a mistake about. That was a load, a compare and a branch a
+  number, 116,000 of them for a 200 by 256 by 256 matmul: now, with AVX, it's 4 at a time, any NaN among them
+  kept and looked at once at the end.
+- **Elementwise work 4 at a time (numbers_binary).** `+`, `-`, `*`, the larger and smaller of two, relu, relu's
+  gradient and a copy, where a's numbers are side by side and b's are too or are one number, as plus, times,
+  add_row and relu have them, are done 4 at a time with AVX. Each of the 4 is the one at a time's to the bit, as
+  vaddpd and vmaxpd work each place as addsd and maxsd do; a NaN that would make the one at a time give it to
+  Folio still does.
+- **matmul in floats, when asked (`use_floats(yes)`).** The graphics card works in 32-bit floats, about 7 digits,
+  and so does PyTorch on the processor. `arrays's matmul_floats(a, b)` and `matmul_turned_floats(a, b)` round each
+  number to a float and add each sum up in floats, 8 to a register: b's columns made floats once into room kept
+  from one multiply to the next, then each four of a's rows made floats once and multiplied by each sixteen of
+  b's, a float multiply then a float add a term at a time, on every core as matmul is. Rows past the fours and
+  columns past the sixteens are worked out in Folio's own numbers, so nothing is less than a float's 7 digits.
+  learn.folio's `use_floats(yes)` uses them for every matmul on the processor. On the JavaScript engines, and with
+  BLAS, they're matmul.
+
+A 200 by 256 by 256 matmul takes 0.24 ms in floats, not 0.40; 1,024 by 1,024 by 1,024, 14 ms, not 23 (153
+GFLOPS, not 96). A batch of the digit reader takes 1.5 ms, not 1.8, and 1.25 ms in floats; digits-learn.folio on
+the processor takes 0.60 s, and 0.52 s with floats, beside PyTorch's 0.50, still 99.4% right. Adam's step goes
+over every parameter twice, to change nothing if anything goes wrong; a first pass that looked without the square
+root and the division was tried and made no difference, as the step waits on memory, not on those.
+
+Tests check matmul_floats against matmul to 7 digits for shapes on and off the blocks, turned and not, in machine
+code and on every engine, where it's matmul; numbers_binary's every operation 4 at a time against Folio's own,
+to the bit, with b one number or a row, and a NaN in the middle of the fours; and learn's gradients through
+matmul in floats against the slopes worked out by nudging.
+
+## 186. ONNX outputs kept where ONNX Runtime made them
+
+folio-ask, a program that answers questions from a folder of documents, writes its answers with
+Qwen2.5-0.5B-Instruct (int8, 512 MB) through onnx.folio. Each token is a run of the model, given the keys and
+values of every token before it (24 layers, two of each, 1 by 2 by the tokens so far by 64) and giving them back
+with one more. `run` made every output an array of Folio's numbers and every input a tensor again, so each token
+carried the whole cache out of ONNX Runtime and back in, and copied each input twice on the way (`array` copied an
+array it was given, and `numbers_of` copied its numbers again). On a Ryzen 5 4600H, after a prompt of 662 tokens,
+a token took 277 ms at best, and reading the prompt 7.3 s. (Each time here is the best of three runs, taken in
+turn: on this laptop the same run takes up to half again as long from one time to the next.)
+
+- **Outputs kept (`run_keeping`).** `run_keeping(model, inputs, names)` runs the model as `run` does, but each
+  output it names stays where ONNX Runtime put it: an `onnx_value` record holding its OrtValue, shape and type. An
+  ONNX value given to `run` or `run_keeping` as an input goes in as it is, after a check that it's the type the
+  model takes. The writer keeps every `present.*` and the logits, gives the presents back as the next token's
+  `past_key_values.*`, and releases the ones before.
+- **Only what's wanted read (`numbers_from`).** The logits are 151,936 numbers for each token given, so a prompt
+  read 64 tokens at a time made 9.7 million numbers a run, of which the writer wants the last row.
+  `numbers_from(value, first, count)` copies those `count` numbers from the tensor's memory and converts only
+  them. `array_of` reads them all, and `shape_of` says the shape.
+- **Given back (`release`).** A kept value holds ONNX Runtime's memory until `release`, which marks it released:
+  using it again is a mistake that says so, and releasing it again does nothing.
+- **No copies of an array given.** `run` takes an array's own numbers, which it reads and doesn't change, where it
+  made two copies.
+
+A token went from 277 ms to 189, and reading the prompt from 7.3 s to 4.6. Of the 189 ms, about 2 are Folio's: the
+inputs, the last row read, and picking the most likely token from it. The rest was ONNX Runtime, and its own
+time had a cause of its own: the model keeps its table of token vectors (151,936 by 896) as 8-bit whole numbers,
+and uses it twice, to look up each token's vector and, turned, to make the logits. ONNX Runtime keeps a
+DequantizeLinear on a weight as it is, so as not to break the patterns it fuses, so the whole table was made
+floats again on every run: 136 million numbers.
+
+- **Settings for a session (`load_with`).** `load_with(file, settings)` makes the session with a dictionary of
+  settings: `"threads"` (SetIntraOpNumThreads), `"optimization"` (`"none"`, `"basic"`, `"extended"` or `"all"`,
+  SetSessionGraphOptimizationLevel) and any of ONNX Runtime's session settings by name (AddSessionConfigEntry,
+  the C API's 131st function, which onnx.folio asks for from version 4 of the API, so an older ONNX Runtime says
+  it doesn't have it rather than calling what isn't there). With `"session.disable_quant_qdq"` set to `"1"`,
+  ONNX Runtime folds the DequantizeLinear of a weight into a weight of floats once, when the model's loaded.
+  It's a setting, not the default: it takes more memory, and a model made to be fused that way is faster with
+  the patterns kept.
+
+With it, a token takes 49 ms and the prompt 2.5 s, 5.6 and 2.9 times as fast as before. Loading takes as long,
+within the noise (4.4, 4.6 and 4.6 s at best), and the program 2.8 GB at most instead of 2.4. Two things found on
+the way are the model's and Windows' ONNX Runtime's, not onnx.folio's, and folio-ask works round them: ONNX Runtime
+1.17 reads ONNX's format up to 9, and onnx-community's export says 10 while using nothing 10 added; and with nothing
+in the cache yet, it let each of several tokens given at once see the ones after it, so the writer gives the first
+token alone.
+
+Tested in machine code, with a model the test writes that's relu(x + 1) of 3 numbers: an output kept, its shape,
+two of its numbers and all of them, given back as an input, kept again and read, released twice, and shown once
+released; and a released value read, a double given where a float is taken, numbers past the end, an output the
+model doesn't have, a setting it doesn't know, a negative number of threads, and a list where an ONNX value is
+wanted, each with what it says.
+
+## 187. math.folio's sqrt, the processor's own
+
+Five heavier programs, written alike in Folio and in Rust (rustc -O) and each giving the same output, were timed
+on a Ryzen 5 4600H, the best of three runs, less an empty program's time: n-body (500,000 steps of 5 planets,
+records of numbers), binary-trees (depth 16, records made and dropped), spectral-norm (n = 1,000), fannkuch-redux
+(n = 10, a list's items swapped) and counting the pieces of 1 to 6 letters of a million letters (dictionaries
+and text). Folio took 4.9 to 5.8 times as long as Rust on three, was faster on binary-trees (491 ms to Rust's
+659, whose every node is a call to the system's allocator), and took 55 times as long on n-body: 1,201 ms to
+Rust's 22.
+
+n-body takes a square root ten times a step, 5 million in all, and math.folio's sqrt works it out in Folio: the
+number brought between 1 and 4 by powers of 4, six rounds of Newton's method, and the last step settled by
+Dekker's exact product, so that it gives the double nearest the true root, as a processor's own does. That's
+dozens of operations and three loops where sqrtsd is one instruction, and sqrtsd gives the same double, as
+IEEE 754 has every square root rounded to the nearest.
+
+- **sqrt by sqrtsd.** math.folio names a function of Folio's own (§118), `use the library "folio"`'s
+  `number_sqrt`, and its sqrt, once it has made sure the number isn't below 0 (comparing anything but a number
+  with 0 is a mistake, so it's a number by then), gives what that gives. machine.folio makes the call's body two
+  instructions, the input loaded and sqrtsd, rather than a C call; nothing is loaded or asked for. On the
+  JavaScript engines, which can't call a library, a try finds it isn't there as math.folio starts, and sqrt works
+  it out in Folio as before.
+
+n-body went from 1,201 ms to 412, 19 times Rust's time instead of 55, with the same output to the last digit.
+The rest is reading and setting records' fields, whose values can be anything, so each sum looks at what it was
+given; that's for another time.
+
+A test runs a program in machine code and on the JavaScript engine and wants the same output: the roots of 0, 1,
+2, 3, 16, 0.1, a third, 2^1000, 10^300, 2^-1074, 2^-600 and a number of 15 digits, each with r * r - x, which a
+root a step out would change; a sum of 100,000 roots; and the mistakes for -1, text and an amount.
+
+## 188. A second security pass, before going public
+
+§152 tried the permissions, packages and broken code. This pass looked at what came since and what that one
+didn't: the repository's history and workflows, which strangers read and run once it's public, Folio's own kernels,
+the cryptography, secure connections, zip files and the web server.
+
+- **The history.** Every blob on every branch looked through for keys and tokens (GitHub's, OpenAI's and
+  Anthropic's, AWS's, Google's, Slack's, npm's, PyPI's, Hugging Face's, private keys, and passwords set in code):
+  only AWS's documented example key in s3.test.folio, keys the tests make up, and a private key of `AAAA` that
+  jwt.test.folio checks is refused. Nothing personal but a folder's name in a comment.
+- **The workflows.** None runs on `pull_request_target` or `workflow_run`, and none puts a pull request's title or
+  branch into a command, so a stranger's pull request runs with a token that can only read and no secrets. The two
+  that every push and pull request runs now say so (`permissions: contents: read`), and the three actions that
+  publish and weren't pinned to a commit (PyPI's, and the Pages upload and deploy) are.
+- **Folio's own kernels could reach any memory.** `use the library "folio"` names loops in the program's own
+  machine code (§118), which need no `--allow-libraries`, as they can't reach past the lists and bytes they're
+  given. Two ways got past that. memory.folio's memory at an address (§160) goes to numbers_memory and
+  numbers_atomic with an address and a size, which they used as they were given: `block_at(address, size)`, or the
+  kernel named in a program's own `use the library "folio"`, read and wrote any of the program's memory, the
+  permission flags' own word among it. And a kernel trusts that what it's told is a list is one: a program that
+  named numbers_reduce with `a long whole number` where arrays.folio says `a list of numbers` had it take that
+  number as where a list is. Either could make a program run with no flags, or with only `--allow-read=data`, do
+  anything the user can.
+- **What they take now.** A kernel can be named only as Folio's own files name it, each input a list of numbers,
+  bytes or a long whole number where they say (`own_kernel_shapes`), or the program isn't made. Memory at an
+  address is refused by the kernel, without touching it, unless the program may use libraries (`allow_all`'s bit
+  for them): memory.folio then does it through the C library, which asks, as it always did for take. And a list
+  or bytes given to a kernel is checked to be one as it's given, as Folio's input checks already did, so a kernel
+  that's given something else can't be reached.
+- **Cryptography.** crypto.folio's keys, salts and nonces come from secrets.folio's random_bytes, the system's own
+  (BCryptGenRandom, getrandom), which fails rather than give anything less. AES-GCM checks the tag, in time that
+  doesn't depend on where it differs, before it decrypts anything. key_from_password takes 200,000 rounds of
+  PBKDF2 unless told otherwise, which OWASP would make 600,000; changing it would change every key made without
+  saying, so the documents say to give `rounds`.
+- **Secure connections.** sockets.folio asks OpenSSL to check the certificate and its name (SSL_VERIFY_PEER,
+  SSL_set1_host, the name sent for SNI), but went on if SSL_set1_host failed, which would have left the name
+  unchecked; it ends the connection now. `read "https://..."` uses WinHTTP or curl with neither told to trust
+  anything: curl reads no .curlrc (`-q`) and speaks only http and https.
+- **Zip files.** Nothing writes a zip file's things to disk, so no name in one can reach out of a folder. But
+  `unzipped` inflated a thing whole before comparing it with the size the zip file's list gives, and DEFLATE's
+  copies let a few kilobytes stand for gigabytes: a .docx given to a program could take all its memory. inflate
+  takes a limit now, `most`, checked at each copy and stored block (a literal is a byte for a code of a bit or more,
+  so it can't grow past eight times what it takes), and `unzipped` gives each thing's own.
+- **The web server.** server.folio serves no folder of its own, so no path in a request reaches a file but by a
+  handler's choice, and requests have limits of size, headers, time and connections. But it wrote an answer's type
+  and headers as it was given them: a handler that put what a client sent into a header, as a redirect's Location,
+  sent the client's line breaks, and so its headers, or another answer. An answer whose type or headers have a new
+  line or a carriage return in them, or whose status isn't a whole number from 100 to 999, is a 500 now, as Node
+  and Python refuse such headers too.
+- **Found on the way: `add` to an item, in a file used as a name.** §179 makes `add x to item k of d` a few
+  statements, the item read and then set, and both were one node. `use "m.folio" as m` renames each name in the
+  file as it walks past it, so the item's holder was renamed twice, `m's m's ...`, which reads as a field of m:
+  `'m' has nothing called ...`. machine.folio is used as a name by folio.folio, so folio.exe stopped as it started
+  once machine.folio had such an `add`. The read and the set each have a node of their own now, in folio.js and in
+  compiler.folio, and a test runs such a file on every engine.
+- **The pages.** The playground escapes everything it highlights; what Folio's page.folio makes runs in a frame
+  with no access to the site (§141); the site's own HTML is its own lessons and documents.
+
+Tests: a program with no flags that names numbers_memory and numbers_atomic with an address gets 1 from each, with
+the address untouched; memory.folio's block_at then says it needs --allow-libraries; text, bytes and a list each
+given where a kernel takes another are refused, saying what they were; four kernels named another way are refused
+when the program is made; an inflate past its limit, and a zip file whose list says a thing is 10 bytes, fail; and
+server.folio answers 500 for a line break in a header's value, a header's name, a type and a status, and for a
+status of 99, and sends a redirect as it is.

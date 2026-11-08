@@ -1417,6 +1417,167 @@ test("[1, 2, 3] is a list, on every engine and in the compiler written in Folio"
   assert.deepEqual(problems("set xs to [1, 2]\nsay xs + 1"), ["2:8 fails: can't use '+' on a list and a number"]);
 });
 
+test("x is a number, some text, a list, a dog...: what kind a value is, on every engine and in the compiler written in Folio", () => {
+  const source = [
+    "kind dog with name",
+    "    to speak with self",
+    "        return self's name + \" barks\"",
+    "    end",
+    "end",
+    "kind cat with name",
+    "    to speak with self",
+    "        return \"meow\"",
+    "    end",
+    "end",
+    "set things to [1, \"one\", yes, [1], (record with b 1), (dictionary where \"b\" is 1), (2) bytes, dog(\"Rex\"), function with x gives x, nothing, 5 km, cat(\"Tom\")]",
+    "for each v in things",
+    "    say [v is a number, v is some text, v is either yes or no, v is a list, v is a record, v is a dictionary, v is bytes, v is a function, v is a dog, v is not a cat]",
+    "end",
+    "say dog(\"Rex\") is a dog",
+    "say 5 is not some text",
+    "if \"x\" is some text and 3 is not a list",
+    "    say \"fine\"",
+    "end",
+    "expect 5 is a number",
+  ].join("\n");
+  const row = (...yes) => `[${[...Array(10)].map((_, k) => (yes.includes(k) ? "yes" : "no")).join(", ")}]`;
+  const want = [row(0, 9), row(1, 9), row(2, 9), row(3, 9), row(4, 9), row(5, 9), row(6, 9), row(4, 8, 9), row(7, 9), row(9), row(9), row(4), "yes", "yes", "fine"]
+    .map((line) => ["out", line]);
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  // a say's values stand side by side: where the file may give `a` a value, `say 1 is a dog` says 1 is a, then
+  // dog, as it did before, and in brackets it's what kind 1 is
+  const sideBySide = "set a to 1\nset dog to \"!\"\nsay 1 is a dog\nsay (1 is a dog)\nset xs to [1]\nsay xs is a list of 1, 2\nsay 1 is a number";
+  const kept = "to f with a, b\n    return a\nend\nset either to 1\nset some to 2\nset text to 3\nsay 1 is either yes or no\nsay 2 is some text";
+  for (const engine of ENGINES) {
+    assert.deepEqual(streams(sideBySide, { engine }).log, ["yes!", "no", "no[1, 2]", "yes"].map((line) => ["out", line]), engine);
+    assert.deepEqual(streams(kept, { engine }).log, ["yesyes", "yes3"].map((line) => ["out", line]), engine);
+    assert.deepEqual(streams("say 1 is a dog\nsay \"t\" is some text", { engine }).log, [["out", "no"], ["out", "yes"]], engine);
+  }
+  assert.deepEqual(streams("say 1 is a text", { engine: "vm" }).log, [["mistake", "line 1: for whether a value is text, write 'is some text'"]]);
+  const folio = folioCompiler(COMPILER);
+  for (const program of [source, sideBySide, kept, "say 1 is a text", "say x is", "say 1 is either yes", "use \"a.folio\"\nsay 1 is a dog"]) {
+    assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
+  }
+});
+
+test("add x to r's items, to count of r, to item \"a\" of counts: add to a field or an item, on every engine and in the compiler written in Folio", () => {
+  const source = [
+    "kind basket with items",
+    "    to put with self, thing",
+    "        add thing to self's items",
+    "    end",
+    "end",
+    "set b to basket([])",
+    "b's put(\"apple\")",
+    "b's put(\"pear\")",
+    "say b's items",
+    "set r to record with count 1, name \"a\", tags [\"x\"]",
+    "add 2 to r's count",
+    "add \"b\" to name of r",
+    "add \"y\" to r's tags",
+    "say r",
+    "set counts to dictionary where \"a\" is 1",
+    "add 5 to item \"a\" of counts",
+    "set xs to [1, [2]]",
+    "add 3 to item 2 of xs",
+    "add 10 to item 1 of xs",
+    "say counts \" \" xs",
+    "set bs to (3) bytes",
+    "add 7 to byte 2 of bs",
+    "say bs",
+    "set n to record with inner (record with total 1)",
+    "add 4 to n's inner's total",
+    "say n"
+  ].join("\n");
+  const want = ['["apple", "pear"]', '(record with count 3, name "ab", tags ["x", "y"])', '(dictionary where "a" is 6) [11, [2, 3]]', "(3 bytes: 0, 7, 0)",
+    "(record with inner (record with total 5))"].map((line) => ["out", line]);
+  for (const engine of ENGINES) {
+    assert.deepEqual(streams(source, { engine }).log, want, engine);
+    assert.deepEqual(streams("set r to record with count 1\nadd \"x\" to r's count", { engine }).log, [["mistake", "line 2: can't add text to a number"]], engine);
+    assert.deepEqual(streams("set r to record with count 1\nadd 1 to r's nope", { engine }).log, [["mistake", "line 2: this record has no 'nope'"]], engine);
+  }
+  // in a file used as a name, whose every name is renamed once, the item read and the item set too (DESIGN §188)
+  const used = { "m.folio": 'set d to dictionary where "a" is 1\nadd 5 to item "a" of d\nto put with name, x\n    if not (name is in d)\n        set item name of d to 0\n    end\n    add x to item name of d\nend\n' };
+  for (const engine of ENGINES) {
+    assert.deepEqual(streams('use "m.folio" as m\nm\'s put("b", 2)\nm\'s put("a", 1)\nsay m\'s d', { engine, files: (n) => used[n] }).log,
+      [["out", '(dictionary where "a" is 7, "b" is 2)']], engine);
+  }
+  const folio = folioCompiler(COMPILER);
+  for (const program of [source, "add 1 to r's f()", "add 1 to r's", "add 1 to item of xs", "add 1 to x of"]) {
+    assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
+  }
+});
+
+test('text after """, on the lines up to one with only """: on every engine, in the compiler written in Folio, and tidied', () => {
+  const source = [
+    'set name to "Sam"',
+    'set poem to """',
+    '    Roses are "red",',
+    '      violets \\n are {name}',
+    "",
+    '    """',
+    "say poem",
+    "say length of poem",
+    "to page with title",
+    '    return """',
+    "        <h1>",
+    '        """ ',
+    "end",
+    "say page(1)",
+    'say """',
+    '"""',
+    'say """""" "!"',
+  ].join("\n");
+  const want = ['Roses are "red",\n  violets \\n are {name}\n', "41", "<h1>", "", "!"].map((line) => ["out", line]);
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  const crlf = 'set x to """  \r\n\t a\r\n\r\n\t   b\r\n\t """\r\nsay x';
+  assert.deepEqual(streams(crlf, { engine: "vm" }).log, [["out", "a\n\n  b"]]);
+  const wrong = ['say """\n    a\n  b\n    """', 'say """\n    a\n', 'say """\n  \u0001\n  """', 'say """ x\n"""'];
+  assert.deepEqual(wrong.map((w) => streams(w, { engine: "vm" }).log), [
+    [["mistake", 'line 3: this line of the text starts left of the """ that ends it']],
+    [["mistake", 'line 1: this text has no line with only """ to end it']],
+    [["mistake", "line 2: text can't hold a control character, but for a tab"]],
+    [["mistake", "line 1: this text is missing its closing quote"]],
+  ]);
+  const folio = folioCompiler(COMPILER);
+  for (const program of [source, crlf, ...wrong]) assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
+  assert.equal(format('to f\n  say """\n      a\n\n        b\n      """\nend\nset   x to """\n"""'),
+    'to f\n    say """\n        a\n\n          b\n        """\nend\nset x to """\n    """\n');
+});
+
+test("Folio's own words as field names, where no phrase starts: r's length, record with read yes, in order by number", () => {
+  const source = [
+    "set r to record with read yes, length 3, list [1], kind \"x\"",
+    "say r's read \" \" r's length \" \" r's list",
+    "set r's length to 4",
+    "add 1 to r's length",
+    "say r",
+    "set f to record with split (function with s gives s + \"!\")",
+    "say f's split()",
+    "set rows to [(record with number 2), (record with number 1)]",
+    "say rows in order by number"
+  ].join("\n");
+  const want = ["yes 3 [1]", '(record with read yes, length 5, list [1], kind "x")', '(record with split <function function on line 6>)!',
+    "[(record with number 1), (record with number 2)]"].map((line) => ["out", line]);
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  const folio = folioCompiler(COMPILER);
+  for (const program of [source, "set read to 1", "say length of r's", "to read with x\nend"]) assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
+  assert.deepEqual(streams("set read to 1", { engine: "vm" }).log, [["mistake", "line 1: 'read' is a Folio word, so it can't be used as a variable name"]]);
+});
+
+test("a record's own function called in a file used as a name is the record's: one's cost() in cart.folio, used as cart", () => {
+  const files = {
+    "cart.folio": "kind thing with price\n    to cost with self\n        return self's price * 2\n    end\nend\nto total with things\n    set sum to 0\n    for each one in things\n        set sum to sum + one's cost()\n    end\n    return sum\nend\n",
+    "wrong.folio": "to cost_of with r\n    return r's nope()\nend\n",
+  };
+  const source = "use \"cart.folio\" as cart\nsay cart's total([cart's thing(3), cart's thing(4)])";
+  const wrong = "use \"wrong.folio\" as w\nsay w's cost_of(record with price 1)";
+  for (const engine of ENGINES) {
+    assert.deepEqual(streams(source, { engine, files: (n) => files[n] }).log, [["out", "14"]], engine);
+    assert.deepEqual(streams(wrong, { engine, files: (n) => files[n] }).log, [["mistake", "wrong.folio, line 2: there is no function called 'nope'"]], engine);
+  }
+});
+
 // ---------- tidying ----------
 
 test("format() tidies code the one way, without changing a piece of it, and tidy code stays as it is", () => {
@@ -1514,7 +1675,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, big.folio, xml.folio, z
       ["lists.test.folio", ["test_shapes", "test_choosing", "test_functions", "test_sorting"]],
       ["stats.test.folio", ["test_middles", "test_spread", "test_two_sets", "test_mistakes"]],
       ["arrays.test.folio", ["test_making", "test_element_by_element", "test_broadcasting", "test_matrices", "test_along_axes", "test_shapes",
-        "test_machine_code_agrees", "test_nan_and_infinity", "test_mistakes"]],
+        "test_machine_code_agrees", "test_nan_and_infinity", "test_floats", "test_mistakes"]],
       ["ai.test.folio", ["test_requests", "test_events_however_they_come", "test_a_fallback_part_of_the_way", "test_vectors"]],
       ["sync.test.folio", ["test_lock", "test_semaphore", "test_holding", "test_flag", "test_queue", "test_tasks"]],
       ["big.test.folio", ["test_reading_and_writing", "test_adding_and_taking", "test_multiplying", "test_dividing",
@@ -1530,7 +1691,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, big.folio, xml.folio, z
       ["charts.test.folio", ["test_axis_numbers", "test_svg", "test_png", "test_mistakes"]],
       ["xml.test.folio", ["test_elements", "test_finding", "test_around_the_element", "test_entities_and_cdata",
         "test_writing", "test_mistakes"]],
-      ["zip.test.folio", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_mistakes"]],
+      ["zip.test.folio", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_no_more_than_it_should", "test_mistakes"]],
       ["mcp.test.folio", ["test_initialize", "test_a_version_it_doesnt_know_gets_its_newest", "test_notifications_have_no_reply",
         "test_tools_list", "test_tools_call", "test_a_tool_that_gives_a_list_gives_json", "test_a_tools_mistake_is_its_error",
         "test_unknown_tools_and_methods", "test_what_isnt_json", "test_resources", "test_prompts", "test_ping"]],
@@ -1604,7 +1765,7 @@ test("stdlib.folio is what make-stdlib.mjs makes of the standard library's files
 // weights it saves and loads
 test("learn.folio passes its own tests, learn.test.folio, on all three engines", () => {
   const found = (name) => (name === "math.folio" ? readFileSync(new URL("./math.folio", import.meta.url), "utf8") : tool(name));
-  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
+  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_custom", "test_small_floats", "test_floats", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
   for (const engine of ENGINES) {
     const results = testFolio(tool("learn.test.folio"), { engine, files: found, disk: memoryDisk() });
     assert.deepEqual(results.map((r) => [r.name, r.error?.message]), names.map((n) => [n, undefined]), `learn.test.folio on ${engine}`);

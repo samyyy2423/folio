@@ -696,6 +696,13 @@ to web_ready with c, answer, method
             set kind to "application/json"
         end
     end
+    if not web_answer_sound(status, kind, extra) # a line break in a header would end it there and start another, or
+        # another answer, of the client's making if a handler put what it was sent there (DESIGN §188)
+        set status to 500
+        set body to "This answer had a line break in a header, or a status that isn't a number from 100 to 999, so it wasn't sent."
+        set kind to "text/plain; charset=utf-8"
+        set extra to nothing
+    end
     set sent to body
     if web_is_text(body)
         set sent to body as bytes
@@ -1282,6 +1289,30 @@ to web_hex with code
 end
 
 # a record's field, or `otherwise` if it has none
+# whether an answer's status is a whole number from 100 to 999, and its type and each header's name and value have no
+# line break (a new line or a carriage return) in them
+to web_answer_sound with status, kind, extra
+    if not (status is a number) or not (status is divisible by 1) or status is less than 100 or status is greater than 999
+        return no
+    end
+    set parts to empty list
+    if kind is not nothing
+        add "" + kind to parts
+    end
+    if extra is not nothing
+        for each name in extra
+            add "" + name to parts
+            add "" + item name of extra to parts
+        end
+    end
+    for each part in parts
+        if "\n" is in part or web_cr is in part
+            return no
+        end
+    end
+    return yes
+end
+
 to web_field with answer, name, otherwise
     try
         if name is "status"
