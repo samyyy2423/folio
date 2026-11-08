@@ -1296,11 +1296,11 @@ to cli_format with cli_source
                     end
                     set cli_was to cli_indent_of(item cli_past of cli_all)
                     for each cli_k from cli_at + 1 to cli_past - 1
-                        set cli_written to cli_without_cr(item cli_k of cli_all)
-                        if cli_indent_of(cli_written) is length of cli_written
+                        set cli_block_line to cli_without_cr(item cli_k of cli_all)
+                        if cli_indent_of(cli_block_line) is length of cli_block_line
                             add "" to cli_lines
                         else
-                            add cli_spaces(cli_here + 4) + (items (cli_was + 1) to (length of cli_written) of cli_written) to cli_lines
+                            add cli_spaces(cli_here + 4) + (items (cli_was + 1) to (length of cli_block_line) of cli_block_line) to cli_lines
                         end
                     end
                     add cli_spaces(cli_here + 4) + "\"\"\"" to cli_lines
