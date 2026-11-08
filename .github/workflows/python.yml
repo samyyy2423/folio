@@ -5,6 +5,9 @@ name: python
 # Windows; then the benchmark, so each run says what Folio gave Python
 on: [push, pull_request]
 
+permissions:
+  contents: read # what every push and pull request runs reads the code, and nothing more
+
 jobs:
   python:
     strategy:

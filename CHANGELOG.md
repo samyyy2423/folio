@@ -6,6 +6,21 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Security: Folio's own kernels keep to what a program was allowed.** Folio's own loops in machine code (`use the
+  library "folio"`) need no `--allow-libraries`, and two ways into them could reach any of the program's memory,
+  and so get round every `--allow` flag: memory.folio's memory at an address (`block_at`, or the kernel named
+  directly), and a kernel named with a number where Folio's own files give it a list or bytes. Memory at an
+  address now needs `--allow-libraries`, as C's memory does, and a kernel can be named only as Folio's own files
+  name it. Programs that use arrays.folio, memory.folio and the rest as they're documented do as they did
+  (DESIGN §188).
+- **Security: a zip file's things no bigger than it says.** zip.folio's `unzipped` stops a thing as soon as it
+  would be bigger than the zip file's list says, where a few bytes could stand for gigabytes; `inflate(data,
+  most)` takes the same limit.
+- **Security: no line breaks in server.folio's headers.** An answer whose type, headers or status would have a
+  line break in them, which would end a header and start another, is a 500 instead. sockets.folio's secure
+  connections fail if OpenSSL won't check the certificate's name, rather than go on without.
+- **Fixed:** `add x to item k of d` in a file used as a name (`use "m.folio" as m`) said `'m' has nothing called
+  ...`, as the item it read and the item it set were one node, renamed twice.
 - **math.folio's sqrt in machine code is the processor's own.** One instruction, sqrtsd, the same double
   math.folio works out in Folio on the JavaScript engines. The n-body simulation (500,000 steps of 5 planets) on
   a Ryzen 5 4600H: 1.20 s to 0.41 s, against Rust's 0.02 (DESIGN §187).

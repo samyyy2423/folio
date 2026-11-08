@@ -3244,7 +3244,9 @@ to parse with tokens, reading
             add (record with kind "set", name ad_place, value index of ad_target, at t) to ad_made
             add (record with kind "set", name ad_was, value ad_item, at t) to ad_made
             add ad_added to ad_made
-            add (record with kind "setItem", target ad_item, value (record with kind "name", name ad_was, at t), at t) to ad_made
+            # an item of its own, as a file used as a name renames each name it walks past (DESIGN §188)
+            set ad_set_item to record with kind "item", index (record with kind "name", name ad_place, at t), subject (record with kind "name", name ad_holder, at t), at at of ad_target
+            add (record with kind "setItem", target ad_set_item, value (record with kind "name", name ad_was, at t), at t) to ad_made
         end
         return record with kind "several", body ad_made, at t
     end

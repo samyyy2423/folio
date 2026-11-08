@@ -37609,6 +37609,54 @@ set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "num
     "numbers_exp" is "rt_k_exp", "numbers_room" is "rt_k_room", "numbers_matmul_floats" is "rt_k_matmul_f",
     "numbers_matmul_turned_floats" is "rt_k_matmul_tf", "number_sqrt" is "sqrtsd, in line"
 
+# What each of Folio's own kernels takes, as Folio's own files name them (DESIGN §188), and nothing else: a kernel
+# trusts that an input said to be a list of numbers is a list, that bytes are bytes, and that a number is a number,
+# so a program that named one another way could have it take a number for where a list is, and reach any memory.
+set own_kernel_shapes to empty dictionary
+
+to own_shape with name, types
+    if not (name is in own_kernel_shapes)
+        set item name of own_kernel_shapes to empty list
+    end
+    add types to item name of own_kernel_shapes
+end
+
+set own_w to "a long whole number"
+set own_l to "a list of numbers"
+set own_b to "bytes"
+own_shape("numbers_binary", list of own_w, own_l, own_l, own_l, own_w, own_w, own_w, own_w, own_w, own_w, own_w, own_w, own_w)
+for each matmul_name in list of "numbers_matmul", "numbers_matmul_turned", "numbers_matmul_floats", "numbers_matmul_turned_floats"
+    own_shape(matmul_name, list of own_l, own_l, own_l, own_w, own_w, own_w, own_w, own_w, own_w)
+end
+own_shape("numbers_reduce", list of own_w, own_l, own_l, own_w, own_w, own_w, own_w)
+own_shape("numbers_exp", list of own_l, own_l, own_w)
+own_shape("numbers_adam", list of own_l, own_l, own_l, own_l, own_l, own_w)
+own_shape("numbers_room", list of own_l, own_w)
+own_shape("numbers_convert", list of own_w, own_l, own_b)
+own_shape("numbers_memory", list of own_w, own_w, own_l, own_w, own_b, own_w, own_w, own_w)
+own_shape("numbers_memory", list of own_w, own_w, own_l, own_w, own_w, own_w, own_w, own_w)
+own_shape("numbers_atomic", list of own_w, own_l, own_b, own_w, own_w, own_w, own_w)
+own_shape("numbers_atomic", list of own_w, own_l, own_w, own_w, own_w, own_w, own_w)
+
+# jumps on if rax, an input of one of Folio's own kernels, is of this kind (kind_list or kind_bytes); else the
+# mistake that it isn't, as an input given to a C library that isn't what it takes says it
+to own_kind_check with fc, e, f, i, kind, what
+    set a to a of fc
+    set wrong to new_label(a)
+    mov_rr(a, rcx, rax)
+    shifti(a, "shr", rcx, 48)
+    alui(a, "cmp", rcx, kind)
+    jcc(a, cc_ne, wrong)
+    set was to enter_cold(a)
+    mark(a, wrong)
+    store(a, rip("err_a"), rax)
+    stub_start(fc, at of e)
+    stub_text(a, "'" + name of f + "' needs input " + i + " to be " + what + ", not ")
+    stub_kind(a, "err_a")
+    jmp_to(a, "rt_e_end")
+    leave_cold(a, was)
+end
+
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
     set names to libraries of nat
@@ -38247,6 +38295,9 @@ to emit_kernel_atomic with a, target
     load(a, rax, kernel_input(1))
     alui(a, "and", rax, 8)
     jcc(a, cc_e, from_bytes)
+    load(a, rax, rip("allow_all")) # memory at an address, which could be any, only with --allow-libraries (DESIGN §188)
+    alui(a, "and", rax, 16)
+    jcc(a, cc_e, refuse)
     load(a, r9, kernel_input(3))
     load(a, rdx, kernel_input(4))
     test_rr(a, rdx, rdx)
@@ -38351,6 +38402,9 @@ to emit_kernel_memory with a, target
     load(a, rax, kernel_input(1)) # the memory: r9 where it is, rdx how many bytes it has
     alui(a, "and", rax, 4)
     jcc(a, cc_e, from_bytes)
+    load(a, rax, rip("allow_all")) # memory at an address, which could be any, only with --allow-libraries (DESIGN §188)
+    alui(a, "and", rax, 16)
+    jcc(a, cc_e, refuse)
     load(a, r9, kernel_input(5))
     load(a, rdx, kernel_input(6))
     test_rr(a, rdx, rdx)
@@ -41066,6 +41120,10 @@ to gen_library_call with fc, e
         if symbol of nat is not in own_kernel_names
             fail with front's problem(at of e, "the library 'folio' has no function called '" + symbol of nat + "'")
         end
+        if not (types of nat is in item (symbol of nat) of own_kernel_shapes) or gives of nat is not "a long whole number"
+            fail with front's problem(at of e, "the library 'folio''s '" + symbol of nat + "' is named only as Folio's own files name it: (" +
+                (join item 1 of item (symbol of nat) of own_kernel_shapes with ", ") + ") gives a long whole number")
+        end
         set kernels_used to own_kernels of a
         set item (symbol of nat) of kernels_used to yes
     else
@@ -41227,12 +41285,18 @@ to gen_library_call with fc, e
         load(a, rax, mem(rbp, 16 + 8 * (n - i)))
         if type_name is "bytes" # Folio's own kernels get the bytes themselves, and check them; anything else
             # where they are
+            if own # a kernel reads their count and where they are, so they must be bytes (DESIGN §188)
+                own_kind_check(fc, e, f, i, kind_bytes, "bytes")
+            end
             untag(a, rax)
             if not own
                 load(a, rax, mem(rax, 8))
             end
         else if type_name is "a list of numbers" # Folio's own kernels get the list, and check it themselves;
             # anything else where its numbers are, each checked to be one
+            if own # a kernel reads its length and where its numbers are, so it must be a list (DESIGN §188)
+                own_kind_check(fc, e, f, i, kind_list, "a list of numbers")
+            end
             untag(a, rax)
             if not own
                 set wrong to new_label(a)

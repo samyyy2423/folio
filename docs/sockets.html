@@ -310,7 +310,7 @@ net's secure(c, <span class="s">&quot;mail.example.com&quot;</span>)       <span
             <div><h4>Inputs</h4><ul class="inputs"><li><code>connection</code></li><li><code>certificate</code></li><li><code>key</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to secure_as_server with connection, certificate, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L927">sockets.folio line 927</a></p>
+          <p class="written">Written <code>to secure_as_server with connection, certificate, key</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L930">sockets.folio line 930</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> c <span class="k">to</span> net's connect_secure(<span class="s">&quot;example.com&quot;</span>, <span class="n">443</span>)   <span class="c"># TLS, its certificate checked for that name</span>
@@ -323,7 +323,7 @@ net's secure_as_server(c, <span class="s">&quot;cert.pem&quot;</span>, <span cla
             <div><h4>Inputs</h4><ul class="inputs"><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to open_messages with port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L959">sockets.folio line 959</a></p>
+          <p class="written">Written <code>to open_messages with port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L962">sockets.folio line 962</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> u <span class="k">to</span> net's open_messages(<span class="n">9001</span>)        <span class="c"># UDP, on a port of its own (0 for any); open_messages_on(&quot;::&quot;, 9001)</span></code></pre></div>
@@ -335,7 +335,7 @@ net's secure_as_server(c, <span class="s">&quot;cert.pem&quot;</span>, <span cla
             <div><h4>Inputs</h4><ul class="inputs"><li><code>host</code></li><li><code>port</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to open_messages_on with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L964">sockets.folio line 964</a></p>
+          <p class="written">Written <code>to open_messages_on with host, port</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L967">sockets.folio line 967</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 net's open_messages_on(host, port)</code></pre></div>
@@ -347,7 +347,7 @@ net's open_messages_on(host, port)</code></pre></div>
             <div><h4>Inputs</h4><ul class="inputs"><li><code>s</code></li><li><code>host</code></li><li><code>port</code></li><li><code>data</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to send_message with s, host, port, data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L982">sockets.folio line 982</a></p>
+          <p class="written">Written <code>to send_message with s, host, port, data</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L985">sockets.folio line 985</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> u <span class="k">to</span> net's open_messages(<span class="n">9001</span>)        <span class="c"># UDP, on a port of its own (0 for any); open_messages_on(&quot;::&quot;, 9001)</span>
@@ -360,7 +360,7 @@ net's send_message(u, <span class="s">&quot;127.0.0.1&quot;</span>, <span class=
             <div><h4>Inputs</h4><ul class="inputs"><li><code>s</code></li><li><code>most</code></li></ul></div>
             
           </div>
-          <p class="written">Written <code>to receive_message with s, most</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L1017">sockets.folio line 1017</a></p>
+          <p class="written">Written <code>to receive_message with s, most</code>, at <a href="https://github.com/samyyy2423/folio/blob/main/tools/sockets.folio#L1020">sockets.folio line 1020</a></p>
           <h4>Example</h4>
           <div class="code"><pre><code><span class="k">use</span> <span class="s">&quot;sockets.folio&quot;</span> <span class="k">as</span> net
 <span class="k">set</span> u <span class="k">to</span> net's open_messages(<span class="n">9001</span>)        <span class="c"># UDP, on a port of its own (0 for any); open_messages_on(&quot;::&quot;, 9001)</span>

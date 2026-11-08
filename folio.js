@@ -1795,9 +1795,10 @@ function parse(tokens, reading = { loaded: new Set(), open: [] }) {
         at("setField", { name: target.name, target: ref(holder), value: ref(was) }));
     } else {
       const place = hidden("which item", t);
-      const item = { ...target, index: ref(place), of: ref(holder) };
-      body.push(at("set", { name: place, value: target.index }), at("set", { name: was, value: item }), at("add", { value: ref(adding), name: was }),
-        at("setItem", { target: item, value: ref(was) }));
+      // a node of its own for each, as a file used as a name renames each name it walks past (DESIGN §188)
+      const item = () => ({ ...target, index: ref(place), of: ref(holder) });
+      body.push(at("set", { name: place, value: target.index }), at("set", { name: was, value: item() }), at("add", { value: ref(adding), name: was }),
+        at("setItem", { target: item(), value: ref(was) }));
     }
     return { kind: "several", body, at: t };
   }

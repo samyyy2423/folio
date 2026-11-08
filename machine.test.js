@@ -2981,7 +2981,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, toml.folio, options.fol
   const ran = spawnSync(exe, ["test", "text.test.folio", "dates.test.folio", "hash.test.folio", "big.test.folio", "xml.test.folio", "zip.test.folio", "math.test.folio",
     "base64.test.folio", "toml.test.folio", "options.test.folio", "collections.test.folio", "lists.test.folio", "stats.test.folio", "sync.test.folio", "fractions.test.folio", "sets.test.folio", "images.test.folio", "crypto.test.folio", "charts.test.folio"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "94 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "95 passed");
 });
 
 // memory.folio's own loop (DESIGN §160), on its own: each kind of number, each order, written into bytes past their
@@ -3241,6 +3241,67 @@ memcpy(to_here, (list of 1, "two"), 16)`);
     "p.folio:2:5: 'memcpy' needs input 2 to be a list of numbers, not a list with text in it", 1]);
   assert.throws(() => machine('use the library "msvcrt"\n    f(a whole number) gives a list of numbers\nend\n', { target, name: "p.folio" }),
     (err) => err.reason === "a library's function can't give a list of numbers: only a function's input can be one");
+});
+// Folio's own kernels are in every program, with no --allow-libraries (DESIGN §188), so they take only what Folio's
+// own files give them: memory at an address only when libraries are allowed (a kernel refuses it, without
+// touching it, and memory.folio then goes to the C library, which asks), a list where a list is named and bytes
+// where bytes are, and each kernel named only as Folio's own files name it.
+test("Folio's own kernels reach memory by its address only with --allow-libraries, and take only what they're named to", { skip }, () => {
+  const kernels = libraryRun(`use the library "folio"
+    "numbers_memory" as k_raw(a long whole number, a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_atomic" as k_atomic_raw(a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_room" as k_room(a list of numbers, a long whole number) gives a long whole number
+    "numbers_convert" as k_convert(a long whole number, a list of numbers, bytes) gives a long whole number
+end
+set back to list of 0, 0
+say k_raw(4, 5, back, 0, 4096, 8, 0, 1) " " back
+say k_atomic_raw(11, back, 4096, 8, 0, 0, 0) " " back
+set wrongs to list of (function with u gives k_room("text", 1)), (function with u gives k_room(16 bytes, 1)), (function with u gives k_convert(4, back, (list of 1, 2)))
+for each wrong in wrongs
+    try
+        say wrong(0)
+    if it fails with why
+        say why
+    end
+end
+say k_convert(4, back, 16 bytes) " " back`, []);
+  assert.deepEqual([kernels.stderr, kernels.status], ["", 0]);
+  const said = kernels.stdout.split("\n");
+  assert.deepEqual(said.slice(0, 2), ["1 [0, 0]", "1 [0, 0]"]);
+  assert.match(said[2], /^'k_room' needs input 1 to be a list, not text/);
+  assert.match(said[3], /^'k_room' needs input 1 to be a list, not /);
+  assert.match(said[4], /^'k_convert' needs input 3 to be bytes, not /);
+  assert.equal(said[5], "0 [0, 0]");
+  const memoryFiles = { "memory.folio": here("tools/memory.folio") };
+  const dir = mkdtempSync(join(tmpdir(), "folio-own-"));
+  try {
+    const exe = executable(dir, "m");
+    writeFileSync(exe, machine(`use "memory.folio" as memory
+set m to memory's block_at(4096, 8)
+try
+    say memory's get(m, 1, "a whole number")
+if it fails with why
+    say why
+end
+`, { target, name: "m.folio", files: memoryFiles }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    const ran = spawnSync(exe, [], { cwd: dir, encoding: "utf8", input: "" });
+    assert.deepEqual([ran.stderr, ran.status], ["", 0]);
+    assert.match(ran.stdout, /isn't allowed to use libraries \(start it with --allow-libraries\)\n$/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const named = (line) => () => machine(`use the library "folio"
+    ${line}
+end
+say 1`, { target, name: "p.folio" });
+  assert.throws(named(`"numbers_room" as k_room(a long whole number, a long whole number) gives a long whole number`),
+    /the library 'folio''s 'numbers_room' is named only as Folio's own files name it: \(a list of numbers, a long whole number\) gives a long whole number/);
+  assert.throws(named(`"numbers_memory" as k(a long whole number, a long whole number, a long whole number, a long whole number, bytes, a long whole number, a long whole number, a long whole number) gives a long whole number`),
+    /the library 'folio''s 'numbers_memory' is named only as Folio's own files name it/);
+  assert.throws(named(`"numbers_exp" as k(a list of numbers, a list of numbers, a long whole number) gives a number`),
+    /the library 'folio''s 'numbers_exp' is named only as Folio's own files name it/);
+  assert.throws(named(`"number_sqrt" as k(a long whole number) gives a number`), /'number_sqrt' takes a number and gives a number/);
 });
 
 // A library's function "at an address" (DESIGN §119): the first input is where the function is, a pointer C
@@ -5794,6 +5855,26 @@ say "done"
 `);
   assert.deepEqual([ran.stdout, ran.stderr, ran.status], [`200 OK <h1>Hello</h1> text/html; charset=utf-8\nPUT a body é | text/plain; charset=utf-8 | mine | nobody | one two\nPOST {\"name\":\"Sam\"} | application/json | nothing | nobody | json\nPATCH hi | none | nothing | nobody | bytes\nDELETE  | none | nothing | nobody | gone\n200 0\n(dictionary where \"name\" is \"Sam\", \"scores\" is [1, 2, 3])\nGET  | none | nothing | nobody | after302 at http://127.0.0.1:${port}/echo?q=after302\nGET  | none | nothing | nobody | after303\nPOST kept | text/plain; charset=utf-8 | nothing | nobody | after307\nGET  | none | nothing | nobody | far\nsqueezed é, squeezed é, squeezed é 37\n404 nothing at /missing\nthe server said 404 Not Found to http://127.0.0.1:${port}/missing\ntoo many redirects, from http://127.0.0.1:${port}/loop\na%20b%26c%3Dd%2F%C3%A9 a b&c=d/é\nq=folio%20lang&n=2\nhello world\nhttp.folio asks http:// and https:// addresses, not ftp://example.com/\n'http:///nohost' has no host\n'http://[::1/x' has a [ with no ]\ncan't connect to 127.0.0.1 port 1: nothing answered there\ndone\n`, `listening on http://127.0.0.1:${port}/
 `, 0]);
+});
+
+// server.folio sends no answer with a line break in a header, which would end it there and start another header,
+// or another answer, perhaps of the client's making, nor a status that isn't a number from 100 to 999: it sends a
+// 500 instead (DESIGN §188)
+test("server.folio answers 500 rather than send a header with a line break in it", { skip }, () => {
+  const ran = libraryRun(`use "server.folio" as web
+set answers to list of (record with status 302, headers (dictionary where "Location" is "/home")),
+    (record with status 302, headers (dictionary where "Location" is "/x\\nSet-Cookie: stolen=1")),
+    (record with status 302, headers (dictionary where "X-Name" + ((list of 13) as bytes as text) is "1")),
+    (record with body "hi", type "text/html\\nX-Evil: 1"),
+    (record with status "200 OK\\nX-Evil: 1", body "hi"),
+    (record with status 99, body "hi")
+for each answer in answers
+    set c to record with keep no
+    web's web_ready(c, answer, "GET")
+    set head to (item 1 of out of c) as text
+    say items 1 to 12 of head " " ("stolen" is in head) " " ("X-Evil" is in head)
+end`);
+  assert.deepEqual([ran.stdout, ran.stderr, ran.status], ["HTTP/1.1 302 no no\n" + "HTTP/1.1 500 no no\n".repeat(5), "", 0]);
 });
 
 // tools/websocket.folio: an echo server in a task of the program's, and the program connecting to it: text, a

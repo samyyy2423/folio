@@ -1496,6 +1496,12 @@ test("add x to r's items, to count of r, to item \"a\" of counts: add to a field
     assert.deepEqual(streams("set r to record with count 1\nadd \"x\" to r's count", { engine }).log, [["mistake", "line 2: can't add text to a number"]], engine);
     assert.deepEqual(streams("set r to record with count 1\nadd 1 to r's nope", { engine }).log, [["mistake", "line 2: this record has no 'nope'"]], engine);
   }
+  // in a file used as a name, whose every name is renamed once, the item read and the item set too (DESIGN §188)
+  const used = { "m.folio": 'set d to dictionary where "a" is 1\nadd 5 to item "a" of d\nto put with name, x\n    if not (name is in d)\n        set item name of d to 0\n    end\n    add x to item name of d\nend\n' };
+  for (const engine of ENGINES) {
+    assert.deepEqual(streams('use "m.folio" as m\nm\'s put("b", 2)\nm\'s put("a", 1)\nsay m\'s d', { engine, files: (n) => used[n] }).log,
+      [["out", '(dictionary where "a" is 7, "b" is 2)']], engine);
+  }
   const folio = folioCompiler(COMPILER);
   for (const program of [source, "add 1 to r's f()", "add 1 to r's", "add 1 to item of xs", "add 1 to x of"]) {
     assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
@@ -1685,7 +1691,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, big.folio, xml.folio, z
       ["charts.test.folio", ["test_axis_numbers", "test_svg", "test_png", "test_mistakes"]],
       ["xml.test.folio", ["test_elements", "test_finding", "test_around_the_element", "test_entities_and_cdata",
         "test_writing", "test_mistakes"]],
-      ["zip.test.folio", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_mistakes"]],
+      ["zip.test.folio", ["test_checks", "test_reading_what_zlib_makes", "test_round_trips", "test_archives", "test_no_more_than_it_should", "test_mistakes"]],
       ["mcp.test.folio", ["test_initialize", "test_a_version_it_doesnt_know_gets_its_newest", "test_notifications_have_no_reply",
         "test_tools_list", "test_tools_call", "test_a_tool_that_gives_a_list_gives_json", "test_a_tools_mistake_is_its_error",
         "test_unknown_tools_and_methods", "test_what_isnt_json", "test_resources", "test_prompts", "test_ping"]],

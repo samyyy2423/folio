@@ -7589,3 +7589,68 @@ given; that's for another time.
 A test runs a program in machine code and on the JavaScript engine and wants the same output: the roots of 0, 1,
 2, 3, 16, 0.1, a third, 2^1000, 10^300, 2^-1074, 2^-600 and a number of 15 digits, each with r * r - x, which a
 root a step out would change; a sum of 100,000 roots; and the mistakes for -1, text and an amount.
+
+## 188. A second security pass, before going public
+
+§152 tried the permissions, packages and broken code. This pass looked at what came since and what that one
+didn't: the repository's history and workflows, which strangers read and run once it's public, Folio's own kernels,
+the cryptography, secure connections, zip files and the web server.
+
+- **The history.** Every blob on every branch looked through for keys and tokens (GitHub's, OpenAI's and
+  Anthropic's, AWS's, Google's, Slack's, npm's, PyPI's, Hugging Face's, private keys, and passwords set in code):
+  only AWS's documented example key in s3.test.folio, keys the tests make up, and a private key of `AAAA` that
+  jwt.test.folio checks is refused. Nothing personal but a folder's name in a comment.
+- **The workflows.** None runs on `pull_request_target` or `workflow_run`, and none puts a pull request's title or
+  branch into a command, so a stranger's pull request runs with a token that can only read and no secrets. The two
+  that every push and pull request runs now say so (`permissions: contents: read`), and the three actions that
+  publish and weren't pinned to a commit (PyPI's, and the Pages upload and deploy) are.
+- **Folio's own kernels could reach any memory.** `use the library "folio"` names loops in the program's own
+  machine code (§118), which need no `--allow-libraries`, as they can't reach past the lists and bytes they're
+  given. Two ways got past that. memory.folio's memory at an address (§160) goes to numbers_memory and
+  numbers_atomic with an address and a size, which they used as they were given: `block_at(address, size)`, or the
+  kernel named in a program's own `use the library "folio"`, read and wrote any of the program's memory, the
+  permission flags' own word among it. And a kernel trusts that what it's told is a list is one: a program that
+  named numbers_reduce with `a long whole number` where arrays.folio says `a list of numbers` had it take that
+  number as where a list is. Either could make a program run with no flags, or with only `--allow-read=data`, do
+  anything the user can.
+- **What they take now.** A kernel can be named only as Folio's own files name it, each input a list of numbers,
+  bytes or a long whole number where they say (`own_kernel_shapes`), or the program isn't made. Memory at an
+  address is refused by the kernel, without touching it, unless the program may use libraries (`allow_all`'s bit
+  for them): memory.folio then does it through the C library, which asks, as it always did for take. And a list
+  or bytes given to a kernel is checked to be one as it's given, as Folio's input checks already did, so a kernel
+  that's given something else can't be reached.
+- **Cryptography.** crypto.folio's keys, salts and nonces come from secrets.folio's random_bytes, the system's own
+  (BCryptGenRandom, getrandom), which fails rather than give anything less. AES-GCM checks the tag, in time that
+  doesn't depend on where it differs, before it decrypts anything. key_from_password takes 200,000 rounds of
+  PBKDF2 unless told otherwise, which OWASP would make 600,000; changing it would change every key made without
+  saying, so the documents say to give `rounds`.
+- **Secure connections.** sockets.folio asks OpenSSL to check the certificate and its name (SSL_VERIFY_PEER,
+  SSL_set1_host, the name sent for SNI), but went on if SSL_set1_host failed, which would have left the name
+  unchecked; it ends the connection now. `read "https://..."` uses WinHTTP or curl with neither told to trust
+  anything: curl reads no .curlrc (`-q`) and speaks only http and https.
+- **Zip files.** Nothing writes a zip file's things to disk, so no name in one can reach out of a folder. But
+  `unzipped` inflated a thing whole before comparing it with the size the zip file's list gives, and DEFLATE's
+  copies let a few kilobytes stand for gigabytes: a .docx given to a program could take all its memory. inflate
+  takes a limit now, `most`, checked at each copy and stored block (a literal is a byte for a code of a bit or more,
+  so it can't grow past eight times what it takes), and `unzipped` gives each thing's own.
+- **The web server.** server.folio serves no folder of its own, so no path in a request reaches a file but by a
+  handler's choice, and requests have limits of size, headers, time and connections. But it wrote an answer's type
+  and headers as it was given them: a handler that put what a client sent into a header, as a redirect's Location,
+  sent the client's line breaks, and so its headers, or another answer. An answer whose type or headers have a new
+  line or a carriage return in them, or whose status isn't a whole number from 100 to 999, is a 500 now, as Node
+  and Python refuse such headers too.
+- **Found on the way: `add` to an item, in a file used as a name.** §179 makes `add x to item k of d` a few
+  statements, the item read and then set, and both were one node. `use "m.folio" as m` renames each name in the
+  file as it walks past it, so the item's holder was renamed twice, `m's m's ...`, which reads as a field of m:
+  `'m' has nothing called ...`. machine.folio is used as a name by folio.folio, so folio.exe stopped as it started
+  once machine.folio had such an `add`. The read and the set each have a node of their own now, in folio.js and in
+  compiler.folio, and a test runs such a file on every engine.
+- **The pages.** The playground escapes everything it highlights; what Folio's page.folio makes runs in a frame
+  with no access to the site (§141); the site's own HTML is its own lessons and documents.
+
+Tests: a program with no flags that names numbers_memory and numbers_atomic with an address gets 1 from each, with
+the address untouched; memory.folio's block_at then says it needs --allow-libraries; text, bytes and a list each
+given where a kernel takes another are refused, saying what they were; four kernels named another way are refused
+when the program is made; an inflate past its limit, and a zip file whose list says a thing is 10 bytes, fail; and
+server.folio answers 500 for a line break in a header's value, a header's name, a type and a status, and for a
+status of 99, and sends a redirect as it is.

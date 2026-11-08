@@ -51,6 +51,40 @@ to test_archives
     expect zip's unzipped(zip's zipped(empty list, empty list)) is empty dictionary
 end
 
+# a few bytes of copies stand for many: with `most`, no more than that, and a zip file's things no bigger than its
+# list says (DESIGN §188)
+to test_no_more_than_it_should
+    set many to 100000 bytes
+    set squeezed to zip's deflate(many)
+    expect length of zip's inflate(squeezed, 100000) is 100000
+    set caught to nothing
+    try
+        zip's inflate(squeezed, 1000)
+    if it fails with why
+        set caught to why
+    end
+    expect caught is "the compressed data stands for more than the 1000 bytes it should"
+    set packed to zip's zipped((list of "big.bin"), (list of many)) as bytes
+    set place to 0
+    for each k from 1 to length of packed - 3
+        if place is 0 and byte k of packed is 80 and byte (k + 1) of packed is 75 and byte (k + 2) of packed is 1 and byte (k + 3) of packed is 2
+            set place to k
+        end
+    end
+    expect place is greater than 0
+    set byte (place + 24) of packed to 10 # its list says 10 bytes
+    set byte (place + 25) of packed to 0
+    set byte (place + 26) of packed to 0
+    set byte (place + 27) of packed to 0
+    set caught to nothing
+    try
+        zip's unzipped(packed)
+    if it fails with why
+        set caught to why
+    end
+    expect caught is "the compressed data stands for more than the 10 bytes it should"
+end
+
 # what the call, by its number, fails with
 to mistake_of with which
     set caught to nothing
