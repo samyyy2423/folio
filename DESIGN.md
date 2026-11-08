@@ -7496,8 +7496,9 @@ What helped:
 
 A 200 by 256 by 256 matmul takes 0.24 ms in floats, not 0.40; 1,024 by 1,024 by 1,024, 14 ms, not 23 (153
 GFLOPS, not 96). A batch of the digit reader takes 1.5 ms, not 1.8, and 1.25 ms in floats; digits-learn.folio on
-the processor takes 0.60 s, and 0.52 s with floats, beside PyTorch's 0.50, still 99.4% right. Adam's step, two
-passes over every parameter to change nothing if anything goes wrong, is the next thing to make faster.
+the processor takes 0.60 s, and 0.52 s with floats, beside PyTorch's 0.50, still 99.4% right. Adam's step goes
+over every parameter twice, to change nothing if anything goes wrong; a first pass that looked without the square
+root and the division was tried and made no difference, as the step waits on memory, not on those.
 
 Tests check matmul_floats against matmul to 7 digits for shapes on and off the blocks, turned and not, in machine
 code and on every engine, where it's matmul; numbers_binary's every operation 4 at a time against Folio's own,
