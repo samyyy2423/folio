@@ -7327,3 +7327,78 @@ programs that ran mean. A `{[` in text is still a `{` and a `[`, not a value, as
 A test runs lists in brackets on every engine (empty, inside one another, as one input of two, over lines, built
 `for each`, in `for each`, inside `list of`), has the compiler written in Folio write the JavaScript the JIT
 writes for them and for their mistakes, and tidies them; a machine code case does the same.
+
+## 178. What kind a value is
+
+Folio had no way to ask what kind a value is. A program that read JSON, where a field may be a number, text or a
+list, had to try something only one kind allows and catch the mistake: the packages of 2026-11-07 did that in a
+dozen places, and the language's own `shown` does it with a function whose input says `as a function`.
+
+`x is a number` asks it now, and so do `x is a list`, `a record`, `a dictionary`, `a function`, `bytes`,
+`some text`, `either yes or no`, and `x is a dog`, a record the kind dog made; `is not` turns each round. Each
+is the same test an input's kind is (`with x as a number`), so a number is a number and not an amount, and on
+every engine it's one: the VM's, the JIT's and WebAssembly's through vm.js's `fitsKind`, machine code through the
+routine that checks inputs, `rt_fits_kind`. `a dog` is a function of the language's own, `made_by`, which looks
+at the record's `kind` field; a puppy made `from dog(...)` is a puppy, not a dog.
+
+`x is text` and `x is yes or no` would read best, but they meant something already: `is text` compares x with a
+variable called text, which many functions have as an input, and `x is yes or no` is `(x is yes) or no`. Folio 1
+keeps what lines that ran mean (VERSIONING.md), so text is `some text` and yes or no is `either yes or no`;
+`x is a text` is a mistake that says to write `some text`.
+
+Every phrase was a mistake before, with one care. A say's values stand side by side, so `say x is a dog` said
+`x is a`, then `dog`, where the program had variables called a and dog. In a say, outside brackets, a phrase
+that starts with a name (`a dog`, `a function`, `some text`, `either yes or no`) keeps that meaning in a file
+that may give the name a value: one where the word is written anywhere but in a phrase of the language, or
+that uses another file without `as`. Elsewhere, and in brackets, it's always what kind the value is. `a number`,
+`a list`, `a record` and `a dictionary` need no care: `say x is a number of "5"` and the like, where the next
+word makes them a value, keep their meaning, and anywhere else they were mistakes.
+
+A test runs every kind against every kind of value on every engine, the say that keeps its meaning, and the
+compiler written in Folio writing the same JavaScript; a machine code case does the same.
+
+## 179. add to a field or an item
+
+`add x to r's items` was a mistake: add took a variable, and a field had to be read into one, added to and set
+back, three lines for one thought. It was the second most common slip writing the packages, after the list in
+brackets. Now `add` takes what `set` takes: a variable, a field (`r's items`, `count of r`, `self's total`) or an
+item (`item "a" of counts`, `byte 3 of block`).
+
+Both readers write it as what a program would write: what's added, then what has the field or item and its
+item's number, each worked out once, then what's there read into a variable of the program's own, added to as
+add adds to a variable, and set back. So a list grows where it is, which every other variable holding it sees,
+and a number or text is changed in its record. No engine changed. A field that isn't there is the mistake
+reading it is, and adding text to a number the mistake add makes of it.
+
+## 180. Text on the lines after `"""`
+
+Text was written on one line, with `\n` for each new line, which made a page of HTML, a prompt for a model or a
+block of JSON hard to read and harder to change. `"""` at the end of a line now starts text written on the lines
+after it, up to a line with only `"""`:
+
+```text
+set prompt to """
+    You answer from these notes only.
+    Say "I don't know" when they don't say.
+    """
+```
+
+Each line is the text as it's written, less the closing `"""`'s indent, so the text can be indented with the
+code; a line of only spaces is an empty line, and a line that starts left of the closing `"""` is a mistake.
+Nothing in it is a value or follows a `\`: `{`, `\` and `"` are themselves, as JSON and regular expressions want.
+For a value in it, join it on or use `replace`.
+
+`"""` was the empty text and then a text that isn't closed, at a line's end a mistake, so no program that ran
+means anything else; with anything after it on its line (`"""a"""`, `""""""`) it's the texts it was. Both
+tokenizers read it; tidy, in folio.js and folio.folio, moves the text's lines with its closing `"""` to 4 in from
+the line that opens it, so what the text holds doesn't change. A text with no closing line is a mistake the shell
+waits on for more lines. VS Code's grammar colours it; tree-sitter's still reads it as the texts it was.
+
+## 181. Folio's own words as field names
+
+`length`, `number`, `read`, `keys`, `list` and the other words of the language couldn't be names, so a record from
+JSON with a field called `length` or `number` couldn't be read, and a package couldn't call a field what it is.
+After `'s`, in `record with`, and after `in order by`, no phrase of the language can start, so any word can be a
+field's name there now: `r's length`, `record with read yes, number 3`, `set r's list to xs`, `add 1 to r's
+length`, `rows in order by number`. Each was a mistake before. Variables, inputs and functions keep the rule,
+since there a word starts its phrase, and `length of r` is still the length.

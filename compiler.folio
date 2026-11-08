@@ -168,6 +168,110 @@ end
 # what a mistake in a value inside text adds, for text written before there were values in it
 set brace_hint to "to write a '{' itself, put '\\' before it"
 
+# a carriage return, made from its code: in Folio 1's text, \r is an r
+set block_cr to (list of 13) as bytes as text
+
+# whether only spaces and tabs come after `"""`, from character k to the end of its line (DESIGN §180)
+to block_opens with chars, k
+    set i to k
+    repeat while item i of chars is " " or item i of chars is "\t" or item i of chars is block_cr
+        add 1 to i
+    end
+    return item i of chars is "\n"
+end
+
+# the indent before `"""` on a line with only that, or nothing for any other line
+to block_closing with text
+    set ci to 1
+    set cn to length of text
+    repeat while ci is at most cn and (item ci of text is " " or item ci of text is "\t")
+        add 1 to ci
+    end
+    if ci + 2 is greater than cn or items ci to (ci + 2) of text is not "\"\"\""
+        return nothing
+    end
+    set indent to ""
+    if ci is greater than 1
+        set indent to items 1 to (ci - 1) of text
+    end
+    set ce to ci + 3
+    repeat while ce is at most cn and (item ce of text is " " or item ce of text is "\t")
+        add 1 to ce
+    end
+    if ce is at most cn
+        return nothing
+    end
+    return indent
+end
+
+# whether a line holds only spaces and tabs
+to block_blank with text
+    for each c in text
+        if c is not " " and c is not "\t"
+            return no
+        end
+    end
+    return yes
+end
+
+# Text written on the lines after a `"""` that ends its line, at character k, up to a line with only `"""`, as
+# folio.js's textBlock reads it: its value, and the line, column and character just past its closing `"""`
+to text_block with chars, k, line, start, file
+    set i to k + 3
+    repeat while item i of chars is not "\n"
+        add 1 to i
+    end
+    set at_line to line
+    set written to empty list
+    set written_on to empty list
+    repeat while item i of chars is "\n"
+        add 1 to i
+        add 1 to at_line
+        set from to i
+        set text to ""
+        repeat while item i of chars is not "\n" and item i of chars is not ""
+            add item i of chars to text
+            add 1 to i
+        end
+        if length of text is greater than 0 and item (length of text) of text is block_cr
+            if length of text is 1
+                set text to ""
+            else
+                set text to items 1 to (length of text - 1) of text
+            end
+        end
+        set indent to block_closing(text)
+        if indent is not nothing
+            set value to ""
+            for each wk from 1 to length of written
+                set w to item wk of written
+                if wk is greater than 1
+                    add "\n" to value
+                end
+                if not block_blank(w)
+                    if length of w is less than length of indent or (length of indent is greater than 0 and items 1 to (length of indent) of w is not indent)
+                        fail with problem(place(item wk of written_on, 1, file), "this line of the text starts left of the \"\"\" that ends it")
+                    end
+                    set wc to 0
+                    for each c in w
+                        add 1 to wc
+                        if not fits_text(c)
+                            fail with problem(place(item wk of written_on, wc, file), "text can't hold a control character, but for a tab")
+                        end
+                    end
+                    if length of w is greater than length of indent
+                        add items (length of indent + 1) to (length of w) of w to value
+                    end
+                end
+            end
+            return record with value value, line at_line, col length of indent + 4, k from + length of indent + 3
+        end
+        add text to written
+        add at_line to written_on
+    end
+    fail with problem((record with type "eof", line line, col start, file file), "this text has no line with only \"\"\" to end it") # the shell asks for more lines
+end
+
 # `file` names a file the program uses, for errors in it ("" for the program's own)
 to tokenize with source, file
     return tokens_from(source, file, nothing)
@@ -249,6 +353,13 @@ to tokens_from with source, file, begins
             end
             add record with type "word", value text, line line, col start, nl nl, file file, raw as_written to tokens
             set col to start + length of text
+            set nl to no
+        else if c is "\"" and begins is nothing and item (k + 1) of chars is "\"" and item (k + 2) of chars is "\"" and block_opens(chars, k + 3)
+            set block to text_block(chars, k, line, start, file) # `"""`, and the lines up to one with only `"""` (DESIGN §180)
+            add record with type "string", value value of block, line line, col start, nl nl, file file, parts nothing, slips (empty list), block yes to tokens
+            set line to line of block
+            set col to col of block
+            set k to k of block
             set nl to no
         else if c is "\""
             set ends to text_end(chars, k)
@@ -456,16 +567,21 @@ set reserved to list of "set", "add", "say", "if", "else", "end", "repeat", "whi
 # `draw picture` followed by any other word, or by text, a number or a bracket with a space before it (one
 # with none calls `picture`), draws a picture from a file
 set carry_on to list of "at", "of", "bit", "is", "and", "or", "in", "as", "bytes"
+# after `is a`, the kinds' words, each with its kind's number (as KINDS in vm.js numbers them) and the word after
+# it that makes it a value instead, as in `say x is a list of 1, 2` (see kind_after)
+set kind_words to list of "number", "list", "record", "dictionary", "function"
+set kind_word_kinds to list of 0, 3, 4, 5, 7
+set kind_words_after to list of "of", "of", "with", "where", "with"
 # The language's own functions, in Folio, put in a program that needs them as a file used as "the language" is
 # (DESIGN §97): folio.js's LANGUAGE, which a test holds this to
-set language_text to "# What some of Folio's statements are written with (DESIGN §97), put in a program that needs them, its names\n# kept apart as a file used as \"the language\" is\n\n# n as text, with exactly so many decimals, the last rounded a half away from 0, as n is shown\nto with_decimals with n as a number, places as a number\n    if not (places is divisible by 1) or places is less than 0 or places is greater than 100\n        fail with \"'with ... decimals' needs a whole number of decimals from 0 to 100, not \" + places\n    end\n    set written to \"\" + n\n    if written is \"Infinity\" or written is \"-Infinity\" or written is \"NaN\"\n        return written\n    end\n    set negative to n is less than 0\n    if negative\n        set written to \"\" + (0 - n)\n    end\n    set power to 0\n    set e_at to position of \"e\" in written\n    if e_at is greater than 0\n        set power_text to items (e_at + 1) to (length of written) of written\n        if item 1 of power_text is \"+\"\n            set power_text to items 2 to (length of power_text) of power_text\n        end\n        set power to number of power_text\n        set written to items 1 to (e_at - 1) of written\n    end\n    set dot to position of \".\" in written\n    set digits to written\n    set point to length of written\n    if dot is greater than 0\n        set digits to (items 1 to (dot - 1) of written) + (items (dot + 1) to (length of written) of written)\n        set point to dot - 1\n    end\n    set point to point + power\n    repeat while point is less than 1\n        set digits to \"0\" + digits\n        set point to point + 1\n    end\n    repeat while length of digits is less than point + places + 1\n        set digits to digits + \"0\"\n    end\n    set kept to items 1 to (point + places) of digits\n    if position of (item (point + places + 1) of digits) in \"56789\" is greater than 0\n        set kept to one_more(kept)\n        if length of kept is greater than point + places\n            set point to point + 1\n        end\n    end\n    set made to items 1 to point of kept\n    if places is greater than 0\n        set made to made + \".\" + (items (point + 1) to (point + places) of kept)\n    end\n    if negative and not_all_zero(made)\n        return \"-\" + made\n    end\n    return made\nend\n\n# whole number digits, one more\nto one_more with kept\n    set made to \"\"\n    set carrying to yes\n    set k to length of kept\n    repeat while k is at least 1\n        set d to item k of kept\n        if carrying and d is \"9\"\n            set made to \"0\" + made\n        else if carrying\n            set made to (item ((position of d in \"0123456789\") + 1) of \"0123456789\") + made\n            set carrying to no\n        else\n            set made to d + made\n        end\n        set k to k - 1\n    end\n    if carrying\n        return \"1\" + made\n    end\n    return made\nend\n\nto not_all_zero with made\n    for each c in made\n        if c is not \"0\" and c is not \".\"\n            return yes\n        end\n    end\n    return no\nend\n\n# a value as its kind shows it: the function in its shown field, if it has one, given it; or the value\nto shown with value\n    set shown_by to nothing\n    try\n        set shown_by to shown of value\n        a_function(shown_by)\n    if it fails\n        return value\n    end\n    return shown_by(value)\nend\n\nto a_function with f as a function\nend\n"
+set language_text to "# What some of Folio's statements are written with (DESIGN §97), put in a program that needs them, its names\n# kept apart as a file used as \"the language\" is\n\n# n as text, with exactly so many decimals, the last rounded a half away from 0, as n is shown\nto with_decimals with n as a number, places as a number\n    if not (places is divisible by 1) or places is less than 0 or places is greater than 100\n        fail with \"'with ... decimals' needs a whole number of decimals from 0 to 100, not \" + places\n    end\n    set written to \"\" + n\n    if written is \"Infinity\" or written is \"-Infinity\" or written is \"NaN\"\n        return written\n    end\n    set negative to n is less than 0\n    if negative\n        set written to \"\" + (0 - n)\n    end\n    set power to 0\n    set e_at to position of \"e\" in written\n    if e_at is greater than 0\n        set power_text to items (e_at + 1) to (length of written) of written\n        if item 1 of power_text is \"+\"\n            set power_text to items 2 to (length of power_text) of power_text\n        end\n        set power to number of power_text\n        set written to items 1 to (e_at - 1) of written\n    end\n    set dot to position of \".\" in written\n    set digits to written\n    set point to length of written\n    if dot is greater than 0\n        set digits to (items 1 to (dot - 1) of written) + (items (dot + 1) to (length of written) of written)\n        set point to dot - 1\n    end\n    set point to point + power\n    repeat while point is less than 1\n        set digits to \"0\" + digits\n        set point to point + 1\n    end\n    repeat while length of digits is less than point + places + 1\n        set digits to digits + \"0\"\n    end\n    set kept to items 1 to (point + places) of digits\n    if position of (item (point + places + 1) of digits) in \"56789\" is greater than 0\n        set kept to one_more(kept)\n        if length of kept is greater than point + places\n            set point to point + 1\n        end\n    end\n    set made to items 1 to point of kept\n    if places is greater than 0\n        set made to made + \".\" + (items (point + 1) to (point + places) of kept)\n    end\n    if negative and not_all_zero(made)\n        return \"-\" + made\n    end\n    return made\nend\n\n# whole number digits, one more\nto one_more with kept\n    set made to \"\"\n    set carrying to yes\n    set k to length of kept\n    repeat while k is at least 1\n        set d to item k of kept\n        if carrying and d is \"9\"\n            set made to \"0\" + made\n        else if carrying\n            set made to (item ((position of d in \"0123456789\") + 1) of \"0123456789\") + made\n            set carrying to no\n        else\n            set made to d + made\n        end\n        set k to k - 1\n    end\n    if carrying\n        return \"1\" + made\n    end\n    return made\nend\n\nto not_all_zero with made\n    for each c in made\n        if c is not \"0\" and c is not \".\"\n            return yes\n        end\n    end\n    return no\nend\n\n# a value as its kind shows it: the function in its shown field, if it has one, given it; or the value\nto shown with value\n    set shown_by to nothing\n    try\n        set shown_by to shown of value\n        a_function(shown_by)\n    if it fails\n        return value\n    end\n    return shown_by(value)\nend\n\nto a_function with f as a function\nend\n\n# whether a value is a record the kind called named made, for x is a dog (DESIGN §178)\nto made_by with value, named\n    if not (value is a record)\n        return no\n    end\n    set made to nothing\n    try\n        set made to value's kind\n    if it fails\n        return no\n    end\n    return made is named\nend\n"
 # in the order of BUILTINS in vm.js
 set builtin_names to list of "uppercase", "lowercase", "split", "join", "number", "position", "keys", "bit and", "bit or", "bit xor",
     "shift left", "shift right", "bytes", "as bytes", "as text", "as hex", "as binary", "unit", "in", "table", "column", "total",
     "average", "largest", "smallest", "run program", "run program keeping", "order", "order by", "reverse order", "reverse order by",
     "save", "load", "as json", "json from", "send", "send with headers", "read with headers", "read bytes with headers", "ticked", "choice in list", "text in box", "slider value", "chosen file",
     "library call", "power", "items", "rounded down", "rounded up", "rounded", "remainder", "start", "wait for", "has ended",
-    "start worker"
+    "start worker", "is kind"
 # whether a file `use` names could be outside the program's folder: from the top of a disk ("/x", "C:x"), or
 # going up out of a folder ("../x")
 to outside_folder with wanted
@@ -578,6 +694,8 @@ to parse with tokens, reading
     set loop_depth to 0 # loops around this spot, in this function: `stop` needs one
     set indexing to no # inside `item ... of`, where a name followed by `of` is the item number, not a field
     set converting to yes # `trip in miles`; not in `position of ... in`, whose `in` is its own
+    set saying to no # in a say's values, outside brackets, where values stand side by side (see kind_after)
+    set may_name to nothing # the words this file may give values to, worked out when a say needs them
     set nesting to 0 # blocks around the statement being read, for `lay`
     set hoisted to empty list # functions the statement being read makes for its values (see unnamed)
     set unnamed_on_line to empty dictionary # how many each line has made, so each has a name of its own
@@ -959,6 +1077,16 @@ to parse with tokens, reading
         end
         if contains(reserved, value of t)
             fail with problem(t, "'" + value of t + "' is a Folio word, so it can't be used as " + what)
+        end
+        set pos to pos + 1
+        return value of t
+    end
+
+    # a field's name, after `'s`, in `record with` or after `in order by`: any word, Folio's own too (DESIGN §181)
+    to take_field_name with what
+        set t to peek()
+        if type of t is not "word"
+            expected(what)
         end
         set pos to pos + 1
         return value of t
@@ -1399,7 +1527,7 @@ to parse with tokens, reading
         repeat while check("'s")
             set pos to pos + 1
             set own_at to peek()
-            set own_named to take_name("a function's or a field's name")
+            set own_named to take_field_name("a function's or a field's name")
             if tight(match("("))
                 set own_given to list of own_made
                 for each own_one in arg_list()
@@ -1521,17 +1649,34 @@ to parse with tokens, reading
             expect_word("to")
             return record with kind "set", name variable, value expression(), at t
         end
-        if word("add")
+        if word("add") # `add 1 to count`, and to a field or an item: `add x to r's items` (DESIGN §179)
             set value to expression()
             expect_word("to")
-            return record with kind "add", value value, name take_name("a variable name"), at t
+            if is_word("item") or is_word("byte")
+                return added_to(value, primary(), t)
+            end
+            set add_named to peek()
+            set variable to take_name("a variable name")
+            if check("'s") and not contains(aliases, variable)
+                set add_field to possessive(record with kind "name", name variable, at add_named)
+                if kind of add_field is not "field"
+                    fail with problem(at of add_field, "a call can't be added to: add to a field, as in 'add 1 to " + variable + "'s count'")
+                end
+                return added_to(value, add_field, t)
+            end
+            if word("of")
+                return added_to(value, (record with kind "field", name variable, subject unary(), at add_named), t)
+            end
+            return record with kind "add", value value, name variable, at t
         end
         if word("say") # `say "oops" to the error output`
+            set saying to yes
             set parts to empty list
             add expression() to parts
             repeat while not nl of peek() and not is_word("to")
                 add expression() to parts
             end
+            set saying to no
             set said to record with kind "say", parts parts, errors no, at t
             set said_shows to shows of reading # a kind's `shown` shows its parts, if one has it (see language_text)
             add said to said_shows
@@ -2300,6 +2445,13 @@ to parse with tokens, reading
         if word("not")
             set negated to yes
         end
+        set kind_check to kind_after(left, t)
+        if kind_check is not nothing
+            if negated
+                return record with kind "not", operand kind_check, at t
+            end
+            return kind_check
+        end
         set phrase to ""
         if check("word") and type of item (pos + 1) of tokens is "word"
             set phrase to value of peek() + " " + value of item (pos + 1) of tokens
@@ -2312,6 +2464,111 @@ to parse with tokens, reading
             set op to "in"
         end
         return record with kind "compare", op op, negate negated, left left, right bitwise(), at t
+    end
+
+    # `x is a number`, `a list`, `a record`, `a dictionary`, `a function`, `bytes`, `some text`, `either yes or
+    # no`, and `a dog`, a record the kind dog made, after `is` or `is not` (DESIGN §178); or nothing. As folio.js's
+    # kindAfter, which says why a say's values keep their meaning in a file that may give the name a value.
+    to kind_after with left, t
+        set first to kind_word(0)
+        set second to kind_word(1)
+        set after to kind_word(2)
+        set kind_found to -1
+        set kind_named to ""
+        set kind_length to 0
+        if first is "bytes"
+            set kind_found to 6
+            set kind_length to 1
+        else if (first is "a" or first is "an") and second is not ""
+            set fixed_at to slot_of(kind_words, second) # its kind, and the word after it that made it a value
+            if fixed_at is greater than 0
+                if after is not item fixed_at of kind_words_after
+                    set kind_found to item fixed_at of kind_word_kinds
+                    set kind_length to 2
+                end
+            else if not contains(reserved, second)
+                set kind_found to 4
+                set kind_named to second
+                set kind_length to 2
+            end
+        else if first is "some" and second is "text"
+            set kind_found to 1
+            set kind_length to 2
+        else if first is "either" and second is "yes" and after is "or" and kind_word(3) is "no"
+            set kind_found to 2
+            set kind_length to 4
+        end
+        if kind_found is less than 0
+            return nothing
+        end
+        if saying and (kind_named is not "" or second is "function" or first is "some" or first is "either")
+            if may_be_named(first)
+                return nothing
+            end
+        end
+        if kind_named is "text"
+            fail with problem(peek(), "for whether a value is text, write 'is some text'")
+        end
+        set pos to pos + kind_length
+        if kind_named is ""
+            return record with kind "builtin", name "is kind", args (list of left, record with kind "value", type "number", value "" + kind_found, at t), at t
+        end
+        set kind_wants to wants of reading
+        add "kinds" to kind_wants
+        return made_call("the language's made_by", (list of left, record with kind "value", type "string", value kind_named, at t), t)
+    end
+
+    # the word token pos + k is, on the line it's read on, or ""
+    to kind_word with k
+        if pos + k is greater than length of tokens
+            return ""
+        end
+        set ahead to item (pos + k) of tokens
+        if type of ahead is "word" and not nl of ahead
+            return value of ahead
+        end
+        return ""
+    end
+
+    # whether this file may give the word a value (folio.js's mayBeNamed)
+    to may_be_named with w
+        if may_name is nothing
+            set may_name to empty dictionary
+            set n_tokens to length of tokens
+            for each i from 1 to n_tokens
+                set tk to item i of tokens
+                if type of tk is "word"
+                    if value of tk is "use" and i + 2 is at most n_tokens
+                        if type of item (i + 1) of tokens is "string" and nl of item (i + 2) of tokens
+                            set item "*" of may_name to yes
+                        end
+                    end
+                    set next_tk to item (i + 1) of tokens
+                    set goes_on to not nl of next_tk and type of next_tk is not "eof"
+                    set in_phrase to no
+                    if not nl of tk and i is greater than 1
+                        set before_tk to item (i - 1) of tokens
+                        if type of before_tk is "word"
+                            set bw to value of before_tk
+                            if bw is "is" or bw is "gives" or bw is "play" or bw is "choose" or bw is "when"
+                                set in_phrase to yes
+                            else if bw is "as" and goes_on
+                                set in_phrase to yes
+                            else if bw is "not" and i is greater than 2 and word_at(i - 2, "is")
+                                set in_phrase to yes
+                            end
+                        end
+                    end
+                    if value of tk is "either" and goes_on and word_at(i + 1, "way")
+                        set in_phrase to yes
+                    end
+                    if not in_phrase
+                        set item (value of tk) of may_name to yes
+                    end
+                end
+            end
+        end
+        return w is in may_name or "*" is in may_name
     end
 
     to bitwise
@@ -2407,7 +2664,7 @@ to parse with tokens, reading
                 set pos to pos + 1
                 set field_token to peek()
                 set order_args to list of left
-                add (record with kind "value", type "string", value take_name("a field name"), at field_token) to order_args
+                add (record with kind "value", type "string", value take_field_name("a field name"), at field_token) to order_args
                 return record with kind "builtin", name how + " by", args order_args, at in_token
             end
             set order_args to list of left
@@ -2493,7 +2750,9 @@ to parse with tokens, reading
         end
         if match("[") # `[1, 2, 3]`: a list, as `list of 1, 2, 3` is, ending at its `]` (DESIGN §177)
             set outside to indexing
+            set was_saying to saying
             set indexing to no
+            set saying to no
             set items to empty list
             set fns_before to length of hoisted
             set made to nothing
@@ -2521,6 +2780,7 @@ to parse with tokens, reading
                 expected("']'")
             end
             set indexing to outside
+            set saying to was_saying
             if made is not nothing
                 return made
             end
@@ -2553,10 +2813,10 @@ to parse with tokens, reading
             expect_word("with")
             set fields to empty list
             set values to empty list
-            add take_name("a field name") to fields
+            add take_field_name("a field name") to fields
             add expression() to values
             repeat while match(",")
-                add take_name("a field name") to fields
+                add take_field_name("a field name") to fields
                 add expression() to values
             end
             return record with kind "record", fields fields, values values, at t
@@ -2797,11 +3057,14 @@ to parse with tokens, reading
         if match("(")
             set outside to indexing
             set was_converting to converting
+            set was_saying to saying
             set indexing to no
             set converting to yes
+            set saying to no
             set inner to expression()
             set indexing to outside
             set converting to was_converting
+            set saying to was_saying
             if not match(")")
                 expected("')'")
             end
@@ -2908,7 +3171,9 @@ to parse with tokens, reading
 
     to arg_list
         set outside to indexing
+        set was_saying to saying
         set indexing to no
+        set saying to no
         set args to empty list
         set going to not check(")")
         repeat while going
@@ -2919,6 +3184,7 @@ to parse with tokens, reading
             expected("')'")
         end
         set indexing to outside
+        set saying to was_saying
         return args
     end
 
@@ -2956,6 +3222,30 @@ to parse with tokens, reading
             return hn_named + " (" + hn_n + ")"
         end
         return hn_named
+    end
+
+    # `add x to r's items`, `add 1 to count of r`, `add 1 to item "a" of counts` (DESIGN §179): folio.js's addedTo
+    to added_to with ad_value, ad_target, t
+        set ad_adding to hidden_name("what's added", t)
+        set ad_holder to hidden_name("what it's added to", t)
+        set ad_was to hidden_name("what was there", t)
+        set ad_made to list of (record with kind "set", name ad_adding, value ad_value, at t)
+        add (record with kind "set", name ad_holder, value subject of ad_target, at t) to ad_made
+        set ad_added to record with kind "add", value (record with kind "name", name ad_adding, at t), name ad_was, at t
+        if kind of ad_target is "field"
+            set ad_read to record with kind "field", name name of ad_target, subject (record with kind "name", name ad_holder, at t), at at of ad_target
+            add (record with kind "set", name ad_was, value ad_read, at t) to ad_made
+            add ad_added to ad_made
+            add (record with kind "setField", name name of ad_target, target (record with kind "name", name ad_holder, at t), value (record with kind "name", name ad_was, at t), at t) to ad_made
+        else
+            set ad_place to hidden_name("which item", t)
+            set ad_item to record with kind "item", index (record with kind "name", name ad_place, at t), subject (record with kind "name", name ad_holder, at t), at at of ad_target
+            add (record with kind "set", name ad_place, value index of ad_target, at t) to ad_made
+            add (record with kind "set", name ad_was, value ad_item, at t) to ad_made
+            add ad_added to ad_made
+            add (record with kind "setItem", target ad_item, value (record with kind "name", name ad_was, at t), at t) to ad_made
+        end
+        return record with kind "several", body ad_made, at t
     end
 
     # `set a, b to pair`: what's after `to` kept in a variable of its own, then each name its item, once there

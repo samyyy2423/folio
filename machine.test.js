@@ -1860,7 +1860,9 @@ test("folio.exe tidies code to the same bytes format() does, and --check only sa
   const wide = 'say  "é😀"   # a comment with 😀 in it\nsay   item  1  of   "héllo"\n'; // columns counted as JavaScript counts them
   // values in text, with text in them, which a piece of text ends after
   const values = 'set   words to list of "a","b"\nsay  "{join words with ", "}!"\nto f with x\nreturn x+"!"\nend\nsay "{f("{x} {f("{(1+2)}")}")}"+"x"\n';
-  const sources = [messy, wide, values, ...brokenPrograms(7, 150)];
+  // text on the lines after a """, each line moved as its closing """ moves (DESIGN §180)
+  const blocks = 'to page with title\n  return """\n      <h1>\n        hi {title}\n\n      </h1>\n      """\nend\nset   x to """\r\n\t a\r\n\t """\r\nsay x\n';
+  const sources = [messy, wide, values, blocks, ...brokenPrograms(7, 150)];
   const names = [];
   const wanted = [];
   sources.forEach((source, i) => {

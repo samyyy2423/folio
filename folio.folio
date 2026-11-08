@@ -1052,6 +1052,7 @@ to cli_pieces_of with cli_line
     set cli_pieces to empty list
     set cli_note to nothing
     set cli_note_col to 0
+    set cli_opens to no
     set cli_i to 1
     set cli_col to 1
     repeat while item cli_i of cli_chars is not ""
@@ -1101,6 +1102,11 @@ to cli_pieces_of with cli_line
                     add item cli_i of cli_chars to cli_text
                     add 1 to cli_i
                 end
+            else if cli_c is "\"" and cli_opens_block(cli_chars, cli_i) # text on the lines after (DESIGN §180)
+                set cli_what to "string"
+                set cli_text to "\"\"\""
+                set cli_opens to yes
+                set cli_i to length of cli_chars # the line ends here
             else if cli_c is "\""
                 set cli_what to "string"
                 set cli_end to cli_text_end(cli_chars, cli_i)
@@ -1120,7 +1126,61 @@ to cli_pieces_of with cli_line
             add record with what cli_what, text cli_text, col cli_start, over cli_col to cli_pieces
         end
     end
-    return record with pieces cli_pieces, note cli_note, col cli_note_col
+    return record with pieces cli_pieces, note cli_note, col cli_note_col, opens cli_opens
+end
+
+# whether a `"""` starts at character cli_at and only spaces come after it on its line (DESIGN §180)
+to cli_opens_block with cli_chars, cli_at
+    if item (cli_at + 1) of cli_chars is not "\"" or item (cli_at + 2) of cli_chars is not "\""
+        return no
+    end
+    set cli_k to cli_at + 3
+    repeat while item cli_k of cli_chars is not ""
+        set cli_c to item cli_k of cli_chars
+        if cli_c is not " " and cli_c is not "\t" and cli_c is not cli_cr
+            return no
+        end
+        add 1 to cli_k
+    end
+    return yes
+end
+
+# a line without the carriage return a file written on Windows ends it with
+to cli_without_cr with cli_line
+    if length of cli_line is greater than 0 and item (length of cli_line) of cli_line is cli_cr
+        if length of cli_line is 1
+            return ""
+        end
+        return items 1 to (length of cli_line - 1) of cli_line
+    end
+    return cli_line
+end
+
+# how many spaces and tabs a line starts with
+to cli_indent_of with cli_line
+    set cli_n to 0
+    for each cli_c in cli_line
+        if cli_c is not " " and cli_c is not "\t"
+            return cli_n
+        end
+        add 1 to cli_n
+    end
+    return cli_n
+end
+
+# whether a line holds only `"""`, with spaces around it: the end of text written after a `"""`
+to cli_closes_block with cli_line
+    set cli_rest to cli_without_cr(cli_line)
+    set cli_n to cli_indent_of(cli_rest)
+    if length of cli_rest is less than cli_n + 3 or items (cli_n + 1) to (cli_n + 3) of cli_rest is not "\"\"\""
+        return no
+    end
+    for each cli_k from cli_n + 4 to length of cli_rest
+        if item cli_k of cli_rest is not " " and item cli_k of cli_rest is not "\t"
+            return no
+        end
+    end
+    return yes
 end
 
 # whether a piece is one the parser marked as written with no space after it
@@ -1190,42 +1250,62 @@ to cli_format with cli_source
     set cli_lines to empty list
     set cli_indent to 0 # the indent of the statement being written, for the lines that carry it on
     set cli_waiting to empty list # lines with only a comment, which take the indent of the code after them
+    set cli_all to split cli_source by "\n"
+    set cli_past to 0 # the last line of the text after a `"""`, written with the line that opens it (DESIGN §180)
     set cli_at to 0
-    for each cli_line in split cli_source by "\n"
+    for each cli_line in cli_all
         add 1 to cli_at
-        set cli_got to cli_pieces_of(cli_line)
-        set cli_pieces to pieces of cli_got
-        if length of cli_pieces is 0
-            if note of cli_got is not nothing
-                add note of cli_got to cli_lines
-                add length of cli_lines to cli_waiting
-            else if length of cli_lines is greater than 0 and item (length of cli_lines) of cli_lines is not ""
-                add "" to cli_lines
-            end
-        else
-            set cli_key to cli_at + ":" + col of item 1 of cli_pieces
-            set cli_here to cli_indent + 4
-            if cli_key is in cli_layout
-                set cli_here to (item cli_key of cli_layout) * 4
-                set cli_indent to cli_here
-            end
-            set cli_under to cli_here # a comment just before an end, else or if it fails goes inside the block
-            if cli_closes(cli_pieces)
-                set cli_under to cli_here + 4
-            end
-            for each cli_which in cli_waiting
-                set item cli_which of cli_lines to cli_spaces(cli_under) + item cli_which of cli_lines
-            end
-            set cli_waiting to empty list
-            set cli_text to cli_spaces(cli_here) + cli_joined(cli_pieces, cli_at, cli_tight)
-            if note of cli_got is not nothing
-                set cli_gap to (col of cli_got) - (over of item (length of cli_pieces) of cli_pieces)
-                if cli_gap is less than 1
-                    set cli_gap to 1
+        if cli_at is greater than cli_past
+            set cli_got to cli_pieces_of(cli_line)
+            set cli_pieces to pieces of cli_got
+            if length of cli_pieces is 0
+                if note of cli_got is not nothing
+                    add note of cli_got to cli_lines
+                    add length of cli_lines to cli_waiting
+                else if length of cli_lines is greater than 0 and item (length of cli_lines) of cli_lines is not ""
+                    add "" to cli_lines
                 end
-                set cli_text to cli_text + cli_spaces(cli_gap) + note of cli_got
+            else
+                set cli_key to cli_at + ":" + col of item 1 of cli_pieces
+                set cli_here to cli_indent + 4
+                if cli_key is in cli_layout
+                    set cli_here to (item cli_key of cli_layout) * 4
+                    set cli_indent to cli_here
+                end
+                set cli_under to cli_here # a comment just before an end, else or if it fails goes inside the block
+                if cli_closes(cli_pieces)
+                    set cli_under to cli_here + 4
+                end
+                for each cli_which in cli_waiting
+                    set item cli_which of cli_lines to cli_spaces(cli_under) + item cli_which of cli_lines
+                end
+                set cli_waiting to empty list
+                set cli_text to cli_spaces(cli_here) + cli_joined(cli_pieces, cli_at, cli_tight)
+                if note of cli_got is not nothing
+                    set cli_gap to (col of cli_got) - (over of item (length of cli_pieces) of cli_pieces)
+                    if cli_gap is less than 1
+                        set cli_gap to 1
+                    end
+                    set cli_text to cli_text + cli_spaces(cli_gap) + note of cli_got
+                end
+                add cli_text to cli_lines
+                if opens of cli_got # the text's lines, each moved as far as its closing `"""` moves, to 4 in from here
+                    set cli_past to cli_at + 1
+                    repeat while not cli_closes_block(item cli_past of cli_all)
+                        add 1 to cli_past
+                    end
+                    set cli_was to cli_indent_of(item cli_past of cli_all)
+                    for each cli_k from cli_at + 1 to cli_past - 1
+                        set cli_written to cli_without_cr(item cli_k of cli_all)
+                        if cli_indent_of(cli_written) is length of cli_written
+                            add "" to cli_lines
+                        else
+                            add cli_spaces(cli_here + 4) + (items (cli_was + 1) to (length of cli_written) of cli_written) to cli_lines
+                        end
+                    end
+                    add cli_spaces(cli_here + 4) + "\"\"\"" to cli_lines
+                end
             end
-            add cli_text to cli_lines
         end
     end
     set cli_upto to length of cli_lines # no blank lines at the end, and one new line after the last
