@@ -68,6 +68,18 @@ export function profile(folder, settings) {
   return [`--user-data-dir=${join(folder, "data")}`, `--extensions-dir=${join(folder, "extensions")}`, "--disable-extensions"];
 }
 
-// VS Code, FOLIO_VSCODE_VERSION's (stable, the newest, if it isn't set), kept in .vscode-test for next time
+// VS Code, FOLIO_VSCODE_VERSION's (stable, the newest, if it isn't set), kept in .vscode-test for next time. A
+// download that can't reach Microsoft's servers (a CI runner's network timing out, say) is tried again, 3 times
+// in all, 10 seconds apart, so a moment's outage doesn't fail the tests
 export const vscodeVersion = process.env.FOLIO_VSCODE_VERSION || "stable";
-export const downloadVSCode = () => downloadAndUnzipVSCode({ version: vscodeVersion, cachePath: join(extensionFolder, ".vscode-test") });
+export async function downloadVSCode() {
+  for (let tries = 1; ; tries++) {
+    try {
+      return await downloadAndUnzipVSCode({ version: vscodeVersion, cachePath: join(extensionFolder, ".vscode-test") });
+    } catch (err) {
+      if (tries >= 3) throw err;
+      console.log(`Couldn't download VS Code (${err.code ?? err.message}); trying again in 10 seconds`);
+      await new Promise((done) => setTimeout(done, 10_000));
+    }
+  }
+}
