@@ -1,0 +1,71 @@
+/* Why Folio and the benchmarks: pages of reading, in the site's look */
+
+.essay { padding-bottom: 40px; }
+.essay-hero { display: grid; gap: 24px; justify-items: start; padding: 150px 0 56px; margin-bottom: 72px; border-bottom: 1px solid var(--ink); }
+.essay-hero h1 { font-size: clamp(56px, 9vw, 150px); max-width: 13ch; }
+.essay-hero h1 em { color: var(--lamp); }
+.essay-hero .lede { font-size: 20px; color: var(--ink-2); max-width: 60ch; }
+
+.essay-part { display: grid; grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr); gap: clamp(28px, 4vw, 64px); padding: 0 0 88px; }
+.essay-part > h2 { font-size: clamp(32px, 3.6vw, 56px); line-height: 0.95; position: sticky; top: 100px; align-self: start; }
+.essay-part > h2 span { display: block; margin-bottom: 14px; font: 500 12px/1 var(--mono); color: var(--lamp); }
+.essay-body { display: grid; gap: 22px; max-width: 72ch; }
+.essay-body p { font-size: 18px; line-height: 1.6; color: var(--ink-2); }
+.essay-body p b { color: var(--ink); font-weight: 600; }
+.essay-body code, .faq code { font-size: 0.88em; }
+@media (max-width: 860px) {
+  .essay-part { grid-template-columns: 1fr; padding-bottom: 64px; }
+  .essay-part > h2 { position: static; }
+}
+
+/* who it's for, and the idea: numbered points */
+.points { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--ink); }
+.points li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 18px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+.points li > span { font: 500 12px/1.6 var(--mono); color: var(--lamp); }
+.points h3 { margin-bottom: 10px; font-size: clamp(24px, 2.2vw, 32px); }
+.points p { font-size: 17px; line-height: 1.6; color: var(--ink-2); }
+.points .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.points .tools code { padding: 6px 10px; border-radius: 999px; }
+
+/* the same program, side by side */
+.side { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.side figure { margin: 0; border-radius: 6px; background: var(--ink); color: var(--night-text); overflow: hidden; }
+.side figcaption { display: flex; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--night-line); font: 500 11px/1 var(--mono); text-transform: uppercase; color: var(--night-dim); }
+.side figure:first-child figcaption span:first-child { color: var(--lamp); }
+.side pre { margin: 0; padding: 16px 18px; font: 14px/1.7 var(--mono); white-space: pre; overflow-x: auto; }
+@media (max-width: 700px) { .side { grid-template-columns: 1fr; } }
+
+/* the questions people ask */
+.faq { display: grid; border-top: 1px solid var(--ink); }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding: 22px 0; cursor: pointer; list-style: none; font: italic 400 clamp(22px, 2vw, 30px)/1.2 var(--serif); }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; flex: none; font: 400 26px/1 var(--sans); color: var(--lamp); transition: transform 0.3s cubic-bezier(.7,0,.2,1); }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details > div { display: grid; gap: 14px; padding: 0 0 26px; max-width: 66ch; }
+.faq details p { font-size: 17px; line-height: 1.6; color: var(--ink-2); }
+
+/* where to go next, at the end */
+.next-ways { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0 40px; }
+
+/* the benchmarks: a chart for each program, bars on a log scale */
+.summary { padding: 24px 28px; border-left: 3px solid var(--lamp); background: var(--paper-2); font: italic 400 clamp(21px, 1.9vw, 27px)/1.35 var(--serif); color: var(--ink); max-width: 64ch; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 56px 48px; }
+.chart { display: grid; gap: 14px; align-content: start; }
+.chart h3 { font-size: clamp(26px, 2.4vw, 34px); }
+.chart .about { font-size: 15px; color: var(--ink-3); }
+.bars { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.race-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 84px; align-items: center; gap: 12px; }
+.race-row .lang { font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--ink-2); }
+.race-row .track { position: relative; height: 26px; background: var(--paper-2); border-radius: 3px; overflow: hidden; }
+.race-row .fill { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--ink-3); border-radius: 3px; transform-origin: 0 50%; }
+.race-row.folio .fill { background: var(--lamp); }
+.race-row.folio .lang { color: var(--lamp); font-weight: 700; }
+.race-row .ms { font: 600 14px/1 var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.race-row.best .ms::after { content: " ◆"; color: var(--lamp); font-size: 10px; vertical-align: 2px; }
+.scale-note { font: 500 11.5px/1.4 var(--mono); text-transform: uppercase; color: var(--ink-3); }
+.method { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.method li { position: relative; padding-left: 22px; font-size: 17px; line-height: 1.55; color: var(--ink-2); }
+.method li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+.command { margin: 0; padding: 16px 20px; border-radius: 6px; background: var(--ink); color: var(--night-text); font: 15px/1.5 var(--mono); }
+.command::before { content: "$ "; color: var(--lamp); }

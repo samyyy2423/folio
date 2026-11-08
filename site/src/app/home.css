@@ -42,6 +42,11 @@
 .live-foot a:hover { color: var(--lamp); }
 
 .hero-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 22px 40px; }
+.intro-box { display: grid; gap: 12px; }
+.why-links { display: flex; gap: 10px; font: 500 12px/1 var(--mono); text-transform: uppercase; }
+.why-links a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--lamp); padding-bottom: 3px; }
+.why-links a:hover { color: var(--lamp); }
+.why-links span { color: var(--ink-3); }
 .hero .intro { max-width: 50ch; font-size: 17px; color: var(--ink-2); }
 @media (max-width: 980px) {
   .hero h1 .line:nth-child(2) { padding-left: 0; }

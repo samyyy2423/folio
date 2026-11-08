@@ -12,7 +12,7 @@ export const GitHubIcon = () => (
   </svg>
 );
 
-const current = (path, href) => (href === "/docs" ? path === "/docs" || (path.startsWith("/docs/") && !["/docs/cookbook", "/docs/examples"].includes(path)) : path === href);
+const current = (path, href) => (href === "/docs" ? path === "/docs" || (path.startsWith("/docs/") && !["/docs/cookbook", "/docs/examples"].includes(path)) : href === "/why" ? path === "/why" || path === "/benchmarks" : path === href);
 
 // The bar at the top of every page. Over the first screen it runs the page's whole width, clear; once the page
 // scrolls it gathers into an ink dock in the middle. Its lamp, an orange pill, rests on the page you're on and

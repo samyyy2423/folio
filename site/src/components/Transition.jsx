@@ -10,7 +10,7 @@ const STORE = "folio-veil"; // the name the veil shows, kept for the next page w
 // what the veil says on the way to a page
 export function pageWord(path) {
   if (path === "/" || path === "") return "Folio";
-  const names = { "/playground": "Playground", "/learn": "Learn", "/docs": "Docs", "/docs/cookbook": "Cookbook", "/docs/examples": "Examples" };
+  const names = { "/playground": "Playground", "/learn": "Learn", "/docs": "Docs", "/docs/cookbook": "Cookbook", "/docs/examples": "Examples", "/why": "Why Folio", "/benchmarks": "Benchmarks" };
   if (names[path]) return names[path];
   if (path.startsWith("/docs/")) return `${path.slice("/docs/".length)}.folio`;
   return path.split("/").filter(Boolean).at(-1) ?? "Folio";

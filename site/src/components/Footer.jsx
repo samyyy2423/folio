@@ -28,6 +28,8 @@ export default function Footer() {
           <div>
             <h4>Project</h4>
             <ul>
+              <li><Link href="/why">Why Folio</Link></li>
+              <li><Link href="/benchmarks">Benchmarks</Link></li>
               <li><a href={GITHUB}>GitHub</a></li>
               <li><a href={RELEASES}>Releases</a></li>
               <li><a href={`${GITHUB}/blob/main/CHANGELOG.md`}>Changelog</a></li>

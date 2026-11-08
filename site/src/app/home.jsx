@@ -434,7 +434,10 @@ export default function Home({ lessons, gallery }) {
                 </h1>
                 <LiveLine />
                 <div className="hero-foot" data-reveal>
-                  <p className="intro">Folio is a programming language with no symbols to learn. Run it here in your browser, then build it into a program of its own for Windows or Linux.</p>
+                  <div className="intro-box">
+                    <p className="intro">Folio is a programming language with no symbols to learn. Run it here in your browser, then build it into a program of its own for Windows or Linux.</p>
+                    <p className="why-links"><Link href="/why">Why Folio</Link><span>·</span><Link href="/benchmarks">How fast it is</Link></p>
+                  </div>
                   <div className="cta">
                     <a className="btn primary" href={`${BASE}/playground`} data-cursor="Write"><span>Open the playground</span></a>
                     <Link className="btn ghost" href="/learn" data-cursor="Learn"><span>{lessons} lessons</span></Link>
@@ -530,6 +533,7 @@ export default function Home({ lessons, gallery }) {
             <nav className="ways wrap" aria-label="Where to go next" data-reveal-group>
               <a className="way" href={`${BASE}/playground`} data-reveal data-cursor="Write"><span className="t">Write some Folio</span><span className="s">The playground runs it in this tab. Nothing to install.</span><span className="arrow">→</span></a>
               <Link className="way" href="/learn" data-reveal data-cursor="Learn"><span className="t">Learn it tonight</span><span className="s">{lessons} lessons, each a program to run and change.</span><span className="arrow">→</span></Link>
+              <Link className="way" href="/why" data-reveal data-cursor="Read"><span className="t">Why Folio</span><span className="s">Who it&apos;s for, what it isn&apos;t, and how fast it runs.</span><span className="arrow">→</span></Link>
               <a className="way" href={RELEASES} data-reveal data-cursor="Get it"><span className="t">Get Folio</span><span className="s">For Windows and Linux. One program, nothing beside it.</span><span className="arrow">→</span></a>
             </nav>
           </main>
