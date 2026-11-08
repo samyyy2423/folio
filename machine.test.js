@@ -3044,7 +3044,7 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
   const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "31 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "33 passed");
 });
 
 // arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,

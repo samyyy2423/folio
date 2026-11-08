@@ -1,10 +1,10 @@
 # The digit reader taught with learn.folio: a network of 256 pixels in, a hidden layer, 10 chances out, from
 # drawings digits.folio makes, in batches, with Adam; on the graphics card if there is one.
 #
-#     folio run --allow-libraries digits-learn.folio [card|processor] [hidden]
+#     folio run --allow-libraries digits-learn.folio [card|processor] [hidden] [floats]
 #
 # On a GTX 1650, 10 rounds of 6,000 pictures take 0.11 s on the card, 99.4% right on 1,000 it hadn't seen; on
-# the processor, 0.65 s.
+# a Ryzen 5 4600H's processor, 0.60 s, and 0.52 s with `floats`, its matmuls in 32-bit floats (DESIGN §185).
 
 use "math.folio"
 use "digits.folio"
@@ -20,6 +20,9 @@ if length of arguments is at least 2
     set hidden to number of (item 2 of arguments)
 end
 learn's use_card(wanted is "card")
+if length of arguments is at least 3 and item 3 of arguments is "floats"
+    learn's use_floats(yes)
+end
 
 set train_count to 6000
 set test_count to 1000

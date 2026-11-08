@@ -20,7 +20,8 @@
 # random(shape) (from 0 up to 1), random_normal(shape), counting(first, last, step), evenly(first, last, n)
 # and identity(n). Element by element: plus, minus, times, divided_by, maximum, minimum (each of two arrays,
 # or an array and a number), negate, absolute, square, relu, above_zero (relu's slope), relu_gradient(g, x), sqrt, exp, ln, tanh, sigmoid, power(t, p) and
-# apply(t, f). Then matmul, matmul_turned(a, b) (a turned over, times b), dot, transpose, flatten, row, stack, join_along, softmax, to_list, numbers_of,
+# apply(t, f). Then matmul, matmul_turned(a, b) (a turned over, times b), matmul_floats and matmul_turned_floats
+# (the same in 32-bit floats, in machine code), dot, transpose, flatten, row, stack, join_along, softmax, to_list, numbers_of,
 # copy_of, size, rank, close(a, b) and same(a, b). Axes and places count from 1. A shape that can't be,
 # shapes that don't go together, or a place outside an array is a `fail with` that says so.
 
@@ -36,6 +37,8 @@ use the library "folio"
     "numbers_room" as arrays_k_room(a list of numbers, a long whole number) gives a long whole number
     "numbers_exp" as arrays_k_exp(a list of numbers, a list of numbers, a long whole number) gives a long whole number
     "numbers_adam" as arrays_k_adam(a list of numbers, a list of numbers, a list of numbers, a list of numbers, a list of numbers, a long whole number) gives a long whole number
+    "numbers_matmul_floats" as arrays_k_matmul_floats(a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_matmul_turned_floats" as arrays_k_matmul_turned_floats(a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
 end
 
 # whether they're there: in machine code, yes; on the JavaScript engines, which can't call a library, no
@@ -673,6 +676,43 @@ to matmul_turned with a, b
         end
     end
     return matmul(transpose(a), b)
+end
+
+# matmul(a, b) of two matrices, worked out in 32-bit floats, as a graphics card works, where a program folio build
+# makes can (DESIGN §185): with AVX, each of a's and b's numbers rounded to a float and each sum added up in floats,
+# about 7 digits, for the rows in fours and the columns in sixteens, and the rest in Folio's own numbers. Twice as
+# fast or more. Elsewhere, on the JavaScript engines, and with BLAS, it's matmul
+to matmul_floats with a, b
+    set a to arrays_need(a, "matmul_floats")
+    set b to arrays_need(b, "matmul_floats")
+    if length of a's shape is 2 and length of b's shape is 2 and item 2 of a's shape is item 1 of b's shape and arrays_native and arrays_blas is nothing
+        set m to item 1 of a's shape
+        set n to item 2 of b's shape
+        if m * n is greater than 0
+            set data to arrays_zeros_list(m * n)
+            if arrays_k_matmul_floats(data, a's data, b's data, m, item 2 of a's shape, n, 0, 0, 0) is 0
+                return arrays_make((list of m, n), data)
+            end
+        end
+    end
+    return matmul(a, b)
+end
+
+# matmul_turned(a, b) in floats, as matmul_floats is
+to matmul_turned_floats with a, b
+    set a to arrays_need(a, "matmul_turned_floats")
+    set b to arrays_need(b, "matmul_turned_floats")
+    if length of a's shape is 2 and length of b's shape is 2 and item 1 of a's shape is item 1 of b's shape and arrays_native and arrays_blas is nothing
+        set m to item 2 of a's shape
+        set n to item 2 of b's shape
+        if m * n is greater than 0
+            set data to arrays_zeros_list(m * n)
+            if arrays_k_matmul_turned_floats(data, a's data, b's data, m, item 1 of a's shape, n, 0, 0, 0) is 0
+                return arrays_make((list of m, n), data)
+            end
+        end
+    end
+    return matmul_turned(a, b)
 end
 
 to arrays_kth with r

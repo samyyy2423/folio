@@ -7461,3 +7461,46 @@ in place as floats, where neither side is written in the program, was tried too 
 already makes the call cheap; it was left out too.
 
 Both back ends write the same bytes, as a test holds them to, and folio.wasm makes itself again.
+
+## 185. Training on the processor, faster, and in floats when asked
+
+On a Ryzen 5 4600H, digits-learn.folio took 0.65 s on the processor for 10 rounds of 6,000 pictures, where PyTorch
+takes 0.50; on a GTX 1650 Folio was already faster than PyTorch. A batch of 200 took 1.8 ms: the two large
+matmuls 45% of it, Adam's step 16%, and the rest elementwise work and the loss.
+
+Three things were tried and measured no faster, and are left out: two terms at a time in matmul's inner loop (the
+processor wasn't short of instructions to run), 6 threads (one for
+each core) instead of 8, which was 3 to 5% faster but needs the cores counted on every processor, and the pool's
+threads spinning longer between multiplies, which was slower, as they took time from the thread with the rest of
+the work.
+
+What helped:
+
+- **Each kernel's numbers checked 4 at a time.** Before a matmul, machine code checks that every number it's given
+  is a number, as anything else is for Folio to say a mistake about. That was a load, a compare and a branch a
+  number, 116,000 of them for a 200 by 256 by 256 matmul: now, with AVX, it's 4 at a time, any NaN among them
+  kept and looked at once at the end.
+- **Elementwise work 4 at a time (numbers_binary).** `+`, `-`, `*`, the larger and smaller of two, relu, relu's
+  gradient and a copy, where a's numbers are side by side and b's are too or are one number, as plus, times,
+  add_row and relu have them, are done 4 at a time with AVX. Each of the 4 is the one at a time's to the bit, as
+  vaddpd and vmaxpd work each place as addsd and maxsd do; a NaN that would make the one at a time give it to
+  Folio still does.
+- **matmul in floats, when asked (`use_floats(yes)`).** The graphics card works in 32-bit floats, about 7 digits,
+  and so does PyTorch on the processor. `arrays's matmul_floats(a, b)` and `matmul_turned_floats(a, b)` round each
+  number to a float and add each sum up in floats, 8 to a register: b's columns made floats once into room kept
+  from one multiply to the next, then each four of a's rows made floats once and multiplied by each sixteen of
+  b's, a float multiply then a float add a term at a time, on every core as matmul is. Rows past the fours and
+  columns past the sixteens are worked out in Folio's own numbers, so nothing is less than a float's 7 digits.
+  learn.folio's `use_floats(yes)` uses them for every matmul on the processor. On the JavaScript engines, and with
+  BLAS, they're matmul.
+
+A 200 by 256 by 256 matmul takes 0.24 ms in floats, not 0.40; 1,024 by 1,024 by 1,024, 14 ms, not 23 (153
+GFLOPS, not 96). A batch of the digit reader takes 1.5 ms, not 1.8, and 1.25 ms in floats; digits-learn.folio on
+the processor takes 0.60 s, and 0.52 s with floats, beside PyTorch's 0.50, still 99.4% right. Adam's step goes
+over every parameter twice, to change nothing if anything goes wrong; a first pass that looked without the square
+root and the division was tried and made no difference, as the step waits on memory, not on those.
+
+Tests check matmul_floats against matmul to 7 digits for shapes on and off the blocks, turned and not, in machine
+code and on every engine, where it's matmul; numbers_binary's every operation 4 at a time against Folio's own,
+to the bit, with b one number or a row, and a NaN in the middle of the fours; and learn's gradients through
+matmul in floats against the slopes worked out by nudging.

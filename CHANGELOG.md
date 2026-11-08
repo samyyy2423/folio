@@ -6,6 +6,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Training on the processor faster, and in floats when asked.** Machine code checks a matmul's numbers and
+  does `+`, `-`, `*`, relu and the rest 4 at a time with AVX, to the same bits; and learn.folio's
+  `use_floats(yes)` multiplies matrices in 32-bit floats, as the graphics card does (arrays.folio's
+  `matmul_floats` and `matmul_turned_floats`). The digit reader on a Ryzen 5 4600H: 0.65 s to 0.60, and 0.52
+  with floats, beside PyTorch's 0.50 (DESIGN §185).
 - **What kind a value is.** `x is a number`, `a list`, `a record`, `a dictionary`, `a function`, `bytes`,
   `some text`, `either yes or no`, and `x is a dog` for a kind's records, with `is not` too, on every engine
   (DESIGN §178).
