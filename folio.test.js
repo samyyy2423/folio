@@ -1759,7 +1759,7 @@ test("stdlib.folio is what make-stdlib.mjs makes of the standard library's files
 // weights it saves and loads
 test("learn.folio passes its own tests, learn.test.folio, on all three engines", () => {
   const found = (name) => (name === "math.folio" ? readFileSync(new URL("./math.folio", import.meta.url), "utf8") : tool(name));
-  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
+  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_custom", "test_small_floats", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
   for (const engine of ENGINES) {
     const results = testFolio(tool("learn.test.folio"), { engine, files: found, disk: memoryDisk() });
     assert.deepEqual(results.map((r) => [r.name, r.error?.message]), names.map((n) => [n, undefined]), `learn.test.folio on ${engine}`);
