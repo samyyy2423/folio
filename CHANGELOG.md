@@ -24,6 +24,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **16-bit floats in safetensors.** learn.folio's `load` reads F16 and BF16 weights, as most models on
   Hugging Face keep them, and `save(named, file, "F16")` or `"BF16"` writes them, in half the room
   (DESIGN §183).
+- **0 and 1 from a small sum boxed at once, on WebAssembly.** `n - 1` that comes out 0 or 1 goes straight to
+  the boxes made once for them: fib(32) 146 ms to 138 on a first run, 114 to 104 again. Calling functions by
+  their index, not `call_ref`, was tried and measured no faster, so it isn't in (DESIGN §184).
 - **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
   `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
   A `[` was a mistake before, so no program that ran changes (DESIGN §177).

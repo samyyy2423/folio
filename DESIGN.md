@@ -7440,3 +7440,24 @@ half float and 70,000, and checks the bytes against Python's struct (F16) and ag
 The card still works in 32-bit floats: training in 16 is for cards with the arithmetic for it, which a GTX 1650
 has only in part. folio-tokenizer's gpt.folio, a GPT of 931,584 parameters on BPE tokens the package learns from
 its text, saves its weights in F16: 1.9 MB, not 3.7.
+
+## 184. Where fib's time went on WebAssembly
+
+fib(32) took 146 ms on a first run on the WebAssembly engine, and 114 run again in the same process, where
+JavaScript takes 78 and machine code 23. Each call goes through `call_ref`, a closure's function, so the guess was
+that calling a function straight, by its index, would be the next step. It was tried: a call to a function made by
+one `to` at the program's top level, whose name nothing else sets, checked to have its value and then called by
+`call` with the scope from its closure, or, in its own code, with its own. fib's 7 million calls went that way, and
+it took the same time, 138 ms with it and 137 without, 105 and 103 again: V8 sees that each `call_ref` here always
+calls the same function, and calls it as directly. It was left out.
+
+A profile said where the time was: a third of it in three small functions of the runtime's, `box`, `add` and `sub`,
+called from fib. `n - 1` and `n - 2` are worked out in place on small whole numbers (DESIGN §174), but 0 and 1 are
+boxes (the i31 values 0 and 1 are no and yes), so an answer of 0 or 1 went to the shared code, which checked both
+sides again, worked the sum out in floats, and boxed it. Most of fib's calls are near the bottom of its tree,
+where n - 1 and n - 2 are 0 or 1. Now an answer of 0 or 1 goes straight to `box`, which gives the box made once
+for it: fib(32) takes 138 ms on a first run, not 146, and 104 run again, not 114. Adding two values worked out
+in place as floats, where neither side is written in the program, was tried too and made no difference, as V8
+already makes the call cheap; it was left out too.
+
+Both back ends write the same bytes, as a test holds them to, and folio.wasm makes itself again.
