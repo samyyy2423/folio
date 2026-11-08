@@ -33,7 +33,8 @@
 # kernels of your own on the card.
 #
 # A program that uses the card is run or built with --allow-libraries; without that, or with no NVIDIA card, it
-# all works on the processor, more slowly, and use_card(no) asks for that. On the card numbers are floats, about 7
+# all works on the processor, more slowly, and use_card(no) asks for that; use_floats(yes) multiplies there in
+# 32-bit floats, as the card does, twice as fast or more. On the card numbers are floats, about 7
 # digits, as machine learning keeps them. A matrix worked out before a step is let go at the step: its value is a
 # mistake after, so a loss is read with value() first.
 
@@ -62,6 +63,7 @@ set learn_wants_card to yes
 set learn_card to nothing
 set learn_tape to empty list
 set learn_training to yes
+set learn_floats to no
 
 # ---------- where the numbers are ----------
 
@@ -71,6 +73,12 @@ to use_card with wanted
         fail with "use_card comes before the first matrix: they're all on the card or all on the processor"
     end
     set learn_wants_card to wanted
+end
+
+# on the processor, matmul in 32-bit floats, as the graphics card works, in a program folio build makes: about 7
+# digits, not 15, and twice as fast or more (DESIGN §185); use_floats(no), as at first, for Folio's own numbers
+to use_floats with wanted
+    set learn_floats to wanted
 end
 
 # whether the matrices are on the graphics card
@@ -163,6 +171,8 @@ to matmul with a, b
     end
     if a's card
         set data to learn_gpu's matmul(a's data, b's data, a's rows, a's columns, b's columns)
+    else if learn_floats
+        set data to learn_arrays's matmul_floats(a's data, b's data)
     else
         set data to learn_arrays's matmul(a's data, b's data)
     end
@@ -678,7 +688,11 @@ to learn_back with m
             if m's card
                 learn_add_grad_mm(b, a's data, g, a's columns, a's rows, m's columns, yes, no)
             else
-                learn_add_grad(b, learn_arrays's matmul_turned(a's data, g))
+                if learn_floats
+                    learn_add_grad(b, learn_arrays's matmul_turned_floats(a's data, g))
+                else
+                    learn_add_grad(b, learn_arrays's matmul_turned(a's data, g))
+                end
             end
         end
     else if how is "plus" or how is "minus"
@@ -982,6 +996,9 @@ end
 to learn_mm with a, b, rows, inner, columns, card
     if card
         return learn_gpu's matmul(a, b, rows, inner, columns)
+    end
+    if learn_floats
+        return learn_arrays's matmul_floats(a, b)
     end
     return learn_arrays's matmul(a, b)
 end

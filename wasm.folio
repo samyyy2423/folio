@@ -2492,7 +2492,8 @@ to wasm_small_math with fc, e
         wasm_x(fc, "i32.sub local.tee " + r)
     end
     wasm_x(fc, "i32.const 1073741824 i32.add i32.const -2147483648 i32.ge_u br_if 0")
-    wasm_x(fc, "local.get " + r + " i32.const 2 i32.lt_u br_if 0")
+    # 0 and 1 are boxes made once, which box gives without working anything out again (DESIGN §184)
+    wasm_x(fc, "local.get " + r + " i32.const 2 i32.lt_u if local.get " + r + " f64.convert_i32_s call R.box br 2 end")
     wasm_x(fc, "local.get " + r + " ref.i31 br 1 end")
     wasm_small_slow(fc, sides)
     if op of e is "+"

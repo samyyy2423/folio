@@ -1669,7 +1669,7 @@ test("text.folio, dates.folio, hash.folio, base64.folio, big.folio, xml.folio, z
       ["lists.test.folio", ["test_shapes", "test_choosing", "test_functions", "test_sorting"]],
       ["stats.test.folio", ["test_middles", "test_spread", "test_two_sets", "test_mistakes"]],
       ["arrays.test.folio", ["test_making", "test_element_by_element", "test_broadcasting", "test_matrices", "test_along_axes", "test_shapes",
-        "test_machine_code_agrees", "test_nan_and_infinity", "test_mistakes"]],
+        "test_machine_code_agrees", "test_nan_and_infinity", "test_floats", "test_mistakes"]],
       ["ai.test.folio", ["test_requests", "test_events_however_they_come", "test_a_fallback_part_of_the_way", "test_vectors"]],
       ["sync.test.folio", ["test_lock", "test_semaphore", "test_holding", "test_flag", "test_queue", "test_tasks"]],
       ["big.test.folio", ["test_reading_and_writing", "test_adding_and_taking", "test_multiplying", "test_dividing",
@@ -1759,7 +1759,7 @@ test("stdlib.folio is what make-stdlib.mjs makes of the standard library's files
 // weights it saves and loads
 test("learn.folio passes its own tests, learn.test.folio, on all three engines", () => {
   const found = (name) => (name === "math.folio" ? readFileSync(new URL("./math.folio", import.meta.url), "utf8") : tool(name));
-  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_custom", "test_small_floats", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
+  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_custom", "test_small_floats", "test_floats", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
   for (const engine of ENGINES) {
     const results = testFolio(tool("learn.test.folio"), { engine, files: found, disk: memoryDisk() });
     assert.deepEqual(results.map((r) => [r.name, r.error?.message]), names.map((n) => [n, undefined]), `learn.test.folio on ${engine}`);

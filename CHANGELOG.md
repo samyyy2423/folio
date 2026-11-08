@@ -6,6 +6,11 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **Training on the processor faster, and in floats when asked.** Machine code checks a matmul's numbers and
+  does `+`, `-`, `*`, relu and the rest 4 at a time with AVX, to the same bits; and learn.folio's
+  `use_floats(yes)` multiplies matrices in 32-bit floats, as the graphics card does (arrays.folio's
+  `matmul_floats` and `matmul_turned_floats`). The digit reader on a Ryzen 5 4600H: 0.65 s to 0.60, and 0.52
+  with floats, beside PyTorch's 0.50 (DESIGN §185).
 - **What kind a value is.** `x is a number`, `a list`, `a record`, `a dictionary`, `a function`, `bytes`,
   `some text`, `either yes or no`, and `x is a dog` for a kind's records, with `is not` too, on every engine
   (DESIGN §178).
@@ -24,6 +29,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - **16-bit floats in safetensors.** learn.folio's `load` reads F16 and BF16 weights, as most models on
   Hugging Face keep them, and `save(named, file, "F16")` or `"BF16"` writes them, in half the room
   (DESIGN §183).
+- **0 and 1 from a small sum boxed at once, on WebAssembly.** `n - 1` that comes out 0 or 1 goes straight to
+  the boxes made once for them: fib(32) 146 ms to 138 on a first run, 114 to 104 again. Calling functions by
+  their index, not `call_ref`, was tried and measured no faster, so it isn't in (DESIGN §184).
 - **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
   `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
   A `[` was a mistake before, so no program that ran changes (DESIGN §177).

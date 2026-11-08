@@ -172,11 +172,16 @@ to test_machine_code_agrees
         end
         set a to arrays's shaped(xs, list of 3, n)
         set b to arrays's shaped(ys, list of 3, n)
-        for each op from 0 to 9
+        for each op in list of 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12
             set got to arrays's arrays_zeros_list(3 * n)
             arrays's arrays_run_binary(op, got, xs, ys, 3, n, 0, n, 1, 0, n, 1, 0)
             set want to arrays's arrays_zeros_list(3 * n)
             arrays's arrays_binary_folio(op, want, xs, ys, 3, n, 0, n, 1, 0, n, 1, 0)
+            expect_bits(got, want)
+            set got to arrays's arrays_zeros_list(3 * n) # b one number for every place (DESIGN §185)
+            arrays's arrays_run_binary(op, got, xs, ys, 3, n, 0, n, 1, 0, 0, 0, 0)
+            set want to arrays's arrays_zeros_list(3 * n)
+            arrays's arrays_binary_folio(op, want, xs, ys, 3, n, 0, n, 1, 0, 0, 0, 0)
             expect_bits(got, want)
         end
         for each op from 1 to 3
@@ -230,6 +235,65 @@ to test_nan_and_infinity
     set zero_times to arrays's matmul(arrays's array(list of infinity, 1), arrays's array(list of 0, 1))
     expect zero_times is not zero_times
     expect length of arrays's numbers_of(arrays's relu(arrays's array(list of nan, -1))) is 2
+    # a NaN among numbers machine code adds 4 at a time: the same as one at a time (DESIGN §185)
+    set long to arrays's array(list of 1, 2, 3, 4, 5, nan, 7, 8, 9)
+    set sums to arrays's numbers_of(arrays's plus(long, long))
+    expect item 5 of sums is 10
+    expect item 6 of sums is not item 6 of sums
+    expect item 9 of sums is 18
+    set kept to arrays's numbers_of(arrays's relu(long))
+    expect item 6 of kept is not item 6 of kept
+    expect item 8 of kept is 8
+end
+
+# matmul in 32-bit floats (DESIGN §185): in machine code each number to about 7 digits of matmul's, elsewhere
+# matmul's own; and matmul's for what isn't two matrices
+to test_floats
+    set seed to 11
+    for each shape in list of (list of 5, 9, 17), (list of 8, 33, 32), (list of 4, 1, 16), (list of 3, 4, 5)
+        set m to item 1 of shape
+        set k to item 2 of shape
+        set n to item 3 of shape
+        set xs to empty list
+        for each i from 1 to m * k
+            set seed to remainder of (seed * 16807) divided by 2147483647
+            add (seed - 1073741823) / 1073741823 to xs
+        end
+        set ys to empty list
+        for each i from 1 to k * n
+            set seed to remainder of (seed * 16807) divided by 2147483647
+            add (seed - 1073741823) / 1073741823 to ys
+        end
+        set a to arrays's shaped(xs, list of m, k)
+        set b to arrays's shaped(ys, list of k, n)
+        expect_close(arrays's matmul_floats(a, b), arrays's matmul(a, b))
+        set turned to arrays's transpose(a)
+        expect_close(arrays's matmul_turned_floats(turned, b), arrays's matmul_turned(turned, b))
+    end
+    set row to arrays's array(list of 1, 2, 3)
+    expect arrays's numbers_of(arrays's matmul_floats(row, arrays's shaped((list of 1, 0, 0, 1, 1, 1), list of 3, 2))) is list of 4, 5
+end
+
+# each number within a float's 7 digits of the other's, of the largest of them
+to expect_close with got, want
+    expect got's shape is want's shape
+    set gs to arrays's numbers_of(got)
+    set ws to arrays's numbers_of(want)
+    set most to 0
+    for each w in ws
+        if w is greater than most
+            set most to w
+        else if -w is greater than most
+            set most to -w
+        end
+    end
+    for each i from 1 to length of gs
+        set off to item i of gs - item i of ws
+        if off is less than 0
+            set off to -off
+        end
+        expect off is at most 0.00001 * most
+    end
 end
 
 to test_mistakes
