@@ -7402,3 +7402,41 @@ After `'s`, in `record with`, and after `in order by`, no phrase of the language
 field's name there now: `r's length`, `record with read yes, number 3`, `set r's list to xs`, `add 1 to r's
 length`, `rows in order by number`. Each was a mistake before. Variables, inputs and functions keep the rule,
 since there a word starts its phrase, and `length of r` is still the length.
+
+## 182. Operations of your own that train
+
+learn.folio's operations each know their gradient, and a model could only be made of them. A new activation, a
+loss of your own, or a kernel written for the card (DESIGN §176) couldn't train: backward() didn't know how to send
+a gradient through it.
+
+`custom(inputs, forward, backward)` is an operation of your own. forward is given the inputs, a list of matrices,
+and gives the result; backward is given the result's gradient, the inputs and the result, and gives each input's
+gradient, or nothing for one it doesn't change. The result is remembered as learn's own results are, so
+backward() calls the function at its turn and adds what it gives to each input that a parameter went into. Both
+functions are given the matrices as they are, sharing their numbers, but remembered by nothing, so they can use
+learn's operations freely, or launch kernels of their own on each matrix's data. As PyTorch's
+`torch.autograd.Function` has it, with a forward and a backward, and nothing else to register.
+
+A test checks the gradients through two of them, x cubed and a product with a matrix that learns nothing, against
+the slopes worked out by nudging each number, on every engine and in machine code; and on the card, x squared
+written as two PTX kernels, its forward and its backward, gives the gradient 2 x w exactly and trains until x
+squared is its target. A backward that gives a gradient of the wrong shape, or a forward that gives no matrix, is
+a mistake that says so.
+
+## 183. 16-bit floats in safetensors
+
+Models on Hugging Face keep their weights in 16-bit floats more often than not: half floats (F16), or brain
+floats (BF16), a float's first 16 bits. learn.folio's load() read F32 and F64 only, so it couldn't open them, and
+save() wrote twice the room needed.
+
+load() reads F16 and BF16 now, each pattern's number looked up in a table of all 65,536 made the first time, and
+save(named, file, "F16") or "BF16" writes them, each number rounded to the nearest pattern, a half to the even
+one, as IEEE 754 and PyTorch round; too big is infinity. Rounding a number to the nearest whole one with Folio's
+comparisons, which go to 15 digits, could be wrong for a number a hair from a half, so it adds 2^52 and takes it
+away, which the processor rounds exactly. A test saves ten numbers each way, among them 0.1, 65,504, the smallest
+half float and 70,000, and checks the bytes against Python's struct (F16) and against rounding worked out exactly
+(BF16), and what load() gives back.
+
+The card still works in 32-bit floats: training in 16 is for cards with the arithmetic for it, which a GTX 1650
+has only in part. folio-tokenizer's gpt.folio, a GPT of 931,584 parameters on BPE tokens the package learns from
+its text, saves its weights in F16: 1.9 MB, not 3.7.

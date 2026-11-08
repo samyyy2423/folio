@@ -18,6 +18,12 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 - Each of these was a mistake before, so no program that ran means anything else.
 - **Fixed:** a record's own function called in a file used `as` a name (`one's cost()` in `cart.folio`, used
   as cart) looked for a field called `cart's cost`; it reads the record's own `cost`.
+- **Operations of your own that train.** learn.folio's `custom(inputs, forward, backward)`: forward makes the
+  result, backward each input's gradient, with learn's operations or kernels of your own on the card
+  (DESIGN §182).
+- **16-bit floats in safetensors.** learn.folio's `load` reads F16 and BF16 weights, as most models on
+  Hugging Face keep them, and `save(named, file, "F16")` or `"BF16"` writes them, in half the room
+  (DESIGN §183).
 - **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
   `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
   A `[` was a mistake before, so no program that ran changes (DESIGN §177).
