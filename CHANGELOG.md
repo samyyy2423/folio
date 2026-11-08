@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
+  `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
+  A `[` was a mistake before, so no program that ran changes (DESIGN §177).
 - **Kernels of your own on the graphics card.** gpu.folio's `kernel(ptx, name)` loads PTX, NVIDIA's assembly for
   the card, and `launch(kernel, grid, block, inputs)` runs it on up to 3 axes of blocks of threads, each input
   packed as its `.param` says; `launch_with` adds shared memory, and `upload_bytes`, `room` and `download_bytes`

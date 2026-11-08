@@ -62,12 +62,11 @@ end
 
 set capitals to letters("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 set smalls to letters("abcdefghijklmnopqrstuvwxyz")
-set symbols to letters("-+*/(),")
+set symbols to letters("-+*/(),[]")
 # symbols people type out of habit from other languages, and what Folio says instead
-set hint_symbols to list of "=", "!", "<", ">", "%", "[", "]", "{", "}", "'", "."
+set hint_symbols to list of "=", "!", "<", ">", "%", "{", "}", "'", "."
 set hint_texts to list of "to store a value write 'set x to 5', to compare write 'x is 5'", "write 'is not'",
     "write 'is less than'", "write 'is greater than'", "write 'is divisible by'",
-    "make a list with 'list of 1, 2, 3'", "make a list with 'list of 1, 2, 3'",
     "blocks finish with 'end', not braces", "blocks finish with 'end', not braces",
     "put text in double quotes", "to get a field write 'name of person'"
 
@@ -2491,6 +2490,41 @@ to parse with tokens, reading
         end
         if word("nothing")
             return record with kind "value", type "nothing", value nothing, at t
+        end
+        if match("[") # `[1, 2, 3]`: a list, as `list of 1, 2, 3` is, ending at its `]` (DESIGN §177)
+            set outside to indexing
+            set indexing to no
+            set items to empty list
+            set fns_before to length of hoisted
+            set made to nothing
+            set going to not check("]")
+            repeat while going
+                add expression() to items
+                if length of items is 1 and is_word("for") and not nl of peek() and word_at(pos + 1, "each")
+                    set kept_fns to empty list
+                    set value_fns to empty list
+                    for each k from 1 to length of hoisted
+                        if k is at most fns_before
+                            add item k of hoisted to kept_fns
+                        else
+                            add item k of hoisted to value_fns
+                        end
+                    end
+                    set hoisted to kept_fns
+                    set made to built_list(item 1 of items, value_fns, t)
+                    set going to no
+                else
+                    set going to match(",") and not check("]")
+                end
+            end
+            if not match("]")
+                expected("']'")
+            end
+            set indexing to outside
+            if made is not nothing
+                return made
+            end
+            return record with kind "list", items items, at t
         end
         if word("list")
             expect_word("of")

@@ -1379,6 +1379,44 @@ test("\\r in text is an r, as Folio 1 promises, and check() says where it's writ
   assert.deepEqual(check('say "\\\\r, \\\\n and r"'), []);
 });
 
+// `[1, 2, 3]` is a list, as `list of 1, 2, 3` is, and ends at its `]`, so it can be one input of several, inside
+// another, empty, carried over lines after a comma, or a list made `for each` (DESIGN §177): on every engine, the
+// compiler written in Folio writing the same JavaScript, tidy writing it the one way, and its mistakes said. A `[`
+// was a mistake before, so no program that ran means anything else now.
+test("[1, 2, 3] is a list, on every engine and in the compiler written in Folio", () => {
+  const source = [
+    "to pair with a, b",
+    "    return [b, a]",
+    "end",
+    "set xs to [3, 1, 2]",
+    "say xs",
+    "say []",
+    "say [[1, 2], [3], []]",
+    "say pair([1, 2], [3])",
+    "say item 2 of [10, 20, 30]",
+    "say length of [xs, xs]",
+    "say [x * 2 for each x in xs where x is greater than 1]",
+    "say [1,",
+    "    2,",
+    "]",
+    "for each n in [5, 6]",
+    "    say n",
+    "end",
+    "say list of [1], 2",
+  ].join("\n");
+  const want = ["[3, 1, 2]", "[]", "[[1, 2], [3], []]", "[[3], [1, 2]]", "20", "2", "[6, 4]", "[1, 2]", "5", "6", "[[1], 2]"].map((line) => ["out", line]);
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  const folio = folioCompiler(COMPILER);
+  for (const program of [source, "say [1, 2", "say [1 2]", "say ]", "say [", "set x to [,]"]) {
+    assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
+  }
+  assert.deepEqual(streams("say [1, 2", { engine: "vm" }).log, [["mistake", "line 1: expected ']' but found the end of the code"]]);
+  assert.deepEqual(streams("say [1 2]", { engine: "vm" }).log, [["mistake", "line 1: expected ']' but found '2'"]]);
+  assert.equal(format("say [ 1,2 , [3 ] ]\nset y to f( [1] , [ ] )\nto f with a, b\n    return a\nend"),
+    "say [1, 2, [3]]\nset y to f([1], [])\nto f with a, b\n    return a\nend\n");
+  assert.deepEqual(problems("set xs to [1, 2]\nsay xs + 1"), ["2:8 fails: can't use '+' on a list and a number"]);
+});
+
 // ---------- tidying ----------
 
 test("format() tidies code the one way, without changing a piece of it, and tidy code stays as it is", () => {

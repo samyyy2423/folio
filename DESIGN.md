@@ -7305,3 +7305,25 @@ mistake a launch can make, a name the module hasn't, PTX with an instruction tha
 writes to address 0. Putting a float input as a double, or launching with no shared memory, makes it fail. PTX is
 what's needed to write one, which is the card's assembly; kernels written in Folio itself, compiled to PTX, would
 be the next step, and Vulkan's compute for cards that aren't NVIDIA's after that.
+
+## 177. A list in brackets
+
+`list of 1, 2, 3` takes every comma after it, so a list given to a function with more after it has to be put in
+brackets of its own: `f((list of 1, 2), 3)`, or the list takes the 3 and f gets one input. Writing the four
+packages of 2026-11-07 (pdftext, tokenizer, vectors, rag), that was the mistake made most: a call that said it
+needed 4 inputs but got 2, a dozen times, and a test that passed a list it didn't mean to.
+
+`[1, 2, 3]` is now a list, as `list of 1, 2, 3` is, and it ends at its `]`: `f([1, 2], 3)` gives two inputs.
+`[]` is an empty list, a comma may come before the `]` (as a list over several lines has one), and
+`[x * 2 for each x in xs where x is greater than 1]` builds one, as `list of` does. It's the same list to every
+engine: both of Folio's readers, folio.js's and compiler.folio's, make the `list` (or the built list) `list of`
+makes, so nothing after reading changed, and the compiler written in Folio writes the same JavaScript as the
+JIT, to the byte. Tidy writes no space after `[` or before `]`, in folio.js and in folio.folio.
+
+A `[` was a mistake before ("make a list with 'list of 1, 2, 3'"), so no program that ran means anything else
+now, as Folio 1 promises (VERSIONING.md). `list of` stays as it is: making it end at a bracket would change what
+programs that ran mean. A `{[` in text is still a `{` and a `[`, not a value, as it was.
+
+A test runs lists in brackets on every engine (empty, inside one another, as one input of two, over lines, built
+`for each`, in `for each`, inside `list of`), has the compiler written in Folio write the JavaScript the JIT
+writes for them and for their mistakes, and tidies them; a machine code case does the same.

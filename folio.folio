@@ -1135,7 +1135,7 @@ to cli_joined with cli_pieces, cli_at, cli_tight
     set cli_before to nothing
     for each cli_piece in cli_pieces
         set cli_close to cli_before is nothing or what of cli_before is "(" or what of cli_piece is ")" or
-            what of cli_piece is "," or what of cli_piece is "'s"
+            what of cli_before is "[" or what of cli_piece is "]" or what of cli_piece is "," or what of cli_piece is "'s"
         if not cli_close and what of cli_before is "-" and cli_marked(cli_tight, cli_at, cli_before)
             set cli_close to yes
         end
