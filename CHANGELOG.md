@@ -6,6 +6,9 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **math.folio's sqrt in machine code is the processor's own.** One instruction, sqrtsd, the same double
+  math.folio works out in Folio on the JavaScript engines. The n-body simulation (500,000 steps of 5 planets) on
+  a Ryzen 5 4600H: 1.20 s to 0.41 s, against Rust's 0.02 (DESIGN §187).
 - **ONNX models' outputs kept where ONNX Runtime made them.** onnx.folio's `run_keeping(model, inputs, names)`
   leaves the outputs named in ONNX Runtime's memory, unread, as ONNX values, and `run` takes one as an input as
   it is: a language model's cache of keys and values goes from one token to the next with no copy.

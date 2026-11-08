@@ -7547,13 +7547,45 @@ floats again on every run: 136 million numbers.
   the patterns kept.
 
 With it, a token takes 49 ms and the prompt 2.5 s, 5.6 and 2.9 times as fast as before. Loading takes as long,
-within the noise (4.4, 4.6 and 4.6 s at best), and the program 2.8 GB at most instead of 2.4. Two things found on the way are the model's and Windows' ONNX Runtime's, not onnx.folio's,
-and folio-ask works round them: ONNX Runtime 1.17 reads ONNX's format up to 9, and onnx-community's export says
-10 while using nothing 10 added; and with nothing in the cache yet, it let each of several tokens given at once
-see the ones after it, so the writer gives the first token alone.
+within the noise (4.4, 4.6 and 4.6 s at best), and the program 2.8 GB at most instead of 2.4. Two things found on
+the way are the model's and Windows' ONNX Runtime's, not onnx.folio's, and folio-ask works round them: ONNX Runtime
+1.17 reads ONNX's format up to 9, and onnx-community's export says 10 while using nothing 10 added; and with nothing
+in the cache yet, it let each of several tokens given at once see the ones after it, so the writer gives the first
+token alone.
 
 Tested in machine code, with a model the test writes that's relu(x + 1) of 3 numbers: an output kept, its shape,
 two of its numbers and all of them, given back as an input, kept again and read, released twice, and shown once
 released; and a released value read, a double given where a float is taken, numbers past the end, an output the
 model doesn't have, a setting it doesn't know, a negative number of threads, and a list where an ONNX value is
 wanted, each with what it says.
+
+## 187. math.folio's sqrt, the processor's own
+
+Five heavier programs, written alike in Folio and in Rust (rustc -O) and each giving the same output, were timed
+on a Ryzen 5 4600H, the best of three runs, less an empty program's time: n-body (500,000 steps of 5 planets,
+records of numbers), binary-trees (depth 16, records made and dropped), spectral-norm (n = 1,000), fannkuch-redux
+(n = 10, a list's items swapped) and counting the pieces of 1 to 6 letters of a million letters (dictionaries
+and text). Folio took 4.9 to 5.8 times as long as Rust on three, was faster on binary-trees (491 ms to Rust's
+659, whose every node is a call to the system's allocator), and took 55 times as long on n-body: 1,201 ms to
+Rust's 22.
+
+n-body takes a square root ten times a step, 5 million in all, and math.folio's sqrt works it out in Folio: the
+number brought between 1 and 4 by powers of 4, six rounds of Newton's method, and the last step settled by
+Dekker's exact product, so that it gives the double nearest the true root, as a processor's own does. That's
+dozens of operations and three loops where sqrtsd is one instruction, and sqrtsd gives the same double, as
+IEEE 754 has every square root rounded to the nearest.
+
+- **sqrt by sqrtsd.** math.folio names a function of Folio's own (§118), `use the library "folio"`'s
+  `number_sqrt`, and its sqrt, once it has made sure the number isn't below 0 (comparing anything but a number
+  with 0 is a mistake, so it's a number by then), gives what that gives. machine.folio makes the call's body two
+  instructions, the input loaded and sqrtsd, rather than a C call; nothing is loaded or asked for. On the
+  JavaScript engines, which can't call a library, a try finds it isn't there as math.folio starts, and sqrt works
+  it out in Folio as before.
+
+n-body went from 1,201 ms to 412, 19 times Rust's time instead of 55, with the same output to the last digit.
+The rest is reading and setting records' fields, whose values can be anything, so each sum looks at what it was
+given; that's for another time.
+
+A test runs a program in machine code and on the JavaScript engine and wants the same output: the roots of 0, 1,
+2, 3, 16, 0.1, a third, 2^1000, 10^300, 2^-1074, 2^-600 and a number of 15 digits, each with r * r - x, which a
+root a step out would change; a sum of 100,000 roots; and the mistakes for -1, text and an amount.

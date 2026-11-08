@@ -37607,7 +37607,7 @@ set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "num
     "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory",
     "numbers_atomic" is "rt_k_atomic", "numbers_adam" is "rt_k_adam", "numbers_matmul_turned" is "rt_k_matmul_t",
     "numbers_exp" is "rt_k_exp", "numbers_room" is "rt_k_room", "numbers_matmul_floats" is "rt_k_matmul_f",
-    "numbers_matmul_turned_floats" is "rt_k_matmul_tf"
+    "numbers_matmul_turned_floats" is "rt_k_matmul_tf", "number_sqrt" is "sqrtsd, in line"
 
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
@@ -41053,6 +41053,14 @@ to gen_library_call with fc, e
     set nat to native of f
     set target to target of st
     set own to own_library(nat)
+    if own and symbol of nat is "number_sqrt" # math.folio's sqrt (DESIGN §187): the processor's own, right here
+        if types of nat is not list of "a number" or gives of nat is not "a number"
+            fail with front's problem(at of e, "'number_sqrt' takes a number and gives a number")
+        end
+        movsd_plain(a, xmm0, mem(rbp, 16))
+        sqrt_sd(a, xmm0, xmm0)
+        return "value"
+    end
     set desc to nothing
     if own # Folio's own (DESIGN §118): in the program already, so nothing to load or ask for
         if symbol of nat is not in own_kernel_names

@@ -1073,6 +1073,46 @@ test("folio.exe build --web makes a page that holds the program and the files it
 // folio build --target wasm (DESIGN §125): app.wasm, the module wasm.folio makes, here made by wasm.folio as machine
 // code, which must be wasm.js's bytes; what running it needs follows in a section of its own, and runWasm runs it
 // as the VM runs the program. A program with a mistake says it, and makes no module.
+// math.folio's sqrt in machine code is the processor's own, sqrtsd (DESIGN §187): the same double the JavaScript
+// engines work out in Folio, which r * r - x would show a step apart; and the same mistakes, for a number below
+// 0, for text and for an amount
+test("math.folio's sqrt in machine code gives what the JavaScript engine works out in Folio, to the last bit", { skip }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-machine-"));
+  try {
+    const source = `use "math.folio" as math
+set tiny to (1 / (2 to the power of 1000)) / (2 to the power of 74)
+set values to list of 0, 1, 2, 3, 16, 0.1, 1 / 3, 1234567.891, 2 to the power of 1000, 10 to the power of 300, tiny, 1 / (2 to the power of 600), 99999999999999.9
+for each x in values
+    set r to math's sqrt(x)
+    say r " " r * r - x
+end
+set total to 0
+for each i from 1 to 100000
+    set total to total + math's sqrt(i * 7.25)
+end
+say total
+for each wrong in list of -1, "four", 4 km
+    try
+        say math's sqrt(wrong)
+    if it fails with why
+        say why
+    end
+end
+`;
+    const files = { "math.folio": here("math.folio") };
+    let want = "";
+    run(source, (line) => (want += `${line}\n`), { files: (name) => files[name] });
+    const exe = executable(dir, "s");
+    writeFileSync(exe, machine(source, { target, name: "s.folio", files }));
+    if (target === "linux") chmodSync(exe, 0o755);
+    const got = spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 60_000 });
+    assert.deepEqual({ stdout: got.stdout, stderr: got.stderr, status: got.status }, { stdout: want, stderr: "", status: 0 });
+    assert.match(want, /^0 0\n1 0\n1\.4142135623731 4\.44089209850063e-16\n/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("folio.exe build --target wasm makes wasm.js's module, which runs as the VM runs the program", { skip }, () => {
   const { dir, exe } = folioExe();
   const sub = join(dir, "wasm");

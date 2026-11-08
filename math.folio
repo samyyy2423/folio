@@ -13,6 +13,19 @@
 #   say math's random()                    # from 0 up to 1, the same each run: set seed to change them
 #   say math's between(1, 6)               # from 1 up to 6
 
+# The processor's own square root, in machine code (DESIGN §187): one instruction, sqrtsd, which gives the double
+# nearest the true root, as sqrt below does in Folio. On the JavaScript engines, which can't call a library,
+# math_native is no and sqrt works it out itself.
+use the library "folio"
+    "number_sqrt" as math_k_sqrt(a number) gives a number
+end
+set math_native to yes
+try
+    math_k_sqrt(4)
+if it fails
+    set math_native to no
+end
+
 # ---------- random numbers (Park and Miller, 1988) ----------
 
 set seed to 42
@@ -122,6 +135,9 @@ end
 to sqrt with x
     if x is less than 0
         fail with "can't take the square root of a number below 0"
+    end
+    if math_native # x is a number here: comparing anything else with 0 is a mistake
+        return math_k_sqrt(x)
     end
     if x is 0 or x is not x or x - x is not 0 # 0, and what isn't a number or is infinite, as it is
         return x
