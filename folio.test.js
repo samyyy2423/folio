@@ -680,6 +680,238 @@ test("try can't catch running out of steps, and the checker trusts it", () => {
   assert.deepEqual(problems('try\n    say 1\nif it fails with e\n    say 1 / 0\nend'), ["4:11 fails: can't divide by zero"]);
 });
 
+// The WebAssembly engine adds, takes away and compares two small whole numbers itself, and a comparison an `if`
+// or `while` tests is a yes or no with no box (DESIGN §174): at the edges of what an i31 holds, for what comes
+// out as 0 or 1 (boxes of their own), for yes and no beside numbers, for text, and for mistakes, every engine
+// says the same
+test("small whole numbers added and compared in place say what every engine says", () => {
+  const source = `to show with a, b
+    set a to a - 0 # worked out, so an i31 where it's small and whole, as numbers written in a list aren't
+    set b to b - 0
+    say a + 1
+    say a - 1
+    say 1 - a
+    say a + 1073741823
+    say a - 1073741823
+    say a is 2
+    say a is less than 7
+    say 7 is at most a
+    say a + b
+    say a - b
+    say b - a
+    say a is b
+    say a is less than b
+    say a is at least b
+    if a is greater than b
+        say "greater"
+    end
+end
+for each pair in list of (list of 5, 3), (list of 1073741823, 1), (list of -1073741824, 1), (list of 1073741823, -1073741824), (list of 2, 1), (list of 3, 2), (list of 1, 1), (list of 0, 1), (list of -5, 7), (list of 2.5, 3), (list of 7, 7)
+    show(item 1 of pair, item 2 of pair)
+end
+set big to 1073741823
+say big + 1
+say big + 0
+say 1073741824 - 1
+say 2 - 1
+say 5 - 5
+say -3 + 4
+set flag to yes
+say flag is 1
+say flag is yes
+say no is 0
+say 1 is 1
+say "a" + 2
+say 2 + "a"
+set i to 0
+repeat while i is less than 5
+    set i to i + 1
+end
+say i
+for each probe in list of "yes and 2", "text and 2", "nothing and 2"
+    try
+        if probe is "yes and 2"
+            say yes + 2
+        else if probe is "text and 2"
+            say "x" is less than 2
+        else
+            say nothing - 2
+        end
+    if it fails with why
+        say why
+    end
+end`;
+  const said = {};
+  for (const engine of ENGINES) {
+    const out = [];
+    try {
+      run(source, (line) => out.push(line), { engine });
+    } catch (err) {
+      if (!(err instanceof FolioError)) throw err;
+      out.push(`mistake: ${err.message}`);
+    }
+    said[engine] = out;
+  }
+  assert.ok(!said.vm.some((line) => line.startsWith("mistake:")), said.vm.join(" | ")); // the program runs to its end
+  for (const engine of ENGINES) assert.deepEqual(said[engine], said.vm, engine);
+});
+
+// The WebAssembly engine runs each loop at the program's top level in a function of its own, 65,536 rounds to a
+// call, the top level's variables handed over in globals (DESIGN §173): what a loop changes is there after it,
+// across its calls, when it stops, and when a mistake leaves it for a `try` around it, and every engine says
+// the same and stops at the same step
+test("a loop at the top level, run a call at a time, leaves its variables as every engine has them", () => {
+  const programs = [
+    `set total to 0
+set words to ""
+set kept to empty list
+for each i from 1 to 200000
+    add i to total
+    if i is divisible by 50000
+        set words to words + i + " "
+        add i to kept
+    end
+end
+say total
+say words
+say kept`,
+    `set rounds to 0
+set total to 0.5
+try
+    for each i from 1 to 150000
+        add 1 to rounds
+        set total to total + i / 3
+        if i is 140001
+            set total to total / (i - i)
+        end
+    end
+if it fails with why
+    say "caught: " + why
+end
+say rounds
+say total`,
+    `set rounds to 0
+try
+    repeat 100000 times
+        add 1 to rounds
+        if rounds is 99999
+            add 1 to later
+        end
+    end
+    set later to 5
+if it fails with why
+    say why
+end
+say rounds`,
+    `set found to 0
+set made to empty list
+for each i from 1 to 1000000
+    for each j from 1 to 3
+        add 1 to found
+    end
+    if i is 70000
+        to seen with x
+            return x + i
+        end
+        add seen to made
+        stop
+    end
+end
+say found
+say (item 1 of made)(5)`,
+    `set n to 0
+set xs to empty list
+repeat while n is less than 80000
+    add n * 2 to xs
+    add 1 to n
+end
+set total to 0
+for each x in xs
+    try
+        if x is 100
+            fail with "skip"
+        end
+        add x to total
+    if it fails
+        add 1 to total
+    end
+end
+say n
+say total
+say length of xs`,
+  ];
+  for (const source of programs) {
+    for (const maxSteps of [Infinity, 30_007, 250_001]) {
+      const seen = {};
+      for (const engine of ENGINES) {
+        const said = [];
+        let stopped = null;
+        try {
+          run(source, (line) => said.push(line), { engine, maxSteps });
+        } catch (err) {
+          if (!(err instanceof FolioError)) throw err;
+          stopped = err.message;
+        }
+        seen[engine] = { said, stopped };
+      }
+      if (maxSteps === Infinity) assert.equal(seen.vm.stopped, null, source); // with no limit, each runs to its end
+      for (const engine of ENGINES) assert.deepEqual(seen[engine], seen.vm, `${engine}, ${maxSteps} steps: ${source}`);
+    }
+  }
+});
+
+// The WebAssembly engine makes a mistake checked for in a loop (a name with no value yet, a division by 0) at
+// the function's end, past the loop (DESIGN §172): a `try` further out that catches it, and goes on, still
+// counts the steps every engine counts, so a step limit stops each at the same place
+test("a mistake in a loop, caught further out, leaves the steps where every engine has them", () => {
+  const source = `to sum_to with n
+    set total to 0
+    for each i from 1 to n
+        if i is 7
+            set total to total / 0
+        end
+        add i to total
+    end
+    return total
+end
+to check with n
+    for each i from 1 to n
+        if i is 5
+            add i to never
+        end
+    end
+end
+set caught to 0
+for each round from 1 to 300
+    try
+        say sum_to(round - (round / 3 rounded down) * 3 + 5)
+    if it fails with why
+        add 1 to caught
+    end
+    try
+        check(round - (round / 2 rounded down) * 2 + 4)
+    if it fails
+        add 1 to caught
+    end
+end
+say caught`;
+  for (const maxSteps of [500, 2_003, 7_777, 50_000]) {
+    const seen = {};
+    for (const engine of ENGINES) {
+      const said = [];
+      let stopped = null;
+      try {
+        run(source, (line) => said.push(line), { engine, maxSteps });
+      } catch (err) {
+        if (!(err instanceof FolioError)) throw err;
+        stopped = err.message;
+      }
+      seen[engine] = { said: said.length, last: said.at(-1), stopped };
+    }
+    for (const engine of ENGINES) assert.deepEqual(seen[engine], seen.vm, `${engine}, ${maxSteps} steps`);
+  }
+});
+
 // ---------- files and arguments ----------
 
 // Files in memory that keep a log of what was done to them.
@@ -1120,6 +1352,71 @@ test("read the folder, on all three engines and in the compiler written in Folio
   assert.deepEqual(compiled((s) => folio(s, used), using), compiled((s) => compileToJs(s, { files: (name) => used[name] }), using));
 });
 
+// \r in text is an r, as SPEC.md promises every Folio 1 (a backslash before a letter but n or t is that letter), on
+// every engine and in the compiler written in Folio, and tidy leaves it as written; and check() says where it's
+// written, in a value in text too, as a carriage return was likely meant (DESIGN §175). \\r is a backslash and an r.
+test("\\r in text is an r, as Folio 1 promises, and check() says where it's written", () => {
+  const source = [
+    'say ("a\\rb\\tc\\nd") as bytes',
+    'say length of "\\r"',
+    'say "\\r" is (list of 13) as bytes as text',
+    "set n to 4",
+    'say ("x{n}\\r\\n") as bytes',
+    'say list of "\\r", "r", "\\\\r", "\\q"',
+    'say split "one\\r\\ntwo" by "\\r\\n"',
+    'say "{("\\r")} and \\\\r"',
+  ].join("\n");
+  const want = [["out", "(7 bytes: 97, 114, 98, 9, 99, 10, 100)"], ["out", "1"], ["out", "no"], ["out", "(4 bytes: 120, 52, 114, 10)"],
+    ["out", '["r", "r", "\\\\r", "q"]'], ["out", '["one", "two"]'], ["out", "r and \\r"]];
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  const folio = folioCompiler(COMPILER);
+  assert.deepEqual(compiled(folio, source), compiled(compileToJs, source));
+  assert.equal(format(source), `${source}\n`);
+  const message = "'\\r' is the letter r in Folio 1, not a carriage return: for one, write (list of 13) as bytes as text";
+  assert.deepEqual(check(source).map((p) => [p.line, p.col, p.kind, p.message]),
+    [[1, 8, "looks wrong", message], [2, 16, "looks wrong", message], [3, 6, "looks wrong", message], [5, 11, "looks wrong", message],
+      [6, 14, "looks wrong", message], [7, 15, "looks wrong", message], [7, 28, "looks wrong", message], [8, 9, "looks wrong", message]]);
+  assert.deepEqual(check('say "\\\\r, \\\\n and r"'), []);
+});
+
+// `[1, 2, 3]` is a list, as `list of 1, 2, 3` is, and ends at its `]`, so it can be one input of several, inside
+// another, empty, carried over lines after a comma, or a list made `for each` (DESIGN §177): on every engine, the
+// compiler written in Folio writing the same JavaScript, tidy writing it the one way, and its mistakes said. A `[`
+// was a mistake before, so no program that ran means anything else now.
+test("[1, 2, 3] is a list, on every engine and in the compiler written in Folio", () => {
+  const source = [
+    "to pair with a, b",
+    "    return [b, a]",
+    "end",
+    "set xs to [3, 1, 2]",
+    "say xs",
+    "say []",
+    "say [[1, 2], [3], []]",
+    "say pair([1, 2], [3])",
+    "say item 2 of [10, 20, 30]",
+    "say length of [xs, xs]",
+    "say [x * 2 for each x in xs where x is greater than 1]",
+    "say [1,",
+    "    2,",
+    "]",
+    "for each n in [5, 6]",
+    "    say n",
+    "end",
+    "say list of [1], 2",
+  ].join("\n");
+  const want = ["[3, 1, 2]", "[]", "[[1, 2], [3], []]", "[[3], [1, 2]]", "20", "2", "[6, 4]", "[1, 2]", "5", "6", "[[1], 2]"].map((line) => ["out", line]);
+  for (const engine of ENGINES) assert.deepEqual(streams(source, { engine }).log, want, engine);
+  const folio = folioCompiler(COMPILER);
+  for (const program of [source, "say [1, 2", "say [1 2]", "say ]", "say [", "set x to [,]"]) {
+    assert.deepEqual(compiled(folio, program), compiled(compileToJs, program), program);
+  }
+  assert.deepEqual(streams("say [1, 2", { engine: "vm" }).log, [["mistake", "line 1: expected ']' but found the end of the code"]]);
+  assert.deepEqual(streams("say [1 2]", { engine: "vm" }).log, [["mistake", "line 1: expected ']' but found '2'"]]);
+  assert.equal(format("say [ 1,2 , [3 ] ]\nset y to f( [1] , [ ] )\nto f with a, b\n    return a\nend"),
+    "say [1, 2, [3]]\nset y to f([1], [])\nto f with a, b\n    return a\nend\n");
+  assert.deepEqual(problems("set xs to [1, 2]\nsay xs + 1"), ["2:8 fails: can't use '+' on a list and a number"]);
+});
+
 // ---------- tidying ----------
 
 test("format() tidies code the one way, without changing a piece of it, and tidy code stays as it is", () => {
@@ -1307,7 +1604,7 @@ test("stdlib.folio is what make-stdlib.mjs makes of the standard library's files
 // weights it saves and loads
 test("learn.folio passes its own tests, learn.test.folio, on all three engines", () => {
   const found = (name) => (name === "math.folio" ? readFileSync(new URL("./math.folio", import.meta.url), "utf8") : tool(name));
-  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_saving", "test_training", "test_optimizers", "test_mistakes"];
+  const names = ["test_matrices", "test_gradients", "test_transformer_gradients", "test_saving", "test_training", "test_optimizers", "test_training_tools", "test_mistakes"];
   for (const engine of ENGINES) {
     const results = testFolio(tool("learn.test.folio"), { engine, files: found, disk: memoryDisk() });
     assert.deepEqual(results.map((r) => [r.name, r.error?.message]), names.map((n) => [n, undefined]), `learn.test.folio on ${engine}`);

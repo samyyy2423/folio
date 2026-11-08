@@ -6,6 +6,36 @@ and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for eac
 
 ## Not released yet
 
+- **A list in brackets.** `[1, 2, 3]` is the list `list of 1, 2, 3` is, and ends at its `]`, so
+  `f([1, 2], 3)` gives f two inputs; `[]` is an empty list, and `[x * 2 for each x in xs]` builds one.
+  A `[` was a mistake before, so no program that ran changes (DESIGN §177).
+- **Kernels of your own on the graphics card.** gpu.folio's `kernel(ptx, name)` loads PTX, NVIDIA's assembly for
+  the card, and `launch(kernel, grid, block, inputs)` runs it on up to 3 axes of blocks of threads, each input
+  packed as its `.param` says; `launch_with` adds shared memory, and `upload_bytes`, `room` and `download_bytes`
+  keep whole numbers and anything else on the card. Mistakes name the input and its type, and PTX the driver
+  can't take shows its log, with the line (DESIGN §176).
+- **`folio check` warns of `\r` in text.** It's an `r` in Folio 1, as SPEC.md promises, where a carriage return
+  was likely meant: the warning says where, in the playground and editors too, and how to write one. gpu.folio
+  and the Bob exercise's example had the slip, and are fixed (DESIGN §175).
+- **Small whole numbers added and compared in place, on WebAssembly.** `n - 1`, `i + 1` and `x is less than 2`
+  work on i31 numbers without a call, an `if` tests a comparison without a box, and an input is read without a
+  check: fib(32) 162 ms to 145 on a first run, primes 148 to 136, and folio.wasm 5% smaller (DESIGN §174).
+- **Loops at the top level fast on their first run.** On the WebAssembly engine, each loop at a program's top
+  level is a function of its own, called for 65,536 rounds at a time, so V8 optimizes it while it runs: a Run on
+  the website of 100 million rounds of `add` takes about 450 ms in Chrome, not 674, and 172, not 374, run again;
+  a first run in Node.js takes 144 ms, not 397 (DESIGN §173).
+- **WebAssembly loops V8 can keep in registers.** A mistake the code checks for is made at the function's end, and
+  asking for more steps is outside the round, so once V8 has optimized a loop it keeps its numbers in registers:
+  100 million rounds of `add`, run again in one process, take 95 ms, not 332 (plain JavaScript 77). A first run,
+  as a Run on the website is, stays in V8's baseline compiler, which has no on-stack replacement for WebAssembly:
+  in Chrome that loop goes from about 800 ms to about 650. A step limit now stops the WebAssembly engine where it
+  stops the others when a `try` in a loop catches a mistake from a call. memory.folio's `get_many` is 2.6 times
+  as fast (DESIGN §172).
+- **Training as GPT-2 was trained.** learn.folio has `adamw` (weight decay), `clip_gradients` and
+  `gradient_norm`, `cosine_rate` (a warmup, then down along a cosine) and `dropout` with `training(yes)` and
+  `training(no)`, on the card and on the processor. On the card, decay and clipping are in Adam's launch, with
+  nothing copied back. gpt.folio uses them: its loss on text it hadn't seen goes from 1.72 to 1.64 in the same
+  2,000 steps, each still 3.0 ms (DESIGN §170).
 - **Lists that grow where they are, and `for each` without a copy.** A list that's full and is the last block of
   the heap gets the pages after it, with no copy, and `for each` goes through a list's own numbers when nothing
   in the loop can change them: making a list of 10 million numbers takes 30 ms, not 71, adding them up 18, not

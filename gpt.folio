@@ -5,7 +5,9 @@
 #
 #     folio run --allow-read --allow-write --allow-libraries gpt.folio [steps]
 #
-# It saves what it learned to gpt.safetensors. On a GTX 1650, 2,000 steps take about 6 seconds.
+# It learns as GPT-2 did: AdamW, its rate up over a warmup and down along a cosine, the gradients clipped, and
+# dropout on a long run. It saves what it learned to gpt.safetensors. On a GTX 1650, 2,000 steps take about 6
+# seconds.
 
 use "math.folio"
 use "learn.folio" as learn
@@ -19,7 +21,11 @@ set heads to 4
 set layers to 2
 set time to 64 # places it looks back over
 set batch to 16
-set rate to 0.003
+set rate to 0.006
+set dropping to 0 # dropout, for a run long enough to start learning the text by heart
+if steps is greater than 3000
+    set dropping to 0.1
+end
 
 # ---------- the text, a letter at a time ----------
 
@@ -123,10 +129,10 @@ to forward with tokens, pieces, places
         set k to learn's matmul(h, w(p + "k"))
         set v to learn's matmul(h, w(p + "v"))
         set seen to learn's attention(q, k, v, pieces, places, heads)
-        set x to learn's plus(x, learn's add_row(learn's matmul(seen, w(p + "o")), w(p + "o_bias")))
+        set x to learn's plus(x, learn's dropout(learn's add_row(learn's matmul(seen, w(p + "o")), w(p + "o_bias")), dropping))
         set h to learn's layer_norm(x, w(p + "ln2_gamma"), w(p + "ln2_beta"))
         set up to learn's gelu(learn's add_row(learn's matmul(h, w(p + "up")), w(p + "up_bias")))
-        set x to learn's plus(x, learn's add_row(learn's matmul(up, w(p + "down")), w(p + "down_bias")))
+        set x to learn's plus(x, learn's dropout(learn's add_row(learn's matmul(up, w(p + "down")), w(p + "down_bias")), dropping))
     end
     set x to learn's layer_norm(x, w("final_gamma"), w("final_beta"))
     return learn's add_row(learn's matmul(x, w("scores")), w("scores_bias"))
@@ -134,9 +140,13 @@ end
 
 # ---------- learning ----------
 
-set opt to learn's adam(parameters, rate)
+# AdamW, its rate up over the first 100 steps and then down along a cosine to a tenth, and the gradients clipped
+# to 1 together, as GPT-2 was trained
+set opt to learn's adamw(parameters, rate, 0.1)
+learn's clip_gradients(opt, 1)
 set t0 to the clock
 for each s from 1 to steps
+    set opt's rate to learn's cosine_rate(s, steps, 100, rate, rate / 10)
     set piece to piece_of(0, cut)
     set loss to learn's cross_entropy(forward(piece's inputs, batch, time), piece's targets)
     learn's backward(loss)
@@ -146,6 +156,7 @@ for each s from 1 to steps
     learn's step(opt)
 end
 set took to the clock - t0
+learn's training(no)
 
 # how well it does on the tenth of the text it never learned from
 set total to 0
@@ -157,6 +168,7 @@ end
 say "learned in " + took + " s (" + (took / steps * 1000) + " ms a step); loss on text it hadn't seen: " + total / 10
 
 learn's save(model, "gpt.safetensors")
+set t1 to the clock
 
 # ---------- writing ----------
 
@@ -190,3 +202,4 @@ for each n from 1 to 400
 end
 say "----"
 say written
+say "wrote 400 letters in " + (the clock - t1) + " s"

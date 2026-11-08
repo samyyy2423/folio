@@ -214,6 +214,105 @@ to test_optimizers
     expect item 2 of moved - 2.1 is less than 0.000001 and 2.1 - item 2 of moved is less than 0.000001
 end
 
+# within a millionth, a number or each of a list
+to near with got, wanted
+    if is_a_list(got)
+        if length of got is not length of wanted
+            return no
+        end
+        for each k from 1 to length of got
+            if not near(item k of got, item k of wanted)
+                return no
+            end
+        end
+        return yes
+    end
+    return got - wanted is less than 0.000001 and wanted - got is less than 0.000001
+end
+
+to is_a_list with v
+    try
+        set n to length of v
+    if it fails
+        return no
+    end
+    return yes
+end
+
+# AdamW's decay, clipping, the cosine rate and dropout (DESIGN §170)
+to test_training_tools
+    learn's use_card(no)
+    # AdamW: a weight of two rows made smaller, times 1 - rate decay, then Adam's step; a bias, one row, not
+    set w to learn's parameter(learn's matrix(list of (list of 2), (list of -4)))
+    set b to learn's parameter(learn's matrix(list of (list of 2)))
+    set opt to learn's adamw((list of w, b), 0.1, 0.5)
+    learn's backward(learn's plus(learn's sum(learn's times(w, -50)), learn's sum(learn's times(b, -50))))
+    learn's step(opt)
+    expect near(learn's numbers_of(w), list of 2, -3.7)
+    expect near(learn's numbers_of(b), list of 2.1)
+    # clipping: gradients 3 and 4, 5 together, made 1 together
+    set p to learn's parameter(learn's matrix(list of (list of 1, 2)))
+    set opt to learn's sgd((list of p), 1)
+    learn's clip_gradients(opt, 1)
+    learn's backward(learn's sum(learn's times(p, learn's matrix(list of (list of 3, 4)))))
+    expect near(learn's gradient_norm(opt), 5)
+    learn's step(opt)
+    expect near(learn's numbers_of(p), list of 0.4, 1.2)
+    learn's clip_gradients(opt, 10) # not too big: as it was
+    learn's backward(learn's sum(learn's times(p, learn's matrix(list of (list of 3, 4)))))
+    learn's step(opt)
+    expect near(learn's numbers_of(p), list of -2.6, -2.8)
+    # the rate: up over the warmup, then down along half a cosine
+    expect learn's cosine_rate(5, 100, 10, 1, 0.1) is 0.5
+    expect learn's cosine_rate(10, 100, 10, 1, 0.1) is 1
+    expect near(learn's cosine_rate(55, 100, 10, 1, 0.1), 0.55)
+    expect learn's cosine_rate(100, 100, 10, 1, 0.1) is 0.1
+    expect learn's cosine_rate(500, 100, 10, 1, 0.1) is 0.1
+    # dropout: about a quarter 0, the rest 4/3, and the gradient through the same ones
+    set ones to empty list
+    for each k from 1 to 1000
+        add 1 to ones
+    end
+    set x to learn's parameter(learn's matrix_of(ones, 1, 1000))
+    set d to learn's dropout(x, 0.25)
+    set ds to learn's numbers_of(d)
+    set dropped to 0
+    set others to yes
+    for each y in ds
+        if y is 0
+            add 1 to dropped
+        else if not near(y, 4 / 3)
+            set others to no
+        end
+    end
+    expect others
+    expect dropped is greater than 180 and dropped is less than 320
+    learn's backward(learn's sum(d))
+    expect learn's numbers_of(learn's gradient_of(x)) is ds
+    learn's forget()
+    learn's training(no)
+    expect learn's numbers_of(learn's dropout(x, 0.5)) is ones
+    learn's training(yes)
+    try
+        learn's dropout(x, 1)
+        expect "a chance of 1" is "a mistake"
+    if it fails with why
+        expect why is "'dropout' needs a chance from 0 up to 1, not 1 itself, not 1"
+    end
+    try
+        learn's adamw((list of x), 0.1, -1)
+        expect "a decay less than 0" is "a mistake"
+    if it fails with why
+        expect why is "'adamw' needs a decay of 0 or more, not -1"
+    end
+    try
+        learn's clip_gradients(learn's sgd((list of x), 0.1), 0)
+        expect "clipping to 0" is "a mistake"
+    if it fails with why
+        expect why is "'clip_gradients' needs a number more than 0, not 0"
+    end
+end
+
 to test_mistakes
     learn's use_card(no)
     set a to learn's matrix(list of (list of 1, 2))

@@ -790,6 +790,14 @@ class WasmCompiler extends Scope {
     this.c = this.f.code;
     const c = this.c;
     if (!parent) c.emit("local.get", 0).emit("global.set", ctx.maxSteps).emit("call", ctx.init.index).emit("call", ctx.im.grant).emit("global.set", ctx.left);
+    this.inputs = parent ? params.length : 0; // an input always has a value: it's read with no check (DESIGN §174)
+    // A mistake the code checks for on its way, a name with no value yet or a division by 0, branches to the
+    // function's end, past its return, where the mistake is made: the code it's checked in calls nothing, so V8
+    // keeps its numbers in registers (DESIGN §172). In a `try` it's made where it is, for the `try` to catch.
+    this.tries = 0; // the `try`s being written
+    this.missing = [this.f.local(I32), this.f.local(I32), this.f.local(I32)]; // noValueYet's inputs
+    this.dividing = [this.f.local(F64), this.f.local(F64), this.f.local(I32)]; // a / b, b 0, and where
+    this.e("block").e("block");
     const captured = ctx.captured.get(body);
     this.numberSet = this.numericSlots(body, captured, parent ? params.length : 0);
     this.numbers = []; // slot -> { value, box } for the variables that only ever hold numbers
@@ -817,6 +825,12 @@ class WasmCompiler extends Scope {
     }
     for (const s of body) this.statement(s);
     if (parent) c.emit("ref.null", "eq");
+    this.e("return").e("end");
+    for (const l of this.missing) this.e("local.get", l);
+    this.e("call", ctx.R.noValueYet).e("unreachable").e("end");
+    const [a, b, k] = this.dividing;
+    this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
+    this.e("local.get", k).e("call", ctx.R.arithRest).e("unreachable");
   }
 
   // Type-directed unboxing: the variables of this function (not captured, not inputs) that can only ever
@@ -901,8 +915,15 @@ class WasmCompiler extends Scope {
       if (e.op !== "/") return void this.e({ "+": "f64.add", "-": "f64.sub", "*": "f64.mul" }[e.op]);
       const [a, b] = [this.temp(F64), this.temp(F64)];
       this.e("local.set", b).e("local.set", a).e("local.get", b).e("f64.const", 0).e("f64.eq").e("if");
-      this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
-      this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R.arithRest).e("unreachable").e("end");
+      if (this.tries) {
+        this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
+        this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R.arithRest).e("unreachable").e("end");
+      } else {
+        const [da, db, dk] = this.dividing;
+        this.keepCount();
+        this.e("local.get", a).e("local.set", da).e("local.get", b).e("local.set", db).e("i32.const", this.pos(e.at)).e("local.set", dk);
+        this.e("br", this.labels - 1).e("end");
+      }
       return void this.e("local.get", a).e("local.get", b).e("f64.div");
     }
     if (e.kind === "negate" && this.unboxed(e)) return void (this.exprNum(e.operand), this.e("f64.neg"));
@@ -981,7 +1002,16 @@ class WasmCompiler extends Scope {
   // A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
   noValueYet(name, k) {
     const [at, n] = this.ctx.spelled(name);
-    this.e("if").e("i32.const", at).e("i32.const", n).e("i32.const", k).e("call", this.ctx.R.noValueYet).e("end");
+    if (this.tries) return void this.e("if").e("i32.const", at).e("i32.const", n).e("i32.const", k).e("call", this.ctx.R.noValueYet).e("end");
+    this.e("if");
+    this.keepCount();
+    [at, n, k].forEach((v, i) => this.e("i32.const", v).e("local.set", this.missing[i]));
+    this.e("br", this.labels - 2).e("end");
+  }
+
+  // on the way to a mistake at the function's end, past the loops' catch_all: the steps left, in the global
+  keepCount() {
+    if (this.lefts.length) this.e("local.get", this.lefts.at(-1)).e("global.set", this.ctx.left);
   }
 
   // text made from the program's data where it's needed, not when the program starts, as a mistake's words are
@@ -1016,6 +1046,124 @@ class WasmCompiler extends Scope {
     this.e("call", this.ctx.R.truthy);
   }
 
+  // an `if`'s or a `while`'s condition, as an i32: a comparison's yes or no as it is, anything else checked
+  // to be yes or no (DESIGN §174)
+  cond(e) {
+    if (e.kind === "compare") return this.compare(e);
+    this.expr(e);
+    this.truthy();
+  }
+
+  // whether a name is one of this function's inputs, which always have a value
+  isInput(name) {
+    const [depth, slot] = this.resolve(name);
+    return depth === 0 && slot <= this.inputs;
+  }
+
+  // A comparison, as an i32. With a whole number written in the program on one side, and a small whole number
+  // on the other, an i31 (from 2 up, as unsigned, as 0 and 1 are no and yes), they're compared here; anything
+  // else as before (DESIGN §174). Only there: inlined everywhere, the compiler's own code grew a fifth.
+  compare(e) {
+    const { R } = this.ctx;
+    if (e.op === "in") {
+      this.expr(e.left);
+      this.expr(e.right);
+      this.e("i32.const", this.pos(e.at)).e("call", R.isIn);
+    } else if (this.isNumber(e.left) && this.isNumber(e.right)) { // two numbers: no boxes, no checks
+      this.exprNum(e.left);
+      this.exprNum(e.right);
+      if (e.op === "divisible by") this.e("i32.const", this.pos(e.at)).e("call", R.dvf);
+      else this.e("call", R.ncmp), ORDER_TESTS[e.op](this.c); // to 15 digits
+    } else if (e.op === "divisible by") {
+      this.expr(e.left);
+      this.expr(e.right);
+      this.e("i32.const", this.pos(e.at)).e("call", R.dv);
+    } else if (!this.hasSmall(e, e.op === "is")) {
+      this.expr(e.left);
+      this.expr(e.right);
+      if (e.op === "is") this.e("call", R.eq);
+      else this.e("i32.const", this.pos(e.at)).e("call", R[{ "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le" }[e.op]]);
+    } else {
+      const sides = this.smallSides(e, e.op === "is");
+      const at = e.op === "is" ? null : this.pos(e.at);
+      this.e("block", I32).e("block");
+      this.smallChecks(sides, e.op !== "is");
+      this.e({ "is": "i32.eq", "less than": "i32.lt_s", "greater than": "i32.gt_s", "at least": "i32.ge_s", "at most": "i32.le_s" }[e.op]).e("br", 1).e("end");
+      this.smallSlow(sides);
+      if (e.op === "is") this.e("call", R.eq);
+      else this.e("i32.const", at).e("call", R[{ "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le" }[e.op]]);
+      this.e("end");
+    }
+    if (e.negate) this.e("i32.eqz");
+  }
+
+  // a + b or a - b, one side a whole number written in the program: two small whole numbers added here, when what
+  // comes out is one too (not 0 or 1, which are boxes); anything else as before
+  smallMath(e) {
+    if (!this.hasSmall(e, false)) {
+      this.expr(e.left);
+      this.expr(e.right);
+      this.e("i32.const", this.pos(e.at)).e("call", this.ctx.R[e.op === "+" ? "add" : "sub"]);
+      return;
+    }
+    const sides = this.smallSides(e, false);
+    const at = this.pos(e.at);
+    const r = this.temp(I32);
+    this.e("block", EQ).e("block");
+    this.smallChecks(sides, true);
+    this.e(e.op === "+" ? "i32.add" : "i32.sub").e("local.tee", r);
+    this.e("i32.const", 2 ** 30).e("i32.add").e("i32.const", -(2 ** 31)).e("i32.ge_u").e("br_if", 0);
+    this.e("local.get", r).e("i32.const", 2).e("i32.lt_u").e("br_if", 0);
+    this.e("local.get", r).e("ref.i31").e("br", 1).e("end");
+    this.smallSlow(sides);
+    this.e("i32.const", at).e("call", this.ctx.R[e.op === "+" ? "add" : "sub"]).e("end");
+  }
+
+  // each side: a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`, as a box of
+  // its own is what those are), kept to be written as a constant; or worked out now, into a local
+  smallSides(e, boxed01) {
+    return [e.left, e.right].map((x) => {
+      const v = this.smallSide(x, boxed01);
+      if (v !== null) return { k: v, x };
+      const t = this.temp();
+      this.expr(x);
+      this.e("local.set", t);
+      return { t, x };
+    });
+  }
+
+  // a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`), or null
+  smallSide(x, boxed01) {
+    const v = x.kind === "value" && typeof x.value === "number" ? x.value : null;
+    return v !== null && Number.isInteger(v) && v >= -(2 ** 30) && v < 2 ** 30 && !(boxed01 && (v === 0 || v === 1)) ? v : null;
+  }
+
+  hasSmall(e, boxed01) {
+    return this.smallSide(e.left, boxed01) !== null || this.smallSide(e.right, boxed01) !== null;
+  }
+
+  // to the block outside unless each side in a local is an i31 (a number, from 2 up as unsigned, if numbers);
+  // then both sides' whole numbers
+  smallChecks(sides, numbers) {
+    for (const s of sides) {
+      if (s.t === undefined) continue;
+      this.e("local.get", s.t).e("ref.test", "i31").e("i32.eqz").e("br_if", 0);
+      if (numbers) this.e("local.get", s.t).e("ref.cast", "i31").e("i31.get_u").e("i32.const", 2).e("i32.lt_u").e("br_if", 0);
+    }
+    for (const s of sides) {
+      if (s.t === undefined) this.e("i32.const", s.k);
+      else this.e("local.get", s.t).e("ref.cast", "i31").e("i31.get_s");
+    }
+  }
+
+  // both sides as values, for the shared check
+  smallSlow(sides) {
+    for (const s of sides) {
+      if (s.t === undefined) this.expr(s.x);
+      else this.e("local.get", s.t);
+    }
+  }
+
   block(body) {
     for (const s of body) this.statement(s);
   }
@@ -1027,6 +1175,7 @@ class WasmCompiler extends Scope {
   // keeps the smaller of the two, as a count only goes down, so every step is counted as the other engines
   // count them.
   loop(k, test, body) {
+    if (!this.parent && !this.lefts.length) return this.outlinedLoop(k, test, body);
     const { ctx } = this;
     const outer = this.lefts.at(-1);
     const counting = this.temp(I32);
@@ -1034,12 +1183,16 @@ class WasmCompiler extends Scope {
     this.e("global.get", ctx.left).e("local.set", counting);
     this.lefts.push(counting);
     this.e("try");
+    // the loop, inside one that asks for more steps when its count runs out, so the round itself makes no call
+    // (DESIGN §172)
     this.stops.push(this.labels);
-    this.e("block").e("loop");
+    this.e("block").e("loop").e("block").e("loop");
     test();
-    this.e("br_if", 1);
+    this.e("br_if", 3);
     body();
-    this.tick(k);
+    this.e("local.get", counting).e("i32.const", 1).e("i32.sub").e("local.tee", counting).e("i32.const", 0).e("i32.lt_s").e("br_if", 1);
+    this.e("br", 0).e("end").e("end");
+    this.e("i32.const", k).e("call", ctx.im.refill).e("local.tee", counting).e("global.set", ctx.left);
     this.e("br", 0).e("end").e("end");
     this.stops.pop();
     this.e("local.get", counting).e("global.set", ctx.left);
@@ -1049,6 +1202,76 @@ class WasmCompiler extends Scope {
     this.e("end");
     this.lefts.pop();
     if (outer !== undefined) this.e("global.get", ctx.left).e("local.set", outer);
+  }
+
+  // A loop at the program's top level, in a function of its own that runs 65,536 rounds and is called again for
+  // more (DESIGN §173): V8 makes a WebAssembly function's optimized code for its next call, never during one, and
+  // the top level is called once, so its loops ran in V8's first, plain code from start to end. The function has
+  // the top level's locals at the same places, so the loop's code is what it was; they go into globals before the
+  // first call, each call takes them and gives them back as it returns, or as a mistake leaves it, and the top
+  // level takes them back after. It gives 0 when the loop is done, and 1 to be called again (a `return` at the top
+  // level is a mistake before the program runs). Only a loop in a `try` has its rounds in a `try` of their own,
+  // to give the locals back as a mistake leaves them: without one, a mistake ends the program, and V8's code for
+  // a loop in a `try` was half as fast again.
+  outlinedLoop(k, test, body) {
+    const { ctx } = this;
+    const { m, T } = ctx;
+    const types = [F64, ...this.f.locals]; // the top level's input, the steps it may take, and its locals
+    const globals = types.map((t) => m.global(t, true, typeof t === "string" ? new Code().emit(t === F64 ? "f64.const" : "i32.const", 0) : new Code().emit("ref.null", t.heap)));
+    const keep = () => globals.forEach((g, j) => this.e("local.get", j).e("global.set", g));
+    const take = () => globals.forEach((g, j) => this.e("global.get", g).e("local.set", j));
+    keep();
+    const caller = { f: this.f, c: this.c, labels: this.labels, stops: this.stops, lefts: this.lefts, tries: this.tries };
+    const guarded = this.tries > 0;
+    const f = m.func("loop", [F64], [I32]);
+    f.locals.push(...this.f.locals);
+    Object.assign(this, { f, c: f.code, labels: 0, stops: [], lefts: [], tries: 0 });
+    take();
+    this.e("block").e("block"); // the mistakes at its end, as each function has them
+    const [counting, chunk] = [this.temp(I32), this.temp(I32)];
+    this.e("global.get", ctx.left).e("local.set", counting).e("i32.const", 65536).e("local.set", chunk);
+    this.lefts.push(counting);
+    if (guarded) this.e("try");
+    this.e("block");
+    this.stops.push(this.labels);
+    this.e("block").e("loop").e("block").e("loop");
+    test();
+    this.e("br_if", 3);
+    body();
+    this.e("local.get", counting).e("i32.const", 1).e("i32.sub").e("local.tee", counting).e("i32.const", 0).e("i32.lt_s").e("br_if", 1);
+    this.e("local.get", chunk).e("i32.const", 1).e("i32.sub").e("local.tee", chunk).e("i32.eqz").e("br_if", 4);
+    this.e("br", 0).e("end").e("end");
+    this.e("i32.const", k).e("call", ctx.im.refill).e("local.tee", counting).e("global.set", ctx.left);
+    this.e("br", 0).e("end").e("end");
+    this.stops.pop();
+    for (const status of [0, 1]) { // the loop done; then this call's rounds done
+      keep();
+      this.e("local.get", counting).e("global.set", ctx.left).e("i32.const", status).e("return");
+      if (status === 0) this.e("end");
+    }
+    if (guarded) {
+      this.e("catch_all");
+      keep();
+      this.e("local.get", counting).e("global.get", ctx.left).e("local.get", counting).e("global.get", ctx.left).e("i32.lt_s").e("select").e("global.set", ctx.left);
+      this.e("rethrow", 0).e("end");
+    }
+    this.e("unreachable").e("end");
+    keep();
+    for (const l of this.missing) this.e("local.get", l);
+    this.e("call", ctx.R.noValueYet).e("unreachable").e("end");
+    keep();
+    const [a, b, d] = this.dividing;
+    this.e("i32.const", MATH.indexOf("/")).e("local.get", a).e("struct.new", T.num).e("local.get", b).e("struct.new", T.num);
+    this.e("local.get", d).e("call", ctx.R.arithRest).e("unreachable");
+    Object.assign(this, caller);
+    if (guarded) this.e("try");
+    this.e("loop").e("local.get", 0).e("call", f.index).e("br_if", 0).e("end");
+    if (guarded) {
+      this.e("catch_all");
+      take();
+      this.e("rethrow", 0).e("end");
+    }
+    take();
   }
 
   // around a call that may count steps of its own: the loop's count given to the global, and taken back after
@@ -1104,8 +1327,7 @@ class WasmCompiler extends Scope {
         this.e("i32.const", this.pos(s.at)).e("call", im.exit).e("unreachable");
         return;
       case "if":
-        this.expr(s.cond);
-        this.truthy();
+        this.cond(s.cond);
         this.e("if");
         this.block(s.then);
         this.e("else");
@@ -1113,7 +1335,7 @@ class WasmCompiler extends Scope {
         this.e("end");
         return;
       case "while":
-        return this.loop(this.pos(s.at), () => (this.expr(s.cond), this.truthy(), this.e("i32.eqz")), () => this.block(s.body));
+        return this.loop(this.pos(s.at), () => (this.cond(s.cond), this.e("i32.eqz")), () => this.block(s.body));
       case "repeat": {
         const k = this.pos(s.at);
         const n = this.temp(F64);
@@ -1260,7 +1482,9 @@ class WasmCompiler extends Scope {
         const got = this.temp(EQ);
         this.e("global.get", this.ctx.depth).e("local.set", depth).e("call", im.tryStart);
         this.e("block").e("block", EQ).e("try");
+        this.tries++;
         this.block(s.body);
+        this.tries--;
         this.e("br", 2); // nothing went wrong: past the handler
         this.e("catch", this.ctx.mistake).e("drop").e("drop").e("br", 1); // what `if it fails with` gets
         this.e("catch_all");
@@ -1268,6 +1492,10 @@ class WasmCompiler extends Scope {
         this.e("call", im.caughtValue).e("br", 1);
         this.e("end").e("unreachable").e("end");
         this.e("local.set", got).e("local.get", depth).e("global.set", this.ctx.depth);
+        // in a loop, its count the smaller of its own and the global's: a call's steps went into the global, and
+        // the mistake came back past where the call would have given them to the loop (DESIGN §172)
+        const counting = this.lefts.at(-1);
+        if (counting !== undefined) this.e("local.get", counting).e("global.get", this.ctx.left).e("local.get", counting).e("global.get", this.ctx.left).e("i32.lt_s").e("select").e("local.set", counting);
         if (s.name) this.store(s.name, () => this.e("local.get", got));
         this.block(s.handler);
         this.e("end");
@@ -1418,6 +1646,7 @@ class WasmCompiler extends Scope {
         return;
       case "name": {
         if (!this.resolve(e.name)) return this.undefinedName(e.name, e.at);
+        if (this.isInput(e.name)) return void this.load(e.name);
         const value = this.temp();
         this.load(e.name);
         this.e("local.tee", value).e("global.get", this.ctx.unset).e("ref.eq");
@@ -1428,33 +1657,13 @@ class WasmCompiler extends Scope {
       case "call":
         return this.call(e);
       case "math":
+        if (e.op === "+" || e.op === "-") return this.smallMath(e);
         this.expr(e.left);
         this.expr(e.right);
         this.e("i32.const", this.pos(e.at)).e("call", R[["add", "sub", "mul", "div"][MATH.indexOf(e.op)]]);
         return;
       case "compare":
-        if (e.op === "in") {
-          this.expr(e.left);
-          this.expr(e.right);
-          this.e("i32.const", this.pos(e.at)).e("call", R.isIn);
-          if (e.negate) this.e("i32.eqz");
-          this.e("ref.i31");
-          return;
-        }
-        if (this.isNumber(e.left) && this.isNumber(e.right)) { // two numbers: no boxes, no checks
-          this.exprNum(e.left);
-          this.exprNum(e.right);
-          if (e.op === "divisible by") this.e("i32.const", this.pos(e.at)).e("call", R.dvf);
-          else this.e("call", R.ncmp), ORDER_TESTS[e.op](this.c); // to 15 digits
-          if (e.negate) this.e("i32.eqz");
-          this.e("ref.i31");
-          return;
-        }
-        this.expr(e.left);
-        this.expr(e.right);
-        if (e.op === "is") this.e("call", R.eq);
-        else this.e("i32.const", this.pos(e.at)).e("call", R[{ "less than": "lt", "greater than": "gt", "at least": "ge", "at most": "le", "divisible by": "dv" }[e.op]]);
-        if (e.negate) this.e("i32.eqz");
+        this.compare(e);
         this.e("ref.i31");
         return;
       case "and":

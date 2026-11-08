@@ -20,8 +20,11 @@
 # cross_entropy(scores, labels) and mean_squared_error(m, target); and for transformers, embedding(table, ids),
 # gelu(m), layer_norm(m, gamma, beta) and attention(q, k, v, batch, time, heads), with a causal mask. Then backward(loss), and value(m), numbers_of(m),
 # rows_of(m), shape_of(m), gradient_of(p), softmax_of(m) and accuracy(scores, labels). Layers: layer(inputs,
-# outputs), network(sizes), forward(net, x) and parameters_of(net). Optimizers: sgd(parameters, rate) and
-# adam(parameters, rate), moved on by step(opt). forget() lets go of every matrix worked out since the last step,
+# outputs), network(sizes), forward(net, x) and parameters_of(net). dropout(m, chance) while training(yes), as at
+# first; training(no) to use what it learned. Optimizers: sgd(parameters, rate), adam(parameters, rate) and
+# adamw(parameters, rate, decay), moved on by step(opt); clip_gradients(opt, most) and gradient_norm(opt), and
+# cosine_rate(s, steps, warmup, top, bottom) for opt's rate at each step, set as `set opt's rate to ...`.
+# forget() lets go of every matrix worked out since the last step,
 # for a program that only uses a network; free(m) lets go of one. save(named, file), load(file) and
 # load_into(named, file) keep matrices in a safetensors file, as Hugging Face does, and named_parameters(net)
 # names a network's.
@@ -55,6 +58,7 @@ end
 set learn_wants_card to yes
 set learn_card to nothing
 set learn_tape to empty list
+set learn_training to yes
 
 # ---------- where the numbers are ----------
 
@@ -261,36 +265,25 @@ to cross_entropy with scores, labels
         learn_gpu's free(placed)
         return learn_result(learn_scalar(worked's loss, yes), 1, 1, "cross_entropy", (list of scores), worked's gradient)
     end
-    set xs to learn_arrays's numbers_of(scores's data)
+    # each row's softmax, from its largest, its loss and its gradient: the softmax less 1 at the label, over n
     set n to scores's rows
     set c to scores's columns
+    set xs to scores's data
+    set top to learn_arrays's reshape(learn_arrays's max(xs, 2), (list of n, 1))
+    set exps to learn_arrays's exp(learn_arrays's minus(xs, top))
+    set totals to learn_arrays's reshape(learn_arrays's sum(exps, 2), (list of n, 1))
+    set gradient to learn_arrays's divided_by(exps, totals)
+    set tops to top's data
+    set sums to totals's data
+    set numbers to xs's data
+    set gs to gradient's data
     set loss to 0
-    set gradient to empty list
     for each i from 1 to n
-        set top to item ((i - 1) * c + 1) of xs
-        for each j from 2 to c
-            if item ((i - 1) * c + j) of xs is greater than top
-                set top to item ((i - 1) * c + j) of xs
-            end
-        end
-        set total to 0
-        set exps to empty list
-        for each j from 1 to c
-            set e to learn_math's exp(item ((i - 1) * c + j) of xs - top)
-            add e to exps
-            set total to total + e
-        end
-        set label to item i of labels
-        set loss to loss + top + learn_math's ln(total) - item ((i - 1) * c + label + 1) of xs
-        for each j from 1 to c
-            set p to item j of exps / total
-            if j - 1 is label
-                set p to p - 1
-            end
-            add p / n to gradient
-        end
+        set at to (i - 1) * c + item i of labels + 1
+        set loss to loss + item i of tops + learn_math's ln(item i of sums) - item at of numbers
+        set item at of gs to item at of gs - 1
     end
-    return learn_result(learn_scalar(loss / n, no), 1, 1, "cross_entropy", (list of scores), learn_arrays's shaped(gradient, (list of n, c)))
+    return learn_result(learn_scalar(loss / n, no), 1, 1, "cross_entropy", (list of scores), learn_arrays's divided_by(gradient, n))
 end
 
 # the average of the squares of how far m is from target, a matrix of the same shape: a 1 by 1 matrix
@@ -449,6 +442,47 @@ to attention with q, k, v, batch, time, heads
     return learn_result(learn_arrays's shaped(out, (list of q's rows, c)), q's rows, c, "attention", (list of q, k, v), list of probs, shape)
 end
 
+# ---------- dropout (DESIGN §170) ----------
+
+# whether dropout() drops numbers: yes while a network learns, as at first, and no to use what it learned
+to training with on
+    set learn_training to on
+end
+
+# m with each number 0 at the chance given, chosen anew each time, and the rest made larger, over 1 - chance, so
+# it all adds up to about what it did: a network learns not to lean on any one number. While training(no), m
+to dropout with m, chance
+    learn_live(m, "dropout")
+    if not learn_is_number(chance) or chance is less than 0 or chance is at least 1
+        fail with "'dropout' needs a chance from 0 up to 1, not 1 itself, not " + chance
+    end
+    if not learn_training or chance is 0
+        return m
+    end
+    set n to m's rows * m's columns
+    if m's card
+        set mask to learn_gpu's dropout_mask(n, chance, (learn_math's random() * 4294967296) rounded down)
+        set data to learn_gpu's times(m's data, mask)
+    else
+        set scale to 1 / (1 - chance)
+        set kept to empty list
+        for each k from 1 to n
+            if learn_math's random() is less than chance
+                add 0 to kept
+            else
+                add scale to kept
+            end
+        end
+        set mask to learn_arrays's shaped(kept, (list of m's rows, m's columns))
+        set data to learn_arrays's times(m's data, mask)
+    end
+    if not m's tracks # nothing to send a gradient back to
+        learn_drop(mask, m's card)
+        set mask to nothing
+    end
+    return learn_result(data, m's rows, m's columns, "dropout", (list of m), mask)
+end
+
 # ---------- what they are ----------
 
 # a 1 by 1 matrix's number, or a matrix's numbers row after row
@@ -583,8 +617,7 @@ to learn_back with m
             if m's card
                 learn_add_grad_mm(b, a's data, g, a's columns, a's rows, m's columns, yes, no)
             else
-                set turned to learn_t(a)
-                learn_add_grad(b, learn_mm(turned, g, a's columns, a's rows, m's columns, m's card))
+                learn_add_grad(b, learn_arrays's matmul_turned(a's data, g))
             end
         end
     else if how is "plus" or how is "minus"
@@ -628,7 +661,7 @@ to learn_back with m
             if m's card
                 learn_add_grad(a, learn_gpu's relu_gradient(g, a's data))
             else
-                learn_add_grad(a, learn_arrays's times(g, learn_arrays's above_zero(a's data)))
+                learn_add_grad(a, learn_arrays's relu_gradient(g, a's data))
             end
         end
     else if how is "sum" or how is "mean"
@@ -673,6 +706,10 @@ to learn_back with m
             else
                 learn_add_grad(a, learn_arrays's times(g, learn_arrays's apply(a's data, learn_gelu_slope)))
             end
+        end
+    else if how is "dropout"
+        if a's tracks
+            learn_add_grad(a, learn_each_times(g, m's extra, m's card))
         end
     else if how is "layer_norm"
         learn_back_layer_norm(m, g)
@@ -971,24 +1008,88 @@ end
 
 # plain gradient descent: each parameter moved against its gradient, rate times it
 to sgd with parameters, rate
-    return record with way "sgd", parameters parameters, rate rate, t 0, m empty list, v empty list
+    return learn_optimizer("sgd", parameters, rate, 0)
 end
 
 # Adam: each parameter moved against a running average of its gradient, over one of its square, as most
 # networks are trained (b1 0.9, b2 0.999, eps 10^-8)
 to adam with parameters, rate
+    return learn_optimizer("adam", parameters, rate, 0)
+end
+
+# AdamW, as GPT-2 and most transformers are trained (DESIGN §170): Adam, and each parameter of more than one row,
+# the weights and embeddings but not a bias or a layer norm's row, made a little smaller at each step, times
+# 1 - rate times decay, apart from its gradient
+to adamw with parameters, rate, decay
+    if not learn_is_number(decay) or decay is less than 0
+        fail with "'adamw' needs a decay of 0 or more, not " + decay
+    end
+    return learn_optimizer("adam", parameters, rate, decay)
+end
+
+to learn_optimizer with way, parameters, rate, decay
     set ms to empty list
     set vs to empty list
     for each p in parameters
         add nothing to ms
         add nothing to vs
     end
-    return record with way "adam", parameters parameters, rate rate, t 0, m ms, v vs
+    return record with way way, parameters parameters, rate rate, t 0, m ms, v vs, decay decay, clip nothing, room nothing
+end
+
+# from now on, at each step, the gradients made smaller together when they're too big: when the square root of
+# the sum of all their squares is more than most, each times most over it, as PyTorch's clip_grad_norm_ does,
+# so one odd batch can't throw a network far
+to clip_gradients with opt, most
+    if not learn_is_number(most) or most is at most 0
+        fail with "'clip_gradients' needs a number more than 0, not " + most
+    end
+    set opt's clip to most
+end
+
+# how big the parameters' gradients are now, all together: the square root of the sum of their squares, as
+# clip_gradients measures them; between backward and step
+to gradient_norm with opt
+    set total to 0
+    set on_card to empty list
+    for each p in opt's parameters
+        if p's grad is not nothing and not p's zeroed
+            if p's card
+                add p's grad to on_card
+            else
+                set total to total + learn_arrays's sum(learn_arrays's times(p's grad, p's grad))
+            end
+        end
+    end
+    if length of on_card is greater than 0
+        set total to total + learn_gpu's sum_of_squares(on_card)
+    end
+    return learn_math's sqrt(total)
+end
+
+# the rate for step s (from 1) of steps, as GPT-2 and most transformers are trained: up from 0 to top over the
+# first warmup steps, then down to bottom along half a cosine, and bottom after
+to cosine_rate with s, steps, warmup, top, bottom
+    if warmup is greater than 0 and s is at most warmup
+        return top * s / warmup
+    end
+    if s is at least steps
+        return bottom
+    end
+    set through to (s - warmup) / (steps - warmup)
+    return bottom + (top - bottom) * 0.5 * (1 + learn_math's cosine(learn_math's pi * through))
 end
 
 # one step: each parameter moved, its gradient gone, and every matrix worked out since the last step let go
 to step with opt
     set opt's t to opt's t + 1
+    set scale to 1 # clipping's, worked out here unless it's on the card
+    if opt's clip is not nothing and not (opt's way is "adam" and learn_on_card())
+        set scale to opt's clip / (gradient_norm(opt) + 0.000001)
+        if scale is greater than 1
+            set scale to 1
+        end
+    end
     set k to 0
     set together to empty list
     for each p in opt's parameters
@@ -1001,21 +1102,37 @@ to step with opt
                 set item k of opt's m to learn_gpu's zeros(p's rows * p's columns)
                 set item k of opt's v to learn_gpu's zeros(p's rows * p's columns)
             end
-            add (list of p's data, p's grad, item k of opt's m, item k of opt's v) to together
+            add (list of p's data, p's grad, item k of opt's m, item k of opt's v, learn_decays(opt, p)) to together
             set p's zeroed to yes
         else if p's grad is not nothing
             if opt's way is "sgd"
-                learn_sgd_one(p, opt's rate)
+                learn_sgd_one(p, opt's rate * scale)
             else
+                if scale is less than 1
+                    set p's grad to learn_arrays's times(p's grad, scale)
+                end
                 learn_adam_one(opt, k, p)
             end
             learn_free_grad(p)
         end
     end
     if length of together is greater than 0
-        learn_gpu's adam_many(together, opt's rate, 0.9, 0.999, 0.00000001, opt's t, yes)
+        set keep to 1 - opt's rate * opt's decay
+        if opt's clip is nothing
+            learn_gpu's adam_many(together, opt's rate, 0.9, 0.999, 0.00000001, opt's t, yes, keep)
+        else
+            if opt's room is nothing
+                set opt's room to learn_gpu's zeros(1)
+            end
+            learn_gpu's adam_many(together, opt's rate, 0.9, 0.999, 0.00000001, opt's t, yes, keep, opt's room, opt's clip)
+        end
     end
     forget()
+end
+
+# whether AdamW makes p smaller: a parameter of more than one row, when there's a decay
+to learn_decays with opt, p
+    return opt's decay is greater than 0 and p's rows is greater than 1
 end
 
 to learn_sgd_one with p, rate
@@ -1043,7 +1160,11 @@ to learn_adam_one with opt, k, p
         learn_gpu's adam_step(p's data, p's grad, item k of opt's m, item k of opt's v, opt's rate, b1, b2, eps, opt's t)
         return nothing
     end
-    learn_arrays's adam_step(p's data, p's grad, item k of opt's m, item k of opt's v, opt's rate, b1, b2, eps, opt's t)
+    set keep to 1
+    if learn_decays(opt, p)
+        set keep to 1 - opt's rate * opt's decay
+    end
+    learn_arrays's adam_step(p's data, p's grad, item k of opt's m, item k of opt's v, opt's rate, b1, b2, eps, opt's t, keep)
 end
 
 to learn_free_grad with p

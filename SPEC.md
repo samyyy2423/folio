@@ -121,7 +121,8 @@ word straight after a number makes an amount: `5 km` (section 4).
 Text is written between double quotes on one line. Inside it:
 
 - `\n` is a new line, `\t` a tab, and `\` before any other character is that character, so `\"` is a quote,
-  `\\` a backslash and `\{` a brace.
+  `\\` a backslash and `\{` a brace. `\r` is therefore an `r`, not a carriage return, which `folio check` warns
+  of where it's written (its warnings aren't guaranteed); a carriage return is `(list of 13) as bytes as text`.
 - Any character but a control character can be written as itself; a tab can too.
 - **Values in text.** A `{` right before a letter, `_` or `(` starts a value, which ends at its own `}`:
   `"Hi, {name}!"` is `"Hi, " + name + "!"`. The value is any expression, and can hold text of its own:
@@ -348,6 +349,8 @@ value = number [ unit ]
       | "yes" | "no" | "nothing"
       | "list of" expression { "," expression }
       | "list of" expression "for each" name "in" expression [ "where" expression ]
+      | "[" [ expression { "," expression } [ "," ] ] "]"
+      | "[" expression "for each" name "in" expression [ "where" expression ] "]"
       | "record with" name expression { "," name expression }
       | "dictionary where" sum "is" expression { "," sum "is" expression }
       | "empty list" | "empty record" | "empty dictionary"
@@ -365,6 +368,9 @@ inputs = expression { "," expression } { "," name expression }
 
 - `list of x for each x in xs where x is greater than 1` builds a list: the value after `list of` for each
   item, of those for which the `where` holds. `x` is the item's own name, which nothing outside sees.
+- `[1, 2, 3]` is the list `list of 1, 2, 3` is, and `[x * 2 for each x in xs]` the one `list of` builds; it ends
+  at its `]`, so `f([1, 2], 3)` gives f two inputs, where `f(list of 1, 2, 3)` gives one. `[]` is an empty list,
+  and a comma may come before the `]`.
 - A **call** gives what the function returns. Inputs can be given by name after those given in order:
   `greet("Sam", greeting "Hi")` (section 7.2).
 - `name of r` and `r's name` are r's field; reading a field r hasn't got is a mistake, with the closest name

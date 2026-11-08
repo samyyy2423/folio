@@ -59,6 +59,7 @@ use the library "folio"
     "numbers_memory" as memory_k_raw(a long whole number, a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
     "numbers_atomic" as memory_k_atomic_bytes(a long whole number, a list of numbers, bytes, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
     "numbers_atomic" as memory_k_atomic_raw(a long whole number, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_room" as memory_k_room(a list of numbers, a long whole number) gives a long whole number
 end
 
 # the system's C library: memory of the program's own, and copying and filling it
@@ -990,6 +991,12 @@ set memory_zero_list to list of 0
 to memory_zeros with n
     if n is 0
         return empty list
+    end
+    if memory_native # a block of zeros of its own, with no copy (DESIGN §171)
+        set made to empty list
+        if memory_k_room(made, n) is 0
+            return made
+        end
     end
     set kept to n
     if kept is greater than 1000000

@@ -7022,3 +7022,308 @@ On Linux the same: `add` 176 ms to 80 under WSL, and `for each` 120 to 37.
 - **Calls**: `fib(32)`, 7 million calls, is 15 ms of work in Folio to C's 10, with C's numbers doubles too, as
   Folio's are, so the difference is in the call: the calls in progress counted, the function's number pushed
   for a mistake's trail, and its inputs kept in its frame. Keeping a function's inputs in registers is next.
+
+## 170. Training as GPT-2 was trained: AdamW, a warmup and a cosine, clipping and dropout
+
+gpt.folio trained with plain Adam at one rate. Most transformers are trained with four more things, and
+learn.folio has them now, on the card and on the processor:
+
+- **`adamw(parameters, rate, decay)`**: Adam, and each parameter of more than one row (the weights and
+  embeddings, not a bias or a layer norm's row, as nanoGPT has it) times `1 - rate * decay` at each step, apart
+  from its gradient. On the card it's in the launch Adam was already: each entry of `adam_many`'s table has a
+  flag for it, and the factor is in the table's first bytes, where there was room.
+- **`clip_gradients(opt, most)`**: at each step, when the square root of the sum of the squares of every
+  gradient is more than `most`, each gradient times `most` over it, as PyTorch's `clip_grad_norm_`. On the card
+  nothing waits for it: `sumsq_many` adds up the squares of every gradient into one number on the card, a warp
+  at a time with one atomic add each, and `adam_many` reads that number and works out its own factor, so a
+  step is still two launches and no copy back. `gradient_norm(opt)` gives the number, for a program that wants
+  to see it.
+- **`cosine_rate(s, steps, warmup, top, bottom)`**: up from 0 to `top` over the first `warmup` steps, then down
+  to `bottom` along half a cosine. A program sets `opt's rate` to it at each step, as `opt's rate` was always
+  read at the step.
+- **`dropout(m, chance)`**, with `training(no)` to use a network and `training(yes)` to train it again: each
+  number 0 at the chance, the rest over `1 - chance`, and the gradient through the same ones. On the card the
+  choice is a hash of each number's place and a seed, one launch for the mask, with no random numbers to
+  upload.
+
+For gpt.folio, AdamW with a decay of 0.1, a warmup of 100 steps, a cosine down to a tenth and clipping to 1 took
+the loss on text it hadn't seen from 1.72 to 1.64 in the same 2,000 steps, at a higher rate (0.006, where 0.003
+was best for plain Adam), and the step still takes 3.0 ms. Dropout hurt at 2,000 steps (1.64 to 1.67), as a
+model this small hasn't started learning the text by heart, and helped at 6,000 (1.66 to 1.59), so gpt.folio
+uses 0.1 only past 3,000 steps.
+
+- **Checked**: AdamW's decay against the sum worked out by hand, a bias not decayed, clipping to 1 of gradients 3
+  and 4, the cosine at its ends and middle, and dropout's share and gradient, on every engine; on the card,
+  AdamW and clipping over four steps against the processor's to a float's precision (and without clipping the
+  card's numbers are 0.02 away, so the test would see it gone), and dropout's share of 100,000, its gradient, a
+  new choice each time and nothing dropped while `training(no)`.
+- **Writing** was already quick: 400 letters in 0.24 s, the model run over up to 64 letters for each one. A cache
+  of each place's keys and values would save most of that, and isn't worth its size here.
+
+## 171. Training on the processor, twice as fast
+
+The digit reader learned its 10 rounds on the processor in 1.41 s, to PyTorch's 0.50. A step of it, 200 drawings
+through layers of 256 by 256 and 256 by 10, took 4.0 ms, and its two big matrix multiplies were only 0.75 ms of
+that. The rest was the small things around them, which, timed one at a time, were each slower than they had to be:
+
+| a step's part | before | now |
+|:--|--:|--:|
+| `adam_step`, 65,536 numbers | 637 µs | 133 µs |
+| relu's gradient: `above_zero`, then `times` | 474 µs | 137 µs, `relu_gradient` |
+| `cross_entropy`, 200 by 10 | 310 µs | 73 µs |
+| 200 by 256 times 256 by 10 | 183 µs | 73 µs |
+| a turned copy of 200 by 256, for a gradient | 167 µs | none, `matmul_turned` |
+| a new array of 51,200 zeros | 87 µs | 50 µs |
+| the whole step | 4.0 ms | 1.64 ms |
+
+- **Adam 4 at a time.** `rt_k_adam` works through the numbers with AVX, 4 to a register, each of the 4 the same
+  multiply, add, square root and divide as one at a time, so the same bits; the check before anything is changed
+  is a compare of the 4 at once, gathered over the whole pass and looked at once at the end.
+- **relu's gradient in one go.** `arrays's relu_gradient(g, x)`, g where x is above 0 and 0 elsewhere, is one
+  compare and a mask in `rt_k_binary`; `above_zero` is a compare and a mask too, where it was a branch for each
+  number that, on numbers whose signs are as likely either way, went the wrong way half the time.
+- **exp in machine code.** math.folio's `exp` is Folio: the nearest whole number of halvings, a 20-term series,
+  then doubling back, 131 ns a call. `rt_k_exp` does the same steps 4 at a time, the doubling as a multiply by 2
+  to the power of the halvings, which is exact while the numbers stay in the doubles' range; past 700 either way
+  it leaves them to Folio. `arrays's exp` uses it, and learn.folio's `cross_entropy` on the processor is now
+  arrays' `max`, `minus`, `exp`, `sum` and `divided_by` and a loop over the rows, not a loop over every number.
+- **`matmul_turned(a, b)`**, a turned over times b, reads a where it is: the kernel steps along a's column for
+  each term, not its row, and that step is kept for its threads with the rest. A layer's weights' gradient, x
+  turned over times what came back, needed a turned copy of x first.
+- **The last columns.** A matrix multiply does 4 rows by 8 columns at a time in registers, and the columns past a
+  multiple of 8 one row at a time, out's row in memory, a load and a store for every term, each waiting on the
+  last: for 256 by 10, the last 2 columns were nearly all of the time. They're 4 rows by 2 columns at a time now,
+  each number added up in a register.
+- **Room without a copy.** arrays.folio made every array's numbers by copying the first n of a list of zeros it
+  kept, on top of the zeros the collector's new block already is. `rt_k_room` gives a new list that block; own
+  kernels run with the program's lists to themselves, and the collector looks through the whole stack and every
+  register, so the kernel can ask for it.
+
+Each is still Folio's own numbers, to the last bit: tests run Adam over 1,003 numbers with AdamW's keep and
+without, relu's gradient and slope, `exp` from -690 to 690 and past 700, and matrix multiplies of shapes with rows
+past the fours, columns past the eights, a b too long to copy and enough to share over threads, normal and turned,
+in machine code and on the JavaScript engine, and compare their bits.
+
+The digit reader now learns its 10 rounds on the processor in **0.65 s**, from 1.41, to PyTorch's 0.50, still
+99.4% right, the loss the same to the last digit shown. What's left is mostly what PyTorch does differently by
+design: its numbers are 32-bit floats, 8 to a register where Folio's doubles are 4, its multiplies fuse a multiply
+and an add, and its allocator hands back memory it hasn't zeroed. Folio's numbers are doubles, added in Folio's
+own order, everywhere.
+
+## 172. WebAssembly loops V8 can keep in registers, and a step count put right
+
+The website runs programs on the WebAssembly engine, and its loops were 2 to 6 times as slow as the same loop in
+plain JavaScript: 100 million rounds of `add i to total`, run again and again in one process, took 332 ms, to
+JavaScript's 77, though `total` and `i` were already f64 locals (DESIGN §146) and each round was an f64 compare,
+an add and a count of steps. A loop built by hand with the same instructions ran in 84 ms. What made the
+difference was calls in the round that never happen: the check that a name has a value called `noValueYet` inside
+an `if`, a division called `arithRest` for 0, and the count of steps called `refill` when it ran out. V8's
+optimizing compiler keeps a loop's numbers in registers only when nothing in the loop can call out, taken or not.
+
+- **Mistakes at the function's end.** Each function is now `block block`, its code, `return`, then the two
+  mistakes: a name with no value yet, and a division by 0. A check in the code puts what the mistake needs in
+  locals and branches there. Inside a `try` the mistake is still made where it is, as a branch out of a `try`
+  would pass its handler; on the way out of a loop, its count of steps goes into the global first.
+- **More steps outside the round.** A loop is two: the inner one runs rounds and counts down, and branches out
+  to the outer one when its count runs out, which asks JavaScript for more and goes round again.
+- **A count of steps put right.** A mistake that a `try` inside a loop caught, coming back from a call, left the
+  loop counting from where it was before the call, as the steps the call took were in the global: a program
+  limited to 500 steps did three times as many rounds on WebAssembly as on the VM and the JIT. After a `try`
+  catches, the loop's count is now the smaller of its own and the global's, as a loop's `catch_all` already did;
+  a test runs mistakes from loops caught further out under four step limits, and every engine stops at the same
+  place.
+
+wasm.folio does each the same way, and still makes wasm.js's bytes on every program the engines are tested
+with, and itself; folio.wasm is made again, 2.14 MB where it was 2.05, as each of its functions has the
+two mistakes at its end.
+
+What it gains depends on V8 having optimized the code, and V8 optimizes a WebAssembly function for its next call,
+never in the middle of one: there is no on-stack replacement. A program's top level is one function, called once,
+so a Run on the website, or the first run in a process, goes through its loops in V8's baseline compiler from
+start to end. Later runs of the same module, in the same process, get the optimized code:
+
+| on the WebAssembly engine, Node.js | first run, before | first run, now | later runs, before | later runs, now | plain JavaScript |
+|:--|--:|--:|--:|--:|--:|
+| loop: 100 million rounds of `add` | 394 ms | 393 ms | 332 ms | 95 ms | 77 ms |
+| float: 30 million of `1 / (i * i)` | 204 ms | 169 ms | 125 ms | 60 ms | 38 ms |
+| primes | 314 ms | 287 ms | 89 ms | 85 ms | 58 ms |
+| fib(32) | 166 ms | 162 ms | 134 ms | 126 ms | 23 ms |
+
+In Chrome, on the playground, the loop's Run went from 740 to 840 ms to 620 to 700. A Run as fast as a later run
+wants a program's loops in functions of their own, which V8 would optimize while they're called again (DESIGN
+§173). fib calls a function V8 has already optimized, so it's what it was.
+
+The JIT's call trail, the function and the place of each call in progress, is two arrays made at their full size
+once (2,000, as deep as the JIT goes before the VM takes over), not grown: fib on the JIT 130 to 120 ms. Its
+loops stay slower than WebAssembly's, as V8 boxes a number that a helper's other way could make text; that wants
+the JIT to know which names only hold numbers, as WebAssembly does. (JavaScript has on-stack replacement, so the
+JIT's first run is as fast as its later ones.)
+
+**Native code.** memory.folio's `get_many` made its list by copying a million zeros and adding the rest one at a
+time; it has `rt_k_room`'s block now (DESIGN §171): 10 million floats back from bytes in 18 ms, not 47, and the
+floats program in 120 ms, not 150 (C 67). A call stays about 1.4 times C's: taking out the count of calls in
+progress, the function's number in its frame or the call's number after it each saved about 2% of fib(32), and
+each is what makes "too much recursion" come at the same depth as on every engine and a mistake's trail say
+where each call came from. On Linux, under WSL, the new kernels give the JavaScript engine's numbers to the last
+bit, and the digit reader learns on the processor in 0.8 s.
+
+## 173. A top-level loop in a function of its own, called a chunk of rounds at a time
+
+V8 makes a WebAssembly function's optimized code for the function's next call, and never switches to it in the
+middle of a call. A program's top level is one function, called once, so its loops ran in V8's first, plain code
+from start to end: 100 million rounds of `add` took 397 ms on a first run, where the same module run again took
+92. A loop written by hand the same way, in a function called again and again for 65,536 rounds at a time, took
+90 ms on its first run, whatever the chunk.
+
+So each loop at the top level (an outermost one; a function's loops get optimized code when it's called again) is
+now a function of its own:
+
+- **The same code.** The new function has the top level's input and locals at the same places, so the loop's
+  test and body are generated into it as they were, and a temporary the body needs is a new local after them.
+- **Handed over in globals.** A global for each of those locals; the top level puts its locals in them before the
+  first call, each call takes them at its start and puts them back as it returns, and the top level takes them
+  back after the last. A call gives 1 to be called again, after 65,536 rounds, and 0 when the loop is done.
+- **The count of steps** is the loop's own local, as before (DESIGN §172), from the global at each call's start
+  and back into it as the call returns.
+- **Mistakes.** The mistakes at the function's end put the locals back before they're made. A loop inside a `try`
+  at the top level has its rounds in a `try` of their own too, whose `catch_all` puts the locals and the count
+  back, and the top level's `catch_all` takes them, so the `try` sees what the loop changed. Without a `try`
+  around it, a mistake that leaves the loop ends the program, and its rounds aren't in a `try`: V8's code for
+  the float loop took 94 ms in one and 63 out of one. A `return` at the top level is a mistake before the
+  program runs, so a loop never needs to give one back.
+
+wasm.folio does each the same way, and makes wasm.js's bytes on every program the engines are tested with, and
+itself; folio.wasm is made again, 2.19 MB. A test runs five programs on every engine, each unlimited and under
+two step limits: loops past 65,536 rounds whose variables are used after, mistakes caught around a loop (a
+division by 0, a name with no value yet) and inside one, `stop`, a nested loop, a function made in a loop, and
+`for each`, `repeat` and `while`; taking out any of the hand-overs (the locals back after the loop, back as a
+mistake leaves it, or back before either mistake at the end) makes it fail.
+
+| on the WebAssembly engine, Node.js | first run, before | first run, now | later runs, before | later runs, now |
+|:--|--:|--:|--:|--:|
+| loop: 100 million rounds of `add` | 397 ms | 144 ms | 92 ms | 111 ms |
+| primes | 292 ms | 148 ms | 87 ms | 95 ms |
+| float: 30 million of `1 / (i * i)` | 169 ms | 98 ms | 60 ms | 64 ms |
+| fib(32) | 162 ms | 162 ms | 127 ms | 129 ms |
+
+On the playground in Chrome, a Run of the loop went from 674 ms to 449, and run again from 374 to 172; the float
+loop from 190 to 140. Later runs of the same module are a little slower, the count of a chunk's rounds being one
+more thing each round does; folding it into the count of steps would change what every call inside a loop hands
+over, and wasn't worth that here.
+
+## 174. Small whole numbers added and compared in place, on WebAssembly
+
+After DESIGN §173, fib(32) on the WebAssembly engine still took 162 ms on a first run, to plain JavaScript's 23.
+Taking out a call's parts one at a time (the check that it's a function, the count of its inputs, the count of
+steps, the trail a mistake shows) saved about 5% each: the time was in what fib does between its calls. `n is
+less than 2`, `n - 1`, `n - 2` and the `+` of the two calls' answers were each a call into the runtime, which
+looked at what both sides were, and the `if` called another to see its yes or no; and every read of `n` checked
+it had a value, which an input always has.
+
+- **A whole number written in the program** (`1` in `n - 1`, `2` in `n is less than 2`, from -2^30 up to 2^30)
+  is an `i32.const` beside the other side, which, when it's an i31 (a number from 2 up as unsigned, as 0 and 1
+  are no and yes), is taken away, added or compared there and then: a sum that's still an i31 (and not 0 or 1,
+  which are boxes of their own) goes on as one. Anything else goes to the runtime as before, with both sides as
+  they were, so what it says (a number that's a box, text, an amount, a mistake) is what it said. `is` keeps a
+  written 0 or 1 out of it: those are boxes, never the i31 no or yes.
+- **A comparison an `if` or a `while` tests** is its i32, with no box made and no call to see it's a yes or no.
+- **An input** is read with no check that it has a value.
+
+Inlined beside any two values, not only beside a written number, it was no faster, and folio.wasm, the compiler
+the website runs, grew from 470 KB to 562 squeezed: the compiler is made of this code too. Beside a written
+number only, folio.wasm is 445 KB squeezed (2.07 MB), smaller than before, as each written number it uses this
+way is a constant where it was a global's box.
+
+| on the WebAssembly engine, Node.js | first run, before | first run, now | later runs, before | later runs, now |
+|:--|--:|--:|--:|--:|
+| fib(32) | 162 ms | 145 ms | 127 ms | 110 ms |
+| primes | 148 ms | 136 ms | 95 ms | 89 ms |
+
+wasm.folio does the same, and makes wasm.js's bytes. A test runs both ends of what an i31 holds, sums that come
+out 0 or 1, yes and no beside numbers, text, and mistakes, on every engine; taking out the check for a sum past
+an i31, or for yes and no, makes it fail. The rest of fib's time is the call itself: a function value called
+through `call_ref`, which V8 doesn't put in line. A call to a function the program never sets again could be a
+direct `call`, and inputs only ever given numbers f64s; both are bigger changes to both compilers.
+
+## 175. \r is an r, and folio check says so
+
+Text has two escapes for characters that can't be typed into it, `\n` and `\t`, and a backslash before anything
+else stands for what comes after it, so that `\"`, `\\` and `\{` work: SPEC.md promises it, for every Folio 1.
+`"\r"` is therefore an `r`, and code that wrote it for a carriage return did something else, with no word from
+Folio. Writing the tokenizer package, a line's end trimmed with `"\r"` took the `r` off `for` in a BERT
+vocabulary, and the Bob exercise's example answer, trimming its spaces, trimmed `r`s.
+
+Making `\r` a carriage return would be the fix, and it was made, then taken back: a program that wrote `"\r"` and
+meant the `r` it has always been would change, and Folio 1 keeps every program meaning what it meant
+(VERSIONING.md). So `\r` stays an `r` in Folio 1, and is a carriage return for Folio 2 to make.
+
+What Folio 1 can do is say so. Both of Folio's readers, folio.js's and compiler.folio's, note each `\r` in text,
+in a value in text too, as they read it, and `folio check` and the playground's checker give a warning there: it
+"looks wrong", a kind of its own that, as "unused" does, leaves folio check ending with 0. The language server
+shows it as you type, as it shows the rest. Making the letter after any backslash a warning would be too much:
+`\}` beside `\{` (as properties.test.folio has it) and `\'` mean what they say.
+
+The trying-out found that "\r" was written for a carriage return in three of Folio's own files: gpu.folio's PTX
+reader (where it made `r` a space), compiler.folio's JavaScript strings, and the Bob example; each now makes a
+carriage return from its byte, `(list of 13) as bytes as text`, which is what Folio 1 has for one, and Bob's tests
+have exercism's "other whitespace" case, which the old example fails. A test runs `\r` beside `\n` and `\t`, in a
+value in text, `\\r` and `\q` on every engine, in the compiler written in Folio and through tidy, with check()'s
+warning at each place; folio.exe's check says what check() says of the same program.
+
+## 176. Kernels of your own on the graphics card
+
+gpu.folio ran about 45 kernels, written in it in PTX, NVIDIA's assembly for the card, which the driver makes the
+card's own as it loads: the maths learn.folio and the GPT need. A program could use those and nothing else, so
+the card was there for what gpu.folio had thought of, and for nothing a program needed of its own. CUDA's way is
+to write a kernel in C++ and compile it with nvcc, from the CUDA toolkit; gpu.folio needs only the driver, and
+the driver takes PTX.
+
+- **kernel(ptx, name)** loads a module of PTX, once for its text however many of its kernels are asked for, and
+  finds the .entry called name. Each input's type comes from the .entry's own `.param` lines, so a launch packs
+  each as the kernel reads it, with nothing more said. A name the PTX hasn't is a mistake that lists the ones
+  it has; PTX the driver can't take is a mistake with the driver's own log, which says the line and what's
+  wrong there: the same loading gpu.folio's own code has, now one function for both.
+- **launch(kernel, grid, block, inputs)**, and **launch_with** for bytes of shared memory a block, run it on a
+  grid of blocks of threads, each a number or 1 to 3 axes. Numbers or bytes on the card go to a 64-bit input as
+  where they are; a number to `.f32` as a float and to `.f64` as a double; a whole number to the rest, checked
+  against its type's range by memory.folio, which writes each input into its 8 bytes. A count, a type, a range,
+  a whole number or a grid that's wrong is said before the card sees it, naming the input and its type. A
+  launch doesn't wait for the card, as CUDA's don't: the next download, download_bytes or finish() does, and a
+  mistake the kernel made (writing where it mustn't) is said there; after it the card does nothing more for the
+  program, as CUDA leaves a context.
+- **upload_bytes, room and download_bytes** keep bytes on the card, as a kernel wants for whole numbers or
+  anything else that isn't 32-bit floats; memory.folio puts C's kinds of number into bytes and takes them out.
+  `free` gives bytes back to the driver at once, as they don't come in the sizes training reuses.
+
+A launch of a kernel with four inputs takes 14 µs on a GTX 1650, as long as gpu.folio's own `plus` (most of it
+the driver's), so a kernel of your own costs nothing more than one of gpu.folio's.
+
+A test builds a program for the processor that loads six kernels from one module and checks each against what it
+must give: a saxpy past a block's edge, whole numbers squared in bytes, a 2D grid of 2D blocks, sums in shared
+memory, a double, a byte and a 64-bit whole number as inputs, and a kernel with no inputs on a 3D grid; then every
+mistake a launch can make, a name the module hasn't, PTX with an instruction that isn't one, and a kernel that
+writes to address 0. Putting a float input as a double, or launching with no shared memory, makes it fail. PTX is
+what's needed to write one, which is the card's assembly; kernels written in Folio itself, compiled to PTX, would
+be the next step, and Vulkan's compute for cards that aren't NVIDIA's after that.
+
+## 177. A list in brackets
+
+`list of 1, 2, 3` takes every comma after it, so a list given to a function with more after it has to be put in
+brackets of its own: `f((list of 1, 2), 3)`, or the list takes the 3 and f gets one input. Writing the four
+packages of 2026-11-07 (pdftext, tokenizer, vectors, rag), that was the mistake made most: a call that said it
+needed 4 inputs but got 2, a dozen times, and a test that passed a list it didn't mean to.
+
+`[1, 2, 3]` is now a list, as `list of 1, 2, 3` is, and it ends at its `]`: `f([1, 2], 3)` gives two inputs.
+`[]` is an empty list, a comma may come before the `]` (as a list over several lines has one), and
+`[x * 2 for each x in xs where x is greater than 1]` builds one, as `list of` does. It's the same list to every
+engine: both of Folio's readers, folio.js's and compiler.folio's, make the `list` (or the built list) `list of`
+makes, so nothing after reading changed, and the compiler written in Folio writes the same JavaScript as the
+JIT, to the byte. Tidy writes no space after `[` or before `]`, in folio.js and in folio.folio.
+
+A `[` was a mistake before ("make a list with 'list of 1, 2, 3'"), so no program that ran means anything else
+now, as Folio 1 promises (VERSIONING.md). `list of` stays as it is: making it end at a bracket would change what
+programs that ran mean. A `{[` in text is still a `{` and a `[`, not a value, as it was.
+
+A test runs lists in brackets on every engine (empty, inside one another, as one input of two, over lines, built
+`for each`, in `for each`, inside `list of`), has the compiler written in Folio write the JavaScript the JIT
+writes for them and for their mistakes, and tidies them; a machine code case does the same.

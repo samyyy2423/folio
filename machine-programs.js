@@ -428,6 +428,11 @@ export const MACHINE_CASES = [
   "say 5 without repeats",
   // a text a letter at a time: past one byte, views of one text's bytes, and the collector in between
   "set words to \"aé😀b, ça va? ✓ plain ascii too\"\nset made to \"\"\nfor each k from 1 to length of words\n    add item k of words to made\nend\nsay made is words\nsay item 3 of words \" \" item 1 of words \" \" item (length of words) of words \" \" item 2 of words\nsay items 2 to 4 of words\nsay items 5 to 9 of words \" \" item 6 of words \" \" items 1 to 2 of words\nset other to \"x😀y\"\nsay item 2 of words \" \" item 2 of other \" \" item 3 of words \" \" item 3 of other\nset ascii to \"hello\"\nsay item 5 of ascii \" \" item 1 of ascii\nset big to \"\"\nrepeat 3000 times\n    add \"é\" to big\nend\nadd \"!\" to big\nsay item (length of big) of big\nset counted to 0\nfor each k from 1 to length of big\n    if item k of big is \"é\"\n        add 1 to counted\n    end\nend\nsay counted\nsay item 1 of big \" \" item 2999 of big",
+  // \r in text: an r, as SPEC.md promises Folio 1, beside \n and \t and in text with values in it too; \\r is a
+  // backslash and an r (DESIGN §175)
+  "say (\"a\\rb\\tc\\nd\") as bytes\nsay length of \"\\r\"\nsay \"\\r\" is (list of 13) as bytes as text\nset n to 4\nsay (\"x{n}\\r\\n\") as bytes\nsay list of \"\\r\", \"r\", \"\\\\r\"\nsay split \"one\\r\\ntwo\" by \"\\r\\n\"\nsay \"before\\r\" \"after\"",
+  // [1, 2, 3]: a list, as list of 1, 2, 3 is, ending at its ] (DESIGN §177)
+  "to pair with a, b\n    return [b, a]\nend\nset xs to [3, 1, 2]\nsay xs\nsay []\nsay [[1, 2], [3], []]\nsay pair([1, 2], [3])\nsay item 2 of [10, 20, 30]\nsay [x * 2 for each x in xs where x is greater than 1]\nsay [1,\n    2,\n]\nfor each n in [5, 6]\n    say n\nend",
   ...bitCases(),
 ];
 

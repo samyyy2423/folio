@@ -19,8 +19,8 @@
 # Made with array(nested lists), shaped(numbers, shape), zeros(shape), ones(shape), filled(shape, x),
 # random(shape) (from 0 up to 1), random_normal(shape), counting(first, last, step), evenly(first, last, n)
 # and identity(n). Element by element: plus, minus, times, divided_by, maximum, minimum (each of two arrays,
-# or an array and a number), negate, absolute, square, relu, above_zero (relu's slope), sqrt, exp, ln, tanh, sigmoid, power(t, p) and
-# apply(t, f). Then matmul, dot, transpose, flatten, row, stack, join_along, softmax, to_list, numbers_of,
+# or an array and a number), negate, absolute, square, relu, above_zero (relu's slope), relu_gradient(g, x), sqrt, exp, ln, tanh, sigmoid, power(t, p) and
+# apply(t, f). Then matmul, matmul_turned(a, b) (a turned over, times b), dot, transpose, flatten, row, stack, join_along, softmax, to_list, numbers_of,
 # copy_of, size, rank, close(a, b) and same(a, b). Axes and places count from 1. A shape that can't be,
 # shapes that don't go together, or a place outside an array is a `fail with` that says so.
 
@@ -32,6 +32,9 @@ use the library "folio"
     "numbers_binary" as arrays_k_binary(a long whole number, a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
     "numbers_matmul" as arrays_k_matmul(a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
     "numbers_reduce" as arrays_k_reduce(a long whole number, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_matmul_turned" as arrays_k_matmul_turned(a list of numbers, a list of numbers, a list of numbers, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number, a long whole number) gives a long whole number
+    "numbers_room" as arrays_k_room(a list of numbers, a long whole number) gives a long whole number
+    "numbers_exp" as arrays_k_exp(a list of numbers, a list of numbers, a long whole number) gives a long whole number
     "numbers_adam" as arrays_k_adam(a list of numbers, a list of numbers, a list of numbers, a list of numbers, a list of numbers, a long whole number) gives a long whole number
 end
 
@@ -357,9 +360,23 @@ to above_zero with t
     return arrays_unary(11, t, "above_zero")
 end
 
-# e to the power of each number
+# g's number where x's is above 0, and 0 for the rest: relu's gradient, g from after it and x what went in, in
+# one go (DESIGN §171)
+to relu_gradient with g, x
+    return arrays_binary(12, g, x, "relu_gradient")
+end
+
+# e to the power of each number, as math.folio's exp has it; in a program folio build makes, 4 at a time in
+# machine code (DESIGN §171)
 to exp with t
-    return apply(arrays_need(t, "exp"), arrays_math's exp)
+    set t to arrays_need(t, "exp")
+    if arrays_native and size(t) is greater than 0
+        set data to arrays_zeros_list(size(t))
+        if arrays_k_exp(data, t's data, size(t)) is 0
+            return arrays_make(items 1 to length of t's shape of t's shape, data)
+        end
+    end
+    return apply(t, arrays_math's exp)
 end
 
 # each number's natural logarithm
@@ -639,6 +656,25 @@ to matmul with a, b
     return arrays_make(shape, data)
 end
 
+# a turned over, times b: a k by m, b k by n, and m by n what comes out, as matmul(transpose(a), b) has it to the
+# last bit, with no turned copy made (DESIGN §171)
+to matmul_turned with a, b
+    set a to arrays_need(a, "matmul_turned")
+    set b to arrays_need(b, "matmul_turned")
+    if length of a's shape is not 2 or length of b's shape is not 2 or item 1 of a's shape is not item 1 of b's shape
+        fail with "'matmul_turned' needs two matrices with as many rows as each other: " + a's shape + " and " + b's shape
+    end
+    set m to item 2 of a's shape
+    set n to item 2 of b's shape
+    if arrays_native and arrays_blas is nothing and m * n is greater than 0
+        set data to arrays_zeros_list(m * n)
+        if arrays_k_matmul_turned(data, a's data, b's data, m, item 1 of a's shape, n, 0, 0, 0) is 0
+            return arrays_make((list of m, n), data)
+        end
+    end
+    return matmul(transpose(a), b)
+end
+
 to arrays_kth with r
     if r is 1
         return "only axis"
@@ -909,7 +945,8 @@ to arrays_run_binary with op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, sb
     arrays_binary_folio(op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, sb1, oo)
 end
 
-# rt_k_binary, in Folio: op 0 a's number, 1 to 6 + - * / max min, 7 to 11 negate, absolute, relu, sqrt and above_zero
+# rt_k_binary, in Folio: op 0 a's number, 1 to 6 + - * / max min, 7 to 11 negate, absolute, relu, sqrt and
+# above_zero, and 12 relu_gradient
 to arrays_binary_folio with op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, sb1, oo
     set k to oo + 1
     set i to 0
@@ -956,6 +993,11 @@ to arrays_binary_folio with op, out, a, b, outer, inner, oa, sa0, sa1, ob, sb0, 
                     if x is greater than 0
                         set r to 1
                     end
+                end
+            else if op is 12
+                set r to 0
+                if item ib of b is greater than 0
+                    set r to x
                 end
             else
                 set r to x
@@ -1209,9 +1251,10 @@ end
 
 # an array, or a mistake that says what wanted one
 # Adam's step for an array of parameters p, from g, their gradient, and m and v, its running averages, for
-# step t (from 1), as learn.folio's adam moves a parameter: p, m and v changed in place. In a program folio build
-# makes, one loop over the numbers, not ten arrays one after another, and no new ones (DESIGN §168)
-to adam_step with p, g, m, v, rate, b1, b2, eps, t
+# step t (from 1), as learn.folio's adam moves a parameter: p, m and v changed in place, and p times keep first,
+# for AdamW's weight decay (keep 1 - rate times the decay, DESIGN §170). In a program folio build makes, one loop
+# over the numbers, not ten arrays one after another, and no new ones (DESIGN §168)
+to adam_step with p, g, m, v, rate, b1, b2, eps, t, keep or 1
     set p to arrays_need(p, "adam_step")
     set n to size(p)
     for each x in list of g, m, v
@@ -1222,14 +1265,18 @@ to adam_step with p, g, m, v, rate, b1, b2, eps, t
     set c1 to 1 / (1 - (b1 to the power of t))
     set c2 to 1 / (1 - (b2 to the power of t))
     if arrays_native and n is greater than 0
-        if arrays_k_adam(p's data, g's data, m's data, v's data, (list of b1, 1 - b1, b2, 1 - b2, c1 * rate, c2, eps), n) is 0
+        if arrays_k_adam(p's data, g's data, m's data, v's data, (list of b1, 1 - b1, b2, 1 - b2, c1 * rate, c2, eps, keep), n) is 0
             return nothing
         end
     end
     set new_m to plus(times(m, b1), times(g, 1 - b1))
     set new_v to plus(times(v, b2), times(times(g, g), 1 - b2))
     set moved to divided_by(times(new_m, c1 * rate), plus(sqrt(times(new_v, c2)), eps))
-    set p's data to minus(p, moved)'s data
+    set kept to p
+    if keep is not 1
+        set kept to times(p, keep)
+    end
+    set p's data to minus(kept, moved)'s data
     set m's data to new_m's data
     set v's data to new_v's data
 end
@@ -1324,6 +1371,12 @@ set arrays_zero_list to list of 0
 to arrays_zeros_list with n
     if n is 0
         return empty list
+    end
+    if arrays_native # a block of zeros of its own, with no copy (DESIGN §171)
+        set made to empty list
+        if arrays_k_room(made, n) is 0
+            return made
+        end
     end
     repeat while length of arrays_zero_list is less than n
         for each x in items 1 to length of arrays_zero_list of arrays_zero_list

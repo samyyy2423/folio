@@ -784,6 +784,11 @@ to andpd with a, x, at
     sse(a, 0x66, 0x54, x, at)
 end
 
+# x: x compared with what's at `at`, all ones if predicate p holds (1 less than), else 0
+to cmpsd with a, x, at, p
+    enc(a, (list of 0xF2), no, (list of 0x0F, 0xC2), x, at, list of p)
+end
+
 # 16 bytes in the read-only data, on a 16-byte boundary as andpd needs: every bit but the sign of each half;
 # once
 to abs_mask with a
@@ -29160,7 +29165,7 @@ to emit_runtime with st
     if workers of a and target of st is "windows"
         add (list of "KERNEL32.dll", wk_imports) to wanted
     end
-    if "numbers_matmul" is in own_kernels of a and target of st is "windows" # matmul on every core (DESIGN §166)
+    if ("numbers_matmul" is in own_kernels of a or "numbers_matmul_turned" is in own_kernels of a) and target of st is "windows" # matmul on every core (DESIGN §166)
         add (list of "KERNEL32.dll", (list of "CreateThread", "WaitForSingleObject", "CloseHandle", "GetSystemInfo", "CreateEventW", "SetEvent")) to wanted
     end
     if threading of a
@@ -37600,7 +37605,8 @@ end
 
 set own_kernel_names to dictionary where "numbers_binary" is "rt_k_binary", "numbers_matmul" is "rt_k_matmul",
     "numbers_reduce" is "rt_k_reduce", "numbers_convert" is "rt_k_convert", "numbers_memory" is "rt_k_memory",
-    "numbers_atomic" is "rt_k_atomic", "numbers_adam" is "rt_k_adam"
+    "numbers_atomic" is "rt_k_atomic", "numbers_adam" is "rt_k_adam", "numbers_matmul_turned" is "rt_k_matmul_t",
+    "numbers_exp" is "rt_k_exp", "numbers_room" is "rt_k_room"
 
 # whether a library's function is one of Folio's own: from `use the library "folio"`
 to own_library with nat
@@ -37669,7 +37675,7 @@ to kernel_enter with a, target, inputs
     for each r in list of rbx, rsi, rdi, r12, r13, r14, r15
         push_r(a, r)
     end
-    alui(a, "sub", rsp, 160) # inputs and slots 1 to 20 (see kernel_input)
+    alui(a, "sub", rsp, 176) # inputs and slots 1 to 22 (see kernel_input)
     set in_regs to list of rdi, rsi, rdx, rcx, r8, r9
     set stack_from to 16
     if target is "windows"
@@ -37730,7 +37736,7 @@ to emit_kernels with a, target
     if "numbers_binary" is in used
         emit_kernel_binary(a, target)
     end
-    if "numbers_matmul" is in used
+    if "numbers_matmul" is in used or "numbers_matmul_turned" is in used
         emit_kernel_matmul(a, target)
         mark(a, "rt_mm_blocks")
         matmul_blocks(a)
@@ -37746,6 +37752,12 @@ to emit_kernels with a, target
     end
     if "numbers_reduce" is in used
         emit_kernel_reduce(a, target)
+    end
+    if "numbers_exp" is in used
+        emit_kernel_exp(a, target)
+    end
+    if "numbers_room" is in used
+        emit_kernel_room(a, target)
     end
     if "numbers_convert" is in used
         emit_kernel_convert(a, target)
@@ -37763,13 +37775,16 @@ end
 
 # rt_k_adam(p, g, m, v, s, n): Adam's step for n numbers, each list's first n, in place (DESIGN §168):
 # m = m b1 + g (1 - b1), v = v b2 + g g (1 - b2) and p = p - m (c1 rate) / (sqrt(v c2) + eps), with the new m and
-# v, s the list of b1, 1 - b1, b2, 1 - b2, c1 rate, c2 and eps. Each step is the one arrays.folio's adam_step
-# takes in Folio, in the same order, so the numbers are the same, in one loop and not ten. It goes over them
+# v, s the list of b1, 1 - b1, b2, 1 - b2, c1 rate, c2, eps and keep, p times keep first for AdamW (1 for Adam,
+# DESIGN §170), so p = p keep - m (c1 rate) / (sqrt(v c2) + eps). Each step is the one arrays.folio's adam_step
+# takes in Folio, in the same order, so the numbers are the same, in one loop and not ten, 4 at a time with AVX,
+# whose each of 4 is the one at a time's to the bit (DESIGN §171). It goes over them
 # twice: first only to see that nothing goes wrong, a NaN, a square root of less than 0 or a division by 0,
 # which is 1, for Folio to do, with nothing changed; then again, putting each one in
 to emit_kernel_adam with a, target
     set refuse to new_label(a)
     set done to new_label(a)
+    set no_avx to new_label(a)
     mark(a, "rt_k_adam")
     kernel_enter(a, target, 6)
     kernel_small(a, 6, refuse)
@@ -37781,17 +37796,100 @@ to emit_kernel_adam with a, target
         dec_r(a, rax)
         kernel_inside(a, k, refuse)
     end
-    movi(a, rax, 6)
+    movi(a, rax, 7)
     kernel_inside(a, 5, refuse)
+    avx_check(a)
+    store(a, kernel_input(7), rax) # 2 with AVX
+    # with AVX, s's 8 numbers each 4 times over on the stack, 32 bytes apart, then 4 zeros, for ymm0 to ymm5 to
+    # work with, which no system keeps for whoever called
+    alui(a, "sub", rsp, 288)
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ne, no_avx)
+    load(a, r15, kernel_input(5))
+    load(a, r15, mem(r15, 16))
+    for each k from 0 to 7
+        vbroadcastsd(a, 0, mem(r15, 8 * k))
+        vmovupd_store(a, mem(rsp, 32 * k), 0)
+    end
+    vxorpd(a, 0)
+    vmovupd_store(a, mem(rsp, 256), 0)
+    vzeroupper(a)
+    mark(a, no_avx)
     xorpd(a, xmm7, reg_at(xmm7))
     for each storing in list of no, yes
         set each to new_label(a)
+        set fours to new_label(a)
+        set tail to new_label(a)
+        set pass_done to new_label(a)
         set regs to list of r8, r9, r10, r11, r15
         for each k from 1 to 5
             load(a, item k of regs, kernel_input(k))
             load(a, item k of regs, mem(item k of regs, 16))
         end
         load(a, rcx, kernel_input(6))
+        load(a, rax, kernel_input(7))
+        alui(a, "cmp", rax, 2)
+        jcc(a, cc_ne, tail)
+        mov_rr(a, rdx, rcx) # fours of them, with AVX
+        shifti(a, "shr", rdx, 2)
+        jcc(a, cc_e, tail)
+        if not storing
+            vxorpd(a, 5) # what's gone wrong, in any of the 4
+        end
+        mark(a, fours)
+        vmovupd_load(a, 1, mem(r9, 0)) # g
+        vmovupd_load(a, 0, mem(r10, 0)) # m b1 + g (1 - b1)
+        vop(a, "*", 0, 0, mem(rsp, 0))
+        vop(a, "*", 2, 1, mem(rsp, 32))
+        vop(a, "+", 0, 0, reg_at(2))
+        vmovupd_load(a, 3, mem(r11, 0)) # v b2 + g g (1 - b2)
+        vop(a, "*", 3, 3, mem(rsp, 64))
+        vop(a, "*", 2, 1, reg_at(1))
+        vop(a, "*", 2, 2, mem(rsp, 96))
+        vop(a, "+", 3, 3, reg_at(2))
+        vop(a, "*", 2, 3, mem(rsp, 160)) # sqrt(v c2) + eps
+        if not storing # below 0, or a NaN
+            vcmppd(a, 4, 2, mem(rsp, 256), 9)
+            vop(a, "or", 5, 5, reg_at(4))
+        end
+        vop(a, "sqrt", 2, 0, reg_at(2))
+        vop(a, "+", 2, 2, mem(rsp, 192))
+        if not storing # 0, or a NaN
+            vcmppd(a, 4, 2, mem(rsp, 256), 8)
+            vop(a, "or", 5, 5, reg_at(4))
+        end
+        vop(a, "*", 4, 0, mem(rsp, 128)) # m (c1 rate), over that
+        vop(a, "/", 4, 4, reg_at(2))
+        vmovupd_load(a, 2, mem(r8, 0)) # p times keep, less that
+        vop(a, "*", 2, 2, mem(rsp, 224))
+        vop(a, "-", 2, 2, reg_at(4))
+        if storing
+            vmovupd_store(a, mem(r10, 0), 0)
+            vmovupd_store(a, mem(r11, 0), 3)
+            vmovupd_store(a, mem(r8, 0), 2)
+        else # a NaN in m, v, what moves p, or p
+            for each y in list of 0, 3, 4, 2
+                vcmppd(a, 1, y, reg_at(y), 3)
+                vop(a, "or", 5, 5, reg_at(1))
+            end
+        end
+        for each r in list of r8, r9, r10, r11
+            alui(a, "add", r, 32)
+        end
+        dec_r(a, rdx)
+        jcc(a, cc_ne, fours)
+        if not storing
+            vmovmskpd(a, rax, 5)
+            vzeroupper(a)
+            test_rr(a, rax, rax)
+            jcc(a, cc_ne, refuse)
+        else
+            vzeroupper(a)
+        end
+        alui(a, "and", rcx, 3) # the last 1 to 3, one at a time
+        mark(a, tail)
+        test_rr(a, rcx, rcx)
+        jcc(a, cc_e, pass_done)
         mark(a, each)
         movsd_plain(a, xmm1, mem(r9, 0)) # g
         movsd_plain(a, xmm0, mem(r10, 0)) # m b1 + g (1 - b1)
@@ -37824,7 +37922,8 @@ to emit_kernel_adam with a, target
         movsd_plain(a, xmm4, reg_at(xmm0)) # m (c1 rate), over that
         scalar_math(a, "*", xmm4, mem(r15, 32))
         scalar_math(a, "/", xmm4, reg_at(xmm2))
-        movsd_plain(a, xmm5, mem(r8, 0)) # p, less that
+        movsd_plain(a, xmm5, mem(r8, 0)) # p times keep, less that
+        scalar_math(a, "*", xmm5, mem(r15, 56))
         scalar_math(a, "-", xmm5, reg_at(xmm4))
         if storing
             movsd_store(a, mem(r10, 0), xmm0)
@@ -37841,8 +37940,184 @@ to emit_kernel_adam with a, target
         end
         dec_r(a, rcx)
         jcc(a, cc_ne, each)
+        mark(a, pass_done)
     end
     mark(a, done)
+    movi(a, rax, 0)
+    kernel_leave(a)
+    mark(a, refuse)
+    movi(a, rax, 1)
+    kernel_leave(a)
+end
+
+# rt_k_exp(out, a, n): out's first n numbers e to the power of a's, each to the last bit as math.folio's exp works
+# it out (DESIGN §171): h the nearest whole number to x / ln2 (the floor of it and a half), r = x - h ln2, then
+# 1 + r + r^2 / 2 + ... to the 20th term, each term the last times r, over n, and then times 2 for each of h.
+# 4 at a time with AVX. 1, with nothing changed, for a NaN or a number past 700 either way, for Folio to do: e to
+# the power of 700 is 10^304, and past that h's doubling would leave the doubles' range, where Folio's own loop
+# rounds at each step
+to emit_kernel_exp with a, target
+    set refuse to new_label(a)
+    set done to new_label(a)
+    set scan to new_label(a)
+    set no_avx to new_label(a)
+    set fours to new_label(a)
+    set tail to new_label(a)
+    set each to new_label(a)
+    set floored to new_label(a)
+    set ln2 to double_bytes(0.6931471805599453)
+    mark(a, "rt_k_exp")
+    kernel_enter(a, target, 3)
+    kernel_small(a, 3, refuse)
+    load(a, rax, kernel_input(3))
+    test_rr(a, rax, rax)
+    jcc(a, cc_e, done)
+    for each k from 1 to 2
+        load(a, rax, kernel_input(3))
+        dec_r(a, rax)
+        kernel_inside(a, k, refuse)
+    end
+    load(a, r8, kernel_input(2)) # each a number, from -700 to 700
+    load(a, r8, mem(r8, 16))
+    load(a, rcx, kernel_input(3))
+    load_bits(a, xmm2, double_bytes(700))
+    mark(a, scan)
+    movsd_plain(a, xmm0, mem(r8, 0))
+    andpd(a, xmm0, rip(abs_mask(a)))
+    ucomisd(a, xmm0, reg_at(xmm2))
+    jcc(a, cc_p, refuse)
+    jcc(a, cc_a, refuse)
+    alui(a, "add", r8, 8)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, scan)
+    avx_check(a) # (which uses r8)
+    load(a, r8, kernel_input(2))
+    load(a, r8, mem(r8, 16))
+    load(a, r9, kernel_input(1))
+    load(a, r9, mem(r9, 16))
+    load(a, rcx, kernel_input(3))
+    alui(a, "cmp", rax, 2)
+    jcc(a, cc_ne, tail)
+    # with AVX: ln2, a half, 1 and each n from 1 to 20 on the stack, each 4 times over, 32 bytes apart; then room
+    # for 4 h's and 4 sums
+    alui(a, "sub", rsp, 800)
+    set constants to list of ln2, double_bytes(0.5), double_bytes(1)
+    for each n from 1 to 20
+        add double_bytes(n) to constants
+    end
+    set k to 0
+    for each c in constants
+        vbroadcastsd(a, 0, rip(number_place(a, c)))
+        vmovupd_store(a, mem(rsp, 32 * k), 0)
+        add 1 to k
+    end
+    load(a, rcx, kernel_input(3))
+    mov_rr(a, rdx, rcx)
+    shifti(a, "shr", rdx, 2)
+    jcc(a, cc_e, no_avx)
+    mark(a, fours)
+    vmovupd_load(a, 0, mem(r8, 0)) # x
+    vop(a, "/", 1, 0, mem(rsp, 0)) # h: the floor of x / ln2 and a half
+    vop(a, "+", 1, 1, mem(rsp, 32))
+    vex(a, 3, 1, 1, 0, 0x09, 1, 0, reg_at(1)) # vroundpd, down
+    set code to code of a
+    add 1 to code
+    vop(a, "*", 2, 1, mem(rsp, 0)) # r: x - h ln2
+    vop(a, "-", 2, 0, reg_at(2))
+    vmovupd_load(a, 3, mem(rsp, 64)) # the term, and the sum, 1
+    vmovupd_load(a, 4, mem(rsp, 64))
+    for each n from 1 to 20
+        vop(a, "*", 3, 3, reg_at(2))
+        vop(a, "/", 3, 3, mem(rsp, 96 + 32 * (n - 1)))
+        vop(a, "+", 4, 4, reg_at(3))
+    end
+    vmovupd_store(a, mem(rsp, 736), 1)
+    vmovupd_store(a, mem(rsp, 768), 4)
+    vzeroupper(a)
+    for each j from 0 to 3 # each sum times 2 to the power of its h, made from h's bits: exact, in range
+        movsd_plain(a, xmm0, mem(rsp, 736 + 8 * j))
+        cvttsd2si(a, rax, xmm0)
+        alui(a, "add", rax, 1023)
+        shifti(a, "shl", rax, 52)
+        movq_xr(a, xmm1, rax)
+        movsd_plain(a, xmm0, mem(rsp, 768 + 8 * j))
+        scalar_math(a, "*", xmm0, reg_at(xmm1))
+        movsd_store(a, mem(r9, 8 * j), xmm0)
+    end
+    alui(a, "add", r8, 32)
+    alui(a, "add", r9, 32)
+    dec_r(a, rdx)
+    jcc(a, cc_ne, fours)
+    mark(a, no_avx)
+    load(a, rcx, kernel_input(3)) # the last 1 to 3, one at a time
+    alui(a, "and", rcx, 3)
+    mark(a, tail)
+    test_rr(a, rcx, rcx)
+    jcc(a, cc_e, done)
+    mark(a, each)
+    movsd_plain(a, xmm0, mem(r8, 0)) # x
+    movapd(a, xmm1, xmm0) # h: the floor of x / ln2 and a half
+    scalar_math(a, "/", xmm1, rip(number_place(a, ln2)))
+    scalar_math(a, "+", xmm1, rip(number_place(a, double_bytes(0.5))))
+    cvttsd2si(a, rax, xmm1)
+    cvtsi2sd(a, xmm2, rax)
+    ucomisd(a, xmm2, reg_at(xmm1))
+    jcc(a, cc_be, floored)
+    dec_r(a, rax)
+    cvtsi2sd(a, xmm2, rax)
+    mark(a, floored)
+    scalar_math(a, "*", xmm2, rip(number_place(a, ln2))) # r: x - h ln2
+    movapd(a, xmm4, xmm0)
+    scalar_math(a, "-", xmm4, reg_at(xmm2))
+    load_bits(a, xmm5, double_bytes(1)) # the term, and the sum, 1
+    load_bits(a, xmm3, double_bytes(1))
+    for each n from 1 to 20
+        scalar_math(a, "*", xmm5, reg_at(xmm4))
+        scalar_math(a, "/", xmm5, rip(number_place(a, double_bytes(n))))
+        scalar_math(a, "+", xmm3, reg_at(xmm5))
+    end
+    alui(a, "add", rax, 1023)
+    shifti(a, "shl", rax, 52)
+    movq_xr(a, xmm1, rax)
+    scalar_math(a, "*", xmm3, reg_at(xmm1))
+    movsd_store(a, mem(r9, 0), xmm3)
+    alui(a, "add", r8, 8)
+    alui(a, "add", r9, 8)
+    dec_r(a, rcx)
+    jcc(a, cc_ne, each)
+    mark(a, done)
+    movi(a, rax, 0)
+    kernel_leave(a)
+    mark(a, refuse)
+    movi(a, rax, 1)
+    kernel_leave(a)
+end
+
+# rt_k_room(list, n): the list's numbers n zeros, in a block of its own the collector gives, already 0, and its old
+# block let go; 0 (DESIGN §171). arrays.folio made each array's room by copying part of a list of zeros it kept,
+# which for 51,200 numbers took 35 microseconds on top of the 48 the block's own zeros take. Own kernels are called
+# with the program's lists to themselves, and the collector looks through the whole stack and every register, so
+# the block can be asked for here
+to emit_kernel_room with a, target
+    set refuse to new_label(a)
+    set roomy to new_label(a)
+    mark(a, "rt_k_room")
+    kernel_enter(a, target, 2)
+    kernel_small(a, 2, refuse)
+    load(a, rcx, kernel_input(2))
+    alui(a, "cmp", rcx, 4) # room for 4 at least, as every list has
+    jcc(a, cc_ae, roomy)
+    movi(a, rcx, 4)
+    mark(a, roomy)
+    store(a, kernel_input(3), rcx)
+    shifti(a, "shl", rcx, 3)
+    call_to(a, "rt_alloc")
+    load(a, r8, kernel_input(1))
+    store(a, mem(r8, 16), rax)
+    load(a, rax, kernel_input(3))
+    store(a, mem(r8, 8), rax)
+    load(a, rax, kernel_input(2))
+    store(a, mem(r8, 0), rax)
     movi(a, rax, 0)
     kernel_leave(a)
     mark(a, refuse)
@@ -38277,8 +38552,10 @@ end
 # for each of `outer` rows and `inner` places in it, out's next number, from out_from on, is a's and b's
 # numbers there with op between them: a's from a_from, a_step_out on for each row and a_step for each place,
 # and b's likewise. op 0 is a's number itself, 1 to 6 + - * / max min, and 7 to 11 a's number negated, made
-# positive, made 0 below 0 (ReLU), its square root, and 1 above 0 and 0 otherwise (ReLU's slope). max is a if a is greater than b, else b, as maxsd has it; min is a if
-# a is less than b, else b.
+# positive, made 0 below 0 (ReLU), its square root, and 1 above 0 and 0 otherwise (ReLU's slope), and 12 a's
+# number where b's is above 0 and 0 otherwise (ReLU's gradient, DESIGN §171). max is a if a is greater than b,
+# else b, as maxsd has it; min is a if a is less than b, else b. The slope and the gradient are a compare and a
+# mask, with no branch to guess wrong.
 to emit_kernel_binary with a, target
     set refuse to new_label(a)
     set done to new_label(a)
@@ -38288,7 +38565,7 @@ to emit_kernel_binary with a, target
         kernel_small(a, k, refuse)
     end
     load(a, rax, kernel_input(1))
-    alui(a, "cmp", rax, 11)
+    alui(a, "cmp", rax, 12)
     jcc(a, cc_a, refuse)
     for each k in list of 5, 6
         load(a, rax, kernel_input(k))
@@ -38328,7 +38605,7 @@ to emit_kernel_binary with a, target
     end
     load(a, r12, kernel_input(5))
     xorpd(a, xmm4, reg_at(xmm4))
-    set ops to list of "copy", "+", "-", "*", "/", "max", "min", "negate", "absolute", "relu", "sqrt", "step"
+    set ops to list of "copy", "+", "-", "*", "/", "max", "min", "negate", "absolute", "relu", "sqrt", "step", "relu_grad"
     set starts to empty list
     for each op in ops
         add new_label(a) to starts
@@ -38347,6 +38624,10 @@ to emit_kernel_binary with a, target
         set rows to new_label(a)
         set places to new_label(a)
         mark(a, item k of starts)
+        if op is "step" # 1, for the mask
+            movi64(a, rax, list of 0, 0, 0, 0, 0, 0, 0xF0, 0x3F)
+            movq_xr(a, xmm5, rax)
+        end
         mark(a, rows)
         mov_rr(a, r8, r13)
         mov_rr(a, r9, r14)
@@ -38366,6 +38647,15 @@ to emit_kernel_binary with a, target
             scalar_math(a, op, xmm0, reg_at(xmm1))
             ucomisd(a, xmm0, reg_at(xmm0))
             jcc(a, cc_p, refuse)
+        else if op is "relu_grad" # a where b is above 0: a mask of b above 0, and a with it
+            movsd_plain(a, xmm1, mem(r9, 0))
+            ucomisd(a, xmm0, reg_at(xmm0))
+            jcc(a, cc_p, refuse)
+            ucomisd(a, xmm1, reg_at(xmm1))
+            jcc(a, cc_p, refuse)
+            movapd(a, xmm2, xmm4)
+            cmpsd(a, xmm2, reg_at(xmm1), 1)
+            andpd(a, xmm0, reg_at(xmm2))
         else if op is "max" or op is "min"
             movsd_plain(a, xmm1, mem(r9, 0))
             ucomisd(a, xmm0, reg_at(xmm1)) # either a NaN
@@ -38382,17 +38672,11 @@ to emit_kernel_binary with a, target
                 ucomisd(a, xmm0, reg_at(xmm4))
                 jcc(a, cc_b, refuse)
                 sqrt_sd(a, xmm0, xmm0)
-            else if op is "step"
-                set positive to new_label(a)
-                set stepped to new_label(a)
-                ucomisd(a, xmm0, reg_at(xmm4))
-                jcc(a, cc_a, positive)
-                xorpd(a, xmm0, reg_at(xmm0))
-                jmp_to(a, stepped)
-                mark(a, positive)
-                movi64(a, rax, list of 0, 0, 0, 0, 0, 0, 0xF0, 0x3F)
-                movq_xr(a, xmm0, rax)
-                mark(a, stepped)
+            else if op is "step" # a mask of 0 below the number, and 1 with it
+                movapd(a, xmm1, xmm4)
+                cmpsd(a, xmm1, reg_at(xmm0), 1)
+                andpd(a, xmm1, reg_at(xmm5))
+                movapd(a, xmm0, xmm1)
             else
                 scalar_math(a, "max", xmm0, reg_at(xmm4))
             end
@@ -38502,6 +38786,26 @@ end
 
 to vzeroupper with a
     raw(a, list of 0xC5, 0xF8, 0x77)
+end
+
+# y = x op what's at `at` (a register or memory), 4 doubles at a time: "+" vaddpd, "*" vmulpd, "-" vsubpd, "/"
+# vdivpd and "or" vorpd; and "sqrt", vsqrtpd, of what's at `at` alone (x 0)
+to vop with a, op, y, x, at
+    set codes to dictionary where "+" is 0x58, "*" is 0x59, "-" is 0x5C, "/" is 0x5E, "or" is 0x56, "sqrt" is 0x51
+    vex(a, 1, 1, 1, 0, item op of codes, y, x, at)
+end
+
+# y: x compared with what's at `at`, each double all ones where predicate p holds, else 0: p 3 either is a NaN,
+# 8 equal or either a NaN, 9 less than or either a NaN. `at` isn't rip, as the predicate comes after it
+to vcmppd with a, y, x, at, p
+    vex(a, 1, 1, 1, 0, 0xC2, y, x, at)
+    set code to code of a
+    add p to code
+end
+
+# register r: the sign bits of y's 4 doubles, 1 for each that's all ones
+to vmovmskpd with a, r, y
+    vex(a, 1, 0, 1, 0, 0x50, r, 0, reg_at(y))
 end
 
 # rax 2 if the processor has AVX and the system keeps its registers (CPUID's AVX and OSXSAVE, and XGETBV's
@@ -38780,7 +39084,7 @@ to emit_matmul_thread with a, target
     for each r in list of rbx, rsi, rdi, r12, r13, r14, r15
         push_r(a, r)
     end
-    alui(a, "sub", rsp, 160)
+    alui(a, "sub", rsp, 176)
     set given to rdi
     if target is "windows"
         set given to rcx
@@ -38791,6 +39095,8 @@ to emit_matmul_thread with a, target
         load(a, rax, mem(r9, -56 - 8 * k))
         store(a, kernel_input(k), rax)
     end
+    load(a, rax, mem(r9, -56 - 8 * 21)) # and a's step from term to term
+    store(a, kernel_input(21), rax)
     load(a, rax, mem(r8, 8))
     store(a, kernel_input(17), rax)
     load(a, rax, mem(r8, 16))
@@ -39214,6 +39520,7 @@ to matmul_blocks with a
     mov_rr(a, rax, r11)
     alu(a, "add", rax, rdx)
     mov_rr(a, r13, r9) # b's columns from row 0: the copy, or b itself
+    load(a, r14, kernel_input(21)) # a's step from term to term: 8 bytes, or a row of it turned over
     load(a, rcx, kernel_input(5))
     mark(a, terms_loop)
     movupd_load(a, xmm0, mem(r13, 0))
@@ -39227,7 +39534,7 @@ to matmul_blocks with a
         packed_math(a, "+", 8 + 2 * k, reg_at(xmm3))
         packed_math(a, "*", xmm2, reg_at(xmm1))
         packed_math(a, "+", 9 + 2 * k, reg_at(xmm2))
-        alui(a, "add", row_at, 8)
+        alu(a, "add", row_at, r14)
         add 1 to k
     end
     alu(a, "add", r13, r12)
@@ -39346,6 +39653,7 @@ to matmul_blocks_avx with a
     mov_rr(a, rax, r11)
     alu(a, "add", rax, rdx)
     mov_rr(a, r13, r9) # b's columns from row 0: the copy, or b itself
+    load(a, r14, kernel_input(21)) # a's step from term to term: 8 bytes, or a row of it turned over
     load(a, rcx, kernel_input(5))
     mark(a, terms_loop)
     vmovupd_load(a, 0, mem(r13, 0))
@@ -39357,7 +39665,7 @@ to matmul_blocks_avx with a
         vmath(a, "+", 8 + 2 * k, 8 + 2 * k, 3)
         vmath(a, "*", 3, 2, 1)
         vmath(a, "+", 9 + 2 * k, 9 + 2 * k, 3)
-        alui(a, "add", row_at, 8)
+        alu(a, "add", row_at, r14)
         add 1 to k
     end
     alu(a, "add", r13, r12)
@@ -39386,6 +39694,106 @@ to matmul_blocks_avx with a
         movdqu_load(a, 8 + k, mem(rsp, 16 * k))
     end
     alui(a, "add", rsp, 128)
+end
+
+# rt_k_matmul's columns past the blocks (from kernel_input(12)), for the rows in fours (to kernel_input(11)):
+# 4 rows by 2 columns at a time, then by 1, each of out's numbers added up in a register over every term and
+# put in out once (DESIGN §171). It was out's row in memory, a load and a store for every term, each waiting on
+# the one before: a 200 by 256 times 256 by 10 took 180 microseconds, nearly all of it its last 2 columns.
+# Still 0 + a's first times b's first + ..., in that order. r12 to r15 are used: the rows past the fours reload
+# what they need
+to matmul_rest_columns with a
+    set row_loop to new_label(a)
+    set col_loop to new_label(a)
+    set single to new_label(a)
+    set next_rows to new_label(a)
+    set finished to new_label(a)
+    load(a, rax, kernel_input(6))
+    alu_load(a, "cmp", rax, kernel_input(12))
+    jcc(a, cc_e, finished)
+    movi(a, rsi, 0) # i, out's row
+    mark(a, row_loop)
+    alu_load(a, "cmp", rsi, kernel_input(11))
+    jcc(a, cc_ae, finished)
+    load(a, r8, kernel_input(10)) # a's 4 rows from row i: r8, r10, r11 and rax
+    mov_rr(a, rdx, rsi)
+    imul_rr(a, rdx, r8)
+    mov_rr(a, r8, rdx)
+    alu_load(a, "add", r8, kernel_input(14))
+    load(a, rdx, kernel_input(10))
+    mov_rr(a, r10, r8)
+    alu(a, "add", r10, rdx)
+    mov_rr(a, r11, r10)
+    alu(a, "add", r11, rdx)
+    mov_rr(a, rax, r11)
+    alu(a, "add", rax, rdx)
+    load(a, rdi, kernel_input(12)) # j, out's column
+    mark(a, col_loop)
+    load(a, rcx, kernel_input(6))
+    alu(a, "sub", rcx, rdi)
+    jcc(a, cc_e, next_rows)
+    for each width in list of 2, 1
+        set terms to new_label(a)
+        if width is 1
+            mark(a, single)
+        else
+            alui(a, "cmp", rcx, 2)
+            jcc(a, cc_b, single)
+        end
+        set ptrs to list of r12, r13, r14, r15
+        set rows to list of r8, r10, r11, rax
+        for each k from 1 to 4
+            mov_rr(a, item k of ptrs, item k of rows)
+            xorpd(a, k - 1, reg_at(k - 1))
+        end
+        load(a, r9, kernel_input(15)) # b's row 0, from column j
+        mov_rr(a, rdx, rdi)
+        shifti(a, "shl", rdx, 3)
+        alu(a, "add", r9, rdx)
+        load(a, rdx, kernel_input(21)) # a's step from term to term
+        load(a, rcx, kernel_input(5))
+        mark(a, terms)
+        if width is 2
+            movupd_load(a, xmm4, mem(r9, 0))
+        else
+            movsd_plain(a, xmm4, mem(r9, 0))
+        end
+        for each k from 1 to 4
+            movsd_plain(a, xmm5, mem(item k of ptrs, 0))
+            if width is 2
+                unpcklpd(a, xmm5)
+                packed_math(a, "*", xmm5, reg_at(xmm4))
+                packed_math(a, "+", k - 1, reg_at(xmm5))
+            else
+                scalar_math(a, "*", xmm5, reg_at(xmm4))
+                scalar_math(a, "+", k - 1, reg_at(xmm5))
+            end
+            alu(a, "add", item k of ptrs, rdx)
+        end
+        alu(a, "add", r9, rbx)
+        dec_r(a, rcx)
+        jcc(a, cc_ne, terms)
+        mov_rr(a, r9, rsi) # out's 4 by width from row i, column j
+        imul_rr(a, r9, rbx)
+        alu_load(a, "add", r9, kernel_input(16))
+        mov_rr(a, rdx, rdi)
+        shifti(a, "shl", rdx, 3)
+        alu(a, "add", r9, rdx)
+        for each k from 1 to 4
+            if width is 2
+                movupd_store(a, mem(r9, 0), k - 1)
+            else
+                movsd_store(a, mem(r9, 0), k - 1)
+            end
+            alu(a, "add", r9, rbx)
+        end
+        alui(a, "add", rdi, width)
+        jmp_to(a, col_loop)
+    end
+    mark(a, next_rows)
+    alui(a, "add", rsi, 4)
+    jmp_to(a, row_loop)
+    mark(a, finished)
 end
 
 # rt_k_matmul's rows from row_from (an input's place, or 0 for row 0) to rows_to (one, or 0 for m), and their
@@ -39427,12 +39835,13 @@ to matmul_rest with a, row_from, rows_to, col_from
     load(a, r14, kernel_input(15))
     alu(a, "add", r14, rdi)
     mark(a, rows)
+    mov_rr(a, rsi, r13) # a's row, from its first term
     load(a, r11, kernel_input(5))
     mov_rr(a, r9, r14)
     mark(a, terms) # out's row + a's number there times b's row
     movsd_plain(a, xmm1, mem(r13, 0))
     unpcklpd(a, xmm1)
-    alui(a, "add", r13, 8)
+    alu_load(a, "add", r13, kernel_input(21))
     mov_rr(a, r8, r9)
     mov_rr(a, r10, r15)
     load(a, rcx, kernel_input(13))
@@ -39470,6 +39879,8 @@ to matmul_rest with a, row_from, rows_to, col_from
     dec_r(a, r11)
     jcc(a, cc_ne, terms)
     alu(a, "add", r15, rbx)
+    mov_rr(a, r13, rsi) # a's next row
+    alu_load(a, "add", r13, kernel_input(10))
     dec_r(a, r12)
     jcc(a, cc_ne, rows)
     mark(a, finished)
@@ -39478,8 +39889,15 @@ end
 to emit_kernel_matmul with a, target
     set refuse to new_label(a)
     set done to new_label(a)
+    set common to new_label(a)
+    mark(a, "rt_k_matmul_t") # a turned over: a is k by m, its column i out's row i (DESIGN §171)
+    kernel_enter(a, target, 9)
+    storei(a, kernel_input(21), 1)
+    jmp_to(a, common)
     mark(a, "rt_k_matmul")
     kernel_enter(a, target, 9)
+    storei(a, kernel_input(21), 0)
+    mark(a, common)
     for each k in list of 4, 5, 6, 7, 8, 9
         kernel_small(a, k, refuse)
     end
@@ -39532,9 +39950,22 @@ to emit_kernel_matmul with a, target
     store(a, kernel_input(16), r15)
     load(a, rbx, kernel_input(6)) # b's and out's row, in bytes
     shifti(a, "shl", rbx, 3)
-    load(a, rax, kernel_input(5)) # a's row, in bytes
+    set turned_steps to new_label(a)
+    set stepped to new_label(a)
+    load(a, rax, kernel_input(21))
+    test_rr(a, rax, rax)
+    jcc(a, cc_ne, turned_steps)
+    load(a, rax, kernel_input(5)) # a's row, in bytes, and from term to term 8
     shifti(a, "shl", rax, 3)
     store(a, kernel_input(10), rax)
+    storei(a, kernel_input(21), 8)
+    jmp_to(a, stepped)
+    mark(a, turned_steps) # turned over: from row to row 8 bytes, and from term to term m numbers
+    storei(a, kernel_input(10), 8)
+    load(a, rax, kernel_input(4))
+    shifti(a, "shl", rax, 3)
+    store(a, kernel_input(21), rax)
+    mark(a, stepped)
     load(a, rax, kernel_input(4)) # m and n, down to fours
     alui(a, "and", rax, -4)
     store(a, kernel_input(11), rax)
@@ -39551,8 +39982,9 @@ to emit_kernel_matmul with a, target
     mark(a, widths_set)
     store(a, kernel_input(12), rcx)
     matmul_on_cores(a, target)
-    # the rest, a term at a time: the columns past the fours for the rows in fours, then the rows past them
-    matmul_rest(a, 0, 11, 12)
+    # the rest: the columns past the blocks for the rows in fours, in registers, then the rows past them, a term
+    # at a time
+    matmul_rest_columns(a)
     matmul_rest(a, 11, 0, 0)
     mark(a, done)
     movi(a, rax, 0)

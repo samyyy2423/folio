@@ -1,11 +1,12 @@
 to trimmed with words
     set letters to split words by ""
+    set spaces to list of " ", "\t", "\n", (list of 13) as bytes as text # and a carriage return
     set first to 1
     set last to length of letters
-    repeat while first is at most last and item first of letters is in list of " ", "\t", "\n", "\r"
+    repeat while first is at most last and item first of letters is in spaces
         add 1 to first
     end
-    repeat while last is at least first and item last of letters is in list of " ", "\t", "\n", "\r"
+    repeat while last is at least first and item last of letters is in spaces
         set last to last - 1
     end
     if last is less than first

@@ -1135,7 +1135,7 @@ to cli_joined with cli_pieces, cli_at, cli_tight
     set cli_before to nothing
     for each cli_piece in cli_pieces
         set cli_close to cli_before is nothing or what of cli_before is "(" or what of cli_piece is ")" or
-            what of cli_piece is "," or what of cli_piece is "'s"
+            what of cli_before is "[" or what of cli_piece is "]" or what of cli_piece is "," or what of cli_piece is "'s"
         if not cli_close and what of cli_before is "-" and cli_marked(cli_tight, cli_at, cli_before)
             set cli_close to yes
         end
@@ -2672,7 +2672,36 @@ end
 
 # every problem in a program, with the files it uses in place
 to cli_problems_of with cli_source, cli_names, cli_texts
-    return cli_problems_in(machine's read_program(cli_source, cli_files_of(cli_names, cli_texts)))
+    set cli_found to cli_problems_in(machine's read_program(cli_source, cli_files_of(cli_names, cli_texts)))
+    set cli_slips to cli_r_slips(machine's read_tokens(cli_source), empty list)
+    if length of cli_slips is 0
+        return cli_found
+    end
+    for each cli_slip in cli_slips
+        add cli_slip to cli_found
+    end
+    return cli_sorted_problems(cli_found)
+end
+
+# each \r in a program's text, which Folio 1 reads as an r (SPEC.md) where a carriage return was likely meant: a
+# warning where it's written, as folio.js's check gives (DESIGN §175)
+to cli_r_slips with cli_tokens, cli_found
+    for each cli_token in cli_tokens
+        if type of cli_token is "string"
+            for each cli_col in slips of cli_token
+                add record with line line of cli_token, col cli_col, file "", kind "looks wrong",
+                    message "'\\r' is the letter r in Folio 1, not a carriage return: for one, write (list of 13) as bytes as text" to cli_found
+            end
+            if parts of cli_token is not nothing
+                for each cli_part in parts of cli_token
+                    if tokens of cli_part is not nothing
+                        cli_r_slips(tokens of cli_part, cli_found)
+                    end
+                end
+            end
+        end
+    end
+    return cli_found
 end
 
 # `folio check file.folio`: every problem, where it is, and the line with a ^ under the spot; 0 if no line
@@ -2730,7 +2759,7 @@ end
 # reads them as they come). Lines and columns are counted from 0 there, and columns as JavaScript counts
 # them, as Folio's are.
 
-set cli_cr to ((list of 13) as bytes) as text # a carriage return, which Folio text can't write
+set cli_cr to ((list of 13) as bytes) as text # a carriage return, which Folio 1's text can't write
 # what can come next in a line, for completion
 set cli_lsp_words to list of "set", "to", "say", "if", "else", "end", "repeat", "while", "for each", "return", "add", "remove",
     "kind", "use", "try", "if it fails", "either way", "fail with", "stop", "expect", "match", "when", "every", "ask", "read",

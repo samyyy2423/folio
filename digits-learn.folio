@@ -3,7 +3,8 @@
 #
 #     folio run --allow-libraries digits-learn.folio [card|processor] [hidden]
 #
-# On a GTX 1650, 10 rounds of 6,000 pictures take 0.11 s on the card, 99.4% right on 1,000 it hadn't seen.
+# On a GTX 1650, 10 rounds of 6,000 pictures take 0.11 s on the card, 99.4% right on 1,000 it hadn't seen; on
+# the processor, 0.65 s.
 
 use "math.folio"
 use "digits.folio"

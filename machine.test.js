@@ -3042,7 +3042,7 @@ test("arrays.folio, memory.folio, learn.folio and ai.folio pass their own tests 
   writeFileSync(join(sub, "math.folio"), readFileSync(new URL("./math.folio", import.meta.url), "utf8"));
   const ran = spawnSync(exe, ["test", "arrays.test.folio", "memory.test.folio", "learn.test.folio", "ai.test.folio", "--allow-libraries", "--allow-read", "--allow-write"], { cwd: sub, encoding: "utf8", timeout: 300_000 });
   assert.deepEqual([ran.status, ran.stderr, ran.stdout.includes("✗")], [0, "", false], ran.stdout);
-  assert.equal(ran.stdout.split("\n").at(-2), "28 passed");
+  assert.equal(ran.stdout.split("\n").at(-2), "29 passed");
 });
 
 // arrays.folio's matmul in machine code (DESIGN §164, §166): 4 by 8 blocks with AVX where the processor has it,
@@ -3075,6 +3075,96 @@ say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") 
 `), { engine: "jit", files: (name) => files[name] });
   assert.equal(native.stdout.split(" ").length, 16000);
   assert.ok(native.stdout === folio, "machine code's sums aren't Folio's own");
+});
+
+// arrays.folio's matmul_turned and columns past the blocks (DESIGN §171): a turned over read where it is, and
+// the last 1 to 7 columns added up in registers, on shapes with rows past the fours, columns past the eights, b
+// too long to copy (k past 1,024) and enough to share out over threads, each number Folio's own to the last bit
+test("arrays.folio's matmul_turned and columns past the blocks give Folio's own sums to the last bit", { skip }, () => {
+  const files = {};
+  for (const name of ["arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+  files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+  const source = `use "arrays.folio" as arrays
+use "memory.folio" as memory
+use "math.folio" as m
+to wave with rows, columns, f
+    set made to empty list
+    for each k from 1 to rows * columns
+        add m's sine(k * f) * 2.3 to made
+    end
+    return arrays's shaped(made, list of rows, columns)
+end
+set got to empty list
+for each shape in list of (list of 40, 300, 203), (list of 7, 13, 9), (list of 200, 256, 10), (list of 13, 1030, 11), (list of 256, 200, 10), (list of 4, 5, 1), (list of 1, 3, 2)
+    set a to wave(item 1 of shape, item 2 of shape, 1.37)
+    set b to wave(item 2 of shape, item 3 of shape, 0.71)
+    for each y in arrays's numbers_of(arrays's matmul(a, b))
+        add y to got
+    end
+    for each y in arrays's numbers_of(arrays's matmul_turned(arrays's transpose(a), b))
+        add y to got
+    end
+end
+set b to (8 * length of got) bytes
+memory's put_many(b, 1, got, "a number")
+say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") with " "`;
+  const native = taskRun(source, { allow: [], files });
+  assert.deepEqual([native.stderr, native.status], ["", 0]);
+  let folio = "";
+  run(source, (line) => (folio += `${line}
+`), { engine: "jit", files: (name) => files[name] });
+  const count = [[40, 300, 203], [7, 13, 9], [200, 256, 10], [13, 1030, 11], [256, 200, 10], [4, 5, 1], [1, 3, 2]].reduce((t, [m, , n]) => t + 2 * m * n, 0);
+  assert.equal(native.stdout.split(" ").length, 2 * count);
+  assert.ok(native.stdout === folio, "machine code's sums aren't Folio's own");
+});
+
+// arrays.folio's adam_step 4 at a time with AVX, relu's slope and gradient as a compare and a mask, and exp 4 at a
+// time (DESIGN §171): each number's bits Folio's own, worked out by the JavaScript engine, over 1,003 numbers so
+// the last 3 are one at a time, with AdamW's keep and without, exp from -690 to 690 and past 700, which Folio does
+test("arrays.folio's adam_step 4 at a time, relu_gradient and above_zero without a branch, and exp in machine code give Folio's own numbers to the last bit", { skip }, () => {
+  const files = {};
+  for (const name of ["arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+  files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
+  const source = `use "arrays.folio" as arrays
+use "memory.folio" as memory
+use "math.folio" as m
+to wave with n, f, s
+    set made to empty list
+    for each k from 1 to n
+        add m's sine(k * f) * s to made
+    end
+    return arrays's shaped(made, list of n)
+end
+set n to 1003
+set p to wave(n, 1.37, 3.1)
+set mm to arrays's zeros(list of n)
+set v to arrays's zeros(list of n)
+for each t from 1 to 3
+    set keep to 1
+    if t is 2
+        set keep to 0.993
+    end
+    arrays's adam_step(p, wave(n, 0.71 * t, 0.5), mm, v, 0.01, 0.9, 0.999, 0.00000001, t, keep)
+end
+set x to wave(n, 2.3, 1)
+set got to empty list
+set wide to arrays's times(wave(n, 0.53, 1), 690)
+set past to arrays's shaped((list of 1, -2, 701, 0.5), list of 4)
+for each part in list of p, mm, v, arrays's relu_gradient(wave(n, 0.37, 2), x), arrays's above_zero(x), arrays's relu_gradient(arrays's shaped((list of -1, 2, -3, 4), list of 4), arrays's shaped((list of 0, 0, -1, 1), list of 4)), arrays's exp(x), arrays's exp(wide), arrays's exp(past)
+    for each y in arrays's numbers_of(part)
+        add y to got
+    end
+end
+set b to (8 * length of got) bytes
+memory's put_many(b, 1, got, "a number")
+say join memory's get_many(b, 1, 2 * length of got, "an unsigned whole number") with " "`;
+  const native = taskRun(source, { allow: [], files });
+  assert.deepEqual([native.stderr, native.status], ["", 0]);
+  let folio = "";
+  run(source, (line) => (folio += `${line}
+`), { engine: "jit", files: (name) => files[name] });
+  assert.equal(native.stdout.split(" ").length, 2 * (7 * 1003 + 8));
+  assert.ok(native.stdout === folio, "machine code's numbers aren't Folio's own");
 });
 
 // Folio's own library, which needs no --allow-libraries and isn't a library the program loads, and a list of
@@ -3245,7 +3335,7 @@ test("tools/gpu.folio works on numbers on the graphics card, as Folio does to a 
   const dir = mkdtempSync(join(tmpdir(), "folio-gpu-"));
   try {
     const files = {};
-    for (const name of ["gpu.folio", "arrays.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    for (const name of ["gpu.folio", "arrays.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
     files["math.folio"] = readFileSync(new URL("./math.folio", import.meta.url), "utf8");
     const exe = executable(dir, "p");
     writeFileSync(exe, machine(`use "gpu.folio" as gpu
@@ -3335,6 +3425,328 @@ end
   }
 });
 
+// tools/gpu.folio's kernels of your own (DESIGN §176): PTX the driver makes the card's own, launched on a grid of
+// blocks with numbers on the card, whole numbers in bytes on the card, a float, a double, a byte and a 64-bit whole
+// number, past a block's edge, on 2D and 3D grids, and with shared memory; each mistake a launch can make, said
+// before the card sees it; the driver's own words, with the line, for PTX it can't take; and a kernel that writes
+// where it mustn't, found at the next wait
+const KERNELS_PTX = `// kernels for trying gpu.folio's kernel() and launch()
+.version 6.0
+.target sm_50
+.address_size 64
+
+// y[i] = a * x[i] + y[i], for i below n
+.visible .entry saxpy(.param .u64 p_y, .param .u64 p_x, .param .f32 p_a, .param .u32 p_n)
+{
+    .reg .pred %p<2>;
+    .reg .b32 %r<6>;
+    .reg .f32 %f<4>;
+    .reg .b64 %rd<8>;
+    ld.param.u64 %rd1, [p_y];
+    ld.param.u64 %rd2, [p_x];
+    ld.param.f32 %f1, [p_a];
+    ld.param.u32 %r5, [p_n];
+    mov.u32 %r1, %ctaid.x;
+    mov.u32 %r2, %ntid.x;
+    mov.u32 %r3, %tid.x;
+    mad.lo.s32 %r4, %r1, %r2, %r3;
+    setp.ge.u32 %p1, %r4, %r5;
+    @%p1 bra DONE;
+    cvta.to.global.u64 %rd3, %rd1;
+    cvta.to.global.u64 %rd4, %rd2;
+    mul.wide.u32 %rd5, %r4, 4;
+    add.s64 %rd6, %rd3, %rd5;
+    add.s64 %rd7, %rd4, %rd5;
+    ld.global.f32 %f2, [%rd7];
+    ld.global.f32 %f3, [%rd6];
+    fma.rn.f32 %f3, %f1, %f2, %f3;
+    st.global.f32 [%rd6], %f3;
+DONE:
+    ret;
+}
+
+/* out[i] = in[i] * in[i] + k, whole numbers of 32 bits */
+.visible .entry square_ints(
+    .param .u64 p_out,
+    .param .u64 p_in,
+    .param .s32 p_k,
+    .param .u32 p_n
+)
+{
+    .reg .pred %p<2>;
+    .reg .b32 %r<9>;
+    .reg .b64 %rd<8>;
+    ld.param.u64 %rd1, [p_out];
+    ld.param.u64 %rd2, [p_in];
+    ld.param.s32 %r6, [p_k];
+    ld.param.u32 %r5, [p_n];
+    mov.u32 %r1, %ctaid.x;
+    mov.u32 %r2, %ntid.x;
+    mov.u32 %r3, %tid.x;
+    mad.lo.s32 %r4, %r1, %r2, %r3;
+    setp.ge.u32 %p1, %r4, %r5;
+    @%p1 bra DONE;
+    cvta.to.global.u64 %rd3, %rd1;
+    cvta.to.global.u64 %rd4, %rd2;
+    mul.wide.u32 %rd5, %r4, 4;
+    add.s64 %rd6, %rd4, %rd5;
+    ld.global.s32 %r7, [%rd6];
+    mul.lo.s32 %r8, %r7, %r7;
+    add.s32 %r8, %r8, %r6;
+    add.s64 %rd7, %rd3, %rd5;
+    st.global.s32 [%rd7], %r8;
+DONE:
+    ret;
+}
+
+// out[y * w + x] = y * 1000 + x, on a 2D grid of 2D blocks
+.visible .entry grid2d(.param .u64 p_out, .param .u32 p_w, .param .u32 p_h)
+{
+    .reg .pred %p<3>;
+    .reg .b32 %r<12>;
+    .reg .f32 %f<2>;
+    .reg .b64 %rd<5>;
+    ld.param.u64 %rd1, [p_out];
+    ld.param.u32 %r10, [p_w];
+    ld.param.u32 %r11, [p_h];
+    mov.u32 %r1, %ctaid.x;
+    mov.u32 %r2, %ntid.x;
+    mov.u32 %r3, %tid.x;
+    mad.lo.s32 %r4, %r1, %r2, %r3;
+    mov.u32 %r5, %ctaid.y;
+    mov.u32 %r6, %ntid.y;
+    mov.u32 %r7, %tid.y;
+    mad.lo.s32 %r8, %r5, %r6, %r7;
+    setp.ge.u32 %p1, %r4, %r10;
+    setp.ge.u32 %p2, %r8, %r11;
+    or.pred %p1, %p1, %p2;
+    @%p1 bra DONE;
+    mad.lo.s32 %r9, %r8, 1000, %r4;
+    cvt.rn.f32.u32 %f1, %r9;
+    mad.lo.s32 %r9, %r8, %r10, %r4;
+    cvta.to.global.u64 %rd2, %rd1;
+    mul.wide.u32 %rd3, %r9, 4;
+    add.s64 %rd4, %rd2, %rd3;
+    st.global.f32 [%rd4], %f1;
+DONE:
+    ret;
+}
+
+// each block's numbers added up in shared memory: out[block] = the sum of its blockDim numbers of in
+.extern .shared .align 4 .b8 cache[];
+.visible .entry block_sums(.param .u64 p_out, .param .u64 p_in)
+{
+    .reg .pred %p<3>;
+    .reg .b32 %r<10>;
+    .reg .f32 %f<4>;
+    .reg .b64 %rd<10>;
+    ld.param.u64 %rd1, [p_out];
+    ld.param.u64 %rd2, [p_in];
+    mov.u32 %r1, %ctaid.x;
+    mov.u32 %r2, %ntid.x;
+    mov.u32 %r3, %tid.x;
+    mad.lo.s32 %r4, %r1, %r2, %r3;
+    cvta.to.global.u64 %rd3, %rd2;
+    mul.wide.u32 %rd4, %r4, 4;
+    add.s64 %rd5, %rd3, %rd4;
+    ld.global.f32 %f1, [%rd5];
+    mov.u64 %rd6, cache;
+    mul.wide.u32 %rd7, %r3, 4;
+    add.s64 %rd8, %rd6, %rd7;
+    st.shared.f32 [%rd8], %f1;
+    bar.sync 0;
+    setp.ne.u32 %p1, %r3, 0;
+    @%p1 bra DONE;
+    mov.f32 %f2, 0f00000000;
+    mov.u32 %r5, 0;
+LOOP:
+    mul.wide.u32 %rd7, %r5, 4;
+    add.s64 %rd8, %rd6, %rd7;
+    ld.shared.f32 %f3, [%rd8];
+    add.f32 %f2, %f2, %f3;
+    add.u32 %r5, %r5, 1;
+    setp.lt.u32 %p2, %r5, %r2;
+    @%p2 bra LOOP;
+    cvta.to.global.u64 %rd9, %rd1;
+    mul.wide.u32 %rd7, %r1, 4;
+    add.s64 %rd9, %rd9, %rd7;
+    st.global.f32 [%rd9], %f2;
+DONE:
+    ret;
+}
+
+// out[0] = s (a double, made a float), out[1] = t (a byte), out[2] = u (a 64-bit whole number)
+.visible .entry kinds(.param .u64 p_out, .param .f64 p_s, .param .u8 p_t, .param .s64 p_u)
+{
+    .reg .b16 %h<2>;
+    .reg .f32 %f<4>;
+    .reg .f64 %fd<2>;
+    .reg .b64 %rd<4>;
+    ld.param.u64 %rd1, [p_out];
+    ld.param.f64 %fd1, [p_s];
+    ld.param.u8 %h1, [p_t];
+    ld.param.s64 %rd2, [p_u];
+    cvta.to.global.u64 %rd3, %rd1;
+    cvt.rn.f32.f64 %f1, %fd1;
+    st.global.f32 [%rd3], %f1;
+    cvt.rn.f32.u16 %f2, %h1;
+    st.global.f32 [%rd3+4], %f2;
+    cvt.rn.f32.s64 %f3, %rd2;
+    st.global.f32 [%rd3+8], %f3;
+    ret;
+}
+
+// nothing at all
+.visible .entry idle()
+{
+    ret;
+}
+`;
+test("tools/gpu.folio runs kernels of your own, written in PTX, with what each input's type says", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
+  const dir = mkdtempSync(join(tmpdir(), "folio-kernels-"));
+  try {
+    const files = {};
+    for (const name of ["gpu.folio", "memory.folio"]) files[name] = readFileSync(new URL(`./tools/${name}`, import.meta.url), "utf8");
+    writeFileSync(join(dir, "kernels.ptx"), KERNELS_PTX);
+    const ran = (source, name) => {
+      const exe = executable(dir, name);
+      writeFileSync(exe, machine(source, { target, name: `${name}.folio`, files, allow: ["--allow-libraries", "--allow-read"] }));
+      if (target === "linux") chmodSync(exe, 0o755);
+      return spawnSync(exe, [], { cwd: dir, encoding: "utf8", timeout: 120_000 });
+    };
+    const kernels = ran(`use "gpu.folio" as gpu
+use "memory.folio" as memory
+
+if not gpu's available()
+    say "no card"
+    stop the program
+end
+set ptx to read "kernels.ptx"
+
+# saxpy, past a block's edge: 1000 numbers, 4 blocks of 256
+set saxpy to gpu's kernel(ptx, "saxpy")
+say saxpy
+say saxpy's inputs
+set xs to empty list
+set ys to empty list
+for each i from 1 to 1000
+    add i to xs
+    add 10 * i to ys
+end
+set x to gpu's upload(xs)
+set y to gpu's upload(ys)
+gpu's launch(saxpy, 4, 256, list of y, x, 2.5, 1000)
+set got to gpu's download(y)
+set wrong to 0
+for each i from 1 to 1000
+    if item i of got is not 12.5 * i
+        add 1 to wrong
+    end
+end
+say "saxpy wrong: " + wrong + ", last " + item 1000 of got
+
+# whole numbers in bytes
+set ints to (4 * 5) bytes
+memory's put_many(ints, 1, (list of -3, 0, 7, 46340, 2), "a whole number")
+set inside to gpu's upload_bytes(ints)
+set out to gpu's room(4 * 5)
+gpu's launch(gpu's kernel(ptx, "square_ints"), 1, 32, list of out, inside, -1, 5)
+say memory's get_many(gpu's download_bytes(out), 1, 5, "a whole number")
+
+# a 2D grid of 2D blocks: 37 by 21 numbers, blocks of 16 by 8
+set flat to gpu's zeros(37 * 21)
+gpu's launch(gpu's kernel(ptx, "grid2d"), (list of 3, 3), (list of 16, 8), list of flat, 37, 21)
+set g to gpu's download(flat)
+say item 1 of g " " item 37 of g " " item 38 of g " " item (37 * 21) of g
+
+# shared memory: 4 blocks of 128 numbers, each added up in its block
+set many to empty list
+for each i from 1 to 512
+    add i to many
+end
+set sums to gpu's zeros(4)
+gpu's launch_with(gpu's kernel(ptx, "block_sums"), 4, 128, 128 * 4, list of sums, gpu's upload(many))
+say gpu's download(sums)
+
+# a double, a byte and a 64-bit whole number
+set three to gpu's zeros(3)
+gpu's launch(gpu's kernel(ptx, "kinds"), 1, 1, list of three, 0.1, 255, -9000000000)
+say gpu's download(three)
+gpu's launch(gpu's kernel(ptx, "idle"), (list of 2, 2, 2), (list of 4, 4, 4), empty list)
+gpu's finish()
+say "idle ran"
+
+# mistakes
+for each attempt in list of "count", "type", "range", "whole", "grid", "block", "name", "ptx", "bytes back", "numbers back"
+    try
+        if attempt is "count"
+            gpu's launch(saxpy, 1, 32, list of y, x, 2.5)
+        else if attempt is "type"
+            gpu's launch(saxpy, 1, 32, list of y, x, x, 3)
+        else if attempt is "range"
+            gpu's launch(saxpy, 1, 32, list of y, x, 2.5, -1)
+        else if attempt is "whole"
+            gpu's launch(saxpy, 1, 32, list of y, x, 2.5, 2.5)
+        else if attempt is "grid"
+            gpu's launch(saxpy, 0, 32, list of y, x, 2.5, 3)
+        else if attempt is "block"
+            gpu's launch(saxpy, 1, 4096, list of y, x, 2.5, 3)
+        else if attempt is "name"
+            gpu's kernel(ptx, "nope")
+        else if attempt is "ptx"
+            gpu's kernel(".version 6.0\\n.target sm_50\\n.address_size 64\\n.visible .entry bad()\\n\\{\\n    frobnicate.f32 %f1;\\n    ret;\\n}\\n", "bad")
+        else if attempt is "bytes back"
+            gpu's download_bytes(x)
+        else
+            gpu's download(out)
+        end
+        say attempt + ": no mistake"
+    if it fails with why
+        say attempt + ": " + why
+    end
+end
+`, "kernels");
+    if (kernels.stdout === "no card\n") return; // a driver, and no card it can use
+    assert.deepEqual([kernels.stderr, kernels.status], ["", 0], kernels.stdout);
+    const lines = kernels.stdout.split("\n");
+    const ptxLine = lines.findIndex((line) => line.startsWith("ptx: "));
+    assert.deepEqual(lines.slice(0, ptxLine), ["the kernel saxpy on the graphics card", '[".u64", ".u64", ".f32", ".u32"]', "saxpy wrong: 0, last 12500",
+      "[8, -1, 48, 2147395599, 3]", "0 36 1000 20036", "[8256, 24640, 41024, 57408]", "[0.100000001490116, 255, -8999999488]", "idle ran",
+      "count: saxpy takes 4 inputs (.u64, .u64, .f32, .u32), not 3",
+      "type: input 3 of saxpy (.f32) can't be numbers on the card: a place on the card is 64 bits, a .u64",
+      "range: input 4 of saxpy (.u32) can't hold -1", "whole: input 4 of saxpy (.u32) is a whole number, not 2.5",
+      "grid: the grid for saxpy is whole numbers from 1 up, not [0]", "block: the graphics card couldn't run the kernel saxpy (CUDA_ERROR_INVALID_VALUE)",
+      "name: this PTX has no .entry called nope: it has saxpy, square_ints, grid2d, block_sums, kinds, idle"]);
+    // the driver's own words, which its version words its own way: the instruction, and its line
+    assert.ok(lines[ptxLine].startsWith("ptx: the graphics card couldn't take this PTX (CUDA_ERROR_INVALID_PTX): ") && lines[ptxLine].includes("line 6")
+      && lines[ptxLine].includes("frobnicate"), lines[ptxLine]);
+    assert.deepEqual(lines.slice(-3), ["bytes back: download_bytes brings back bytes on the card, as upload_bytes and room make; for numbers, download",
+      "numbers back: download brings back numbers, as upload and the rest make; for bytes, download_bytes", ""]);
+    const crashed = ran(`use "gpu.folio" as gpu
+set saxpy to gpu's kernel(read "kernels.ptx", "saxpy")
+set x to gpu's upload(list of 1, 2, 3)
+# a place on the card that isn't one: 0, as a whole number for the .u64
+gpu's launch(saxpy, 1, 32, list of 0, x, 2.5, 3)
+say "launched"
+try
+    gpu's finish()
+    say "finished"
+if it fails with why
+    say why
+end
+try
+    say gpu's download(x)
+if it fails with why
+    say why
+end
+`, "crash");
+    assert.deepEqual([crashed.stdout, crashed.stderr, crashed.status], [["launched", "the graphics card couldn't finish its work (CUDA_ERROR_ILLEGAL_ADDRESS)",
+      "the graphics card couldn't finish its work (CUDA_ERROR_ILLEGAL_ADDRESS)", ""].join("\n"), "", 0]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // tools/learn.folio (DESIGN §162) on the card: gpu.folio's kernels for it against the same maths in Folio, and the
 // losses and gradients of every operation on the card against the processor's, to a float's precision
 test("learn.folio works out the same losses and gradients on the graphics card as on the processor", { skip: skip || (!cudaHere && "there's no NVIDIA driver here") }, () => {
@@ -3353,6 +3765,7 @@ test("learn.folio works out the same losses and gradients on the graphics card a
     };
     const kernels = run(KERNELS, "kernels");
     assert.deepEqual(kernels.filter((line) => !line.startsWith("ok ")), ["failures: 0"], kernels.join("\n"));
+    assert.deepEqual(run(DROPOUT, "dropout"), ["on the card: yes", "dropped: yes", "the rest made larger: yes", "a new choice: yes", "the gradient through the same ones: yes", "not while training(no): yes"]);
     const card = run(LOSSES.replace("WHERE", "yes"), "card");
     const processor = run(LOSSES.replace("WHERE", "no"), "processor");
     assert.deepEqual([card[0], processor[0]], ["on the card: yes", "on the card: no"]);
@@ -3708,6 +4121,60 @@ end
 for each p in list of table, w, b, gamma, beta, extra
     say learn's numbers_of(p)
 end
+
+# AdamW and clipping (DESIGN §170): the weights made smaller as they move, and the gradients, too big together,
+# clipped; on the card in the launches Adam had, with nothing to wait for
+set table to learn's parameter(learn's matrix(list of (list of 0.1, -0.2, 0.3, 0.05), (list of -0.3, 0.2, 0.1, 0.4), (list of 0.25, 0.15, -0.1, -0.2)))
+set w to learn's parameter(learn's matrix(list of (list of 0.2, -0.1, 0.4), (list of 0.3, 0.5, -0.2), (list of -0.4, 0.1, 0.2), (list of 0.1, 0.3, 0.6)))
+set b to learn's parameter(learn's matrix(list of (list of 0.01, -0.02, 0.03)))
+set opt to learn's adamw((list of table, w, b), 0.05, 0.1)
+learn's clip_gradients(opt, 0.05)
+for each s from 1 to 4
+    set scores to learn's add_row(learn's matmul(learn's embedding(table, ids), w), b)
+    set loss to learn's cross_entropy(learn's times(scores, 5), targets)
+    learn's backward(loss)
+    say learn's value(loss)
+    say learn's gradient_norm(opt)
+    learn's step(opt)
+end
+for each p in list of table, w, b
+    say learn's numbers_of(p)
+end
+`;
+
+// dropout on the card (DESIGN §170): about the chance dropped, the rest made larger, the gradient through the
+// same ones, and a new choice each time
+const DROPOUT = `use "learn.folio" as learn
+say "on the card: " + learn's on_card()
+set ones to empty list
+for each k from 1 to 100000
+    add 1 to ones
+end
+set x to learn's parameter(learn's matrix_of(ones, 100, 1000))
+set ds to learn's numbers_of(learn's dropout(x, 0.3))
+set d to learn's dropout(x, 0.3)
+set again to learn's numbers_of(d)
+set dropped to 0
+set others to yes
+set differ to 0
+for each k from 1 to 100000
+    set y to item k of again
+    if y is 0
+        add 1 to dropped
+    else if y - 1 / 0.7 is greater than 0.00001 or 1 / 0.7 - y is greater than 0.00001
+        set others to no
+    end
+    if (y is 0) is not (item k of ds is 0)
+        add 1 to differ
+    end
+end
+say "dropped: " + (dropped is greater than 29000 and dropped is less than 31000)
+say "the rest made larger: " + others
+say "a new choice: " + (differ is greater than 30000)
+learn's backward(learn's sum(d))
+say "the gradient through the same ones: " + (learn's numbers_of(learn's gradient_of(x)) is again)
+learn's training(no)
+say "not while training(no): " + (learn's numbers_of(learn's dropout(x, 0.3)) is ones)
 `;
 
 // BLAS for matmul: OpenBLAS as Linux has it, or NumPy's copy of it, which the test puts beside the program

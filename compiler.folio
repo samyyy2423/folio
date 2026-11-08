@@ -62,12 +62,11 @@ end
 
 set capitals to letters("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 set smalls to letters("abcdefghijklmnopqrstuvwxyz")
-set symbols to letters("-+*/(),")
+set symbols to letters("-+*/(),[]")
 # symbols people type out of habit from other languages, and what Folio says instead
-set hint_symbols to list of "=", "!", "<", ">", "%", "[", "]", "{", "}", "'", "."
+set hint_symbols to list of "=", "!", "<", ">", "%", "{", "}", "'", "."
 set hint_texts to list of "to store a value write 'set x to 5', to compare write 'x is 5'", "write 'is not'",
     "write 'is less than'", "write 'is greater than'", "write 'is divisible by'",
-    "make a list with 'list of 1, 2, 3'", "make a list with 'list of 1, 2, 3'",
     "blocks finish with 'end', not braces", "blocks finish with 'end', not braces",
     "put text in double quotes", "to get a field write 'name of person'"
 
@@ -276,7 +275,8 @@ to tokens_from with source, file, begins
                 add 1 to ti
             end
             set parts to text_parts(chars, k + 1, k of ends - 1, line, col + 1, file)
-            add record with type "string", value text, line line, col start, nl nl, file file, parts parts to tokens
+            add record with type "string", value text, line line, col start, nl nl, file file, parts parts,
+                slips text_slips(chars, k + 1, k of ends - 1, col + 1) to tokens
             set col to col_at(chars, k, col, k of ends)
             set k to k of ends
             set nl to no
@@ -369,6 +369,32 @@ to col_at with chars, here, here_col, there
         add width(item ca_k of chars) to ca_col
     end
     return ca_col
+end
+
+# The columns where text written from `first` to just before `upto`, from column `col`, has \r, not in a value
+# in it: an r, as SPEC.md has it for Folio 1, where a carriage return was likely meant, which folio check says
+# (DESIGN §175)
+to text_slips with chars, first, upto, col
+    set found to empty list
+    set i to first
+    repeat while i is less than upto
+        set c to item i of chars
+        if c is "\\"
+            if item (i + 1) of chars is "r"
+                add col to found
+            end
+            add width(c) + width(item (i + 1) of chars) to col
+            set i to i + 2
+        else if c is "{" and starts_value(item (i + 1) of chars)
+            set closing to k of value_end(chars, i)
+            set col to col_at(chars, i, col, closing + 1)
+            set i to closing + 1
+        else
+            add width(c) to col
+            add 1 to i
+        end
+    end
+    return found
 end
 
 # "Hi {name}!": text with values in it. A '{' right before a letter, '_' or '(' starts a value, which ends at
@@ -2464,6 +2490,41 @@ to parse with tokens, reading
         end
         if word("nothing")
             return record with kind "value", type "nothing", value nothing, at t
+        end
+        if match("[") # `[1, 2, 3]`: a list, as `list of 1, 2, 3` is, ending at its `]` (DESIGN §177)
+            set outside to indexing
+            set indexing to no
+            set items to empty list
+            set fns_before to length of hoisted
+            set made to nothing
+            set going to not check("]")
+            repeat while going
+                add expression() to items
+                if length of items is 1 and is_word("for") and not nl of peek() and word_at(pos + 1, "each")
+                    set kept_fns to empty list
+                    set value_fns to empty list
+                    for each k from 1 to length of hoisted
+                        if k is at most fns_before
+                            add item k of hoisted to kept_fns
+                        else
+                            add item k of hoisted to value_fns
+                        end
+                    end
+                    set hoisted to kept_fns
+                    set made to built_list(item 1 of items, value_fns, t)
+                    set going to no
+                else
+                    set going to match(",") and not check("]")
+                end
+            end
+            if not match("]")
+                expected("']'")
+            end
+            set indexing to outside
+            if made is not nothing
+                return made
+            end
+            return record with kind "list", items items, at t
         end
         if word("list")
             expect_word("of")

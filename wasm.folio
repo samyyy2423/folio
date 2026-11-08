@@ -116,6 +116,11 @@ end
 
 # a number as the program wrote it: digits, maybe a point, or 0x and 0b whole numbers
 to wasm_literal with written
+    return wasm_double(wasm_literal_value(written))
+end
+
+# the number a number written in the program is
+to wasm_literal_value with written
     set chars to front's letters(written)
     if length of chars is at least 2 and item 1 of chars is "0" and (item 2 of chars is "x" or item 2 of chars is "b")
         set base to 16
@@ -130,9 +135,9 @@ to wasm_literal with written
             end
             set v to v * base + digit
         end
-        return wasm_double(v)
+        return v
     end
-    return wasm_double(number of written)
+    return number of written
 end
 
 # a list of bytes as text, to tell lists apart as a dictionary's key
@@ -1426,12 +1431,19 @@ to wasm_function with cx, parent, label, params, body, place
         set f to wasm_func(m, label, inputs, (list of wasm_eq))
     end
     set fc to record with cx cx, parent parent, scope scope, f f, numbers empty dictionary, locals empty dictionary, number_set nothing,
-        slot_array nothing, env_local nothing, stops empty list, lefts empty list
+        slot_array nothing, env_local nothing, stops empty list, lefts empty list, tries 0, missing nothing, dividing nothing, inputs 0
+    # A mistake the code checks for on its way, a name with no value yet or a division by 0, branches to the
+    # function's end, past its return, where the mistake is made: the code it's checked in calls nothing, so V8
+    # keeps its numbers in registers (DESIGN §172). In a `try` it's made where it is, for the `try` to catch.
+    set missing of fc to list of wasm_local(f, wasm_i32), wasm_local(f, wasm_i32), wasm_local(f, wasm_i32) # R.noValueYet's inputs
+    set dividing of fc to list of wasm_local(f, wasm_f64), wasm_local(f, wasm_f64), wasm_local(f, wasm_i32) # a / b, b 0, and where
+    wasm_asm(f, "block block")
     set captured to wasm_captured(scope, body)
     set inputs_count to 0
     if parent is not nothing
         set inputs_count to length of params
     end
+    set inputs of fc to inputs_count # an input always has a value: it's read with no check (DESIGN §174)
     set number_set of fc to wasm_numeric_slots(fc, body, captured, inputs_count)
     set numbers to numbers of fc
     set locals to locals of fc
@@ -1472,6 +1484,10 @@ to wasm_function with cx, parent, label, params, body, place
     if parent is not nothing
         wasm_asm(f, "ref.null eq")
     end
+    set held to missing of fc
+    wasm_asm(f, "return end local.get " + item 1 of held + " local.get " + item 2 of held + " local.get " + item 3 of held + " call R.noValueYet unreachable end")
+    set held to dividing of fc
+    wasm_asm(f, "i32.const 3 local.get " + item 1 of held + " struct.new num local.get " + item 2 of held + " struct.new num local.get " + item 3 of held + " call R.arithRest unreachable")
     return fc
 end
 
@@ -1617,8 +1633,16 @@ to wasm_expr_num with fc, e
             set a to wasm_temp(fc, wasm_f64)
             set b to wasm_temp(fc, wasm_f64)
             wasm_x(fc, "local.set " + b + " local.set " + a + " local.get " + b + " f64.const 0 f64.eq if")
-            wasm_x(fc, "i32.const 3 local.get " + a + " struct.new num local.get " + b + " struct.new num")
-            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.arithRest unreachable end local.get " + a + " local.get " + b + " f64.div")
+            if tries of fc is greater than 0
+                wasm_x(fc, "i32.const 3 local.get " + a + " struct.new num local.get " + b + " struct.new num")
+                wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.arithRest unreachable end")
+            else
+                wasm_keep_count(fc)
+                set held to dividing of fc
+                wasm_x(fc, "local.get " + a + " local.set " + item 1 of held + " local.get " + b + " local.set " + item 2 of held + " i32.const " + wasm_pos(fc, at of e) + " local.set " + item 3 of held)
+                wasm_x(fc, "br " + (labels of code of f of fc - 1) + " end")
+            end
+            wasm_x(fc, "local.get " + a + " local.get " + b + " f64.div")
         end
         return nothing
     end
@@ -1695,7 +1719,22 @@ end
 # A variable with no value yet, if the yes or no on the stack is yes: the mistake, thrown at position k
 to wasm_no_value_yet with fc, wanted, k
     set place to wasm_place(fc, wanted)
-    wasm_x(fc, "if i32.const " + item 1 of place + " i32.const " + item 2 of place + " i32.const " + k + " call R.noValueYet end")
+    if tries of fc is greater than 0
+        wasm_x(fc, "if i32.const " + item 1 of place + " i32.const " + item 2 of place + " i32.const " + k + " call R.noValueYet end")
+        return nothing
+    end
+    wasm_x(fc, "if")
+    wasm_keep_count(fc)
+    set held to missing of fc
+    wasm_x(fc, "i32.const " + item 1 of place + " local.set " + item 1 of held + " i32.const " + item 2 of place + " local.set " + item 2 of held + " i32.const " + k + " local.set " + item 3 of held)
+    wasm_x(fc, "br " + (labels of code of f of fc - 2) + " end")
+end
+
+# on the way to a mistake at the function's end, past the loops' catch_all: the steps left, in the global
+to wasm_keep_count with fc
+    if length of lefts of fc is greater than 0
+        wasm_x(fc, "local.get " + wasm_top(lefts of fc) + " global.set g.left")
+    end
 end
 
 # where text's units are in the program's data, as bytes, and how many there are, for text made where it's needed
@@ -1741,6 +1780,9 @@ end
 # loop counts its steps down in a local of its own, which goes back into the global before each call and after
 # the loop; if a mistake leaves the loop, the global keeps the smaller of the two, as a count only goes down.
 to wasm_loop_start with fc
+    if parent of fc is nothing and length of lefts of fc is 0
+        return wasm_outlined_start(fc)
+    end
     set outer to wasm_top(lefts of fc)
     set counting to wasm_temp(fc, wasm_i32)
     if outer is not nothing
@@ -1750,26 +1792,164 @@ to wasm_loop_start with fc
     set kept to lefts of fc
     add counting to kept
     wasm_x(fc, "try")
+    # the loop, inside one that asks for more steps when its count runs out, so the round itself makes no call
+    # (DESIGN §172)
     set kept to stops of fc
     add labels of code of f of fc to kept
-    wasm_x(fc, "block loop")
-    return record with outer outer, counting counting
+    wasm_x(fc, "block loop block loop")
+    return record with outer outer, counting counting, outlined no
 end
 
 to wasm_loop_body with fc
-    wasm_x(fc, "br_if 1")
+    wasm_x(fc, "br_if 3")
 end
 
 to wasm_loop_end with fc, k, state
+    if outlined of state
+        wasm_outlined_end(fc, k, state)
+        return nothing
+    end
     set counting to counting of state
-    wasm_tick(fc, k)
-    wasm_x(fc, "br 0 end end")
+    wasm_x(fc, "local.get " + counting + " i32.const 1 i32.sub local.tee " + counting + " i32.const 0 i32.lt_s br_if 1 br 0 end end")
+    wasm_x(fc, "i32.const " + k + " call im.refill local.tee " + counting + " global.set g.left br 0 end end")
     set stops of fc to wasm_less_last(stops of fc)
     wasm_x(fc, "local.get " + counting + " global.set g.left catch_all")
     wasm_x(fc, "local.get " + counting + " global.get g.left local.get " + counting + " global.get g.left i32.lt_s select global.set g.left rethrow 0 end")
     set lefts of fc to wasm_less_last(lefts of fc)
     if outer of state is not nothing
         wasm_x(fc, "global.get g.left local.set " + outer of state)
+    end
+end
+
+# A loop at the program's top level, in a function of its own that runs 65,536 rounds and is called again for
+# more (DESIGN §173): V8 makes a WebAssembly function's optimized code for its next call, never during one, and
+# the top level is called once, so its loops ran in V8's first, plain code from start to end. The function has
+# the top level's locals at the same places, so the loop's code is what it was; they go into globals before the
+# first call, each call takes them and gives them back as it returns, or as a mistake leaves it, and the top
+# level takes them back after. It gives 0 when the loop is done, and 1 to be called again (a `return` at the top
+# level is a mistake before the program runs). Only a loop in a `try` has its rounds in a `try` of their own,
+# to give the locals back as a mistake leaves them: without one, a mistake ends the program, and V8's code for
+# a loop in a `try` was half as fast again.
+to wasm_outlined_start with fc
+    set m to m of cx of fc
+    set f to f of fc
+    set types to list of wasm_f64 # the top level's input, the steps it may take, and its locals
+    for each t in locals of f
+        add t to types
+    end
+    set globals to empty list
+    for each t in types
+        add wasm_loop_global(m, t) to globals
+    end
+    wasm_keep_locals(fc, globals)
+    set made to wasm_func(m, "loop", (list of wasm_f64), (list of wasm_i32))
+    set mirrored to locals of made
+    for each t in locals of f
+        add t to mirrored
+    end
+    set state to record with outer nothing, counting nothing, outlined yes, chunk nothing, globals globals, made made, caller_f f,
+        caller_stops stops of fc, caller_lefts lefts of fc, caller_tries tries of fc
+    set f of fc to made
+    set stops of fc to empty list
+    set lefts of fc to empty list
+    set tries of fc to 0
+    wasm_take_locals(fc, globals)
+    wasm_x(fc, "block block") # the mistakes at its end, as each function has them
+    set counting to wasm_temp(fc, wasm_i32)
+    set chunk to wasm_temp(fc, wasm_i32)
+    set counting of state to counting
+    set chunk of state to chunk
+    wasm_x(fc, "global.get g.left local.set " + counting + " i32.const 65536 local.set " + chunk)
+    set kept to lefts of fc
+    add counting to kept
+    if caller_tries of state is greater than 0
+        wasm_x(fc, "try")
+    end
+    wasm_x(fc, "block")
+    set kept to stops of fc
+    add labels of code of f of fc to kept
+    wasm_x(fc, "block loop block loop")
+    return state
+end
+
+to wasm_outlined_end with fc, k, state
+    set counting to counting of state
+    set chunk to chunk of state
+    set globals to globals of state
+    wasm_x(fc, "local.get " + counting + " i32.const 1 i32.sub local.tee " + counting + " i32.const 0 i32.lt_s br_if 1")
+    wasm_x(fc, "local.get " + chunk + " i32.const 1 i32.sub local.tee " + chunk + " i32.eqz br_if 4")
+    wasm_x(fc, "br 0 end end")
+    wasm_x(fc, "i32.const " + k + " call im.refill local.tee " + counting + " global.set g.left br 0 end end")
+    set stops of fc to wasm_less_last(stops of fc)
+    for each status in list of 0, 1 # the loop done; then this call's rounds done
+        wasm_keep_locals(fc, globals)
+        wasm_x(fc, "local.get " + counting + " global.set g.left i32.const " + status + " return")
+        if status is 0
+            wasm_x(fc, "end")
+        end
+    end
+    set guarded to caller_tries of state is greater than 0
+    if guarded
+        wasm_x(fc, "catch_all")
+        wasm_keep_locals(fc, globals)
+        wasm_x(fc, "local.get " + counting + " global.get g.left local.get " + counting + " global.get g.left i32.lt_s select global.set g.left")
+        wasm_x(fc, "rethrow 0 end")
+    end
+    wasm_x(fc, "unreachable end")
+    wasm_keep_locals(fc, globals)
+    set held to missing of fc
+    wasm_x(fc, "local.get " + item 1 of held + " local.get " + item 2 of held + " local.get " + item 3 of held + " call R.noValueYet unreachable end")
+    wasm_keep_locals(fc, globals)
+    set held to dividing of fc
+    wasm_x(fc, "i32.const 3 local.get " + item 1 of held + " struct.new num local.get " + item 2 of held + " struct.new num local.get " + item 3 of held + " call R.arithRest unreachable")
+    set f of fc to caller_f of state
+    set stops of fc to caller_stops of state
+    set lefts of fc to caller_lefts of state
+    set tries of fc to caller_tries of state
+    if guarded
+        wasm_x(fc, "try")
+    end
+    wasm_x(fc, "loop local.get 0 call " + index of made of state + " br_if 0 end")
+    if guarded
+        wasm_x(fc, "catch_all")
+        wasm_take_locals(fc, globals)
+        wasm_x(fc, "rethrow 0 end")
+    end
+    wasm_take_locals(fc, globals)
+end
+
+# a global for a top-level loop's function to have a local in, 0 or null at first
+to wasm_loop_global with m, type
+    set init to empty list
+    if item 1 of type is 124 # f64
+        set init to list of 68, 0, 0, 0, 0, 0, 0, 0, 0
+    else if item 1 of type is 127 # i32
+        set init to list of 65, 0
+    else # (ref null heap): ref.null heap
+        add 208 to init
+        for each b in items 2 to length of type of type
+            add b to init
+        end
+    end
+    set kept to globals of m
+    add record with type type, mutable yes, init init to kept
+    return length of kept - 1
+end
+
+# each local, from the first, into its global; and back
+to wasm_keep_locals with fc, globals
+    set j to 0
+    for each g in globals
+        wasm_x(fc, "local.get " + j + " global.set " + g)
+        add 1 to j
+    end
+end
+
+to wasm_take_locals with fc, globals
+    set j to 0
+    for each g in globals
+        wasm_x(fc, "global.get " + g + " local.set " + j)
+        add 1 to j
     end
 end
 
@@ -1857,8 +2037,8 @@ to wasm_statement with fc, s
         end
         wasm_x(fc, "i32.const " + wasm_pos(fc, at of s) + " call im.exit unreachable")
     else if what is "if"
-        wasm_expr(fc, cond of s)
-        wasm_x(fc, "call R.truthy if")
+        wasm_cond(fc, cond of s)
+        wasm_x(fc, "if")
         wasm_block(fc, then of s)
         wasm_x(fc, "else")
         wasm_block(fc, otherwise of s)
@@ -1866,8 +2046,8 @@ to wasm_statement with fc, s
     else if what is "while"
         set k to wasm_pos(fc, at of s)
         set state to wasm_loop_start(fc)
-        wasm_expr(fc, cond of s)
-        wasm_x(fc, "call R.truthy i32.eqz")
+        wasm_cond(fc, cond of s)
+        wasm_x(fc, "i32.eqz")
         wasm_loop_body(fc)
         wasm_block(fc, body of s)
         wasm_loop_end(fc, k, state)
@@ -2028,10 +2208,18 @@ to wasm_statement with fc, s
         set depth to wasm_temp(fc, wasm_i32)
         set got to wasm_temp(fc, wasm_eq)
         wasm_x(fc, "global.get g.depth local.set " + depth + " call im.tryStart block block eq try")
+        set tries of fc to tries of fc + 1
         wasm_block(fc, body of s)
+        set tries of fc to tries of fc - 1
         wasm_x(fc, "br 2 catch 0 drop drop br 1") # past the handler if nothing went wrong; or what `if it fails with` gets
         wasm_x(fc, "catch_all call im.caught i32.eqz if rethrow 1 end call im.caughtValue br 1 end unreachable end") # going too deep, say: not ours
         wasm_x(fc, "local.set " + got + " local.get " + depth + " global.set g.depth")
+        # in a loop, its count the smaller of its own and the global's: a call's steps went into the global, and
+        # the mistake came back past where the call would have given them to the loop (DESIGN §172)
+        set counting to wasm_top(lefts of fc)
+        if counting is not nothing
+            wasm_x(fc, "local.get " + counting + " global.get g.left local.get " + counting + " global.get g.left i32.lt_s select local.set " + counting)
+        end
         if name of s is not nothing
             set local to wasm_store_start(fc, name of s)
             wasm_x(fc, "local.get " + got)
@@ -2209,6 +2397,189 @@ to wasm_start_worker with fc, e
     wasm_x(fc, "local.get " + made)
 end
 
+# an `if`'s or a `while`'s condition, as an i32: a comparison's yes or no as it is, anything else checked to be
+# yes or no (DESIGN §174)
+to wasm_cond with fc, e
+    if kind of e is "compare"
+        wasm_compare(fc, e)
+        return nothing
+    end
+    wasm_expr(fc, e)
+    wasm_x(fc, "call R.truthy")
+end
+
+# whether a name is one of this function's inputs, which always have a value
+to wasm_is_input with fc, wanted
+    set where to front's resolve(scope of fc, wanted)
+    return depth of where is 0 and slot of where is at most inputs of fc
+end
+
+# A comparison, as an i32. With a whole number written in the program on one side, and a small whole number on
+# the other, an i31 (from 2 up, as unsigned, as 0 and 1 are no and yes), they're compared here; anything else as
+# before (DESIGN §174). Only there: inlined everywhere, the compiler's own code grew a fifth.
+to wasm_compare with fc, e
+    set op to op of e
+    if op is "in"
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.isIn")
+    else if wasm_numeric(fc, left of e) and wasm_numeric(fc, right of e) # two numbers: no boxes, no checks
+        wasm_expr_num(fc, left of e)
+        wasm_expr_num(fc, right of e)
+        if op is "divisible by"
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.dvf")
+        else
+            wasm_x(fc, "call R.ncmp " + wasm_order_test(op)) # to 15 digits
+        end
+    else if op is "divisible by"
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.dv")
+    else if not wasm_has_small(e, op is "is")
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        if op is "is"
+            wasm_x(fc, "call R.eq")
+        else
+            set helper to item (front's slot_of((list of "less than", "greater than", "at least", "at most"), op)) of (list of "lt", "gt", "ge", "le")
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R." + helper)
+        end
+    else
+        set sides to wasm_small_sides(fc, e, op is "is")
+        set place to nothing
+        if op is not "is"
+            set place to wasm_pos(fc, at of e)
+        end
+        wasm_x(fc, "block i32 block")
+        wasm_small_checks(fc, sides, op is not "is")
+        set test to item (front's slot_of((list of "is", "less than", "greater than", "at least", "at most"), op)) of (list of "i32.eq", "i32.lt_s", "i32.gt_s", "i32.ge_s", "i32.le_s")
+        wasm_x(fc, test + " br 1 end")
+        wasm_small_slow(fc, sides)
+        if op is "is"
+            wasm_x(fc, "call R.eq")
+        else
+            set helper to item (front's slot_of((list of "less than", "greater than", "at least", "at most"), op)) of (list of "lt", "gt", "ge", "le")
+            wasm_x(fc, "i32.const " + place + " call R." + helper)
+        end
+        wasm_x(fc, "end")
+    end
+    if negate of e
+        wasm_x(fc, "i32.eqz")
+    end
+end
+
+# a + b or a - b, one side a whole number written in the program: two small whole numbers added here, when what
+# comes out is one too (not 0 or 1, which are boxes); anything else as before
+to wasm_small_math with fc, e
+    if not wasm_has_small(e, no)
+        wasm_expr(fc, left of e)
+        wasm_expr(fc, right of e)
+        if op of e is "+"
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.add")
+        else
+            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.sub")
+        end
+        return nothing
+    end
+    set sides to wasm_small_sides(fc, e, no)
+    set place to wasm_pos(fc, at of e)
+    set r to wasm_temp(fc, wasm_i32)
+    wasm_x(fc, "block eq block")
+    wasm_small_checks(fc, sides, yes)
+    if op of e is "+"
+        wasm_x(fc, "i32.add local.tee " + r)
+    else
+        wasm_x(fc, "i32.sub local.tee " + r)
+    end
+    wasm_x(fc, "i32.const 1073741824 i32.add i32.const -2147483648 i32.ge_u br_if 0")
+    wasm_x(fc, "local.get " + r + " i32.const 2 i32.lt_u br_if 0")
+    wasm_x(fc, "local.get " + r + " ref.i31 br 1 end")
+    wasm_small_slow(fc, sides)
+    if op of e is "+"
+        wasm_x(fc, "i32.const " + place + " call R.add end")
+    else
+        wasm_x(fc, "i32.const " + place + " call R.sub end")
+    end
+end
+
+# each side: a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`, as a box of its
+# own is what those are), kept to be written as a constant; or worked out now, into a local
+to wasm_small_sides with fc, e, boxed01
+    set sides to empty list
+    for each x in list of left of e, right of e
+        set v to wasm_small_side(x, boxed01)
+        if v is not nothing
+            add record with k v, t nothing, x x to sides
+        else
+            set t to wasm_temp(fc, wasm_eq)
+            wasm_expr(fc, x)
+            wasm_x(fc, "local.set " + t)
+            add record with k nothing, t t, x x to sides
+        end
+    end
+    return sides
+end
+
+# a number written in the program that's whole, from -2^30 up to 2^30, or nothing; whole to the last bit, not to
+# 15 digits, as Folio compares
+to wasm_small_whole with x
+    if kind of x is not "value"
+        return nothing
+    end
+    if type of x is not "number"
+        return nothing
+    end
+    set v to wasm_literal_value(value of x)
+    if v - (v rounded down) is not 0 or v is less than -1073741824 or v is at least 1073741824
+        return nothing
+    end
+    return v
+end
+
+# a whole number written in the program, from -2^30 up to 2^30 (not 0 or 1 for `is`), or nothing
+to wasm_small_side with x, boxed01
+    set v to wasm_small_whole(x)
+    if v is not nothing and boxed01 and (v is 0 or v is 1)
+        return nothing
+    end
+    return v
+end
+
+to wasm_has_small with e, boxed01
+    return wasm_small_side(left of e, boxed01) is not nothing or wasm_small_side(right of e, boxed01) is not nothing
+end
+
+# to the block outside unless each side in a local is an i31 (a number, from 2 up as unsigned, if numbers); then
+# both sides' whole numbers
+to wasm_small_checks with fc, sides, numbers
+    for each side in sides
+        if t of side is not nothing
+            wasm_x(fc, "local.get " + t of side + " ref.test i31 i32.eqz br_if 0")
+            if numbers
+                wasm_x(fc, "local.get " + t of side + " ref.cast i31 i31.get_u i32.const 2 i32.lt_u br_if 0")
+            end
+        end
+    end
+    for each side in sides
+        if t of side is nothing
+            wasm_x(fc, "i32.const " + k of side)
+        else
+            wasm_x(fc, "local.get " + t of side + " ref.cast i31 i31.get_s")
+        end
+    end
+end
+
+# both sides as values, for the shared check
+to wasm_small_slow with fc, sides
+    for each side in sides
+        if t of side is nothing
+            wasm_expr(fc, x of side)
+        else
+            wasm_x(fc, "local.get " + t of side)
+        end
+    end
+end
+
 to wasm_expr with fc, e
     if wasm_unboxed(fc, e)
         wasm_expr_num(fc, e)
@@ -2234,6 +2605,10 @@ to wasm_expr with fc, e
             wasm_undefined(fc, name of e, at of e, no, no)
             return nothing
         end
+        if wasm_is_input(fc, name of e)
+            wasm_load(fc, name of e)
+            return nothing
+        end
         set value to wasm_temp(fc, wasm_eq)
         wasm_load(fc, name of e)
         wasm_x(fc, "local.tee " + value + " global.get g.unset ref.eq")
@@ -2241,38 +2616,15 @@ to wasm_expr with fc, e
         wasm_x(fc, "local.get " + value)
     else if what is "call"
         wasm_call(fc, e, no)
+    else if what is "math" and (op of e is "+" or op of e is "-")
+        wasm_small_math(fc, e)
     else if what is "math"
         wasm_expr(fc, left of e)
         wasm_expr(fc, right of e)
         set helper to item (front's slot_of((list of "+", "-", "*", "/"), op of e)) of (list of "add", "sub", "mul", "div")
         wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R." + helper)
     else if what is "compare"
-        set op to op of e
-        if op is "in"
-            wasm_expr(fc, left of e)
-            wasm_expr(fc, right of e)
-            wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.isIn")
-        else if wasm_numeric(fc, left of e) and wasm_numeric(fc, right of e) # two numbers: no boxes, no checks
-            wasm_expr_num(fc, left of e)
-            wasm_expr_num(fc, right of e)
-            if op is "divisible by"
-                wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R.dvf")
-            else
-                wasm_x(fc, "call R.ncmp " + wasm_order_test(op)) # to 15 digits
-            end
-        else
-            wasm_expr(fc, left of e)
-            wasm_expr(fc, right of e)
-            if op is "is"
-                wasm_x(fc, "call R.eq")
-            else
-                set helper to item (front's slot_of((list of "less than", "greater than", "at least", "at most", "divisible by"), op)) of (list of "lt", "gt", "ge", "le", "dv")
-                wasm_x(fc, "i32.const " + wasm_pos(fc, at of e) + " call R." + helper)
-            end
-        end
-        if negate of e
-            wasm_x(fc, "i32.eqz")
-        end
+        wasm_compare(fc, e)
         wasm_x(fc, "ref.i31")
     else if what is "and" or what is "or"
         set left to wasm_temp(fc, wasm_eq)

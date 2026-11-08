@@ -609,13 +609,16 @@ bytes and dictionaries:
   exactly what Folio's own give; `arrays's use_blas()` sends matmul through
   OpenBLAS where it's installed.
 - [`learn.folio`](tools/learn.folio) trains networks as PyTorch does: matrices on the graphics card (or on the
-  processor), `backward(loss)` for every parameter's gradient, layers, `sgd` and `adam`. A digit reader learns
+  processor), `backward(loss)` for every parameter's gradient, layers, `sgd`, `adam` and `adamw`, gradient
+  clipping, a warmup and cosine for the rate, and dropout. A digit reader learns
   10 rounds of 6,000 drawings in a ninth of a second on a GTX 1650, 4 times as fast as PyTorch on the same card.
   It has a GPT's parts too, embeddings, layer norm, GELU and attention, and keeps weights in safetensors files:
   [gpt.folio](gpt.folio) trains a small GPT on this README as well as PyTorch's same model does, 3 times as fast.
 - [`gpu.folio`](tools/gpu.folio) works on numbers on an NVIDIA graphics card, through CUDA's driver: `gpu's
   upload(numbers)`, then `plus`, `times`, `relu`, `exp`, `matmul` and `sum` there, thousands at once, and
   `gpu's download` to bring them back; a 2,048 by 2,048 matrix multiply 270 times as fast as on the processor.
+  Kernels of your own, in PTX: `gpu's kernel(ptx, "saxpy")`, then `gpu's launch(saxpy, blocks, threads,
+  inputs)` on a grid of up to 3 axes, with shared memory, and bytes on the card for whole numbers.
 - [`onnx.folio`](tools/onnx.folio) runs a model trained in PyTorch, or anything
   else that saves ONNX, through ONNX Runtime (Windows 11 has it; elsewhere,
   from its releases): `onnx's run(model, dictionary where "X" is x)`, arrays
@@ -827,6 +830,7 @@ end
 set double to function with x gives x * 2   # a function with no name, as a value
 say double(21)
 set squares to list of n * n for each n in list of 1, 2, 3, 4   # a list built from another
+say [1, 2, 3] " " [n + 1 for each n in squares]   # a list in brackets, which ends at its ]: f([1, 2], 3)
 say list of n for each n in squares where n is greater than 5  # [9, 16]: the ones that pass
 say items 2 to 3 of squares         # [4, 9]: of a list, text or bytes
 say list of 3, 1, 3 without repeats # [3, 1]: each once, where it first is
@@ -1139,7 +1143,8 @@ set name to choose a file to open           # or: to save; nothing if none is ch
   only reads can be set anywhere around it, even below. Functions remember the
   variables around them.
 - **Text:** any character but control characters; write `\n` for a new line and
-  `\t` for a tab. Upper or lower case doesn't matter in names and words.
+  `\t` for a tab (`\r` is an `r`, which `folio check` points out). Upper or
+  lower case doesn't matter in names and words.
 
 Mistakes get a message in plain words that points at the exact spot, with the
 right name when you misspell one, the right word when you type a symbol from
