@@ -4,7 +4,9 @@ What changed in each release of Folio, newest first. Each version links to its r
 the downloads and their SHA-256 sums. [VERSIONING.md](VERSIONING.md) says what a version number promises,
 and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for each.
 
-## Not released yet
+## [1.12.0](https://github.com/samyyy2423/folio/releases/tag/v1.12.0) (2026-11-08)
+
+The first release as Folio: Moth's new name, a second security pass, and everything below since 1.11.
 
 - **Security: Folio's own kernels keep to what a program was allowed.** Folio's own loops in machine code (`use the
   library "folio"`) need no `--allow-libraries`, and two ways into them could reach any of the program's memory,
