@@ -1,15 +1,9 @@
-// Folio's mark: a moth, its fore wings the lamp's orange, the rest ink
+// Folio's mark: an f in Instrument Serif italic, in the text's own colour, and the lamp-orange cursor after it
 export default function FolioMark({ className, title }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title}>
-      <g className="wings">
-        <path className="wing fore left" d="M23 22C17 10 6 7 3.5 13.5C1.5 19 8 25 22.5 25.5Z" fill="#ff4d17" />
-        <path className="wing fore right" d="M25 22C31 10 42 7 44.5 13.5C46.5 19 40 25 25.5 25.5Z" fill="#ff4d17" />
-        <path className="wing hind left" d="M22.5 27C15 28 9.5 33 12 38C14.5 42.5 20 37 23 31Z" fill="currentColor" />
-        <path className="wing hind right" d="M25.5 27C33 28 38.5 33 36 38C33.5 42.5 28 37 25 31Z" fill="currentColor" />
-      </g>
-      <rect x="22.4" y="17" width="3.2" height="20" rx="1.6" fill="currentColor" />
-      <path d="M23.2 17.5C22 13 19.5 10 16.5 8.5M24.8 17.5C26 13 28.5 10 31.5 8.5" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    <svg className={className} viewBox="24 22 82 82" role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title}>
+      <path transform="translate(0 4)" fill="currentColor" d="M38.13 98Q36.78 98 37.09 96.65L47.6 51.72Q48.53 47.87 45.1 47.87H42.92Q41.25 47.87 41.25 46.42Q41.25 44.96 43.12 44.96Q46.35 44.96 47.96 44.13Q49.57 43.3 50.09 40.8Q51.44 34.87 54.1 30.24Q56.75 25.62 60.49 22.91Q64.24 20.21 68.71 20.21Q72.35 20.21 74.58 21.92Q76.82 23.64 76.82 26.66Q76.82 28.94 75.62 30.35Q74.43 31.75 72.66 31.75Q70.48 31.75 69.8 30.5Q69.12 29.26 68.97 27.59Q68.81 25.93 68.29 24.68Q67.77 23.43 65.9 23.43Q63.51 23.43 61.69 25.77Q59.87 28.11 58.41 34.56L56.33 43.61Q56.02 44.96 57.48 44.96H65.8Q67.77 44.96 67.36 46.42Q67.04 47.87 65.48 47.87H56.44Q55.4 47.87 55.08 48.91L43.96 96.86Q43.64 98 42.5 98Z" />
+      <rect className="mark-caret" x="78" y="50" width="15" height="52" rx="2" fill="#ff4d17" />
     </svg>
   );
 }
