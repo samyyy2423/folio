@@ -1,5 +1,9 @@
-# Draw a digit in the box under the output, and a neural network written in Folio reads it. It learned from
-# digits it drew itself: see digits-train.folio, which made digits-model.folio.
+# Draw a digit in the box under the output, and a convolutional network written in Folio reads it, and
+# shows what it saw (your drawing as 16 by 16 pixels) and how sure it is of each digit.
+#
+# It learned from 400,000 digits it drew itself (digits-train.folio, which made digits-model.folio), and
+# has never been shown anyone's handwriting. Tried on the 10,000 handwritten digits of the MNIST test set,
+# each drawn the way this pad draws, it reads 93 in 100.
 use "digits.folio"
 use "digits-model.folio"
 
@@ -9,8 +13,10 @@ to read_digit with drawing
         say "That's empty: draw a digit first."
         return
     end
-    set chances to chances_for(picture_of(strokes, 1.4), model)
+    set pixels to picture_of(strokes, 1.4)
+    set chances to chances_for(pixels, model)
     set best to likeliest(chances)
+    show(pixels, chances, best)
     set sure to whole(item (best + 1) of chances * 100 + 0.5)
     set item (best + 1) of chances to 0 # so the next likeliest is the runner-up
     set next to likeliest(chances)
@@ -28,6 +34,49 @@ to a with digit
         return "an 8"
     end
     return "a " + digit
+end
+
+# how dark a pixel is, as a colour on the dark panel
+to tone with darkness
+    if darkness is greater than 0.8
+        return "#f5f7fb"
+    else if darkness is greater than 0.5
+        return "#b8c2d6"
+    else if darkness is greater than 0.2
+        return "#6b7894"
+    end
+    return "#333f5c"
+end
+
+# The picture the network was given, on the left, and a bar for each digit's chance, on the right, the
+# likeliest in orange. It takes the place of the drawing before it.
+to show with pixels, chances, best
+    clear
+    set dot to 12 # a pixel of the picture is this wide
+    pen color "#101827"
+    draw box at -236, -102 size side * dot + 12 by side * dot + 12
+    for each i in inked_of(pixels)
+        set row to floor((i - 1) / side)
+        pen color tone(item i of pixels)
+        draw box at -230 + (i - 1 - row * side) * dot, 96 - (row + 1) * dot size dot by dot
+    end
+    for each d from 0 to 9
+        set chance to item (d + 1) of chances
+        set left to 2 + d * 24
+        if d is best
+            pen color "#e8590c"
+        else
+            pen color "#9aa4b2"
+        end
+        draw box at left, -72 size 18 by 2 + chance * 150
+        if chance is at least 0.05
+            draw "" + whole(chance * 100 + 0.5) at left - 2, -64 + chance * 150 size 12
+        end
+        draw "" + d at left + 4, -92 size 16
+    end
+    pen color "#8a94a6"
+    draw "what it saw" at -236, -122 size 13
+    draw "how sure it is of each, in %" at 2, -122 size 13
 end
 
 repeat while yes

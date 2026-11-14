@@ -1,0 +1,52 @@
+/* Writing Folio: examples with what they say, pairs of the long way and the Folio way, and a larger program */
+
+.writing .essay-hero h1 { max-width: 15ch; }
+.toc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc-chips a { padding: 8px 14px; border-radius: 0; border: 1px solid var(--line-2); font: 500 13.5px/1 var(--sans); color: var(--ink-2); text-decoration: none; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+.toc-chips a:hover { background: var(--panel); border-color: var(--ink); color: var(--paper); }
+.writing .essay-part { scroll-margin-top: 90px; }
+
+.steps-list { display: grid; gap: 56px; min-width: 0; }
+.intro-line { font: italic 400 clamp(20px, 1.8vw, 26px)/1.3 var(--serif); color: var(--ink-2); }
+.step-item { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(20px, 3vw, 44px); align-items: start; padding-top: 22px; border-top: 1px solid var(--ink); }
+.step-words { display: grid; gap: 10px; }
+.step-n { font: 500 12px/1 var(--mono); color: var(--lamp); }
+.step-words h3 { font-size: clamp(26px, 2.4vw, 36px); }
+.step-words p:not(.step-n) { font-size: 16.5px; line-height: 1.6; color: var(--ink-2); }
+@media (max-width: 1000px) { .step-item { grid-template-columns: 1fr; } }
+
+/* a program, and what it says */
+.program { margin: 0; border-radius: 0; background: var(--panel); color: var(--night-text); overflow: hidden; }
+.program figcaption { display: flex; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--night-line); font: 500 13px/1 var(--sans); color: var(--night-dim); }
+.program figcaption span::before { content: "●"; color: var(--lamp); margin-right: 8px; }
+.program figcaption a { color: inherit; text-decoration: none; }
+.program figcaption a:hover { color: var(--lamp); }
+.program pre { margin: 0; padding: 16px 18px; font: 13.5px/1.7 var(--mono); white-space: pre; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--night-3) transparent; }
+.program-says { display: grid; gap: 2px; padding: 12px 18px 16px; border-top: 1px dashed var(--night-line); }
+.program-says .label { color: var(--lamp); margin-bottom: 4px; }
+.program-says p { font: italic 400 19px/1.25 var(--serif); }
+
+/* the long way and the Folio way */
+.pair { display: grid; gap: 18px; padding-top: 22px; border-top: 1px solid var(--ink); }
+.pair-code { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.pair-label { display: flex; justify-content: space-between; margin-bottom: 8px; font: 500 13px/1 var(--sans); color: var(--ink-3); }
+.pair-label span { color: var(--ink-2); }
+.pair .short .pair-label { color: var(--lamp); }
+.pair .long .program { opacity: 0.72; }
+@media (max-width: 760px) { .pair-code { grid-template-columns: 1fr; } }
+
+/* a larger program: its files, and the commands */
+.tree-and-files { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.tree { display: grid; gap: 12px; padding: 20px 22px; border: 1px solid var(--ink); border-radius: 0; }
+.tree pre { margin: 0; font: 13.5px/1.7 var(--mono); white-space: pre; overflow-x: auto; }
+.tree-note { font-size: 15px; color: var(--ink-2); }
+.commands { display: grid; gap: 10px; }
+.commands pre { margin: 0; padding: 16px 20px; border-radius: 0; background: var(--panel); color: var(--night-text); font: 13.5px/1.8 var(--mono); white-space: pre; overflow-x: auto; }
+@media (max-width: 900px) { .tree-and-files { grid-template-columns: 1fr; } }
+
+/* every column may be narrower than its longest line of code: the code scrolls in its own box, the page doesn't */
+.step-item > *, .pair-code > *, .tree-and-files > *, .steps-list > *, .points li > div { min-width: 0; }
+
+/* what a program says is yellow, on ink */
+.program-says p { color: var(--pop); }
+.program-says .label { color: var(--night-dim); }

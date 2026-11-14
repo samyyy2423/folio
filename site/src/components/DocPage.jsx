@@ -1,6 +1,8 @@
-import TopBar from "./TopBar";
+import Nav from "./Nav";
 import Footer from "./Footer";
 import DocScript from "./DocScript";
+import Letters from "./Letters";
+import Ways from "@/app/ways";
 import pages from "@/generated/pages.json";
 
 // A page of the reference, the cookbook or the examples: what make-docs.mjs or make-guides.mjs made of it (its
@@ -16,10 +18,11 @@ export default function DocPage({ slug }) {
   const page = pages[slug];
   return (
     <>
-      <TopBar />
+      <Nav />
       <main className="doc">
-        <section className="doc-hero"><div className="wrap" dangerouslySetInnerHTML={{ __html: page.hero }} /></section>
+        <section className="doc-hero opening"><Letters word={slug || "docs"} /><div className="wrap" dangerouslySetInnerHTML={{ __html: page.hero }} /></section>
         <div className="doc-body" dangerouslySetInnerHTML={{ __html: page.body }} />
+        <Ways to={["playground", "learn", "why"]} n="→" name="Where next" last={null} moves />
         <DocScript key={slug} code={page.script} />
       </main>
       <Footer />

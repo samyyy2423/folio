@@ -1,5 +1,5 @@
 import "../essay.css";
-import TopBar from "@/components/TopBar";
+import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Benchmarks from "./benchmarks";
 
@@ -11,7 +11,7 @@ export const metadata = {
 export default function BenchmarksPage() {
   return (
     <>
-      <TopBar />
+      <Nav />
       <Benchmarks />
       <Footer />
     </>

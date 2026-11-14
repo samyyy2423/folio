@@ -1,0 +1,78 @@
+/* The parts more than one page has: a section's ruled header, the rows of ways on, a framed drawing's mount,
+   the line that says how far down the page it is, an opening's way out, an essay's parts. */
+
+.scroll-line { position: fixed; inset: 0 0 auto; z-index: 70; height: 3px; pointer-events: none; }
+.scroll-line i { display: block; height: 100%; background: var(--lamp); transform: scaleX(0); transform-origin: 0 50%; }
+
+/* a section's header (Head.jsx): its number, its name, a rule that draws itself across, and which of how many it is */
+.head { --rule: 1; display: grid; grid-template-columns: auto auto minmax(40px, 1fr) auto; align-items: center; gap: 0 14px; margin: 0 0 clamp(18px, 2vw, 30px); font: 500 14px/1.2 var(--sans); letter-spacing: -0.01em; color: inherit; }
+.head .no, .head .of { font-feature-settings: "tnum"; }
+.head .rule { height: 1px; background: currentColor; transform: scaleX(var(--rule)); transform-origin: 0 50%; }
+
+/* what a framed drawing is mounted on (the exhibition's, and the ones that follow the pointer over the ways on) */
+.mount { display: grid; place-items: center; aspect-ratio: 1; padding: 9%; background: var(--paper); overflow: hidden; }
+.on-ink .mount { background: var(--ink); }
+.on-pop .mount { background: var(--pop); }
+.on-lamp .mount { background: var(--lamp); }
+.on-stone .mount { background: var(--stone); }
+.mount .drawing-box { width: 100%; }
+.mount img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+
+/* ---------- where to go next (ways.jsx): rows, each the whole width. Pointed at, a row's name rolls over a letter at
+   a time, the orange comes up through it, the others stand back, and its drawing comes out beside the pointer ---------- */
+.ways { position: relative; padding-top: 150px; display: grid; }
+.way { --line: 1; position: relative; display: grid; grid-template-columns: 3.4em minmax(0, 1fr) minmax(0, 0.42fr) auto; align-items: center; gap: 0 clamp(14px, 2vw, 32px); padding: clamp(10px, 1.1vw, 18px) 0; color: inherit; text-decoration: none; overflow: hidden; isolation: isolate; transition: opacity 0.45s; }
+.way::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--ink); transform: scaleX(var(--line)); transform-origin: 0 50%; }
+.way:last-of-type { border-bottom: 1px solid var(--ink); }
+.way::before { content: ""; position: absolute; inset: 0; background: var(--lamp); transform: translateY(101%); transition: transform 0.6s cubic-bezier(.7,0,.2,1); z-index: -1; }
+.way:hover::before { transform: none; }
+.ways:has(.way:hover) .way:not(:hover) { opacity: 0.3; }
+.way > .no { align-self: start; padding-top: 0.9em; font: 500 14px/1 var(--sans); letter-spacing: -0.01em; font-feature-settings: "tnum"; transition: transform 0.6s cubic-bezier(.7,0,.2,1); }
+/* the name, twice: a row high, the second under the first; each letter goes up, a little after the one before */
+.way .t { display: block; height: 1.16em; overflow: hidden; font: 500 clamp(44px, 7.4vw, 132px)/1.16 var(--display); letter-spacing: -0.055em; white-space: nowrap; transition: transform 0.6s cubic-bezier(.7,0,.2,1); }
+.way .t-row { display: block; }
+.way .ch { display: inline-block; white-space: pre; transition: transform 0.65s cubic-bezier(.7,0,.2,1); transition-delay: calc(var(--i) * 13ms); }
+.way:hover .ch { transform: translateY(-1.16em); }
+.way:hover .t, .way:hover > .no { transform: translateX(clamp(10px, 1.4vw, 22px)); }
+.way .s { font: 500 clamp(16px, 1.3vw, 19px)/1.15 var(--sans); letter-spacing: -0.025em; color: var(--ink); max-width: 24ch; }
+.way .arrow { display: grid; place-items: center; padding: 0 clamp(6px, 1vw, 16px) 0.1em; font: 400 clamp(44px, 6vw, 104px)/0.9 var(--display); transition: transform 0.6s cubic-bezier(.7,0,.2,1); }
+.way:hover .arrow { transform: rotate(-45deg); }
+/* the drawing that follows the pointer: one for each row, framed; the row's comes down over the last */
+.way-peek { position: absolute; left: 0; top: 0; z-index: 5; width: clamp(210px, 20vw, 320px); aspect-ratio: 1; pointer-events: none; opacity: 0; transition: opacity 0.3s; will-change: transform; }
+.way-peek.on { opacity: 1; }
+.way-peek .peek { position: absolute; inset: 0; padding: 8px; border: 1px solid var(--ink); background: var(--white); clip-path: inset(0 0 100% 0); transition: clip-path 0.55s cubic-bezier(.7,0,.2,1); }
+.way-peek .peek.on { clip-path: inset(0 0 0 0); z-index: 1; }
+.way-peek .mount { width: 100%; height: 100%; aspect-ratio: auto; }
+@media (max-width: 899px), (hover: none) { .way-peek { display: none; } }
+@media (max-width: 760px) {
+  .way { grid-template-columns: 2.6em minmax(0, 1fr) auto; }
+  .way .t { font-size: clamp(26px, 8.4vw, 44px); }
+  .way .arrow { font-size: clamp(30px, 9vw, 44px); }
+  .way .s { grid-column: 2; grid-row: 2; padding-bottom: 6px; }
+  .way .arrow { grid-row: 1 / span 2; grid-column: 3; }
+}
+
+
+/* ---------- a page's opening on its way out (motion.js's entrance): it stays where it is and goes darker (its
+   shade) while what follows comes up over it. What follows is marked `covers`: on paper of its own, the whole
+   width of the page, so it hides the opening as it passes ---------- */
+.opening-shade { position: absolute; inset: 0; z-index: 3; background: var(--ink); opacity: 0; pointer-events: none; }
+.covers { position: relative; z-index: 2; }
+.covers::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%; width: 100vw; margin-left: -50vw; background: var(--paper); pointer-events: none; }
+
+/* ---------- an essay's parts (Why, Writing, Benchmarks): a rule across the top of each, which draws itself as the
+   part is reached, and which part of how many it is (motion.js's revealOnScroll adds both) ---------- */
+.essay-part { position: relative; padding-top: 46px; }
+.part-rule { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--ink); transform-origin: 0 50%; }
+.part-of { position: absolute; right: 0; top: 14px; font: 500 14px/1 var(--sans); letter-spacing: -0.01em; font-feature-settings: "tnum"; }
+
+/* a list of points: pointed at, the orange comes up through one, and its words move in */
+.points li { position: relative; isolation: isolate; overflow: hidden; transition: padding 0.55s cubic-bezier(.7,0,.2,1); }
+.points li::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--lamp); transform: translateY(101%); transition: transform 0.55s cubic-bezier(.7,0,.2,1); }
+@media (hover: hover) {
+  .points li:hover::before { transform: none; }
+  .points li:hover { padding-left: 18px; padding-right: 18px; }
+  .points li:hover p, .points li:hover > span { color: var(--ink); }
+  .faq summary { transition: padding 0.45s cubic-bezier(.7,0,.2,1), color 0.3s; }
+  .faq summary:hover { padding-left: 14px; }
+}

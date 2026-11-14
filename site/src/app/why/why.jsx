@@ -1,9 +1,11 @@
 "use client";
+import Ways from "@/app/ways";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Highlighted } from "@/components/CodeView";
 import { BASE } from "@/lib/site";
 import { gsap, motionReady, revealOnScroll, entrance } from "@/lib/motion";
+import Letters from "@/components/Letters";
 
 // The same small program in Folio and in JavaScript
 const FOLIO = `set scores to list of 70, 90, 55
@@ -69,13 +71,23 @@ export default function Why() {
 
   return (
     <main ref={scope} className="essay">
-      <section className="essay-hero wrap">
-        <p className="eyebrow" data-reveal>Why Folio</p>
-        <h1>Readable, <em>and fast</em>.</h1>
-        <p className="lede" data-reveal>Folio is a programming language written in plain English words. It compiles to native machine code, so being readable doesn&apos;t cost speed. This page says who it&apos;s for, what it is, what it isn&apos;t, and answers the questions people ask most.</p>
+      <section className="essay-hero opening">
+        <Letters word="why" />
+        <div className="wrap">
+          <p className="eyebrow" data-reveal>Why Folio</p>
+          <h1>Readable, <em>and fast</em>.</h1>
+          <p className="lede" data-reveal>Folio is a programming language written in plain English words. It compiles to native machine code, so being readable doesn&apos;t cost speed. This page says who it&apos;s for, what it is, what it isn&apos;t, and answers the questions people ask most.</p>
+          <ol className="contents" data-reveal aria-label="On this page">
+            <li><a href="#part-01"><span className="no">(01)</span>Who it&apos;s for</a></li>
+            <li><a href="#part-02"><span className="no">(02)</span>The idea</a></li>
+            <li><a href="#part-03"><span className="no">(03)</span>The same program</a></li>
+            <li><a href="#part-04"><span className="no">(04)</span>What it isn&apos;t</a></li>
+            <li><a href="#part-05"><span className="no">(05)</span>Questions people ask</a></li>
+          </ol>
+        </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-01" data-reveal-group>
         <h2><span>01</span>Who it&apos;s for</h2>
         <ol className="points">
           <li data-reveal>
@@ -95,7 +107,7 @@ export default function Why() {
         </ol>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-02" data-reveal-group>
         <h2><span>02</span>The idea</h2>
         <ol className="points">
           <li data-reveal>
@@ -125,7 +137,7 @@ export default function Why() {
         </ol>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-03" data-reveal-group>
         <h2><span>03</span>The same program</h2>
         <div className="essay-body">
           <p data-reveal>Add up three scores and show the total. First in Folio, then in JavaScript.</p>
@@ -137,7 +149,7 @@ export default function Why() {
         </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-04" data-reveal-group>
         <h2><span>04</span>What it isn&apos;t</h2>
         <div className="essay-body">
           <p data-reveal><b>Folio is not a replacement for Rust or Python.</b> They are mature languages, with large communities and libraries that took decades to build. If you know them and they work for you, keep using them.</p>
@@ -145,7 +157,7 @@ export default function Why() {
         </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-05" data-reveal-group>
         <h2><span>05</span>Questions people ask</h2>
         <div className="faq" data-reveal>
           {FAQ.map(({ q, a }, k) => (
@@ -157,11 +169,7 @@ export default function Why() {
         </div>
       </section>
 
-      <nav className="next-ways wrap" aria-label="Where to go next">
-        <Link className="btn primary" href="/benchmarks" data-cursor="Read"><span>See the benchmarks</span></Link>
-        <a className="btn ghost" href={`${BASE}/playground`} data-cursor="Write"><span>Try it in the playground</span></a>
-        <Link className="btn ghost" href="/learn" data-cursor="Learn"><span>Take the lessons</span></Link>
-      </nav>
+      <Ways to={["benchmarks", "playground", "writing"]} n="→" name="Where next" last={null} moves />
     </main>
   );
 }

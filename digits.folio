@@ -1,6 +1,7 @@
 # Reading a handwritten digit, written in Folio: a drawing (pen strokes) becomes a 16 by 16 picture, and a
-# small neural network says how likely each digit is. The network's weights come from digits-model.folio,
-# which digits-train.folio makes by learning from digits it draws itself (digit-shapes.folio).
+# small convolutional network says how likely each digit is. The network's weights come from
+# digits-model.folio, which digits-train.folio makes by learning from digits it draws itself
+# (digit-shapes.folio).
 #
 # A drawing is text: strokes split by ";", points by spaces, and each point is "x,y" with y going down,
 # like "50,5 50,95" for a 1, or "16,6 84,6 40,96;36,52 72,52" for a 7 with a bar across.
@@ -8,7 +9,6 @@
 use "math.folio"
 
 set side to 16 # the picture is side by side pixels
-set hidden_size to 32 # neurons between the picture and the ten answers
 
 # ---------- drawings ----------
 
@@ -147,28 +147,24 @@ end
 
 # ---------- the network ----------
 
-# The ten digits' chances for a picture: 256 pixels into hidden_size neurons (ReLU), into ten scores, made
-# into chances that add up to 1 (softmax). `weights` is a record of the four lists digits-train.folio learns.
+# A convolutional network, the kind that reads handwriting. Its first layer slides 8 small patterns, each
+# 5 by 5 pixels, over the picture, and notes how strongly each shows at each of the 12 by 12 places it can
+# sit: a stroke's end, a curve, a crossing. Of every 2 by 2 places only the strongest is kept, so a digit
+# drawn a pixel to one side still reads the same. Those 288 numbers go into 32 neurons, and those into the
+# ten digits' scores, made into chances that add up to 1 (softmax). `weights` is a record of the six lists
+# digits-train.folio learns.
+
+set patterns to 8 # the patterns the first layer looks for
+set patch to 5 # each is patch by patch pixels
+set places to side - patch + 1 # where a pattern can sit, each way: 12
+set kept to places / 2 # after keeping the strongest of every 2 by 2: 6
+set features to patterns * kept * kept # what the first layer says of a picture: 288 numbers
+set hidden_size to 32 # neurons between those and the ten answers
+
+# the ten digits' chances for a picture
 to chances_for with pixels, weights
-    return chances_for_hidden(hidden_layer(pixels, weights), weights)
-end
-
-# the same, from the hidden neurons
-to chances_for_hidden with hidden, weights
-    set scores to empty list
-    for each d from 1 to 10
-        set total to item d of output_bias of weights
-        set row to (d - 1) * hidden_size
-        for each j from 1 to hidden_size
-            set total to total + item (row + j) of output_weights of weights * item j of hidden
-        end
-        add total to scores
-    end
-    return softmax(scores)
-end
-
-to hidden_layer with pixels, weights
-    return hidden_from(pixels, inked_of(pixels), weights)
+    set found to strongest(matched(pixels, inked_of(pixels), weights))
+    return chances_for_hidden(hidden_from(values of found, lit of found, weights), weights)
 end
 
 # the pixels with any ink, by number: only these count, which is most of the speed
@@ -182,14 +178,73 @@ to inked_of with pixels
     return inked
 end
 
-# the hidden neurons for a picture
-to hidden_from with pixels, inked, weights
+# How strongly each pattern shows at each place: patterns * places * places numbers. Each inked pixel adds
+# to every place whose patch covers it, its ink times that pattern's weight for that spot of the patch.
+to matched with pixels, inked, weights
+    set maps to empty list
+    for each f from 1 to patterns
+        set bias to item f of pattern_bias of weights
+        repeat places * places times
+            add bias to maps
+        end
+    end
+    set pw to pattern_weights of weights
+    for each i in inked
+        set ink_here to item i of pixels
+        set row to floor((i - 1) / side)
+        set column to i - 1 - row * side
+        for each down from highest(0, row - places + 1) to lowest(patch - 1, row)
+            for each across from highest(0, column - places + 1) to lowest(patch - 1, column)
+                set place to (row - down) * places + column - across + 1
+                set spot to down * patch + across + 1
+                for each f from 0 to patterns - 1
+                    set at to f * places * places + place
+                    set item at of maps to item at of maps + ink_here * item (f * patch * patch + spot) of pw
+                end
+            end
+        end
+    end
+    return maps
+end
+
+# The strongest of every 2 by 2 places, for each pattern, or 0 where none is above 0 (a ReLU). Gives the
+# `values`, where in the maps each came from (`from`, which learning needs), and which are above 0 (`lit`).
+to strongest with maps
+    set values to empty list
+    set from to empty list
+    set lit to empty list
+    for each f from 0 to patterns - 1
+        for each row from 0 to kept - 1
+            for each column from 0 to kept - 1
+                set first to f * places * places + 2 * row * places + 2 * column + 1
+                set best to 0
+                set where to 0
+                for each at in list of first, first + 1, first + places, first + places + 1
+                    if item at of maps is greater than best
+                        set best to item at of maps
+                        set where to at
+                    end
+                end
+                add best to values
+                add where to from
+                if where is not 0
+                    add length of values to lit
+                end
+            end
+        end
+    end
+    return record with values values, from from, lit lit
+end
+
+# the hidden neurons, from what the first layer found
+to hidden_from with values, lit, weights
     set hidden to empty list
+    set hw to hidden_weights of weights
     for each j from 1 to hidden_size
         set total to item j of hidden_bias of weights
-        set row to (j - 1) * side * side
-        for each i in inked
-            set total to total + item (row + i) of hidden_weights of weights * item i of pixels
+        set row to (j - 1) * features
+        for each k in lit
+            set total to total + item (row + k) of hw * item k of values
         end
         if total is less than 0
             set total to 0
@@ -197,6 +252,20 @@ to hidden_from with pixels, inked, weights
         add total to hidden
     end
     return hidden
+end
+
+# the ten chances, from the hidden neurons
+to chances_for_hidden with hidden, weights
+    set scores to empty list
+    for each d from 1 to 10
+        set total to item d of output_bias of weights
+        set row to (d - 1) * hidden_size
+        for each j from 1 to hidden_size
+            set total to total + item (row + j) of output_weights of weights * item j of hidden
+        end
+        add total to scores
+    end
+    return softmax(scores)
 end
 
 to softmax with scores

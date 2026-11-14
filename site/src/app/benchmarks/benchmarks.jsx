@@ -1,8 +1,10 @@
 "use client";
+import Ways from "@/app/ways";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { BASE, GITHUB } from "@/lib/site";
 import { gsap, motionReady, revealOnScroll, entrance } from "@/lib/motion";
+import Letters from "@/components/Letters";
 
 // What versus/race.py measured on a Windows laptop: each time a whole run, start-up included, in milliseconds
 const RACES = [
@@ -27,7 +29,7 @@ function Bars({ times, unit = "ms", digits = 0, width }) {
   return (
     <ul className="bars">
       {Object.entries(times).map(([lang, t]) => (
-        <li key={lang} className={`race-row${lang === "Folio" ? " folio" : ""}${t === fastest ? " best" : ""}`}>
+        <li key={lang} className={`race-row ${lang.toLowerCase()}${t === fastest ? " best" : ""}`}>
           <span className="lang">{lang}</span>
           <span className="track"><i className="fill" style={{ "--w": width ? width(t) : `${((100 * t) / most).toFixed(2)}%` }} /></span>
           <span className="ms" data-value={t} data-unit={unit} data-digits={digits}>{shown(t, digits)} {unit}</span>
@@ -66,13 +68,22 @@ export default function Benchmarks() {
 
   return (
     <main ref={scope} className="essay">
-      <section className="essay-hero wrap">
-        <p className="eyebrow" data-reveal>Benchmarks</p>
-        <h1>How fast is <em>Folio</em>?</h1>
-        <p className="lede" data-reveal>The same four programs in Folio, C, Rust, JavaScript and Python. Each time is a whole run, start-up included, on a Windows laptop. Shorter bars are faster.</p>
+      <section className="essay-hero opening">
+        <Letters word="benchmarks" />
+        <div className="wrap">
+          <p className="eyebrow" data-reveal>Benchmarks</p>
+          <h1>How fast is <em>Folio</em>?</h1>
+          <p className="lede" data-reveal>The same four programs in Folio, C, Rust, JavaScript and Python. Each time is a whole run, start-up included, on a Windows laptop. Shorter bars are faster.</p>
+          <ol className="contents" data-reveal aria-label="On this page">
+            <li><a href="#part-01"><span className="no">(01)</span>The short answer</a></li>
+            <li><a href="#part-02"><span className="no">(02)</span>Four programs</a></li>
+            <li><a href="#part-03"><span className="no">(03)</span>Machine learning</a></li>
+            <li><a href="#part-04"><span className="no">(04)</span>How it was measured</a></li>
+          </ol>
+        </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-01" data-reveal-group>
         <h2><span>01</span>The short answer</h2>
         <div className="essay-body">
           <p className="summary" data-reveal>Folio is about as fast as C on three of the four programs. Rust wins the plain add loop by a wide margin. On fib, Folio takes 23 ms to C&apos;s 18.</p>
@@ -81,7 +92,7 @@ export default function Benchmarks() {
         </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-02" data-reveal-group>
         <h2><span>02</span>Four programs</h2>
         <div className="essay-body" style={{ maxWidth: "none" }}>
           <div className="charts">
@@ -97,7 +108,7 @@ export default function Benchmarks() {
         </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-03" data-reveal-group>
         <h2><span>03</span>Machine learning</h2>
         <div className="essay-body" style={{ maxWidth: "none" }}>
           <p data-reveal>Folio can train neural networks, on the processor or on an NVIDIA graphics card. Here it is against PyTorch, on the same laptop. PyTorch is faster at the digit reader; Folio is faster at a GPT training step.</p>
@@ -114,7 +125,7 @@ export default function Benchmarks() {
         </div>
       </section>
 
-      <section className="essay-part wrap" data-reveal-group>
+      <section className="essay-part wrap" id="part-04" data-reveal-group>
         <h2><span>04</span>How it was measured</h2>
         <div className="essay-body">
           <ul className="method" data-reveal>
@@ -129,10 +140,7 @@ export default function Benchmarks() {
         </div>
       </section>
 
-      <nav className="next-ways wrap" aria-label="Where to go next">
-        <Link className="btn primary" href="/why" data-cursor="Read"><span>Why Folio</span></Link>
-        <a className="btn ghost" href={`${BASE}/playground`} data-cursor="Write"><span>Try it in the playground</span></a>
-      </nav>
+      <Ways to={["why", "playground", "learn"]} n="→" name="Where next" last={null} moves />
     </main>
   );
 }

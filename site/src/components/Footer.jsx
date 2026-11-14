@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { BASE, GITHUB, RELEASES } from "@/lib/site";
+import Drawing from "./Drawing";
 
 export default function Footer() {
   return (
     <footer className="foot">
+      <Drawing name="sunburst" className="foot-art" duration={3} spin={-70} />
       <div className="wrap">
         <div className="cols">
           <div><p className="lead">Programs that read like what they do.</p></div>
@@ -12,6 +14,7 @@ export default function Footer() {
             <ul>
               <li><a href={`${BASE}/playground`}>Playground</a></li>
               <li><Link href="/learn">Lessons</Link></li>
+              <li><Link href="/writing">Writing Folio</Link></li>
               <li><Link href="/docs/cookbook">Cookbook</Link></li>
               <li><Link href="/docs/examples">Examples</Link></li>
             </ul>
@@ -42,7 +45,7 @@ export default function Footer() {
           <span>The playground runs Folio, compiled to WebAssembly by Folio</span>
         </div>
       </div>
-      <p className="wordmark" aria-hidden="true">{"FOLIO".split("").map((c, i) => <span key={i}>{c}</span>)}</p>
+      <p className="wordmark" aria-hidden="true">{"folio".split("").map((c, i) => <span key={i}>{c}</span>)}</p>
     </footer>
   );
 }

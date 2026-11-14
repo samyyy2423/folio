@@ -53,8 +53,8 @@ export async function gallery() {
     ["Paint", "Drag to draw, click a colour", "paint.svg"],
     ["Spiral", "The turtle, in colour", "spiral.svg"],
     ["Tree", "A function that calls itself", "tree.svg"],
-    ["Neural network", "Learns, in Folio", "neural.svg"],
-    ["Handwriting", "Reads the digit you draw", "handwriting.svg"],
+    ["Neural network", "Learns two spirals in about a second", "neural.svg"],
+    ["Handwriting", "Reads 93% of real handwriting", "handwriting.svg"],
   ].map(([name, about, picture]) => ({ name, about, picture, code: fromFile[name] ? read(fromFile[name]).trimEnd() : examples[name] }));
 }
 
@@ -151,8 +151,19 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   mkdirSync(GENERATED, { recursive: true });
   const pages = docsPages();
   writeFileSync(join(GENERATED, "pages.json"), JSON.stringify(pages));
-  writeFileSync(join(GENERATED, "site.json"), JSON.stringify({ ...libraryCounts(pages), playgroundIds: idsUsed(script), gallery: await gallery() }));
+  writeFileSync(join(GENERATED, "site.json"), JSON.stringify({ ...libraryCounts(pages), version: JSON.parse(read("package.json")).version, playgroundIds: idsUsed(script), gallery: await gallery() }));
+  // the site's artwork: what each of art.mjs's programs draws, stroke by stroke, on the engine just copied
+  const { drawings } = await import("./art.mjs");
+  const art = await drawings(new URL(`file:///${join(ROOT, "folio.js").replace(/\\/g, "/")}`).href);
+  // each as a picture the site fetches and draws a path at a time (Drawing.jsx): a path knows how long it is (--n,
+  // a little over, so all of it shows when it's drawn); and what the site says about each, without its paths
+  mkdirSync(join(PUBLIC, "art"), { recursive: true });
+  for (const { name, paths } of art) {
+    const drawn = paths.map((p) => `<path d="${p.d}" stroke="${p.c}" stroke-width="${p.w}" data-n="${p.n}" style="--n:${Math.ceil(p.n * 1.02) + 2}"/>`).join("");
+    writeFileSync(join(PUBLIC, "art", `${name}.svg`), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-250 -250 500 500" class="drawing" fill="none" stroke-linecap="round" stroke-linejoin="round">${drawn}</svg>`);
+  }
+  writeFileSync(join(GENERATED, "art.json"), JSON.stringify(art.map(({ paths, ...about }) => about)));
   copyFileSync(join(ROOT, "learn-lessons.js"), join(GENERATED, "learn-lessons.js"));
   copyFileSync(join(ROOT, "examples.js"), join(GENERATED, "examples.js"));
-  console.log(`synced: the engine, playground.js (${idsUsed(script).length} ids), ${Object.keys(pages).length} docs pages`);
+  console.log(`synced: the engine, playground.js (${idsUsed(script).length} ids), ${Object.keys(pages).length} docs pages, ${art.length} drawings`);
 }

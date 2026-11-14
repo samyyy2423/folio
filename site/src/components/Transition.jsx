@@ -10,7 +10,7 @@ const STORE = "folio-veil"; // the name the veil shows, kept for the next page w
 // what the veil says on the way to a page
 export function pageWord(path) {
   if (path === "/" || path === "") return "Folio";
-  const names = { "/playground": "Playground", "/learn": "Learn", "/docs": "Docs", "/docs/cookbook": "Cookbook", "/docs/examples": "Examples", "/why": "Why Folio", "/benchmarks": "Benchmarks" };
+  const names = { "/playground": "Playground", "/learn": "Learn", "/docs": "Docs", "/docs/cookbook": "Cookbook", "/docs/examples": "Examples", "/why": "Why Folio", "/benchmarks": "Benchmarks", "/writing": "Writing" };
   if (names[path]) return names[path];
   if (path.startsWith("/docs/")) return `${path.slice("/docs/".length)}.folio`;
   return path.split("/").filter(Boolean).at(-1) ?? "Folio";
@@ -181,7 +181,7 @@ export default function Transition() {
     <div className="veil" ref={veil} aria-hidden="true">
       <div className="veil-lamp" />
       <div className="veil-ink">
-        <div className="veil-top"><span className="veil-mark"><FolioMark />Folio</span><span className="veil-to" /></div>
+        <div className="veil-top"><span className="veil-mark"><FolioMark />folio</span><span className="veil-to" /></div>
         <p className="veil-word"><span /></p>
       </div>
     </div>

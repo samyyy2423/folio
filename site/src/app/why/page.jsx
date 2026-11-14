@@ -1,5 +1,5 @@
 import "../essay.css";
-import TopBar from "@/components/TopBar";
+import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Why from "./why";
 
@@ -11,7 +11,7 @@ export const metadata = {
 export default function WhyPage() {
   return (
     <>
-      <TopBar />
+      <Nav />
       <Why />
       <Footer />
     </>
