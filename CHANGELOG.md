@@ -4,6 +4,17 @@ What changed in each release of Folio, newest first. Each version links to its r
 the downloads and their SHA-256 sums. [VERSIONING.md](VERSIONING.md) says what a version number promises,
 and [DESIGN.md](DESIGN.md) has the reasons behind each change, a section for each.
 
+## Not released yet
+
+- **The handwriting reader reads real handwriting.** It has still only seen digits it drew itself, but now 78
+  ways of writing them, bent far more, and through a small convolutional network: of the 10,000 handwritten
+  digits of the MNIST test set, drawn as the pad draws, it reads 93.2%, where it read 73.1%.
+  `handwriting.folio` shows the picture it saw and a bar for each digit's chance. `digits-train.folio` draws
+  and learns from 400,000 digits in under 3 minutes (DESIGN §192).
+- **neural.folio learns two spirals**, in about a second in the playground: layers of lists, backpropagation
+  and Adam written out, six pictures of what it believes as it learns, and then 200 dots it never saw, all
+  right. The network of numbers that remember how they were made is now `micrograd.folio`.
+
 ## [1.12.0](https://github.com/samyyy2423/folio/releases/tag/v1.12.0) (2026-11-08)
 
 The first release as Folio: Moth's new name, a second security pass, and everything below since 1.11.
