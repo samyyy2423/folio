@@ -1,5 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-  <rect x="30" y="20" width="440" height="380" rx="18" fill="#080c18" stroke="#2a3456" stroke-width="3"/>
-  <polyline points="143.6,87.6 212.0,57.0 295.6,63.8 341.2,108.0 310.8,169.2 234.8,199.8 310.8,223.6 356.4,278.0 333.6,339.2 250.0,366.4 151.2,339.2" fill="none" stroke="#ece5d6" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="250" y="462" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="30" fill="#f4b54a">I think it's a 3 (100% sure)</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-244 -110 488 285" stroke-linecap="round" font-family="ui-monospace, Consolas, monospace">
+  <path fill="#101827" d="M-236 -102h204v204h-204z"/>
+  <path fill="#333f5c" d="M-134 -96h12v12h-12zM-122 -96h12v12h-12zM-194 -60h12v12h-12zM-86 -36h12v12h-12zM-98 -24h12v12h-12zM-98 -12h12v12h-12zM-146 0h12v12h-12zM-122 36h12v12h-12zM-86 60h12v12h-12zM-182 72h12v12h-12zM-158 84h12v12h-12zM-146 84h12v12h-12z"/>
+  <path fill="#6b7894" d="M-182 -84h12v12h-12zM-194 -72h12v12h-12zM-98 -72h12v12h-12zM-134 -60h12v12h-12zM-86 -60h12v12h-12zM-122 -48h12v12h-12zM-134 -36h12v12h-12zM-146 -24h12v12h-12zM-86 0h12v12h-12zM-122 12h12v12h-12zM-194 36h12v12h-12zM-170 36h12v12h-12zM-86 36h12v12h-12zM-158 48h12v12h-12zM-146 48h12v12h-12zM-86 48h12v12h-12zM-194 60h12v12h-12zM-98 72h12v12h-12z"/>
+  <path fill="#b8c2d6" d="M-170 -84h12v12h-12zM-158 -84h12v12h-12zM-110 -84h12v12h-12zM-158 -60h12v12h-12zM-146 -60h12v12h-12zM-122 -60h12v12h-12zM-86 -48h12v12h-12zM-98 -36h12v12h-12zM-146 -12h12v12h-12zM-110 -12h12v12h-12zM-134 0h12v12h-12zM-110 24h12v12h-12zM-86 24h12v12h-12zM-182 36h12v12h-12zM-134 48h12v12h-12zM-122 48h12v12h-12zM-170 72h12v12h-12zM-122 72h12v12h-12zM-110 72h12v12h-12z"/>
+  <path fill="#f5f7fb" d="M-146 -84h12v12h-12zM-134 -84h12v12h-12zM-122 -84h12v12h-12zM-182 -72h12v12h-12zM-170 -72h12v12h-12zM-158 -72h12v12h-12zM-146 -72h12v12h-12zM-134 -72h12v12h-12zM-122 -72h12v12h-12zM-110 -72h12v12h-12zM-182 -60h12v12h-12zM-170 -60h12v12h-12zM-110 -60h12v12h-12zM-98 -60h12v12h-12zM-110 -48h12v12h-12zM-98 -48h12v12h-12zM-122 -36h12v12h-12zM-110 -36h12v12h-12zM-134 -24h12v12h-12zM-122 -24h12v12h-12zM-110 -24h12v12h-12zM-134 -12h12v12h-12zM-122 -12h12v12h-12zM-122 0h12v12h-12zM-110 0h12v12h-12zM-98 0h12v12h-12zM-110 12h12v12h-12zM-98 12h12v12h-12zM-86 12h12v12h-12zM-98 24h12v12h-12zM-110 36h12v12h-12zM-98 36h12v12h-12zM-194 48h12v12h-12zM-182 48h12v12h-12zM-170 48h12v12h-12zM-110 48h12v12h-12zM-98 48h12v12h-12zM-182 60h12v12h-12zM-170 60h12v12h-12zM-158 60h12v12h-12zM-146 60h12v12h-12zM-134 60h12v12h-12zM-122 60h12v12h-12zM-110 60h12v12h-12zM-98 60h12v12h-12zM-158 72h12v12h-12zM-146 72h12v12h-12zM-134 72h12v12h-12z"/>
+  <path fill="#9aa4b2" d="M2 70h18v2h-18z"/>
+  <text x="6" y="92" font-size="16" fill="#9aa4b2">0</text>
+  <path fill="#9aa4b2" d="M26 70h18v2h-18z"/>
+  <text x="30" y="92" font-size="16" fill="#9aa4b2">1</text>
+  <path fill="#9aa4b2" d="M50 70h18v2h-18z"/>
+  <text x="54" y="92" font-size="16" fill="#9aa4b2">2</text>
+  <path fill="#e8590c" d="M74 -80h18v152h-18z"/>
+  <text x="72" y="-86" font-size="12" fill="#e8590c">100</text>
+  <text x="78" y="92" font-size="16" fill="#e8590c">3</text>
+  <path fill="#9aa4b2" d="M98 70h18v2h-18z"/>
+  <text x="102" y="92" font-size="16" fill="#9aa4b2">4</text>
+  <path fill="#9aa4b2" d="M122 70h18v2h-18z"/>
+  <text x="126" y="92" font-size="16" fill="#9aa4b2">5</text>
+  <path fill="#9aa4b2" d="M146 70h18v2h-18z"/>
+  <text x="150" y="92" font-size="16" fill="#9aa4b2">6</text>
+  <path fill="#9aa4b2" d="M170 70h18v2h-18z"/>
+  <text x="174" y="92" font-size="16" fill="#9aa4b2">7</text>
+  <path fill="#9aa4b2" d="M194 70h18v2h-18z"/>
+  <text x="198" y="92" font-size="16" fill="#9aa4b2">8</text>
+  <path fill="#9aa4b2" d="M218 70h18v2h-18z"/>
+  <text x="222" y="92" font-size="16" fill="#9aa4b2">9</text>
+  <text x="-236" y="122" font-size="13" fill="#8a94a6">what it saw</text>
+  <text x="2" y="122" font-size="13" fill="#8a94a6">how sure it is of each, in %</text>
+  <text x="0" y="159" text-anchor="middle" font-size="22" fill="#e8590c">I think it's a 3 (100% sure)</text>
 </svg>

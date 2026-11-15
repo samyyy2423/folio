@@ -3,8 +3,9 @@
 #
 #     folio run --allow-libraries digits-learn.folio [card|processor] [hidden] [floats]
 #
-# On a GTX 1650, 10 rounds of 6,000 pictures take 0.11 s on the card, 99.4% right on 1,000 it hadn't seen; on
-# a Ryzen 5 4600H's processor, 0.60 s, and 0.52 s with `floats`, its matmuls in 32-bit floats (DESIGN §185).
+# On a GTX 1650, 10 rounds of 6,000 pictures take 0.11 s on the card, 91% right on 1,000 it hadn't seen (the
+# drawings are bent far more than when it read 99.4% of them: DESIGN §192); on a Ryzen 5 4600H's processor,
+# 0.60 s, and 0.52 s with `floats`, its matmuls in 32-bit floats (DESIGN §185).
 
 use "math.folio"
 use "digits.folio"

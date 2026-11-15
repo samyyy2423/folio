@@ -374,18 +374,24 @@ answer on, so `folio build handwriting.folio` makes the handwriting demo a progr
 of its own.
 
 **Neural networks, written in Folio.** [`neural.folio`](neural.folio) learns to
-tell apart two moons of dots, after Andrej Karpathy's
-[micrograd](https://github.com/karpathy/micrograd): every number it works out is
-a record that remembers how it was made, so backpropagation can trace each
-weight's share of the blame. Folio has no sine or `exp`, so
+tell apart two spirals of dots wound into each other, which no straight line can
+do. There is no library under it: its layers are lists of numbers, and
+backpropagation and Adam are sums written out. Folio has no sine or `exp`, so
 [`math.folio`](math.folio) writes them in Folio too, with random numbers that come
-out the same every run. From 50% right to 100% in 60
-steps:
+out the same every run. From 48% right to 100% in 100 steps, about a second in
+the playground and a third of one as machine code, and then 100% of 200 new dots
+it had never seen:
 
-<p align="center"><img src="docs/neural.svg" width="560" alt="Four pictures of what the network believes: before training it calls almost everything blue; at step 8 and step 20 the boundary bends between the moons; at the end it wraps around both moons exactly. Below, the loss falls from 1.17 to 0.006."></p>
+<p align="center"><img src="docs/neural.svg" width="560" alt="Six pictures of what the network believes about two spirals of dots, one blue and one orange: before training, a few flat bands that get 48% right; at steps 20 and 45 the bands bend; at step 70 both arms show, 95% right; at steps 100 and 150 blue and orange wind round each other exactly, 100% right. Below, the loss falls to nothing."></p>
+
+[`micrograd.folio`](micrograd.folio) is the same idea a number at a time, after
+Andrej Karpathy's [micrograd](https://github.com/karpathy/micrograd): every
+number it works out is a record that remembers how it was made, so
+backpropagation can trace each weight's share of the blame. It learns two moons
+of dots.
 
 <details>
-<summary>Backpropagation, in Folio</summary>
+<summary>Backpropagation in micrograd.folio</summary>
 
 ```
 for each i from 1 to count
@@ -410,11 +416,18 @@ end
 
 **It reads your handwriting.** The network at the top of this page learned
 from digits Folio drew itself: there's no dataset.
-[`digit-shapes.folio`](digit-shapes.folio) holds each digit as pen strokes and
-bends them at random, [`digits.folio`](digits.folio) turns strokes into 16×16
-pictures and runs the network, and [`digits-train.folio`](digits-train.folio)
-trains it on 3,000 pictures in about 5 seconds, then writes what it learned as a
-Folio file: 99% right on drawings it hadn't seen.
+[`digit-shapes.folio`](digit-shapes.folio) holds 78 ways of writing the ten digits
+as pen strokes and bends them at random, [`digits.folio`](digits.folio) turns
+strokes into 16×16 pictures and runs a small convolutional network, and
+[`digits-train.folio`](digits-train.folio) draws a digit, reads it and corrects
+itself 400,000 times, in under 3 minutes, then writes what it learned as a Folio
+file. It has never been shown anyone's handwriting, and it reads 93.2% of the
+10,000 handwritten digits of the MNIST test set, each drawn the way the pad draws
+them (the reader before this one, which said 99% on its own drawings, read 73.1%).
+[`handwriting.folio`](handwriting.folio) shows what it saw of your drawing and
+how sure it is of each digit:
+
+<p align="center"><img src="docs/handwriting.svg" width="480" alt="A 3 as the network saw it, 16 by 16 pixels on a dark square, beside ten bars, one for each digit: the 3's is the only tall one, at 100. Beneath: I think it's a 3 (100% sure)."></p>
 
 ```bash
 folio build digits-train.folio
@@ -1705,7 +1718,7 @@ How each engine was made fast, what didn't work, and why: **[DESIGN.md](DESIGN.m
 | [`editors/`](editors) | Neovim's plugin folder, Helix's settings, Zed's extension, and how to set up each editor with `folio lsp` |
 | [`checker-rules.folio`](checker-rules.folio) | What each of the checker's rules does with each type, for `folio check`: made by `make-checker-rules.mjs` |
 | [`versus/`](versus) | The same four programs in Folio, C, Rust and Python, and `npm run versus`, which times them |
-| [`neural.folio`](neural.folio), [`math.folio`](math.folio) | The neural network, and the maths it needs, in Folio |
+| [`neural.folio`](neural.folio), [`micrograd.folio`](micrograd.folio), [`math.folio`](math.folio) | The neural networks, and the maths they need, in Folio |
 | [`digits.folio`](digits.folio), [`digit-shapes.folio`](digit-shapes.folio), [`digits-train.folio`](digits-train.folio), [`handwriting.folio`](handwriting.folio) | Reading handwriting: strokes to pictures, the network, its training, and the program that asks you to draw |
 | [`tools/`](tools) | Real tools in Folio: a picture maker, a word counter, a JSON reader and its tests, SQLite, Windows' own controls, and a notepad made with them |
 | [`make-docs.mjs`](make-docs.mjs), [`docs/`](docs) | The standard library's reference on the site: a page for each library, made from its own comments |
@@ -1742,7 +1755,7 @@ calls that led there.
   every table program and 3,000 broken ones, and bootstrapping it three stages deep
 - the WebAssembly back end written in Folio against wasm.js, byte for byte, on
   7,822 programs, and what it makes against the VM, mistakes and trails included
-- the neural network and the handwriting reader, on all three engines
+- the neural networks and the handwriting reader, on all three engines
 - the standard library's reference ([`docs.test.js`](docs.test.js)): `docs/` is
   what [`make-docs.mjs`](make-docs.mjs) makes of the libraries, every public
   function has a comment, and each example ran and said what's shown under it
@@ -2051,7 +2064,8 @@ Folio keeps its promises in writing, for anyone who builds on it:
   One right before a number is itself, as in `"\\d{3}"`, so a value that starts
   with a number goes in brackets: `{(3 * n)}`.
 - The handwriting reader learned from shapes, not people, so unusual ways of
-  writing a digit can fool it.
+  writing a digit can fool it: of real handwritten digits it misreads about 7 in
+  100, 2s and 6s the most.
 - The WebAssembly engine needs WebAssembly GC: Node 22, Chrome 119, Firefox 120,
   Safari 18.2, or later; on an older browser the playground starts on the JIT.
 - A program in machine code takes a few milliseconds to start, and on Windows

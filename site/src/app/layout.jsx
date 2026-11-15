@@ -1,19 +1,22 @@
-import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/inter-tight/wght.css";
 import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import "@fontsource-variable/jetbrains-mono/index.css";
 import "./globals.css";
+import "./openings.css";
+import "./parts.css";
 import Cursor from "@/components/Cursor";
 import Transition from "@/components/Transition";
+import SmoothScroll from "@/components/SmoothScroll";
+import ScrollLine from "@/components/ScrollLine";
 import { BASE } from "@/lib/site";
 
 export const metadata = {
   title: "Folio · a programming language that reads like English",
   description: "Folio is a programming language with no symbols to learn. Write programs in plain words, run them in your browser, and build them into programs of their own for Windows and Linux.",
-  icons: { icon: `${BASE}/docs/folio.svg` },
 };
 
-export const viewport = { themeColor: "#eeeae2" };
+export const viewport = { themeColor: "#a5a298" };
 
 // Before the page shows: old links (the playground was at /folio/#playground, a shared program at /folio/#code=...)
 // go to the playground's own page; the veil between pages stays up over a page loaded after a click on another
@@ -48,6 +51,8 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <Transition />
+        <SmoothScroll />
+        <ScrollLine />
         <Cursor />
       </body>
     </html>

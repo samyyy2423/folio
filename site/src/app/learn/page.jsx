@@ -1,5 +1,5 @@
 import "./learn.css";
-import TopBar from "@/components/TopBar";
+import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Lessons from "./lessons";
 
@@ -11,7 +11,7 @@ export const metadata = {
 export default function Learn() {
   return (
     <>
-      <TopBar />
+      <Nav />
       <Lessons />
       <Footer />
     </>

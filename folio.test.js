@@ -527,13 +527,15 @@ test("the compiler written in Folio compiles itself, and what it makes does the 
   assert.deepEqual(said, ["Hello, Sam!", "fib(20) is 6765"]);
 });
 
-// ---------- the neural network written in Folio ----------
+// ---------- the neural networks written in Folio ----------
 
-// It makes its own random numbers, so a run is the same every time: all three engines must say and draw
-// exactly the same things, and the network must learn to put every dot on the right side.
-test("the neural network written in Folio learns, the same way on all three engines", () => {
-  const network = readFileSync(new URL("./neural.folio", import.meta.url), "utf8");
-  const files = (name) => readFileSync(new URL(`./${name}`, import.meta.url), "utf8"); // math.folio
+// They make their own random numbers, so a run is the same every time: all three engines must say and draw
+// exactly the same things, and each network must learn to put every dot on the right side. neural.folio
+// (layers of lists, Adam) tells two spirals apart, and then dots it never saw; micrograd.folio (a record for
+// every number) two moons.
+const learns = (name) => {
+  const network = readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
+  const files = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8"); // math.folio
   const train = (engine) => {
     const said = [];
     const drawn = [];
@@ -543,9 +545,25 @@ test("the neural network written in Folio learns, the same way on all three engi
   const jit = train("jit");
   assert.deepEqual(train("vm"), jit);
   assert.deepEqual(train("wasm"), jit);
-  assert.equal(jit.said[1], "step 1: loss 1.173, 50% right");
-  assert.equal(jit.said.at(-1), "after 60 steps: 100% of the dots are on the right side");
   assert.deepEqual(check(network, { files }), []);
+  return jit;
+};
+
+test("the neural network written in Folio learns two spirals, the same way on all three engines", () => {
+  const { said, drawn } = learns("neural.folio");
+  assert.equal(said[0], "A network with 2 inputs, two layers of 16 neurons and 1 output: 337 numbers to learn.");
+  assert.equal(said[1], "step 1: loss 1.132, 48% right");
+  assert.deepEqual(said.slice(-2), ["after 150 steps: 100% of the 200 dots are on the right side", "and 100% of 200 new dots it had never seen"]);
+  const words = drawn.filter((d) => d.shape === "text").map((d) => d.text); // six pictures, each with its words, and the chart's
+  assert.deepEqual(words.map((w) => w.split(":")[0]), ["before", "step 20", "step 45", "step 70", "step 100", "step 150", "how wrong it is (the loss), step by step"]);
+  assert.equal(words[5], "step 150: 100% right");
+  assert.equal(drawn.filter((d) => d.shape === "circle").length, 6 * 200); // every dot, in every picture
+});
+
+test("the network of numbers that remember how they were made learns, the same way on all three engines", () => {
+  const { said } = learns("micrograd.folio");
+  assert.equal(said[1], "step 1: loss 1.173, 50% right");
+  assert.equal(said.at(-1), "after 60 steps: 100% of the dots are on the right side");
 });
 
 // ---------- the WebAssembly encoder ----------
@@ -643,30 +661,60 @@ const DRAWN = {
 const small = (stroke) => stroke.split(" ").map((p) => p.split(",").map(Number)).map(([x, y]) => `${Math.round(x * 0.6 + 25)},${Math.round(y * 0.6 + 15)}`).join(" ");
 
 test("the network written in Folio reads digits drawn on the pad, on all three engines", () => {
+  let first;
   for (const engine of ENGINES) {
     const answers = Object.values(DRAWN).map((strokes) => strokes.map(small).join(";"));
     const said = [];
+    const drawn = [];
     try {
-      run(here("handwriting.folio"), (line) => said.push(line), { engine, files: here, ask: () => answers.shift() ?? null });
+      run(here("handwriting.folio"), (line) => said.push(line), { engine, files: here, draw: (d) => drawn.push(d), ask: () => answers.shift() ?? null });
     } catch (err) {
       assert.match(err.message, /the input ended/); // it asks for another until the answers run out
     }
     assert.deepEqual(said.map((line) => line.match(/it's an? (\d)/)?.[1]), Object.keys(DRAWN), engine);
+    // what it shows of the last one, the 9: the picture it saw, a bar for each digit with the 9's the tallest
+    // and in orange, and the digits beneath them
+    const shown = drawn.slice(drawn.findLastIndex((d) => d.clear) + 1);
+    assert.equal(drawn.filter((d) => d.clear).length, 10, engine); // each drawing takes the place of the one before
+    const bars = shown.filter((d) => d.shape === "box" && d.width === 18);
+    assert.equal(bars.length, 10, engine);
+    assert.equal(bars.indexOf(bars.reduce((a, b) => (b.height > a.height ? b : a))), 9, engine);
+    assert.deepEqual(bars.map((b) => b.color === "#e8590c"), [false, false, false, false, false, false, false, false, false, true], engine);
+    assert.deepEqual(shown.filter((d) => d.shape === "text" && d.size === 16).map((d) => d.text), ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], engine);
+    assert.ok(shown.filter((d) => d.shape === "box" && d.width === 12).length > 30, engine); // the pixels with ink
+    assert.deepEqual({ said, drawn }, (first ??= { said, drawn }), engine);
   }
-  for (const name of ["handwriting.folio", "digits-train.folio", "neural.folio"]) assert.deepEqual(check(here(name), { files: here }), [], name);
+  for (const name of ["handwriting.folio", "digits-train.folio", "neural.folio", "micrograd.folio"]) assert.deepEqual(check(here(name), { files: here }), [], name);
+  // without anywhere to draw, as in a terminal, it still reads
+  const said = [];
+  const answers = [DRAWN[7].map(small).join(";")];
+  assert.throws(() => run(here("handwriting.folio"), (line) => said.push(line), { files: here, ask: () => answers.shift() ?? null }), /the input ended/);
+  assert.match(said[0], /^I think it's a 7 \(\d+% sure/);
 });
 
-// The real training takes seconds; a tiny one checks that it learns something and writes a model Folio can read.
+// The real training takes minutes; a tiny one checks that it learns something and writes a model Folio can read:
+// 8 patterns of 5 by 5, 32 neurons that each see 288 numbers, and the ten answers.
 test("digits-train.folio writes the model as Folio", () => {
-  const source = here("digits-train.folio").replace(/set per_digit to \d+/, "set per_digit to 5").replace(/set rounds to \d+/, "set rounds to 1");
+  const source = here("digits-train.folio").replace(/set lessons to \d+/, "set lessons to 300");
+  assert.notEqual(source, here("digits-train.folio"));
   const said = [];
   run(source, (line) => said.push(line), { engine: "wasm", files: here });
-  assert.match(said[1], /^# round 1: \d+% right while learning$/);
+  assert.equal(said.length, 1 + 10 + 7);
+  assert.match(said[1], /^# after 30 drawings: \d+% of the last 30 right, before learning from each$/);
+  const right = said.slice(1, 11).map((line) => Number(line.match(/: (\d+)%/)[1]));
+  assert.ok(right.slice(-3).reduce((a, b) => a + b) > right.slice(0, 3).reduce((a, b) => a + b), right.join(" ")); // it learns
   const model = said.join("\n");
-  assert.ok(compileToJs(`${model}\nsay length of hidden_weights of model " " length of output_bias of model`));
+  const sizes = 'say length of pattern_weights of model " " length of pattern_bias of model " " length of hidden_weights of model " " length of hidden_bias of model " " length of output_weights of model " " length of output_bias of model';
+  assert.ok(compileToJs(`${model}\n${sizes}`));
   const out = [];
-  run(`${model}\nsay length of hidden_weights of model " " length of output_bias of model`, (line) => out.push(line));
-  assert.deepEqual(out, ["8192 10"]);
+  run(`${model}\n${sizes}`, (line) => out.push(line));
+  assert.deepEqual(out, ["200 8 9216 32 320 10"]);
+  // the model in the repo is one it wrote
+  const kept = here("digits-model.folio").trimEnd().split("\n");
+  const lessons = Number(here("digits-train.folio").match(/set lessons to (\d+)/)[1]);
+  assert.equal(kept[0], said[0]);
+  assert.match(kept[10], new RegExp(`^# after ${lessons} drawings: 9\\d% of the last ${lessons / 10} right, before learning from each$`));
+  assert.deepEqual(kept.slice(11).map((line) => line.split(" to ")[0]), said.slice(11).map((line) => line.split(" to ")[0]));
 });
 
 // ---------- try ----------

@@ -12,12 +12,12 @@ export const GitHubIcon = () => (
   </svg>
 );
 
-const current = (path, href) => (href === "/docs" ? path === "/docs" || (path.startsWith("/docs/") && !["/docs/cookbook", "/docs/examples"].includes(path)) : path === href);
+const current = (path, href) => (href === "/docs" ? path === "/docs" || (path.startsWith("/docs/") && !["/docs/cookbook", "/docs/examples"].includes(path)) : href === "/why" ? path === "/why" || path === "/benchmarks" : path === href);
 
 // The bar at the top of every page. Over the first screen it runs the page's whole width, clear; once the page
 // scrolls it gathers into an ink dock in the middle. Its lamp, an orange pill, rests on the page you're on and
 // flies to whichever link you point at. On a narrow screen, a menu that fills the screen.
-export default function TopBar() {
+export default function TopBar({ counts = {} }) {
   const path = usePathname();
   const [docked, setDocked] = useState(false);
   const [open, setOpen] = useState(false);
@@ -65,15 +65,16 @@ export default function TopBar() {
     };
   }, [path]);
 
+  const named = (name, href) => <>{name}{counts[href] ? <sup>{counts[href]}</sup> : null}</>; // Learn, and how many lessons
   const link = ({ name, href, full }, extra = {}) => full
-    ? <a key={name} href={`${BASE}${href}`} aria-current={current(path, href) ? "page" : undefined} {...extra}>{extra.children ?? name}</a>
-    : <Link key={name} href={href} aria-current={current(path, href) ? "page" : undefined} {...extra}>{extra.children ?? name}</Link>;
+    ? <a key={name} href={`${BASE}${href}`} aria-current={current(path, href) ? "page" : undefined} {...extra}>{extra.children ?? named(name, href)}</a>
+    : <Link key={name} href={href} aria-current={current(path, href) ? "page" : undefined} {...extra}>{extra.children ?? named(name, href)}</Link>;
 
   return (
     <>
       <header className={`topbar${docked ? " docked" : ""}${open ? " menu-open" : ""}`}>
         <div className="bar">
-          <a className="brand" href={`${BASE}/`}><FolioMark />Folio<sup>®</sup></a>
+          <a className="brand" href={`${BASE}/`}><FolioMark />folio<sup>®</sup></a>
           <nav className="links" ref={links} aria-label="Folio">
             <span className="lamp" ref={lamp} aria-hidden="true" />
             {PAGES.map((page) => link(page))}

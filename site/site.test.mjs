@@ -4,6 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { playgroundScript, idsUsed, docsPages, libraryCounts } from "./scripts/sync.mjs";
+import { run, test as folioTest } from "../folio.js";
+import { LOGIC, SHORTER, CART, SHOP, SHOP_SAYS, CART_TEST } from "./src/app/writing/examples.js";
 
 const here = (file) => readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
 
@@ -25,4 +27,18 @@ test("every page the docs generators made is cut into its parts, with its links 
   const { libraries, functions } = libraryCounts(pages);
   assert.ok(libraries > 40 && functions > 500, `${libraries} libraries, ${functions} functions`);
   assert.match(pages.examples.body, /href="\/folio\/playground#code=/);
+});
+
+test("every program on the Writing Folio page says what the page shows", () => {
+  const files = (name) => ({ "cart.folio": CART })[name];
+  const said = (code) => { const out = []; run(code, (line) => out.push(String(line)), { files, maxSteps: 1_000_000 }); return out; };
+  for (const x of LOGIC) assert.deepEqual(said(x.code), x.says, x.id);
+  for (const x of SHORTER) {
+    assert.deepEqual(said(x.long), x.says, `${x.id}, the long way`);
+    assert.deepEqual(said(x.short), x.says, `${x.id}, the Folio way`);
+  }
+  assert.deepEqual(said(SHOP), SHOP_SAYS, "shop.folio");
+  const tests = folioTest(CART_TEST, { files });
+  assert.equal(tests.length, 2);
+  for (const t of tests) assert.ok(!t.error, `${t.name}: ${t.error?.message}`);
 });

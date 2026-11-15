@@ -31,7 +31,7 @@ export default function Playground() {
       </svg>
 
       <header className="pg-top">
-        <a className="brand" href={`${BASE}/`} title="Folio's front page"><FolioMark />Folio<sup>®</sup></a>
+        <a className="brand" href={`${BASE}/`} title="Folio's front page"><FolioMark />folio<sup>®</sup></a>
         <p className="pg-title">Playground</p>
         <nav aria-label="Pages">
           <Link href="/learn">Learn</Link>

@@ -5,6 +5,7 @@ export const RELEASES = `${GITHUB}/releases`;
 
 export const PAGES = [
   { name: "Playground", href: "/playground", full: true }, // a page of its own: its script runs once, on load
+  { name: "Why Folio", href: "/why" },
   { name: "Learn", href: "/learn" },
   { name: "Docs", href: "/docs" },
   { name: "Cookbook", href: "/docs/cookbook" },

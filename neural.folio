@@ -1,227 +1,175 @@
-# A neural network that learns, written from scratch in Folio. Folio has no random numbers and no sine,
-# so this program makes its own. The design follows Andrej Karpathy's micrograd: every number the
-# network works out remembers how it was made, so after a guess the network can trace back how much
-# each of its weights was to blame, and nudge them all the right way.
+# A neural network that learns, written from scratch in Folio: no library, only lists of numbers and the
+# sums that change them. Folio has no random numbers and no sine, so it uses ones written in Folio too.
 #
-# It learns to tell apart two moons of dots, and draws what it believes at four moments: before
-# training, twice during, and at the end. Blue means it thinks a dot there belongs to the blue moon.
+# It learns to tell apart two spirals of dots wound into each other, which no straight line can do, and
+# draws what it believes at six moments, from knowing nothing to having both arms right. Blue means it
+# thinks a dot there belongs to the blue arm. Then it is shown dots it has never seen.
+#
+# micrograd.folio is the same idea a number at a time, the way Andrej Karpathy's micrograd does it. This
+# one works a layer at a time, which is some hundred times quicker.
 
-use "math.folio" # random numbers, sine and cosine, and rounding, all written in Folio
+use "math.folio" # random numbers, sine and cosine, and square roots, all written in Folio
+
+set turns to 1.75 # how far each arm winds round
+set reach to 3 # the network is given each dot's place times this, a size its weights find easy
 
 # ---------- the dots to learn ----------
 
-# about -0.15 to 0.15, more often near 0
+# about -0.1 to 0.1, more often near 0
 to noise
-    return (random() + random() + random() - 1.5) / 10
+    return (random() + random() + random() - 1.5) / 15
 end
 
-# Two moons that hook into each other: the orange one (-1) on top, the blue one (1) below.
-to moons with count
+# Two arms from the middle outwards: the orange one (-1), and the blue one (1) half a turn on from it.
+# More dots further out, where an arm is longer.
+to spirals with count
     set made to empty list
     repeat count times
-        set angle to random() * pi
-        add record with x cosine(angle) + noise(), y sine(angle) + noise(), label -1 to made
-        set angle to random() * pi
-        add record with x 1 - cosine(angle) + noise(), y 0.5 - sine(angle) + noise(), label 1 to made
+        for each label in list of -1, 1
+            set far to sqrt(between(0.02, 1))
+            set angle to turns * 2 * pi * far
+            add record with x label * far * cosine(angle) + noise(), y label * far * sine(angle) + noise(), label label to made
+        end
     end
     return made
 end
 
-# ---------- numbers that remember how they were made ----------
-
-# `a` and `b` are the numbers it was made from, and `op` how. `grad` will say how much the final
-# loss changes when this number does.
-to leaf with data
-    return record with data data, grad 0, op "", a nothing, b nothing, mark 0
-end
-
-to plus with a, b
-    return record with data data of a + data of b, grad 0, op "+", a a, b b, mark 0
-end
-
-to times with a, b
-    return record with data data of a * data of b, grad 0, op "*", a a, b b, mark 0
-end
-
-# a ReLU: below zero becomes zero
-to relu with a
-    set out to 0
-    if data of a is greater than 0
-        set out to data of a
-    end
-    return record with data out, grad 0, op "relu", a a, b nothing, mark 0
-end
-
-set pass to 0 # each backward pass marks the numbers it has reached, so none is counted twice
-
-# Backpropagation: put every number that led to `root` in an order where each comes after the numbers it
-# was made from, then go through that order backwards, passing each number's grad to its makers.
-to backward with root
-    add 1 to pass
-    set order to empty list
-    to visit with v
-        if mark of v is not pass
-            set mark of v to pass
-            if a of v is not nothing
-                visit(a of v)
-            end
-            if b of v is not nothing
-                visit(b of v)
-            end
-            add v to order
-        end
-    end
-    visit(root)
-    set grad of root to 1
-    set count to length of order
-    for each i from 1 to count
-        set v to item (count - i + 1) of order
-        set g to grad of v
-        set left to a of v
-        if op of v is "+"
-            set right to b of v
-            set grad of left to grad of left + g
-            set grad of right to grad of right + g
-        else if op of v is "*"
-            set right to b of v
-            set grad of left to grad of left + data of right * g
-            set grad of right to grad of right + data of left * g
-        else if op of v is "relu" and data of v is greater than 0
-            set grad of left to grad of left + g
-        end
-    end
-end
-
 # ---------- the network ----------
 
-# A neuron adds up its inputs, each times a weight, plus a bias. Weights start random, between -1 and 1.
-to neuron with inputs, linear
-    set weights to empty list
-    repeat inputs times
-        add leaf(random() * 2 - 1) to weights
+to zeros with count
+    set made to empty list
+    repeat count times
+        add 0 to made
     end
-    return record with weights weights, bias leaf(0), linear linear
+    return made
 end
 
-# layers of neurons, each layer taking the one before as its inputs; the last one is linear
+# A layer is a row of neurons. Each adds up its inputs, each times a weight, plus a bias; all but the last
+# layer's then turn anything below zero into zero (a ReLU). The weights are one list, a neuron after
+# another, and start random. The `blame` lists will say how much the loss changes when each number does,
+# and `pace` and `spread` are what Adam remembers of the blame so far.
+to layer with inputs, neurons, last
+    set weights to empty list
+    set edge to sqrt(6 / (inputs + neurons))
+    repeat inputs * neurons times
+        add between(0 - edge, edge) to weights
+    end
+    return record with neurons neurons, last last, weights weights, bias zeros(neurons),
+        weight_blame zeros(inputs * neurons), bias_blame zeros(neurons),
+        weight_pace zeros(inputs * neurons), bias_pace zeros(neurons),
+        weight_spread zeros(inputs * neurons), bias_spread zeros(neurons)
+end
+
+# layers of neurons, each layer taking the one before as its inputs
 to network with sizes
     set layers to empty list
-    for each i from 1 to length of sizes - 1
-        set layer to empty list
-        repeat item (i + 1) of sizes times
-            add neuron(item i of sizes, i is length of sizes - 1) to layer
-        end
-        add layer to layers
+    for each k from 1 to length of sizes - 1
+        add layer(item k of sizes, item (k + 1) of sizes, k is length of sizes - 1) to layers
     end
     return layers
 end
 
-to parameters with layers
-    set found to empty list
-    for each layer in layers
-        for each n in layer
-            for each w in weights of n
-                add w to found
-            end
-            add bias of n to found
-        end
-    end
-    return found
-end
-
-to fire with n, inputs
-    set total to bias of n
-    set k to 1
-    for each w in weights of n
-        set total to plus(total, times(w, item k of inputs))
-        add 1 to k
-    end
-    if linear of n
-        return total
-    end
-    return relu(total)
-end
-
-# the network's score for a dot: above 0 means blue, below 0 orange
-to think with layers, inputs
-    for each layer in layers
+# What every neuron says for one dot: a list for each layer, after the inputs themselves.
+to fire with layers, inputs
+    set said to list of inputs
+    for each one in layers
+        set weights to weights of one
         set outs to empty list
-        for each n in layer
-            add fire(n, inputs) to outs
-        end
-        set inputs to outs
-    end
-    return item 1 of inputs
-end
-
-# The same score with plain numbers, which is much faster when nothing needs to learn from it.
-to predict with layers, x, y
-    set inputs to list of x, y
-    for each layer in layers
-        set outs to empty list
-        for each n in layer
-            set total to data of bias of n
-            set k to 1
-            for each w in weights of n
-                set total to total + data of w * item k of inputs
-                add 1 to k
+        set spot to 0
+        for each j from 1 to neurons of one
+            set total to item j of bias of one
+            for each v in inputs
+                add 1 to spot
+                set total to total + item spot of weights * v
             end
-            if not linear of n and total is less than 0
+            if total is less than 0 and not last of one
                 set total to 0
             end
             add total to outs
         end
+        add outs to said
         set inputs to outs
     end
-    return item 1 of inputs
+    return said
 end
 
-# How wrong the network is: a "max-margin" loss that wants every score past 1 on the right side, plus a
-# small push to keep the weights small. Also counts the dots it gets right.
-to judge with layers, dots
-    set total to leaf(0)
+# the network's score for a place: above 0 means blue, below 0 orange
+to score_at with layers, x, y
+    set said to fire(layers, list of x * reach, y * reach)
+    return item 1 of item (length of said) of said
+end
+
+# Backpropagation. `blame` is how much the loss changes when the score does. Going back a layer at a
+# time, each neuron's blame is added to its bias's and, times each input, to that weight's; and each
+# input takes its share of the blame back to the neuron it came from, unless that neuron said 0.
+to pass_back with layers, said, blame
+    set blames to list of blame
+    for each back from 1 to length of layers
+        set k to length of layers - back + 1
+        set one to item k of layers
+        set inputs to item k of said
+        set weights to weights of one
+        set weight_blame to weight_blame of one
+        set bias_blame to bias_blame of one
+        set passed to zeros(length of inputs)
+        set spot to 0
+        for each j from 1 to length of blames
+            set g to item j of blames
+            set item j of bias_blame to item j of bias_blame + g
+            for each i from 1 to length of inputs
+                add 1 to spot
+                set item i of passed to item i of passed + g * item spot of weights
+                set item spot of weight_blame to item spot of weight_blame + g * item i of inputs
+            end
+        end
+        if k is greater than 1
+            for each i from 1 to length of inputs
+                if item i of inputs is 0
+                    set item i of passed to 0
+                end
+            end
+        end
+        set blames to passed
+    end
+end
+
+# How wrong the network is: a "max-margin" loss that wants every score past 1 on the right side. Gives
+# the loss and how many dots are on the right side, and, when `learning`, leaves each weight's blame.
+to judge with layers, dots, learning
+    set loss to 0
     set right to 0
     for each dot in dots
-        set score to think(layers, list of leaf(x of dot), leaf(y of dot))
-        set total to plus(total, relu(plus(leaf(1), times(leaf(0 - label of dot), score))))
-        if (label of dot is greater than 0) is (data of score is greater than 0)
+        set said to fire(layers, list of x of dot * reach, y of dot * reach)
+        set score to item 1 of item (length of said) of said
+        if (label of dot is greater than 0) is (score is greater than 0)
             add 1 to right
         end
+        set short to 1 - label of dot * score
+        if short is greater than 0
+            set loss to loss + short / length of dots
+            if learning
+                pass_back(layers, said, (0 - label of dot) / length of dots)
+            end
+        end
     end
-    set size to leaf(0)
-    for each w in parameters(layers)
-        set size to plus(size, times(w, w))
-    end
-    set loss to plus(times(total, leaf(1 / length of dots)), times(size, leaf(0.0001)))
     return record with loss loss, right right / length of dots
 end
 
+# Adam: every number steps against its blame, at a pace that is the blame's running average over its
+# running size, so a number whose blame is small but steady moves as far as one whose blame is big.
+to adam with numbers, blames, pace, spread, rate, warm_pace, warm_spread
+    for each k from 1 to length of numbers
+        set g to item k of blames
+        set m to 0.9 * item k of pace + 0.1 * g
+        set v to 0.999 * item k of spread + 0.001 * g * g
+        set item k of pace to m
+        set item k of spread to v
+        set item k of numbers to item k of numbers - rate * (m / warm_pace) / (sqrt(v / warm_spread) + 0.00000001)
+        set item k of blames to 0
+    end
+end
+
 # ---------- drawing ----------
-
-# Between drawings the turtle faces right, and these say where it is.
-set turtle_x to 0
-set turtle_y to 0
-turn right 90
-
-to go_to with x, y
-    pen up
-    move forward x - turtle_x
-    turn left 90
-    move forward y - turtle_y
-    turn right 90
-    pen down
-    set turtle_x to x
-    set turtle_y to y
-end
-
-# a short line with round ends is a dot
-to dot_at with x, y, size, color
-    go_to(x, y)
-    pen width size
-    pen color color
-    move forward 0.01
-    set turtle_x to x + 0.01
-end
 
 to shade with score
     if score is less than -1.5
@@ -238,104 +186,116 @@ to shade with score
     return "#86acee"
 end
 
-# The view: x from -1.5 to 2.5 and y from -1 to 1.5, in cells of 1/12, each 5 turtle steps wide.
-set cell to 5
-set per_unit to 60
-set columns to 48
-set rows to 30
+set cells to 50 # a picture is cells by cells squares
+set cell to 3 # each this wide
+set view to 1.15 # and shows from -view to view
 
-# What the network believes, as rows of colour (a run of cells with the same colour is one line), with
-# the dots on top. `left` and `bottom` say where the picture goes.
-to picture with layers, dots, left, bottom
-    pen width cell + 0.6 # a little more than a cell, so rows overlap with no seam
-    for each row from 0 to rows - 1
-        set y to -1 + (row + 0.5) / 12
-        set height to bottom + (row + 0.5) * cell
-        set run_color to shade(predict(layers, -1.5 + 0.5 / 12, y))
+# What the network believes, a row at a time (a run of squares of one colour is one box), with the dots
+# on top and a line of words beneath. `left` and `bottom` say where the picture goes.
+to picture with layers, dots, left, bottom, words
+    for each row from 0 to cells - 1
+        set y to (row + 0.5) / cells * 2 * view - view
+        set run_color to shade(score_at(layers, 0.5 / cells * 2 * view - view, y))
         set run_start to 0
-        for each column from 1 to columns
+        for each column from 1 to cells
             set color to "the end"
-            if column is less than columns
-                set color to shade(predict(layers, -1.5 + (column + 0.5) / 12, y))
+            if column is less than cells
+                set color to shade(score_at(layers, (column + 0.5) / cells * 2 * view - view, y))
             end
             if color is not run_color
-                go_to(left + (run_start + 0.5) * cell, height)
-                pen width cell + 0.6
+                set over to 0.5 # a box goes a little under the next one and the row above, so no seam shows
+                if column is cells
+                    set over to 0
+                end
                 pen color run_color
-                move forward (column - run_start - 1) * cell + 0.01
-                set turtle_x to left + (column - 0.5) * cell + 0.01
+                draw box at left + run_start * cell, bottom + row * cell size (column - run_start) * cell + over by cell + 0.5
                 set run_color to color
                 set run_start to column
             end
         end
     end
     for each dot in dots
-        set x to left + (x of dot + 1.5) * per_unit
-        set y to bottom + (y of dot + 1) * per_unit
-        dot_at(x, y, 9, "white")
         if label of dot is 1
-            dot_at(x, y, 6, "#1c5fd4")
+            pen color "#1c5fd4"
         else
-            dot_at(x, y, 6, "#e8590c")
+            pen color "#e8590c"
         end
+        draw circle at left + (x of dot + view) / (2 * view) * cells * cell, bottom + (y of dot + view) / (2 * view) * cells * cell size 1.6
     end
+    pen color "#8a94a6"
+    draw words at left, bottom - 15 size 12
 end
 
-# the loss after each step, as dots falling from the top left
+# the loss after each step, as a line falling from the top left
 to chart with losses, left, bottom, width, height
-    pen width 1
     pen color "#9aa4b2"
-    go_to(left, bottom + height)
-    turn right 90
-    move forward height
-    turn left 90
-    move forward width
-    set turtle_x to left + width
-    set turtle_y to bottom
+    pen width 1
+    pen up
+    move to left, bottom + height
+    pen down
+    move to left, bottom
+    move to left + width, bottom
     set highest to item 1 of losses
+    pen color "#e11d48"
+    pen width 2
+    pen up
     set step to 0
     for each loss in losses
-        dot_at(left + step / (length of losses - 1) * width, bottom + loss / highest * height, 4, "#e11d48")
+        move to left + step / (length of losses - 1) * width, bottom + loss / highest * height
+        pen down
         add 1 to step
     end
+    pen color "#8a94a6"
+    draw "how wrong it is (the loss), step by step" at left + 8, bottom + height - 12 size 12
 end
 
 # ---------- learning ----------
 
-to train with layers, dots, steps
-    set weights to parameters(layers)
-    set losses to empty list
-    say "A network with 2 inputs, two layers of 8 neurons and 1 output: " length of weights " numbers to learn."
-    for each step from 1 to steps
-        set result to judge(layers, dots)
-        if step is 1
-            picture(layers, dots, -250, 60) # the turtle starts in the middle of the picture
-        end
-        for each w in weights
-            set grad of w to 0
-        end
-        backward(loss of result)
-        set rate to 1 - 0.9 * (step - 1) / steps
-        for each w in weights
-            set data of w to data of w - rate * grad of w
-        end
-        add data of loss of result to losses
-        if step is 1 or step is divisible by 10
-            say "step " step ": loss " rounded(data of loss of result) ", " whole(right of result * 100 + 0.5) "% right"
-        end
-        if step is 8
-            picture(layers, dots, 10, 60)
-        end
-        if step is 20
-            picture(layers, dots, -250, -110)
-        end
-    end
-    picture(layers, dots, 10, -110)
-    chart(losses, -250, -210, 500, 80)
-    set result to judge(layers, dots)
-    say "after " steps " steps: " whole(right of result * 100 + 0.5) "% of the dots are on the right side"
+to percent with part
+    return whole(part * 100 + 0.5)
 end
 
-set dots to moons(30)
-set model to network(list of 2, 8, 8, 1)
-train(model, dots, 60)
+to train with layers, dots, steps
+    set losses to empty list
+    set shots to list of 1, 20, 45, 70, 100, steps # the steps a picture is drawn after
+    set drawn to 0
+    set warm_pace to 1
+    set warm_spread to 1
+    for each step from 1 to steps
+        set result to judge(layers, dots, yes)
+        if step is 1
+            picture(layers, dots, -240, 80, "before: " + percent(right of result) + "% right")
+            set drawn to 1
+        end
+        set warm_pace to warm_pace * 0.9
+        set warm_spread to warm_spread * 0.999
+        for each one in layers
+            adam(weights of one, weight_blame of one, weight_pace of one, weight_spread of one, 0.03, 1 - warm_pace, 1 - warm_spread)
+            adam(bias of one, bias_blame of one, bias_pace of one, bias_spread of one, 0.03, 1 - warm_pace, 1 - warm_spread)
+        end
+        add loss of result to losses
+        if step is 1 or step is divisible by 25
+            say "step " step ": loss " rounded(loss of result) ", " percent(right of result) "% right"
+        end
+        if drawn is less than length of shots and step is item (drawn + 1) of shots
+            set now to judge(layers, dots, no)
+            picture(layers, dots, -240 + (drawn - whole(drawn / 3) * 3) * 165, 80 - whole(drawn / 3) * 180, "step " + step + ": " + percent(right of now) + "% right")
+            add 1 to drawn
+        end
+    end
+    chart(losses, -240, -240, 480, 105)
+end
+
+set dots to spirals(100)
+set model to network(list of 2, 16, 16, 1)
+set count to 0
+for each one in model
+    add length of weights of one + length of bias of one to count
+end
+say "A network with 2 inputs, two layers of 16 neurons and 1 output: " count " numbers to learn."
+set steps to 150
+train(model, dots, steps)
+set result to judge(model, dots, no)
+say "after " steps " steps: " percent(right of result) "% of the " length of dots " dots are on the right side"
+set unseen to spirals(100)
+say "and " percent(right of judge(model, unseen, no)) "% of " length of unseen " new dots it had never seen"

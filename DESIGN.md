@@ -344,7 +344,8 @@ messages and positions.
 
 ## 14. A neural network, written in Folio
 
-[`neural.folio`](neural.folio) is a test of the language as much as a demo: a
+[`micrograd.folio`](micrograd.folio) (neural.folio, until §192 gave that name to a quicker one) is a test of
+the language as much as a demo: a
 real program, with recursion, records that point at each other, and thousands
 of numbers, written the way a beginner would read it.
 
@@ -6681,7 +6682,7 @@ it with thousands of threads at once.
   (past a tile's edge both ways) the same as arrays.folio's, a sum of 100,000 numbers, nothing on the card, numbers
   given back, and its mistakes. CI has no card, so it runs on a computer that has one.
 - **Next**: arrays that live on the card, with their shapes, in arrays.folio; a gradient for each operation, so a
-  network of arrays learns (neural.folio's, micrograd's way, is one number at a time); layers, Adam, and a small
+  network of arrays learns (micrograd.folio's, micrograd's way, is one number at a time); layers, Adam, and a small
   GPT trained on the card.
 
 ## 159. The system's DLLs, loaded when a program first uses them
@@ -6770,7 +6771,7 @@ each operation, and its parameters moved, again and again, without coming back t
   Each operation on a matrix a parameter went into, `matmul`, `plus`, `minus`, `times`, `add_row`, `relu`, `sum`,
   `mean`, `cross_entropy` and `mean_squared_error`, is kept on a tape, in the order it was done; `backward(loss)`
   goes through it the other way, each one's gradient sent to what made it, added up where two used the same:
-  reverse-mode differentiation over whole matrices, as PyTorch's autograd, where neural.folio's went a number at
+  reverse-mode differentiation over whole matrices, as PyTorch's autograd, where micrograd.folio's went a number at
   a time. Then `layer`, `network` and `forward`, and `sgd` and `adam`, whose `step` moves the parameters and lets
   go of the tape's matrices, their memory back to the card.
 - **The card's kernels for it**, in gpu.folio, in PTX: a matrix turned over, a row added to each row (a bias),
@@ -7654,3 +7655,54 @@ given where a kernel takes another are refused, saying what they were; four kern
 when the program is made; an inflate past its limit, and a zip file whose list says a thing is 10 bytes, fail; and
 server.folio answers 500 for a line break in a header's value, a header's name, a type and a status, and for a
 status of 99, and sends a redirect as it is.
+
+## 192. A reader that reads real handwriting, and a network that learns spirals
+
+The handwriting reader said 99% right, on drawings it had drawn itself. Nobody had asked how it did on a
+person's. And the neural network of §14 learned 60 dots, which is as much as a record for every number could
+do in half a second.
+
+- **Measured on real handwriting.** MNIST's 10,000 test digits, each thinned to its pen line (Zhang and
+  Suen's thinning, at three times the size) and then drawn the way `picture_of` draws a pad's strokes: fitted
+  to a box of 12, with a pen 1.4 wide. So the reader is given what the pad would give it, had those hands
+  drawn on the pad. The reader as it was read 73.1%: 47% of the 5s, 55% of the 2s, 67% of the 4s.
+- **Why.** It had 24 ways of writing ten digits, upright and narrow. Hands write a 2 and a 5 as wide as they
+  are tall, lean to the right, and make loops of every size. And 256 pixels into 32 neurons knows a stroke
+  only by the pixels it lies on: a digit one pixel over is another picture.
+- **78 ways, bent more** (digit-shapes.folio). A shape's corners are moved by up to 11 in 100 and then rounded
+  off, once to three times (Chaikin's corner cutting), so the same shape is angular in one drawing and round
+  in the next. Its middle is pushed up, down or sideways, which makes a 6's loop small or an 8's top big. It
+  sways in a wave, is as wide as that digit is written (a 5 is 1.4 times its shape), and slants from -0.65 to
+  0.25, to the right more than the left. The ways were added by looking at which real digits were misread:
+  a 2 with a loop, a 4 whose top is round, an 8 that doesn't close.
+- **A convolution** (digits.folio). 8 patterns of 5 by 5 pixels are slid over the picture; of every 2 by 2
+  places the strongest is kept; those 288 numbers go into 32 neurons and those into the ten answers. 9,786
+  numbers, where there were 8,554, and the model's file is 84 KB where it was 73. Only the inked pixels are
+  gone through, each adding to the places whose patch covers it, so a drawing is still read in a fraction of
+  a second on every engine.
+- **Never the same drawing twice** (digits-train.folio). It draws a digit, reads it, and corrects itself,
+  400,000 times, each step smaller than the last (0.02 down to 0.002). 2 minutes 40 seconds as machine code.
+  Twice as many drawings gave no more.
+- **What each gave**, in a test bench in Python that draws and learns the same way, on 20,000 of MNIST's
+  training digits kept for trying things on: twice the ways of writing, 78%; the stronger bending and 40,000
+  drawings, 86%; all 78 ways, 89%; the convolution, 92%. Then, with the model Folio taught itself, on the
+  10,000 test digits nothing was tried on: **93.2%**, from 89% of the 2s to 99% of the 0s. For comparison, a
+  plain network of 64 neurons taught with the 20,000 real digits themselves reads 94.7% of them.
+- **MNIST is a yardstick, not a teacher.** It isn't in the repository, and the network has never learned
+  from one of its digits. Its mistakes on the 20,000 said which ways of writing were missing.
+- **neural.folio learns two spirals.** A record for every number, micrograd's way, is clear and slow. The new
+  one keeps a layer's weights in one list, and writes backpropagation out a layer at a time, and Adam: 337
+  numbers, 200 dots, 150 steps, 27 times the sums of the old one's 105 numbers, 60 dots and 60 steps, in 1.1 s
+  on the JIT where that took 0.5 (1.0 s as WebAssembly, 4.2 s on the VM, 0.3 s as machine code). Every dot is
+  on the right side by step 100, and so are 200 new ones it never saw. A dot the network already has right
+  with room to spare costs no backward pass. The old one is micrograd.folio, and still tested.
+- **What they show.** neural.folio draws six pictures of what it believes, each with its step and how many
+  it has right, and the loss as a line; handwriting.folio draws the 16 by 16 picture it was given and a bar
+  for each digit's chance, over the one before (`clear`). Both in boxes, dots and words, and inside 240 of
+  the middle, so the playground shows them at their own size, a square to three pixels, with no seams.
+- **Tested.** Both networks say and draw the same on all three engines, to the last number; neural.folio's
+  first step, its last two lines, its seven lines of words and its 1,200 dots are held; the reader reads the
+  ten test drawings on every engine, its bars' tallest the right one and the only orange one, and reads
+  without anywhere to draw; a training of 300 drawings learns and writes a model of the right sizes, and
+  the model in the repository has the same lines. digits-learn.folio, on the new drawings, reads 91% of
+  1,000 after its 10 rounds, where the old drawings were 99.4%: they are that much harder.

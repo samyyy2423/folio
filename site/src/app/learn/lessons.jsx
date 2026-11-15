@@ -1,8 +1,10 @@
 "use client";
+import Ways from "@/app/ways";
 import { useEffect, useRef, useState } from "react";
 import { Highlighted } from "@/components/CodeView";
 import { BASE, playgroundLink } from "@/lib/site";
 import { LESSONS } from "@/generated/learn-lessons.js";
+import Letters from "@/components/Letters";
 import { gsap, motionReady, revealOnScroll, entrance } from "@/lib/motion";
 
 const STORE = "folio-learn-done"; // what learn.html kept, so progress made there carries on here
@@ -150,13 +152,21 @@ export default function Lessons() {
     return () => { media.revert(); seen.disconnect(); };
   }, []);
   const share = Math.round((100 * done.size) / LESSONS.length);
+  const next = Math.max(0, LESSONS.findIndex((_, i) => !done.has(i))); // the first lesson not run yet
   return (
     <main ref={scope} className="learn">
-      <section className="learn-hero wrap">
-        <p className="eyebrow" data-reveal>Learn Folio</p>
-        <h1 data-reveal>Eleven lessons. <span className="wing-text">One evening.</span></h1>
-        <p className="lede" data-reveal>Each lesson is a short program to run, change and break. You need nothing but this page: Folio runs right here, in your browser.</p>
-        <div className="meter" data-reveal><div className="bar"><i style={{ width: `${share}%` }} /></div><span>{done.size ? `${done.size} of ${LESSONS.length} run` : `${LESSONS.length} lessons`}</span></div>
+      <section className="learn-hero opening">
+        <Letters word="learn" />
+        <div className="wrap">
+          <p className="eyebrow" data-reveal>Learn Folio</p>
+          <h1 data-reveal>Eleven lessons. <span className="wing-text">One evening.</span></h1>
+          <p className="lede" data-reveal>Each lesson is a short program to run, change and break. You need nothing but this page: Folio runs right here, in your browser.</p>
+          <div className="meter" data-reveal>
+            <span>{done.size ? `${done.size} of ${LESSONS.length} run` : `${LESSONS.length} lessons`}</span>
+            <div className="bar"><i style={{ width: `${share}%` }} /></div>
+            <a className="start" href={`#lesson-${next + 1}`}>{done.size === 0 ? "Start lesson 1" : done.size === LESSONS.length ? "All run. Start again" : `Carry on: lesson ${next + 1}`}<span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
       </section>
       <div className="learn-layout wrap">
         <nav className="toc" aria-label="Lessons">
@@ -172,6 +182,7 @@ export default function Lessons() {
           {LESSONS.map((lesson, i) => <Lesson key={lesson.title} lesson={lesson} index={i} onRun={ran} />)}
         </div>
       </div>
+      <Ways to={["playground", "writing", "docs"]} n="→" name="Where next" last={null} moves />
     </main>
   );
 }
